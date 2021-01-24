@@ -95,7 +95,7 @@ Contributions are what make the open source community such an amazing place to b
 <!-- LICENSE -->
 ## License
 
-Distributed under the MIT OR Apache2.0 License. See `MIT` or `APACHE2.0` for more information.
+Licensed under the MIT OR Apache2.0 License, at your choice. See `MIT` or `APACHE2.0` for more information.
 
 
 
