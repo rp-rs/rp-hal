@@ -10,7 +10,7 @@
   <p align="center">
     A Rust HAL impl for the RP family of microcontrollers from the Raspberry Pi Foundation
     <br />
-    <a href="https://github.com/rp-rs/rp-hal"><strong>Explore the docs »</strong></a>
+    <a href="https://docs.rs/rp2040-hal/"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="https://github.com/rp-rs/rp-hal">View Demo</a>
