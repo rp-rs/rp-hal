@@ -27,13 +27,7 @@
 <details open="open">
   <summary><h2 style="display: inline-block">Table of Contents</h2></summary>
   <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
-    </li>
-    <li>
+   <li>
       <a href="#getting-started">Getting Started</a>
       <ul>
         <li><a href="#prerequisites">Prerequisites</a></li>
@@ -80,6 +74,8 @@ For more examples, please refer to the [Documentation](https://github.com/rp-rs/
 
 <!-- ROADMAP -->
 ## Roadmap
+
+NOTE This HAL is under active development. As such, it is likely to remain volatile until a 1.0.0 release.
 
 See the [open issues](https://github.com/rp-rs/rp-hal/issues) for a list of proposed features (and known issues).
 

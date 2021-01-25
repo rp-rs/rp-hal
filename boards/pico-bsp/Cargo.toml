@@ -1,10 +1,10 @@
 [package]
-name = "pico-bsc"
+name = "pico-bsp"
 version = "0.1.0"
 authors = ["evan <evanmolder@gmail.com>"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal/boards/pico-bsc"
-description = "Board Support Crate for the Raspberry Pi Pico"
+description = "Board Support Package for the Raspberry Pi Pico"
 license = "MIT OR Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
