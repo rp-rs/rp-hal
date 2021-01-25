@@ -10,5 +10,7 @@ license = "MIT OR Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rp2040-pac = "0.1.0"
-embedded-hal = "1.0.0-alpha.4"
+cortex-m = "0.7.1"
+embedded-hal = "0.2.4"
+nb = "1.0.0"
+rp2040-pac = "0.1.1"
