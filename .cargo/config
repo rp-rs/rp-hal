@@ -1,0 +1,3 @@
+[build]
+# Instruction set of Cortex-M0+
+target = "thumbv6m-none-eabi"
