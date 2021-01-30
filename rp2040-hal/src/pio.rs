@@ -19,23 +19,23 @@ impl core::fmt::Debug for PIO {
 }
 
 impl PIO {
-    fn find_offset_for_instructions(&self, i: &[u16], origin: Option<u8>) -> Option<u8> {
+    fn find_offset_for_instructions(&self, i: &[u16], origin: Option<u8>) -> Option<usize> {
         if i.len() > PIO_INSTRUCTION_COUNT {
             None
         } else {
             let mask = (1 << i.len()) - 1;
             if let Some(origin) = origin {
-                if origin as usize > PIO_INSTRUCTION_COUNT - i.len() {
+                if origin as usize > PIO_INSTRUCTION_COUNT - i.len()
+                    || self.used_instruction_space & (mask << origin) != 0
+                {
                     None
-                } else if self.used_instruction_space & (mask << origin) != 0 {
-                    Some(origin)
                 } else {
-                    None
+                    Some(origin as usize)
                 }
             } else {
                 for i in (32 - i.len())..=0 {
                     if self.used_instruction_space & (mask << i) == 0 {
-                        return Some(i as u8);
+                        return Some(i);
                     }
                 }
                 None
@@ -43,16 +43,15 @@ impl PIO {
         }
     }
 
-    fn add_program(&mut self, instructions: &[u16], origin: Option<u8>) -> Option<u8> {
+    fn add_program(&mut self, instructions: &[u16], origin: Option<u8>) -> Option<usize> {
         if let Some(offset) = self.find_offset_for_instructions(instructions, origin) {
             let instrs: &[VolatileCell<u32>; 16] = unsafe {
                 // FIXME: waiting on svd changes to make this an array
                 &*(&self.pio.instr_mem0 as *const pac::generic::Reg<u32, pac::pio0::_INSTR_MEM0>
                     as *const [vcell::VolatileCell<u32>; 16])
             };
-            // 1. Move program somewhere into the 32 instrs of memory in pio
             for (i, instr) in instructions.iter().enumerate() {
-                instrs[i].set(*instr as u32);
+                instrs[i + offset].set(*instr as u32);
             }
             self.used_instruction_space |= (1 << instructions.len()) - 1;
             Some(offset)
@@ -67,16 +66,29 @@ impl PIO {
 pub struct StateMachine {}
 
 impl StateMachine {
-    /*
-     // get pc
-        p.PIO0.sm0_addr.read().bits();
-    // pull from rx
-        p.PIO0.rxf0.read().bits();
-    // push to tx
-        p.PIO0.txf0.write(|w| w.bits(0));
-    // check if stalled
-        p.PIO0.sm0_execctrl.read().exec_stalled().bit();
-    */
+    /// The address of the instruction currently being executed.
+    pub fn instruction_address(&self) -> u32 {
+        // p.PIO0.sm0_addr.read().bits()
+        panic!()
+    }
+
+    /// Pull a word from the RX FIFO
+    pub fn pull(&self) -> u32 {
+        // p.PIO0.rxf0.read().bits();
+        panic!()
+    }
+
+    /// Push a word into the TX FIFO
+    pub fn push(&self, _word: u32) {
+        // p.PIO0.txf0.write(|w| w.bits(word));
+        panic!()
+    }
+
+    /// Check if the current instruction is stalled.
+    pub fn stalled(&self) -> bool {
+        // p.PIO0.sm0_execctrl.read().exec_stalled().bit()
+        panic!()
+    }
 }
 
 /// Builder to deploy a fully configured PIO program on one of the state
