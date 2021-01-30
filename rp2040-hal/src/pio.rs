@@ -1,35 +1,91 @@
 //! Programmable IO (PIO)
 /// See [Chapter 3](https://rptl.io/pico-datasheet) for more details.
+use vcell::VolatileCell;
 
-use rp2040_pac::Peripherals;
-// use vcell::VolatileCell;
+const PIO_INSTRUCTION_COUNT: usize = 32;
 
-/*
-/// aaa
-pub fn aaa<P>(p: &Peripherals, program: &pio::Program<P>) {
-    // atomic steps numbered
-
-    let instrs: &[VolatileCell<u32>; 16] = unsafe { core::mem::transmute(&p.PIO0.instr_mem0) };
-    // 1. Move program somewhere into the 32 instrs of memory in pio
-    for (i, instr) in program.code().iter().enumerate() {
-        instrs[i].set(*instr as u32);
-    }
-
-    // 2. Find a free state machine
-
-    unsafe {
-        // 8. Interact with the state machine.
-        p.PIO0.sm0_addr.read().bits();
-        p.PIO0.rxf0.read().bits();
-        p.PIO0.txf0.write(|w| w.bits(0));
-        p.PIO0.sm0_execctrl.read().exec_stalled().bit();
+/// Programmable IO Block
+pub struct PIO {
+    used_instruction_space: u32, // bit for each PIO_INSTRUCTION_COUNT
+    pio: rp2040_pac::PIO0,       // FIXME: waiting on svd to make this PIO instead of PIO0
+}
+impl core::fmt::Debug for PIO {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.debug_struct("PIO")
+            .field("used_instruction_space", &self.used_instruction_space)
+            .field("pio", &"PIO { .. }")
+            .finish()
     }
 }
-*/
 
-/// a
+impl PIO {
+    fn find_offset_for_instructions(&self, i: &[u16], origin: Option<u8>) -> Option<u8> {
+        if i.len() > PIO_INSTRUCTION_COUNT {
+            None
+        } else {
+            let mask = (1 << i.len()) - 1;
+            if let Some(origin) = origin {
+                if origin as usize > PIO_INSTRUCTION_COUNT - i.len() {
+                    None
+                } else if self.used_instruction_space & (mask << origin) != 0 {
+                    Some(origin)
+                } else {
+                    None
+                }
+            } else {
+                for i in (32 - i.len())..=0 {
+                    if self.used_instruction_space & (mask << i) == 0 {
+                        return Some(i as u8);
+                    }
+                }
+                None
+            }
+        }
+    }
+
+    fn add_program(&mut self, instructions: &[u16], origin: Option<u8>) -> Option<u8> {
+        if let Some(offset) = self.find_offset_for_instructions(instructions, origin) {
+            let instrs: &[VolatileCell<u32>; 16] = unsafe {
+                // FIXME: waiting on svd changes to make this an array
+                &*(&self.pio.instr_mem0 as *const pac::generic::Reg<u32, pac::pio0::_INSTR_MEM0>
+                    as *const [vcell::VolatileCell<u32>; 16])
+            };
+            // 1. Move program somewhere into the 32 instrs of memory in pio
+            for (i, instr) in instructions.iter().enumerate() {
+                instrs[i].set(*instr as u32);
+            }
+            self.used_instruction_space |= (1 << instructions.len()) - 1;
+            Some(offset)
+        } else {
+            None
+        }
+    }
+}
+
+/// PIO State Machine.
+#[derive(Debug)]
+pub struct StateMachine {}
+
+impl StateMachine {
+    /*
+     // get pc
+        p.PIO0.sm0_addr.read().bits();
+    // pull from rx
+        p.PIO0.rxf0.read().bits();
+    // push to tx
+        p.PIO0.txf0.write(|w| w.bits(0));
+    // check if stalled
+        p.PIO0.sm0_execctrl.read().exec_stalled().bit();
+    */
+}
+
+/// Builder to deploy a fully configured PIO program on one of the state
+/// machines.
+#[derive(Debug)]
 pub struct PIOBuilder<'a> {
-    p: &'a Peripherals,
+    p: &'a mut PIO,
+    instructions: &'a [u16],
+    instruction_offset: Option<u8>,
     // wrap program from top to bottom
     wrap_top: u8,
     wrap_bottom: u8,
@@ -81,10 +137,12 @@ pub struct PIOBuilder<'a> {
 }
 
 impl<'a> PIOBuilder<'a> {
-    /// a
-    pub fn new(p: &'a Peripherals) -> Self {
+    /// Create a PIOBuilder instance, with the PIO which will be used.
+    pub fn new(pio: &'a mut PIO) -> Self {
         PIOBuilder {
-            p,
+            p: pio,
+            instructions: &[],
+            instruction_offset: None,
             wrap_top: 0,
             wrap_bottom: 31,
             side_en: false,
@@ -115,18 +173,27 @@ impl<'a> PIOBuilder<'a> {
     }
 }
 
-/// a
+/// Buffer sharing configuration.
+#[derive(Debug)]
 pub enum Buffers {
-    /// a
+    /// No sharing.
     RxTx,
-    /// a
+    /// The memory of the RX FIFO is given to the TX FIFO to double its depth.
     OnlyTx,
-    /// a
+    /// The memory of the TX FIFO is given to the RX FIFO to double its depth.
     OnlyRx,
 }
 
+/// Errors that occured during `PIOBuilder::build`.
+#[derive(Debug)]
+pub enum BuildError {
+    /// There was not enough space for the instructions on the selected PIO.
+    NoSpace,
+}
+
 impl<'a> PIOBuilder<'a> {
-    /// a
+    /// Set config settings based on information from the given `pio::Program`.
+    /// Additional configuration may be needed in addition to this.
     pub fn with_program<P>(&mut self, p: &pio::Program<P>) -> &mut Self {
         self.wrap_top = p.wrap().0;
         self.wrap_bottom = p.wrap().1;
@@ -139,7 +206,7 @@ impl<'a> PIOBuilder<'a> {
         self
     }
 
-    /// a
+    /// Set buffer sharing. See `Buffers` for more information.
     pub fn buffers(&mut self, buffers: Buffers) -> &mut Self {
         match buffers {
             Buffers::RxTx => {
@@ -167,15 +234,23 @@ impl<'a> PIOBuilder<'a> {
         self
     }
 
-    /// a
-    pub fn build(self) {
+    /// Build the config and deploy it to a StateMachine.
+    pub fn build(self) -> Result<StateMachine, BuildError> {
         const SM_ID: u8 = 0;
+
+        let offset = match self
+            .p
+            .add_program(self.instructions, self.instruction_offset)
+        {
+            Some(o) => o,
+            None => return Err(BuildError::NoSpace),
+        };
 
         // ### STOP SM ####
         self.set_sm_enabled(SM_ID, false);
 
         // ### CONFIGURE SM ###
-        self.p.PIO0.sm0_execctrl.write(|w| {
+        self.p.pio.sm0_execctrl.write(|w| {
             unsafe {
                 w.wrap_top().bits(self.wrap_top);
                 w.wrap_bottom().bits(self.wrap_bottom);
@@ -200,7 +275,7 @@ impl<'a> PIOBuilder<'a> {
             w
         });
 
-        self.p.PIO0.sm0_pinctrl.write(|w| {
+        self.p.pio.sm0_pinctrl.write(|w| {
             unsafe {
                 w.in_base().bits(self.in_base);
             }
@@ -223,7 +298,7 @@ impl<'a> PIOBuilder<'a> {
             w
         });
 
-        self.p.PIO0.sm0_shiftctrl.write(|w| {
+        self.p.pio.sm0_shiftctrl.write(|w| {
             w.fjoin_rx().bit(self.fjoin_rx);
             w.fjoin_tx().bit(self.fjoin_tx);
 
@@ -241,7 +316,7 @@ impl<'a> PIOBuilder<'a> {
             w
         });
 
-        self.p.PIO0.sm0_clkdiv.write(|w| {
+        self.p.pio.sm0_clkdiv.write(|w| {
             unsafe {
                 w.int().bits(self.clkdiv_int);
                 w.frac().bits(self.clkdiv_frac);
@@ -251,39 +326,44 @@ impl<'a> PIOBuilder<'a> {
         });
 
         // ### RESTART SM & RESET SM CLOCK ###
-        self.p.PIO0.ctrl.write(|w| {
+        self.p.pio.ctrl.write(|w| {
             unsafe {
                 w.sm_restart()
-                    .bits(self.p.PIO0.ctrl.read().sm_restart().bits() | 1 << SM_ID);
+                    .bits(self.p.pio.ctrl.read().sm_restart().bits() | 1 << SM_ID);
                 w.clkdiv_restart()
-                    .bits(self.p.PIO0.ctrl.read().clkdiv_restart().bits() | 1 << SM_ID);
+                    .bits(self.p.pio.ctrl.read().clkdiv_restart().bits() | 1 << SM_ID);
             }
 
             w
         });
 
         // ### SET SM PC ###
-        self.p.PIO0.sm0_instr.write(|w| {
+        self.p.pio.sm0_instr.write(|w| {
             // set starting location by setting the state machine
             // to execute a jmp to the beginning of the program
             // we loaded in.
+            #[allow(clippy::unusual_byte_groupings)]
+            let mut instr = 0b000_00000_000_00000; // JMP 0
+            instr |= offset as u16;
             unsafe {
-                w.sm0_instr().bits(0b000_00000_000_00000); // jmp 0
+                w.sm0_instr().bits(instr);
             }
             w
         });
 
         // ### ENABLE SM ###
         self.set_sm_enabled(0, true);
+
+        Ok(StateMachine {})
     }
 }
 
 impl<'a> PIOBuilder<'a> {
     fn set_sm_enabled(&self, id: u8, enabled: bool) {
-        let bits = self.p.PIO0.ctrl.read().sm_enable().bits();
+        let bits = self.p.pio.ctrl.read().sm_enable().bits();
         let bits = (bits & !(1 << id)) | ((enabled as u8) << id);
         self.p
-            .PIO0
+            .pio
             .ctrl
             .write(|w| unsafe { w.sm_enable().bits(bits) });
     }
