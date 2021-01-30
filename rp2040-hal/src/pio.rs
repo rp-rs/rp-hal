@@ -8,6 +8,7 @@ const PIO_INSTRUCTION_COUNT: usize = 32;
 pub struct PIO {
     used_instruction_space: u32, // bit for each PIO_INSTRUCTION_COUNT
     pio: rp2040_pac::PIO0,       // FIXME: waiting on svd to make this PIO instead of PIO0
+    state_machines: [StateMachine; 4],
 }
 impl core::fmt::Debug for PIO {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -19,6 +20,11 @@ impl core::fmt::Debug for PIO {
 }
 
 impl PIO {
+    /// This PIO's state machines.
+    pub fn state_machines(&self) -> &[StateMachine] {
+        &self.state_machines
+    }
+
     fn find_offset_for_instructions(&self, i: &[u16], origin: Option<u8>) -> Option<usize> {
         if i.len() > PIO_INSTRUCTION_COUNT {
             None
@@ -63,31 +69,65 @@ impl PIO {
 
 /// PIO State Machine.
 #[derive(Debug)]
-pub struct StateMachine {}
+pub struct StateMachine {
+    id: u8,
+    pio: *mut PIO,
+}
 
+// FIXME: all these methods are specific to sm0 because lack of svd arrays
 impl StateMachine {
+    /// Start and stop the state machine.
+    pub fn set_enabled(&self, enabled: bool) {
+        let bits = self.pio().pio.ctrl.read().sm_enable().bits();
+        let bits = (bits & !(1 << self.id)) | ((enabled as u8) << self.id);
+        self.pio()
+            .pio
+            .ctrl
+            .write(|w| unsafe { w.sm_enable().bits(bits) });
+    }
+
+    fn restart(&self) {
+        let bits = self.pio().pio.ctrl.read().sm_restart().bits() | 1 << self.id;
+        self.pio()
+            .pio
+            .ctrl
+            .write(|w| unsafe { w.sm_restart().bits(bits) });
+    }
+
+    fn reset_clock(&self) {
+        let bits = self.pio().pio.ctrl.read().clkdiv_restart().bits() | 1 << self.id;
+        self.pio()
+            .pio
+            .ctrl
+            .write(|w| unsafe { w.clkdiv_restart().bits(bits) });
+    }
+
     /// The address of the instruction currently being executed.
     pub fn instruction_address(&self) -> u32 {
-        // p.PIO0.sm0_addr.read().bits()
-        panic!()
+        self.pio().pio.sm0_addr.read().bits()
     }
 
     /// Pull a word from the RX FIFO
     pub fn pull(&self) -> u32 {
-        // p.PIO0.rxf0.read().bits();
-        panic!()
+        self.pio().pio.rxf0.read().bits()
     }
 
     /// Push a word into the TX FIFO
-    pub fn push(&self, _word: u32) {
-        // p.PIO0.txf0.write(|w| w.bits(word));
-        panic!()
+    pub fn push(&self, word: u32) {
+        self.pio().pio.txf0.write(|w| unsafe { w.bits(word) });
     }
 
     /// Check if the current instruction is stalled.
     pub fn stalled(&self) -> bool {
-        // p.PIO0.sm0_execctrl.read().exec_stalled().bit()
-        panic!()
+        self.pio().pio.sm0_execctrl.read().exec_stalled().bit()
+    }
+
+    fn pio(&self) -> &PIO {
+        unsafe { &*self.pio }
+    }
+
+    fn pio_mut(&mut self) -> &mut PIO {
+        unsafe { &mut *self.pio }
     }
 }
 
@@ -95,7 +135,7 @@ impl StateMachine {
 /// machines.
 #[derive(Debug)]
 pub struct PIOBuilder<'a> {
-    p: &'a mut PIO,
+    m: &'a mut StateMachine,
     instructions: &'a [u16],
     instruction_offset: Option<u8>,
     // wrap program from top to bottom
@@ -150,9 +190,9 @@ pub struct PIOBuilder<'a> {
 
 impl<'a> PIOBuilder<'a> {
     /// Create a PIOBuilder instance, with the PIO which will be used.
-    pub fn new(pio: &'a mut PIO) -> Self {
+    pub fn new(state_machine: &'a mut StateMachine) -> Self {
         PIOBuilder {
-            p: pio,
+            m: state_machine,
             instructions: &[],
             instruction_offset: None,
             wrap_top: 0,
@@ -247,11 +287,10 @@ impl<'a> PIOBuilder<'a> {
     }
 
     /// Build the config and deploy it to a StateMachine.
-    pub fn build(self) -> Result<StateMachine, BuildError> {
-        const SM_ID: u8 = 0;
-
+    pub fn build(self) -> Result<&'a mut StateMachine, BuildError> {
         let offset = match self
-            .p
+            .m
+            .pio_mut()
             .add_program(self.instructions, self.instruction_offset)
         {
             Some(o) => o,
@@ -259,10 +298,10 @@ impl<'a> PIOBuilder<'a> {
         };
 
         // ### STOP SM ####
-        self.set_sm_enabled(SM_ID, false);
+        self.m.set_enabled(false);
 
         // ### CONFIGURE SM ###
-        self.p.pio.sm0_execctrl.write(|w| {
+        self.m.pio().pio.sm0_execctrl.write(|w| {
             unsafe {
                 w.wrap_top().bits(self.wrap_top);
                 w.wrap_bottom().bits(self.wrap_bottom);
@@ -287,7 +326,7 @@ impl<'a> PIOBuilder<'a> {
             w
         });
 
-        self.p.pio.sm0_pinctrl.write(|w| {
+        self.m.pio().pio.sm0_pinctrl.write(|w| {
             unsafe {
                 w.in_base().bits(self.in_base);
             }
@@ -310,7 +349,7 @@ impl<'a> PIOBuilder<'a> {
             w
         });
 
-        self.p.pio.sm0_shiftctrl.write(|w| {
+        self.m.pio().pio.sm0_shiftctrl.write(|w| {
             w.fjoin_rx().bit(self.fjoin_rx);
             w.fjoin_tx().bit(self.fjoin_tx);
 
@@ -328,7 +367,7 @@ impl<'a> PIOBuilder<'a> {
             w
         });
 
-        self.p.pio.sm0_clkdiv.write(|w| {
+        self.m.pio().pio.sm0_clkdiv.write(|w| {
             unsafe {
                 w.int().bits(self.clkdiv_int);
                 w.frac().bits(self.clkdiv_frac);
@@ -338,19 +377,11 @@ impl<'a> PIOBuilder<'a> {
         });
 
         // ### RESTART SM & RESET SM CLOCK ###
-        self.p.pio.ctrl.write(|w| {
-            unsafe {
-                w.sm_restart()
-                    .bits(self.p.pio.ctrl.read().sm_restart().bits() | 1 << SM_ID);
-                w.clkdiv_restart()
-                    .bits(self.p.pio.ctrl.read().clkdiv_restart().bits() | 1 << SM_ID);
-            }
-
-            w
-        });
+        self.m.restart();
+        self.m.reset_clock();
 
         // ### SET SM PC ###
-        self.p.pio.sm0_instr.write(|w| {
+        self.m.pio().pio.sm0_instr.write(|w| {
             // set starting location by setting the state machine
             // to execute a jmp to the beginning of the program
             // we loaded in.
@@ -364,19 +395,8 @@ impl<'a> PIOBuilder<'a> {
         });
 
         // ### ENABLE SM ###
-        self.set_sm_enabled(0, true);
+        self.m.set_enabled(true);
 
-        Ok(StateMachine {})
-    }
-}
-
-impl<'a> PIOBuilder<'a> {
-    fn set_sm_enabled(&self, id: u8, enabled: bool) {
-        let bits = self.p.pio.ctrl.read().sm_enable().bits();
-        let bits = (bits & !(1 << id)) | ((enabled as u8) << id);
-        self.p
-            .pio
-            .ctrl
-            .write(|w| unsafe { w.sm_enable().bits(bits) });
+        Ok(self.m)
     }
 }
