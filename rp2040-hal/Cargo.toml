@@ -14,3 +14,5 @@ cortex-m = "0.7.1"
 embedded-hal = "0.2.4"
 nb = "1.0.0"
 rp2040-pac = "0.1.1"
+vcell = "0.1"
+pio = { git = "https://github.com/rp-rs/pio-rs.git", branch = "main" }
