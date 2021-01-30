@@ -17,6 +17,7 @@ pub mod adc;
 pub mod clocks;
 pub mod gpio;
 pub mod i2c;
+pub mod pio;
 pub mod pll;
 pub mod prelude;
 pub mod pwm;

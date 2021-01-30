@@ -13,12 +13,14 @@ license = "MIT OR Apache-2.0"
 cortex-m = "0.7.2"
 embedded-hal = { version = "0.2.5", features = ["unproven"] }
 embedded-time = "0.12.0"
-nb = "1.0"
-rp2040-pac = { git = "https://github.com/rp-rs/rp2040-pac", rev = "0226d2c28e8dca03475d6783cbdf07f535859c23" }
-paste = "1.0"
-void = { version = "1.0.2", default-features = false }
-usb-device = "0.2.8"
 itertools = { version = "0.10.1", default-features = false }
+nb = "1.0"
+paste = "1.0"
+pio = { git = "https://github.com/rp-rs/pio-rs.git", branch = "main" }
+rp2040-pac = { git = "https://github.com/rp-rs/rp2040-pac", rev = "0226d2c28e8dca03475d6783cbdf07f535859c23" }
+usb-device = "0.2.8"
+vcell = "0.1"
+void = { version = "1.0.2", default-features = false }
 
 [dev-dependencies]
 cortex-m-rt = "0.6.14"
