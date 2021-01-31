@@ -8,7 +8,7 @@ pub trait Instance: core::ops::Deref<Target = rp2040_pac::pio0::RegisterBlock> {
 
 /// Programmable IO Block
 pub struct PIO<P: Instance> {
-    used_instruction_space: u32, // bit for each PIO_INSTRUCTION_COUNT
+    used_instruction_space: core::cell::Cell<u32>, // bit for each PIO_INSTRUCTION_COUNT
     pio: P,
     state_machines: [StateMachine<P>; 4],
 }
@@ -26,7 +26,7 @@ impl<P: Instance> PIO<P> {
     /// Create a new PIO wrapper.
     pub fn new(pio: P) -> Self {
         PIO {
-            used_instruction_space: 0,
+            used_instruction_space: core::cell::Cell::new(0),
             state_machines: [
                 StateMachine {
                     id: 0,
@@ -70,7 +70,7 @@ impl<P: Instance> PIO<P> {
             let mask = (1 << i.len()) - 1;
             if let Some(origin) = origin {
                 if origin as usize > PIO_INSTRUCTION_COUNT - i.len()
-                    || self.used_instruction_space & (mask << origin) != 0
+                    || self.used_instruction_space.get() & (mask << origin) != 0
                 {
                     None
                 } else {
@@ -78,7 +78,7 @@ impl<P: Instance> PIO<P> {
                 }
             } else {
                 for i in (32 - i.len())..=0 {
-                    if self.used_instruction_space & (mask << i) == 0 {
+                    if self.used_instruction_space.get() & (mask << i) == 0 {
                         return Some(i);
                     }
                 }
@@ -87,12 +87,13 @@ impl<P: Instance> PIO<P> {
         }
     }
 
-    fn add_program(&mut self, instructions: &[u16], origin: Option<u8>) -> Option<usize> {
+    fn add_program(&self, instructions: &[u16], origin: Option<u8>) -> Option<usize> {
         if let Some(offset) = self.find_offset_for_instructions(instructions, origin) {
             for (i, instr) in instructions.iter().enumerate() {
                 self.pio.instr_mem[i + offset].write(|w| unsafe { w.bits(*instr as u32) })
             }
-            self.used_instruction_space |= (1 << instructions.len()) - 1;
+            self.used_instruction_space
+                .set(self.used_instruction_space.get() | ((1 << instructions.len()) - 1));
             Some(offset)
         } else {
             None
@@ -346,11 +347,7 @@ impl<'a> PIOBuilder<'a> {
     }
 
     /// Build the config and deploy it to a StateMachine.
-    pub fn build<P: Instance>(
-        self,
-        pio: &mut PIO<P>,
-        sm: &StateMachine<P>,
-    ) -> Result<(), BuildError> {
+    pub fn build<P: Instance>(self, pio: &PIO<P>, sm: &StateMachine<P>) -> Result<(), BuildError> {
         let offset = match pio.add_program(self.instructions, self.instruction_offset) {
             Some(o) => o,
             None => return Err(BuildError::NoSpace),
