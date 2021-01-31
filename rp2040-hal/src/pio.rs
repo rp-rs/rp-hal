@@ -3,13 +3,17 @@
 
 const PIO_INSTRUCTION_COUNT: usize = 32;
 
+/// PIO Instance
+pub trait Instance: core::ops::Deref<Target = rp2040_pac::pio0::RegisterBlock> {}
+
 /// Programmable IO Block
-pub struct PIO {
+pub struct PIO<P: Instance> {
     used_instruction_space: u32, // bit for each PIO_INSTRUCTION_COUNT
-    pio: rp2040_pac::pio0::RegisterBlock,
-    state_machines: [StateMachine; 4],
+    pio: P,
+    state_machines: [StateMachine<P>; 4],
 }
-impl core::fmt::Debug for PIO {
+
+impl<P: Instance> core::fmt::Debug for PIO<P> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.debug_struct("PIO")
             .field("used_instruction_space", &self.used_instruction_space)
@@ -18,9 +22,40 @@ impl core::fmt::Debug for PIO {
     }
 }
 
-impl PIO {
+impl<P: Instance> PIO<P> {
+    /// Create a new PIO wrapper.
+    pub fn new(pio: P) -> Self {
+        PIO {
+            used_instruction_space: 0,
+            pio,
+            state_machines: [
+                StateMachine {
+                    id: 0,
+                    pio: core::ptr::null_mut(),
+                },
+                StateMachine {
+                    id: 1,
+                    pio: core::ptr::null_mut(),
+                },
+                StateMachine {
+                    id: 2,
+                    pio: core::ptr::null_mut(),
+                },
+                StateMachine {
+                    id: 3,
+                    pio: core::ptr::null_mut(),
+                },
+            ],
+        }
+    }
+
+    /// Free this instance.
+    pub fn free(self) -> P {
+        self.pio
+    }
+
     /// This PIO's state machines.
-    pub fn state_machines(&self) -> &[StateMachine] {
+    pub fn state_machines(&self) -> &[StateMachine<P>; 4] {
         &self.state_machines
     }
 
@@ -63,12 +98,12 @@ impl PIO {
 
 /// PIO State Machine.
 #[derive(Debug)]
-pub struct StateMachine {
+pub struct StateMachine<P: Instance> {
     id: u8,
-    pio: *mut PIO,
+    pio: *mut PIO<P>,
 }
 
-impl StateMachine {
+impl<P: Instance> StateMachine<P> {
     /// Start and stop the state machine.
     pub fn set_enabled(&self, enabled: bool) {
         let bits = self.pio().pio.ctrl.read().sm_enable().bits();
@@ -137,16 +172,18 @@ impl StateMachine {
         self.sm().sm_execctrl.read().exec_stalled().bits()
     }
 
-    fn sm(&self) -> &rp2040_pac::pio0::SM {
-        &self.pio().pio.sm[self.id as usize]
-    }
-
-    fn pio(&self) -> &PIO {
+    fn pio(&self) -> &PIO<P> {
         unsafe { &*self.pio }
     }
 
-    fn pio_mut(&mut self) -> &mut PIO {
+    // SAFETY: don't mutable alias pls
+    #[allow(clippy::mut_from_ref)]
+    fn pio_mut(&self) -> &mut PIO<P> {
         unsafe { &mut *self.pio }
+    }
+
+    fn sm(&self) -> &rp2040_pac::pio0::SM {
+        &self.pio().pio.sm[self.id as usize]
     }
 }
 
@@ -154,7 +191,6 @@ impl StateMachine {
 /// machines.
 #[derive(Debug)]
 pub struct PIOBuilder<'a> {
-    m: &'a mut StateMachine,
     instructions: &'a [u16],
     instruction_offset: Option<u8>,
     // wrap program from top to bottom
@@ -205,11 +241,9 @@ pub struct PIOBuilder<'a> {
     clock_divisor: f32,
 }
 
-impl<'a> PIOBuilder<'a> {
-    /// Create a PIOBuilder instance, with the PIO which will be used.
-    pub fn new(state_machine: &'a mut StateMachine) -> Self {
+impl<'a> Default for PIOBuilder<'a> {
+    fn default() -> Self {
         PIOBuilder {
-            m: state_machine,
             instructions: &[],
             instruction_offset: None,
             wrap_top: 0,
@@ -316,9 +350,8 @@ impl<'a> PIOBuilder<'a> {
     }
 
     /// Build the config and deploy it to a StateMachine.
-    pub fn build(self) -> Result<&'a mut StateMachine, BuildError> {
-        let offset = match self
-            .m
+    pub fn build(self, sm: &StateMachine<impl Instance>) -> Result<(), BuildError> {
+        let offset = match sm
             .pio_mut()
             .add_program(self.instructions, self.instruction_offset)
         {
@@ -327,10 +360,10 @@ impl<'a> PIOBuilder<'a> {
         };
 
         // ### STOP SM ####
-        self.m.set_enabled(false);
+        sm.set_enabled(false);
 
         // ### CONFIGURE SM ###
-        self.m.sm().sm_execctrl.write(|w| {
+        sm.sm().sm_execctrl.write(|w| {
             unsafe {
                 w.wrap_top().bits(offset as u8 + self.wrap_top);
                 w.wrap_bottom().bits(offset as u8 + self.wrap_bottom);
@@ -355,7 +388,7 @@ impl<'a> PIOBuilder<'a> {
             w
         });
 
-        self.m.sm().sm_pinctrl.write(|w| {
+        sm.sm().sm_pinctrl.write(|w| {
             unsafe {
                 w.in_base().bits(self.in_base);
             }
@@ -378,7 +411,7 @@ impl<'a> PIOBuilder<'a> {
             w
         });
 
-        self.m.sm().sm_shiftctrl.write(|w| {
+        sm.sm().sm_shiftctrl.write(|w| {
             w.fjoin_rx().bit(self.fjoin_rx);
             w.fjoin_tx().bit(self.fjoin_tx);
 
@@ -396,11 +429,11 @@ impl<'a> PIOBuilder<'a> {
             w
         });
 
-        self.m.set_clock_divisor(self.clock_divisor);
+        sm.set_clock_divisor(self.clock_divisor);
 
         // ### RESTART SM & RESET SM CLOCK ###
-        self.m.restart();
-        self.m.reset_clock();
+        sm.restart();
+        sm.reset_clock();
 
         // ### SET SM PC ###
         // set starting location by setting the state machine to execute a jmp
@@ -408,11 +441,11 @@ impl<'a> PIOBuilder<'a> {
         #[allow(clippy::unusual_byte_groupings)]
         let mut instr = 0b000_00000_000_00000; // JMP 0
         instr |= offset as u16;
-        self.m.set_instruction(instr);
+        sm.set_instruction(instr);
 
         // ### ENABLE SM ###
-        self.m.set_enabled(true);
+        sm.set_enabled(true);
 
-        Ok(self.m)
+        Ok(())
     }
 }
