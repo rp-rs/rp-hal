@@ -27,25 +27,29 @@ impl<P: Instance> PIO<P> {
     pub fn new(pio: P) -> Self {
         PIO {
             used_instruction_space: 0,
-            pio,
             state_machines: [
                 StateMachine {
                     id: 0,
-                    pio: core::ptr::null_mut(),
+                    block: pio.deref(),
+                    _phantom: core::marker::PhantomData,
                 },
                 StateMachine {
                     id: 1,
-                    pio: core::ptr::null_mut(),
+                    block: pio.deref(),
+                    _phantom: core::marker::PhantomData,
                 },
                 StateMachine {
                     id: 2,
-                    pio: core::ptr::null_mut(),
+                    block: pio.deref(),
+                    _phantom: core::marker::PhantomData,
                 },
                 StateMachine {
                     id: 3,
-                    pio: core::ptr::null_mut(),
+                    block: pio.deref(),
+                    _phantom: core::marker::PhantomData,
                 },
             ],
+            pio,
         }
     }
 
@@ -100,32 +104,30 @@ impl<P: Instance> PIO<P> {
 #[derive(Debug)]
 pub struct StateMachine<P: Instance> {
     id: u8,
-    pio: *mut PIO<P>,
+    block: *const rp2040_pac::pio0::RegisterBlock,
+    _phantom: core::marker::PhantomData<P>,
 }
 
 impl<P: Instance> StateMachine<P> {
     /// Start and stop the state machine.
     pub fn set_enabled(&self, enabled: bool) {
-        let bits = self.pio().pio.ctrl.read().sm_enable().bits();
+        let bits = self.block().ctrl.read().sm_enable().bits();
         let bits = (bits & !(1 << self.id)) | ((enabled as u8) << self.id);
-        self.pio()
-            .pio
+        self.block()
             .ctrl
             .write(|w| unsafe { w.sm_enable().bits(bits) });
     }
 
     fn restart(&self) {
-        let bits = self.pio().pio.ctrl.read().sm_restart().bits() | 1 << self.id;
-        self.pio()
-            .pio
+        let bits = self.block().ctrl.read().sm_restart().bits() | 1 << self.id;
+        self.block()
             .ctrl
             .write(|w| unsafe { w.sm_restart().bits(bits) });
     }
 
     fn reset_clock(&self) {
-        let bits = self.pio().pio.ctrl.read().clkdiv_restart().bits() | 1 << self.id;
-        self.pio()
-            .pio
+        let bits = self.block().ctrl.read().clkdiv_restart().bits() | 1 << self.id;
+        self.block()
             .ctrl
             .write(|w| unsafe { w.clkdiv_restart().bits(bits) });
     }
@@ -159,12 +161,12 @@ impl<P: Instance> StateMachine<P> {
 
     /// Pull a word from the RX FIFO
     pub fn pull(&self) -> u32 {
-        self.pio().pio.rxf[self.id as usize].read().bits()
+        self.block().rxf[self.id as usize].read().bits()
     }
 
     /// Push a word into the TX FIFO
     pub fn push(&self, word: u32) {
-        self.pio().pio.txf[self.id as usize].write(|w| unsafe { w.bits(word) })
+        self.block().txf[self.id as usize].write(|w| unsafe { w.bits(word) })
     }
 
     /// Check if the current instruction is stalled.
@@ -172,18 +174,12 @@ impl<P: Instance> StateMachine<P> {
         self.sm().sm_execctrl.read().exec_stalled().bits()
     }
 
-    fn pio(&self) -> &PIO<P> {
-        unsafe { &*self.pio }
-    }
-
-    // SAFETY: don't mutable alias pls
-    #[allow(clippy::mut_from_ref)]
-    fn pio_mut(&self) -> &mut PIO<P> {
-        unsafe { &mut *self.pio }
+    fn block(&self) -> &rp2040_pac::pio0::RegisterBlock {
+        unsafe { &*self.block }
     }
 
     fn sm(&self) -> &rp2040_pac::pio0::SM {
-        &self.pio().pio.sm[self.id as usize]
+        &self.block().sm[self.id as usize]
     }
 }
 
@@ -350,11 +346,12 @@ impl<'a> PIOBuilder<'a> {
     }
 
     /// Build the config and deploy it to a StateMachine.
-    pub fn build(self, sm: &StateMachine<impl Instance>) -> Result<(), BuildError> {
-        let offset = match sm
-            .pio_mut()
-            .add_program(self.instructions, self.instruction_offset)
-        {
+    pub fn build<P: Instance>(
+        self,
+        pio: &mut PIO<P>,
+        sm: &StateMachine<P>,
+    ) -> Result<(), BuildError> {
+        let offset = match pio.add_program(self.instructions, self.instruction_offset) {
             Some(o) => o,
             None => return Err(BuildError::NoSpace),
         };
