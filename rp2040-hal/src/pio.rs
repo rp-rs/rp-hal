@@ -1,13 +1,12 @@
 //! Programmable IO (PIO)
 /// See [Chapter 3](https://rptl.io/pico-datasheet) for more details.
-use vcell::VolatileCell;
 
 const PIO_INSTRUCTION_COUNT: usize = 32;
 
 /// Programmable IO Block
 pub struct PIO {
     used_instruction_space: u32, // bit for each PIO_INSTRUCTION_COUNT
-    pio: rp2040_pac::PIO0,       // FIXME: waiting on svd to make this PIO instead of PIO0
+    pio: rp2040_pac::pio0::RegisterBlock,
     state_machines: [StateMachine; 4],
 }
 impl core::fmt::Debug for PIO {
@@ -51,13 +50,8 @@ impl PIO {
 
     fn add_program(&mut self, instructions: &[u16], origin: Option<u8>) -> Option<usize> {
         if let Some(offset) = self.find_offset_for_instructions(instructions, origin) {
-            let instrs: &[VolatileCell<u32>; 16] = unsafe {
-                // FIXME: waiting on svd changes to make this an array
-                &*(&self.pio.instr_mem0 as *const pac::generic::Reg<u32, pac::pio0::_INSTR_MEM0>
-                    as *const [vcell::VolatileCell<u32>; 16])
-            };
             for (i, instr) in instructions.iter().enumerate() {
-                instrs[i + offset].set(*instr as u32);
+                self.pio.instr_mem[i + offset].write(|w| unsafe { w.bits(*instr as u32) })
             }
             self.used_instruction_space |= (1 << instructions.len()) - 1;
             Some(offset)
@@ -74,7 +68,6 @@ pub struct StateMachine {
     pio: *mut PIO,
 }
 
-// FIXME: all these methods are specific to sm0 because lack of svd arrays
 impl StateMachine {
     /// Start and stop the state machine.
     pub fn set_enabled(&self, enabled: bool) {
@@ -102,24 +95,50 @@ impl StateMachine {
             .write(|w| unsafe { w.clkdiv_restart().bits(bits) });
     }
 
+    fn set_clock_divisor(&self, divisor: f32) {
+        // sm frequency = clock freq / (CLKDIV_INT + CLKDIV_FRAC / 256)
+        let int = divisor as u16;
+        let frac = (divisor.fract() * 256.0) as u8;
+
+        self.sm().sm_clkdiv.write(|w| {
+            unsafe {
+                w.int().bits(int);
+                w.frac().bits(frac);
+            }
+
+            w
+        });
+    }
+
     /// The address of the instruction currently being executed.
     pub fn instruction_address(&self) -> u32 {
-        self.pio().pio.sm0_addr.read().bits()
+        self.sm().sm_addr.read().bits()
+    }
+
+    /// Set the current instruction.
+    pub fn set_instruction(&self, instruction: u16) {
+        self.sm()
+            .sm_instr
+            .write(|w| unsafe { w.sm0_instr().bits(instruction) })
     }
 
     /// Pull a word from the RX FIFO
     pub fn pull(&self) -> u32 {
-        self.pio().pio.rxf0.read().bits()
+        self.pio().pio.rxf[self.id as usize].read().bits()
     }
 
     /// Push a word into the TX FIFO
     pub fn push(&self, word: u32) {
-        self.pio().pio.txf0.write(|w| unsafe { w.bits(word) });
+        self.pio().pio.txf[self.id as usize].write(|w| unsafe { w.bits(word) })
     }
 
     /// Check if the current instruction is stalled.
     pub fn stalled(&self) -> bool {
-        self.pio().pio.sm0_execctrl.read().exec_stalled().bit()
+        self.sm().sm_execctrl.read().exec_stalled().bits()
+    }
+
+    fn sm(&self) -> &rp2040_pac::pio0::SM {
+        &self.pio().pio.sm[self.id as usize]
     }
 
     fn pio(&self) -> &PIO {
@@ -183,9 +202,7 @@ pub struct PIOBuilder<'a> {
     in_shiftdir: bool,
     // true = shift into ISR from right
     out_shiftdir: bool,
-    // sm frequency = clock freq / (CLKDIV_INT + CLKDIV_FRAC / 256)
-    clkdiv_int: u16,
-    clkdiv_frac: u8,
+    clock_divisor: f32,
 }
 
 impl<'a> PIOBuilder<'a> {
@@ -219,8 +236,7 @@ impl<'a> PIOBuilder<'a> {
             push_thresh: 32,
             in_shiftdir: true,
             out_shiftdir: true,
-            clkdiv_int: 1,
-            clkdiv_frac: 0,
+            clock_divisor: 1.0,
         }
     }
 }
@@ -246,15 +262,30 @@ pub enum BuildError {
 impl<'a> PIOBuilder<'a> {
     /// Set config settings based on information from the given `pio::Program`.
     /// Additional configuration may be needed in addition to this.
-    pub fn with_program<P>(&mut self, p: &pio::Program<P>) -> &mut Self {
-        self.wrap_top = p.wrap().0;
-        self.wrap_bottom = p.wrap().1;
+    pub fn with_program<P>(&mut self, p: &'a pio::Program<P>) -> &mut Self {
+        self.instructions(p.code());
+
+        self.wrap(p.wrap().0, p.wrap().1);
 
         self.side_en = p.side_set().optional();
         self.side_pindir = p.side_set().pindirs();
 
         self.sideset_count = p.side_set().bits();
 
+        self
+    }
+
+    /// Set the instructions of the program.
+    pub fn instructions(&mut self, instructions: &'a [u16]) -> &mut Self {
+        self.instructions = instructions;
+        self
+    }
+
+    /// Set the wrap top and bottom. The program will automatically jump from the wrap bottom to
+    /// the wrap top in 0 cycles.
+    pub fn wrap(&mut self, top: u8, bottom: u8) -> &mut Self {
+        self.wrap_top = top;
+        self.wrap_bottom = bottom;
         self
     }
 
@@ -271,7 +302,7 @@ impl<'a> PIOBuilder<'a> {
             }
             Buffers::OnlyRx => {
                 self.fjoin_rx = true;
-                self.fjoin_tx = true;
+                self.fjoin_tx = false;
             }
         }
         self
@@ -279,10 +310,8 @@ impl<'a> PIOBuilder<'a> {
 
     /// 1 for full speed. A clock divisor of `n` will cause the state macine to run 1 cycle every
     /// `n`. For a small `n`, a fractional divisor may introduce unacceptable jitter.
-    pub fn clock_divisor(&mut self, div: f32) -> &mut Self {
-        // sm frequency = clock freq / (CLKDIV_INT + CLKDIV_FRAC / 256)
-        self.clkdiv_int = div as u16;
-        self.clkdiv_frac = (div.fract() * 256.0) as u8;
+    pub fn clock_divisor(&mut self, divisor: f32) -> &mut Self {
+        self.clock_divisor = divisor;
         self
     }
 
@@ -301,10 +330,10 @@ impl<'a> PIOBuilder<'a> {
         self.m.set_enabled(false);
 
         // ### CONFIGURE SM ###
-        self.m.pio().pio.sm0_execctrl.write(|w| {
+        self.m.sm().sm_execctrl.write(|w| {
             unsafe {
-                w.wrap_top().bits(self.wrap_top);
-                w.wrap_bottom().bits(self.wrap_bottom);
+                w.wrap_top().bits(offset as u8 + self.wrap_top);
+                w.wrap_bottom().bits(offset as u8 + self.wrap_bottom);
             }
 
             w.side_en().bit(self.side_en);
@@ -326,7 +355,7 @@ impl<'a> PIOBuilder<'a> {
             w
         });
 
-        self.m.pio().pio.sm0_pinctrl.write(|w| {
+        self.m.sm().sm_pinctrl.write(|w| {
             unsafe {
                 w.in_base().bits(self.in_base);
             }
@@ -349,7 +378,7 @@ impl<'a> PIOBuilder<'a> {
             w
         });
 
-        self.m.pio().pio.sm0_shiftctrl.write(|w| {
+        self.m.sm().sm_shiftctrl.write(|w| {
             w.fjoin_rx().bit(self.fjoin_rx);
             w.fjoin_tx().bit(self.fjoin_tx);
 
@@ -367,32 +396,19 @@ impl<'a> PIOBuilder<'a> {
             w
         });
 
-        self.m.pio().pio.sm0_clkdiv.write(|w| {
-            unsafe {
-                w.int().bits(self.clkdiv_int);
-                w.frac().bits(self.clkdiv_frac);
-            }
-
-            w
-        });
+        self.m.set_clock_divisor(self.clock_divisor);
 
         // ### RESTART SM & RESET SM CLOCK ###
         self.m.restart();
         self.m.reset_clock();
 
         // ### SET SM PC ###
-        self.m.pio().pio.sm0_instr.write(|w| {
-            // set starting location by setting the state machine
-            // to execute a jmp to the beginning of the program
-            // we loaded in.
-            #[allow(clippy::unusual_byte_groupings)]
-            let mut instr = 0b000_00000_000_00000; // JMP 0
-            instr |= offset as u16;
-            unsafe {
-                w.sm0_instr().bits(instr);
-            }
-            w
-        });
+        // set starting location by setting the state machine to execute a jmp
+        // to the beginning of the program we loaded in.
+        #[allow(clippy::unusual_byte_groupings)]
+        let mut instr = 0b000_00000_000_00000; // JMP 0
+        instr |= offset as u16;
+        self.m.set_instruction(instr);
 
         // ### ENABLE SM ###
         self.m.set_enabled(true);
