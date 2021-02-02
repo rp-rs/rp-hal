@@ -16,6 +16,7 @@ pub mod adc;
 pub mod i2c;
 pub mod prelude;
 pub mod pwm;
+pub mod rom_data;
 pub mod rtc;
 pub mod spi;
 pub mod ssi;
