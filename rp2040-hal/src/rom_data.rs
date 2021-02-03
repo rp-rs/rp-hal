@@ -35,8 +35,9 @@ macro_rules! rom_funcs {
     ) => {
         $(
             $(#[$outer])*
-            pub fn $name() -> extern "C" fn( $( $aname : $aty ),* ) -> $ret {
-                rom_table_lookup(FUNC_TABLE, *$c)
+            pub fn $name($( $aname:$aty ),*) -> $ret{
+                let func:  extern "C" fn( $( $aty ),* ) -> $ret = rom_table_lookup(FUNC_TABLE, *$c);
+                func($( $aname ),*)
             }
         )*
     }
