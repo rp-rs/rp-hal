@@ -1,24 +1,26 @@
 //! Functions and data from the RPI Bootrom.
 
+/// A bootrom function table code.
+pub type RomFnTableCode = [u8; 2];
+
+/// This function searches for (table)
+type RomTableLookupFn<T> = unsafe extern "C" fn(*const u16, u32) -> T;
+
+/// The following addresses are described at `2.8.3. Bootrom Contents`
+/// Pointer to the lookup table function supplied by the rom.
+const ROM_TABLE_LOOKUP_PTR: *const u16 = 0x18 as _;
+
+/// Pointer to helper functions lookup table.
 const FUNC_TABLE: *const *const u16 = 0x14 as _;
+
+/// Pointer to the public data lookup table.
 const DATA_TABLE: *const *const u16 = 0x16 as _;
 
-fn rom_table_lookup<T>(table: *const *const u16, tag: [u8; 2]) -> T {
-    let tag = u16::from_le_bytes(tag);
+/// Retrive rom content from a table using a code.
+fn rom_table_lookup<T>(table: *const *const u16, tag: RomFnTableCode) -> T {
     unsafe {
-        let mut entry = *table;
-        loop {
-            let entry_tag = entry.read();
-            if entry_tag == 0 {
-                panic!("not found");
-            }
-            entry = entry.add(1);
-            let entry_addr = entry.read();
-            if entry_tag == tag {
-                break core::mem::transmute_copy(&entry_addr);
-            }
-            entry = entry.add(1);
-        }
+        let rom_table_lookup: RomTableLookupFn<T> = core::mem::transmute(ROM_TABLE_LOOKUP_PTR);
+        rom_table_lookup(*table, u16::from_le_bytes(tag) as u32)
     }
 }
 
