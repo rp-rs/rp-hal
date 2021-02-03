@@ -253,14 +253,24 @@ float_funcs! {
     /// to even on tie. n specifies the position of the binary point in fixed point, so
     /// f = nearest(v/2^n).
     0x68 ufix64_to_float(v: u64, n: i32) -> f32;
-    /// a
+    /// Convert a float to a signed 64-bit integer, rounding towards -Infinity, and clamping
+    /// the result to lie within the range -0x8000000000000000 to 0x7FFFFFFFFFFFFFFF
     0x6c float_to_int64(v: f32) -> i64;
-    /// a
+    ///     Convert a float to a signed fixed point 64-bit integer representation where n
+    /// specifies the position of the binary point in the resulting fixed point representation -
+    /// e.g. _float2fix(0.5f, 16) == 0x8000. This method rounds towards -Infinity, and
+    /// clamps the resulting integer to lie within the range -0x8000000000000000 to
+    /// 0x7FFFFFFFFFFFFFF
     0x70 float_to_fix64(v: f32, n: i32) -> f32;
-    /// a
+    /// Convert a float to an unsigned 64-bit integer, rounding towards -Infinity, and
+    /// clamping the result to lie within the range 0x0000000000000000 to 0xFFFFFFFFFFFFFFFF
     0x74 float_to_uint64(v: f32) -> u64;
-    /// a
-    0x78 float_to_ufix64(v: f32, n: i32) -> u64;
+    /// Convert a float to an unsigned fixed point 64-bit integer representation where n
+    /// specifies the position of the binary point in the resulting fixed point representation,
+    /// e.g. _float2ufix(0.5f, 16) == 0x8000. This method rounds towards -Infinity, and
+    /// clamps the resulting integer to lie within the range 0x0000000000000000 to
+    /// 0xFFFFFFFFFFFFFFFF
+    /// 0x78 float_to_ufix64(v: f32, n: i32) -> u64;
     /// Converts a float to a double.
     0x7c float_to_double(v: f32) -> f64;
 }
@@ -287,62 +297,83 @@ macro_rules! double_funcs {
 }
 
 double_funcs! {
-    /// a
+    /// Return a + b
     0x00 dadd(a: f64, b: f64) -> f64;
-    /// a
+    /// Return a - b
     0x04 dsub(a: f64, b: f64) -> f64;
-    /// a
+    /// Return a * b
     0x08 dmul(a: f64, b: f64) -> f64;
-    /// a
+    /// Return a / b
     0x0c ddiv(a: f64, b: f64) -> f64;
-    /// a
+    /// Return sqrt(v) or -Infinity if v is negative
     0x18 dsqrt(v: f64) -> f64;
-    /// a
+    /// Convert a double to a signed integer, rounding towards -Infinity, and clamping the result to lie
+    /// within the range -0x80000000 to 0x7FFFFFFF
     0x1c double_to_int(v: f64) -> i32;
-    /// a
+    /// Convert a double to an unsigned fixed point integer representation where n specifies the
+    /// position of the binary point in the resulting fixed point representation, e.g. _double2ufix(0.5f,
+    /// 16) == 0x8000. This method rounds towards -Infinity, and clamps the resulting integer to lie
+    /// within the range 0x00000000 to 0xFFFFFFFF
     0x20 double_to_fix(v: f64, n: i32) -> i32;
-    /// a
-    0x24 double_to_uint(v: f64) -> u32;
-    /// a
+    /// Convert a double to an unsigned integer, rounding towards -Infinity, and clamping the result
+    /// to lie within the range 0x00000000 to 0xFFFFFFFF    0x24 double_to_uint(v: f64) -> u32;
     0x28 double_to_ufix(v: f64, n: i32) -> u32;
-    /// a
+    /// Convert a signed integer to the nearest double value, rounding to even on tie
     0x2c int_to_double(v: i32) -> f64;
-    /// a
+    /// Convert a signed fixed point integer representation to the nearest double value, rounding to
+    /// even on tie. n specifies the position of the binary point in fixed point, so f = nearest(v/(2^n))
     0x30 fix_to_double(v: i32, n: i32) -> f64;
-    /// a
+    /// Convert an unsigned integer to the nearest double value, rounding to even on tie
     0x34 uint_to_double(v: u32) -> f64;
-    /// a
+    /// Convert an unsigned fixed point integer representation to the nearest double value, rounding
+    /// to even on tie. n specifies the position of the binary point in fixed point, so
+    /// f = nearest(v/(2^n))
     0x38 ufix_to_double(v: u32, n: i32) -> f64;
-    /// a
+    /// Return the cosine of angle. angle is in radians, and must be in the range -1024 to 1024
     0x3c dcos(angle: f64) -> f64;
-    /// a
+    /// Return the sine of angle. angle is in radians, and must be in the range -1024 to 1024
     0x40 dsin(angle: f64) -> f64;
-    /// a
+    /// Return the tangent of angle. angle is in radians, and must be in the range -1024 to 1024
     0x44 dtan(angle: f64) -> f64;
-    /// a
+    /// Return the exponential value of v, i.e. so 
     0x4c dexp(v: f64) -> f64;
-    /// a
+    /// Return the natural logarithm of v. If v <= 0 return -Infinity
     0x50 dln(v: f64) -> f64;
-    /// a
+    /// Compares two floating point numbers, returning:
+    ///     • 0 if a == b
+    ///     • -1 if a < b
+    ///     • 1 if a > b
     0x54 dcmp(a: f64, b: f64) -> i32;
-    /// a
+    /// Computes the arc tangent of y/x using the signs of arguments to determine the correct
+    /// quadrant
     0x58 datan2(y: f64, x: f64) -> f64;
-    /// a
+    /// Convert a signed 64-bit integer to the nearest double value, rounding to even on tie
     0x5c int64_to_double(v: i64) -> f64;
-    /// a
+    /// Convert a signed fixed point 64-bit integer representation to the nearest double value,
+    /// rounding to even on tie. n specifies the position of the binary point in fixed point, so
+    /// f = nearest(v/(2^n))
     0x60 fix64_to_doubl(v: i64, n: i32) -> f64;
-    /// a
+    /// Convert an unsigned 64-bit integer to the nearest double value, rounding to even on tie
     0x64 uint64_to_double(v: u64) -> f64;
-    /// a
+    /// Convert an unsigned fixed point 64-bit integer representation to the nearest double value,
+    /// rounding to even on tie. n specifies the position of the binary point in fixed point, so
+    /// f = nearest(v/(2^n))
     0x68 ufix64_to_double(v: u64, n: i32) -> f64;
-    /// a
+    /// Convert a double to a signed 64-bit integer, rounding towards -Infinity, and
     0x6c double_to_int64(v: f64) -> i64;
-    /// a
+    /// Convert a double to a signed fixed point 64-bit integer representation where n specifies the
+    /// position of the binary point in the resulting fixed point representation - e.g. _double2fix(0.5f,
+    /// 16) == 0x8000. This method rounds towards -Infinity, and clamps the resulting integer to lie
+    /// within the range -0x8000000000000000 to 0x7FFFFFFFFFFFFFFF    
     0x70 double_to_fix64(v: f64, n: i32) -> i64;
-    /// a
+    /// Convert a double to an unsigned 64-bit integer, rounding towards -Infinity, and clamping the
+    /// result to lie within the range 0x0000000000000000 to 0xFFFFFFFFFFFFFFFF
     0x74 double_to_uint64(v: f64) -> u64;
-    /// a
+    /// Convert a double to an unsigned fixed point 64-bit integer representation where n specifies
+    /// the position of the binary point in the resulting fixed point representation, e.g.
+    /// _double2ufix(0.5f, 16) == 0x8000. This method rounds towards -Infinity, and clamps the
+    /// resulting integer to lie within the range 0x0000000000000000 to 0xFFFFFFFFFFFFFFFF
     0x78 double_to_ufix64(v: f64, n: i32) -> u64;
-    /// a
+    /// Converts a double to a float
     0x7c double_to_float(v: f64) -> f32;
 }
