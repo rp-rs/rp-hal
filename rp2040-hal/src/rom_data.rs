@@ -35,8 +35,9 @@ macro_rules! rom_funcs {
     ) => {
         $(
             $(#[$outer])*
-            pub fn $name() -> extern "C" fn( $( $aname : $aty ),* ) -> $ret {
-                rom_table_lookup(FUNC_TABLE, *$c)
+            pub fn $name($( $aname:$aty ),*) -> $ret{
+                let func:  extern "C" fn( $( $aty ),* ) -> $ret = rom_table_lookup(FUNC_TABLE, *$c);
+                func($( $aname ),*)
             }
         )*
     }
@@ -90,7 +91,7 @@ rom_funcs! {
     /// Program data to a range of flash addresses starting at addr (offset from the start of flash)
     /// and count bytesin size. addr must be aligned to a 256-byte boundary, and count must be a
     /// multiple of 256.
-    b"RP" flash_range_program(addr: u32, data: *mut u8, count: usize) -> ();
+    b"RP" flash_range_program(addr: u32, data: *const u8, count: usize) -> ();
 
     /// Flush and enable the XIP cache. Also clears the IO forcing on QSPI CSn, so that the SSI can
     /// drive the flashchip select as normal.
