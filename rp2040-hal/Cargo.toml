@@ -12,5 +12,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 cortex-m = "0.7.1"
 embedded-hal = "0.2.4"
+embedded-time = "0.10.1"
 nb = "1.0.0"
+num = { version = "0.3.0", default-features = false }
 rp2040-pac = "0.1.1"
