@@ -1,9 +1,6 @@
-use core::marker::PhantomData;
-use embedded_time::duration::*;
-use embedded_time::fixed_point::FixedPoint;
-use embedded_time::rate::*;
-use num::rational::Ratio;
-use num::{CheckedDiv, CheckedMul};
+use embedded_time::{duration::*, fixed_point::FixedPoint, rate::*};
+use nb::Error::{Other, WouldBlock};
+use num::{rational::Ratio, CheckedDiv, CheckedMul};
 
 mod sealed {
     pub trait Sealed {}
@@ -13,7 +10,9 @@ pub trait State: sealed::Sealed {}
 pub trait EnabledOrStable: State {}
 
 pub struct Disabled;
-pub struct Enabled;
+pub struct Enabled {
+    token: Option<StableToken>,
+}
 pub struct Stable;
 
 impl State for Disabled {}
@@ -27,15 +26,37 @@ impl sealed::Sealed for Disabled {}
 impl sealed::Sealed for Enabled {}
 impl sealed::Sealed for Stable {}
 
+pub struct StableToken {
+    _private: (),
+}
+
 #[derive(Debug)]
 pub enum Error {
     StartUpDelayOverflows,
     RateOutOfRange,
 }
 
+#[derive(Debug)]
+pub struct ErrorTokenAlreadyTaken;
+
 /// [Chapter 2 Section 16](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 ///
 /// # Example
+/// ## Blocking
+/// ```rust no_run
+/// use embedded_time::rate::Extensions as _;
+///
+/// use rp2040_pac::Peripherals;
+/// use rp2040_hal::clocks::XOsc;
+///
+/// let p = Peripherals::take().unwrap();
+///
+/// let xosc = XOsc::new_stable_blocking(p.XOSC, 12.MHz()).unwrap();
+///
+/// // Do things with the clock source
+/// ```
+///
+/// ## Non-Blocking
 /// ```rust no_run
 /// use embedded_time::rate::Extensions as _;
 /// use embedded_time::duration::Extensions as _;
@@ -51,21 +72,31 @@ pub enum Error {
 /// xosc.set_startup_delay(&42.milliseconds()).unwrap();
 ///
 /// let mut xosc = xosc.enable();
-/// let stable_xosc = loop {
-///     xosc = match xosc.stable() {
-///         Ok(x) => break x,
-///         Err(x) => x,
-///     };
-/// };
+/// let token = nb::block!(xosc.await_stable()).unwrap();
+/// let xosc = xosc.stable(token);
 ///
 /// // Do things with the clock source
 /// ```
 pub struct XOsc<S: State, R: Rate> {
     inner: pac::XOSC,
     rate: R,
-    state: PhantomData<S>,
+    state: S,
 }
 
+impl<R> XOsc<Stable, R>
+where
+    R: Rate + FixedPoint<T = u32> + Copy + PartialOrd<Megahertz>,
+    Megahertz: PartialOrd<R>,
+{
+    /// Convenient method for getting a XOsc without caring about the state transitions.
+    pub fn new_stable_blocking(peri: pac::XOSC, rate: R) -> Result<XOsc<Stable, R>, Error> {
+        let mut enabled = XOsc::<Disabled, R>::new(peri, rate)?.enable();
+        let token = nb::block!(enabled.await_stable()).unwrap();
+        Ok(enabled.stable(token))
+    }
+}
+
+/// # Disabled
 impl<R> XOsc<Disabled, R>
 where
     R: Rate + FixedPoint<T = u32> + Copy + PartialOrd<Megahertz>,
@@ -76,8 +107,9 @@ where
         let mut dev = XOsc {
             inner: peri,
             rate,
-            state: PhantomData,
+            state: Disabled {},
         };
+        dev.raw_disable();
 
         if !(1.MHz()..=15.MHz()).contains(&rate) {
             return Err(Error::RateOutOfRange);
@@ -107,11 +139,9 @@ where
     pub fn enable(self) -> XOsc<Enabled, R> {
         self.inner.ctrl.write(|w| w.enable().enable());
 
-        XOsc {
-            inner: self.inner,
-            rate: self.rate,
-            state: PhantomData,
-        }
+        self.transition(Enabled {
+            token: Some(StableToken { _private: () }),
+        })
     }
 
     /// Release the inner peripheral.
@@ -120,35 +150,63 @@ where
     }
 }
 
+/// # Enabled
 impl<R: Rate> XOsc<Enabled, R> {
-    /// Check if the oscillator is stable and can be used. Returns the old state if is not yet stable.
-    pub fn stable(self) -> Result<XOsc<Stable, R>, Self> {
-        if !self.inner.status.read().stable().bit_is_set() {
+    /// Transition to the stable state. Acquire a token by calling `await_stable`
+    pub fn stable(self, _: StableToken) -> XOsc<Stable, R> {
+        self.transition(Stable {})
+    }
+
+    /// Get a nb result to await stable
+    pub fn await_stable(&mut self) -> nb::Result<StableToken, ErrorTokenAlreadyTaken> {
+        let is_stable = self.inner.status.read().stable().bit_is_set();
+        if !is_stable {
+            return Err(WouldBlock);
+        }
+
+        match self.state.token.take() {
+            None => Err(Other(ErrorTokenAlreadyTaken {})),
+            Some(token) => Ok(token),
+        }
+    }
+
+    /// Disable the device returning to the Disabled state. Returns an error with the current
+    /// state if the stable token was already taken.
+    pub fn disable(mut self) -> Result<XOsc<Disabled, R>, Self> {
+        if self.state.token.is_none() {
             return Err(self);
         }
 
-        Ok(XOsc {
-            inner: self.inner,
-            rate: self.rate,
-            state: PhantomData,
-        })
+        self.raw_disable();
+        Ok(self.transition(Disabled {}))
     }
 }
 
-impl<R: Rate, S: EnabledOrStable> XOsc<S, R> {
+/// # Stable
+impl<R: Rate> XOsc<Stable, R> {
     /// This disables the device without checking if the clock is still in use
     // ToDo: Should this be `unsafe`?
-    pub fn disable_unchecked(self) -> XOsc<Disabled, R> {
-        self.inner.ctrl.write(|w| w.enable().disable());
+    pub fn disable_unchecked(mut self) -> XOsc<Disabled, R> {
+        self.raw_disable();
+        self.transition(Disabled {})
+    }
+}
 
+impl<S: State, R: Rate> XOsc<S, R> {
+    fn transition<To: State>(self, to: To) -> XOsc<To, R> {
         XOsc {
             inner: self.inner,
             rate: self.rate,
-            state: PhantomData,
+            state: to,
         }
+    }
+
+    fn raw_disable(&mut self) {
+        self.inner.ctrl.write(|w| w.enable().disable());
     }
 }
 
+#[inline(always)]
 fn delay_cnt<R: Rate + FixedPoint<T = u32>, D: Duration + FixedPoint<T = u32>>(
     rate: &R,
     startup_delay: &D,
@@ -170,7 +228,7 @@ fn delay_cnt<R: Rate + FixedPoint<T = u32>, D: Duration + FixedPoint<T = u32>>(
         .ceil()
         .to_integer();
 
-    if reg_val > 0x3fff {
+    if reg_val > 0b0011_1111_1111_1111 {
         // The register can only hold 14 bits
         return None;
     }
