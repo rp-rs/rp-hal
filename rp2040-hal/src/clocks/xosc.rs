@@ -1,3 +1,4 @@
+use crate::clocks::{ClkDevice, ClkRate, ClkSource};
 use embedded_time::{duration::*, fixed_point::FixedPoint, rate::*};
 use nb::Error::{Other, WouldBlock};
 use num::{rational::Ratio, CheckedDiv, CheckedMul};
@@ -77,15 +78,23 @@ pub struct ErrorTokenAlreadyTaken;
 ///
 /// // Do things with the clock source
 /// ```
-pub struct XOsc<S: State, R: Rate> {
+pub struct XOsc<S: State, R: ClkRate> {
     inner: pac::XOSC,
     rate: R,
     state: S,
 }
+pub type StableXOsc<R> = XOsc<Stable, R>;
+
+impl<R: ClkRate> ClkDevice for XOsc<Stable, R> {}
+impl<R: ClkRate> ClkSource<XOsc<Stable, R>, R> for &XOsc<Stable, R> {
+    fn rate(&self) -> R {
+        self.rate
+    }
+}
 
 impl<R> XOsc<Stable, R>
 where
-    R: Rate + FixedPoint<T = u32> + Copy + PartialOrd<Megahertz>,
+    R: ClkRate,
     Megahertz: PartialOrd<R>,
 {
     /// Convenient method for getting a XOsc without caring about the state transitions.
@@ -99,7 +108,7 @@ where
 /// # Disabled
 impl<R> XOsc<Disabled, R>
 where
-    R: Rate + FixedPoint<T = u32> + Copy + PartialOrd<Megahertz>,
+    R: ClkRate,
     Megahertz: PartialOrd<R>,
 {
     /// Create a new wrapper for an oscillator with a given frequency.
@@ -151,7 +160,7 @@ where
 }
 
 /// # Enabled
-impl<R: Rate> XOsc<Enabled, R> {
+impl<R: ClkRate> XOsc<Enabled, R> {
     /// Transition to the stable state. Acquire a token by calling `await_stable`
     pub fn stable(self, _: StableToken) -> XOsc<Stable, R> {
         self.transition(Stable {})
@@ -183,7 +192,7 @@ impl<R: Rate> XOsc<Enabled, R> {
 }
 
 /// # Stable
-impl<R: Rate> XOsc<Stable, R> {
+impl<R: ClkRate> XOsc<Stable, R> {
     /// This disables the device without checking if the clock is still in use
     // ToDo: Should this be `unsafe`?
     pub fn disable_unchecked(mut self) -> XOsc<Disabled, R> {
@@ -192,7 +201,7 @@ impl<R: Rate> XOsc<Stable, R> {
     }
 }
 
-impl<S: State, R: Rate> XOsc<S, R> {
+impl<S: State, R: ClkRate> XOsc<S, R> {
     fn transition<To: State>(self, to: To) -> XOsc<To, R> {
         XOsc {
             inner: self.inner,
@@ -207,7 +216,7 @@ impl<S: State, R: Rate> XOsc<S, R> {
 }
 
 #[inline(always)]
-fn delay_cnt<R: Rate + FixedPoint<T = u32>, D: Duration + FixedPoint<T = u32>>(
+fn delay_cnt<R: ClkRate, D: Duration + FixedPoint<T = u32>>(
     rate: &R,
     startup_delay: &D,
 ) -> Option<u16> {
