@@ -177,11 +177,11 @@ impl<Dev: PllDev, Src: ClkSource<StableXOsc<R>, R>, R: ClkRate> Pll<Dev, Src, Di
     fn set_params(&mut self, params: PllParams) {
         // Safety: PllParams can only contain valid values for these parameters
         unsafe {
-            self.dev.cs.write(|w| w.refdiv().bits(params.ref_div));
+            self.dev.cs.modify(|_, w| w.refdiv().bits(params.ref_div));
             self.dev
                 .fbdiv_int
-                .write(|w| w.fbdiv_int().bits(params.fb_div));
-            self.dev.prim.write(|w| {
+                .modify(|_, w| w.fbdiv_int().bits(params.fb_div));
+            self.dev.prim.modify(|_, w| {
                 w.postdiv1()
                     .bits(params.post_div1)
                     .postdiv2()
@@ -201,7 +201,7 @@ impl<Dev: PllDev, Src: ClkSource<StableXOsc<R>, R>, R: ClkRate> Pll<Dev, Src, Di
         // Enable power
         self.dev
             .pwr
-            .write(|w| w.pd().clear_bit().vcopd().clear_bit());
+            .modify(|_, w| w.pd().clear_bit().vcopd().clear_bit());
 
         // The VCO is now running and we need to wait until the Pll is locked, to call is stable
         self.transition(Enabled {
@@ -219,7 +219,7 @@ impl<Dev: PllDev, Src: ClkSource<StableXOsc<R>, R>, R: ClkRate> Pll<Dev, Src, En
     /// Transition to the stable state. Obtain a token by calling `await_stable`.
     pub fn stable(self, _: StableToken<Dev>) -> Pll<Dev, Src, Stable, R> {
         // Enable power to the post dividers
-        self.dev.pwr.write(|w| w.postdivpd().clear_bit());
+        self.dev.pwr.modify(|_, w| w.postdivpd().clear_bit());
 
         self.transition(Stable {})
     }
@@ -270,16 +270,7 @@ impl<D: PllDev, Sr: ClkSource<StableXOsc<R>, R>, St: State, R: ClkRate> Pll<D, S
     }
 
     fn raw_disable_pwr(&mut self) {
-        self.dev.pwr.write(|w| {
-            w.pd()
-                .set_bit()
-                .dsmpd()
-                .set_bit()
-                .postdivpd()
-                .set_bit()
-                .vcopd()
-                .set_bit()
-        });
+        self.dev.pwr.reset();
     }
 
     fn params(&self) -> PllParams {

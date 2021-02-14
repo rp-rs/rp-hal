@@ -1,8 +1,10 @@
 //! Clock tree configuration
 
+pub mod generators;
 pub mod pll;
 mod xosc;
 
+pub use generators::SplitClocks;
 pub use pll::Pll;
 pub use xosc::XOsc;
 
