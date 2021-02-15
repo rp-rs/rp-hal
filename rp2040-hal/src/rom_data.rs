@@ -11,17 +11,23 @@ type RomTableLookupFn<T> = unsafe extern "C" fn(*const u16, u32) -> T;
 const ROM_TABLE_LOOKUP_PTR: *const u16 = 0x18 as _;
 
 /// Pointer to helper functions lookup table.
-const FUNC_TABLE: *const *const u16 = 0x14 as _;
+const FUNC_TABLE: *const u16 = 0x14 as _;
 
 /// Pointer to the public data lookup table.
-const DATA_TABLE: *const *const u16 = 0x16 as _;
+const DATA_TABLE: *const u16 = 0x16 as _;
 
 /// Retrive rom content from a table using a code.
-fn rom_table_lookup<T>(table: *const *const u16, tag: RomFnTableCode) -> T {
+fn rom_table_lookup<T>(table: *const u16, tag: RomFnTableCode) -> T {
     unsafe {
-        let rom_table_lookup: RomTableLookupFn<T> = core::mem::transmute(ROM_TABLE_LOOKUP_PTR);
-        rom_table_lookup(*table, u16::from_le_bytes(tag) as u32)
+        let rom_table_lookup_ptr: *const u32 = rom_hword_as_ptr(ROM_TABLE_LOOKUP_PTR);
+        let rom_table_lookup: RomTableLookupFn<T> = core::mem::transmute(rom_table_lookup_ptr);
+        rom_table_lookup(rom_hword_as_ptr(table) as *const u16, u16::from_le_bytes(tag) as u32)
     }
+}
+
+unsafe fn rom_hword_as_ptr(rom_address: *const u16) -> *const u32 {
+    let ptr: u16 = *rom_address;
+    ptr as *const u32
 }
 
 macro_rules! rom_funcs {
