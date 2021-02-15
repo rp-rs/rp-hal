@@ -144,9 +144,9 @@ pub fn copyright_string() -> &'static str {
 }
 
 /// The 8 most significant hex digits of the Bootrom git revision.
-pub fn git_revision() -> &'static str {
-    let s: *const u8 = rom_table_lookup(DATA_TABLE, *b"GR");
-    unsafe { convert_str(s) }
+pub fn git_revision() -> u32 {
+    let s: *const u32 = rom_table_lookup(DATA_TABLE, *b"GR");
+    unsafe { *s }
 }
 
 /// The start address of the floating point library code and data. This and fplib_end along with the individual
