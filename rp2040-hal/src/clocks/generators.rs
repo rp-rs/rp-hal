@@ -232,11 +232,13 @@ mod sharing {
     use pac::clocks::RegisterBlock;
     use pac::CLOCKS;
 
-    pub struct SharedClocksBlock {}
+    pub struct SharedClocksBlock {
+        _private: (),
+    }
 
     impl SharedClocksBlock {
         pub fn new(_dev: &mut CLOCKS) -> SharedClocksBlock {
-            SharedClocksBlock {}
+            SharedClocksBlock { _private: () }
         }
 
         /// Safety: Each of the clock generators may only use its matching registers (CLK_*_(CTRL|DIV|SELECTED))
@@ -245,7 +247,7 @@ mod sharing {
         }
 
         pub fn copy(&self) -> Self {
-            SharedClocksBlock {}
+            SharedClocksBlock { _private: () }
         }
     }
 }

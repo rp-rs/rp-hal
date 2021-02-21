@@ -1,5 +1,8 @@
-use crate::clocks::{ClkDevice, ClkRate, ClkSource};
-use embedded_time::{duration::*, fixed_point::FixedPoint, rate::*};
+use super::Rate;
+use crate::clocks::{ClkDevice, ClkSource};
+use core::convert::TryFrom;
+use embedded_time::rate::{Extensions, Megahertz};
+use embedded_time::{duration::*, fixed_point::FixedPoint};
 use nb::Error::{Other, WouldBlock};
 use num::{rational::Ratio, CheckedDiv, CheckedMul};
 
@@ -52,7 +55,7 @@ pub struct ErrorTokenAlreadyTaken;
 ///
 /// let p = Peripherals::take().unwrap();
 ///
-/// let xosc = XOsc::new_stable_blocking(p.XOSC, 12.MHz()).unwrap();
+/// let xosc = XOsc::new_stable_blocking(p.XOSC, 12.MHz().into()).unwrap();
 ///
 /// // Do things with the clock source
 /// ```
@@ -67,7 +70,7 @@ pub struct ErrorTokenAlreadyTaken;
 ///
 /// let p = Peripherals::take().unwrap();
 ///
-/// let mut xosc = XOsc::new(p.XOSC, 12.MHz()).unwrap();
+/// let mut xosc = XOsc::new(p.XOSC, 12.MHz().into()).unwrap();
 ///
 /// // Optional, defaults to 1ms
 /// xosc.set_startup_delay(&42.milliseconds()).unwrap();
@@ -78,41 +81,35 @@ pub struct ErrorTokenAlreadyTaken;
 ///
 /// // Do things with the clock source
 /// ```
-pub struct XOsc<S: State, R: ClkRate> {
+pub struct XOsc<S: State> {
     inner: pac::XOSC,
-    rate: R,
+    rate: Rate,
     state: S,
 }
-pub type StableXOsc<R> = XOsc<Stable, R>;
+pub type StableXOsc = XOsc<Stable>;
 
-impl<R: ClkRate> ClkDevice for XOsc<Stable, R> {}
-impl<R: ClkRate> ClkSource<XOsc<Stable, R>, R> for &XOsc<Stable, R> {
-    fn rate(&self) -> R {
+impl ClkDevice for StableXOsc {}
+impl ClkSource for &StableXOsc {
+    type DeviceName = pac::XOSC;
+
+    fn rate(&self) -> Rate {
         self.rate
     }
 }
 
-impl<R> XOsc<Stable, R>
-where
-    R: ClkRate,
-    Megahertz: PartialOrd<R>,
-{
+impl XOsc<Stable> {
     /// Convenient method for getting a XOsc without caring about the state transitions.
-    pub fn new_stable_blocking(peri: pac::XOSC, rate: R) -> Result<XOsc<Stable, R>, Error> {
-        let mut enabled = XOsc::<Disabled, R>::new(peri, rate)?.enable();
+    pub fn new_stable_blocking(peri: pac::XOSC, rate: Rate) -> Result<StableXOsc, Error> {
+        let mut enabled = XOsc::<Disabled>::new(peri, rate)?.enable();
         let token = nb::block!(enabled.await_stable()).unwrap();
         Ok(enabled.stable(token))
     }
 }
 
 /// # Disabled
-impl<R> XOsc<Disabled, R>
-where
-    R: ClkRate,
-    Megahertz: PartialOrd<R>,
-{
+impl XOsc<Disabled> {
     /// Create a new wrapper for an oscillator with a given frequency.
-    pub fn new(peri: pac::XOSC, rate: R) -> Result<Self, Error> {
+    pub fn new(peri: pac::XOSC, rate: Rate) -> Result<Self, Error> {
         let mut dev = XOsc {
             inner: peri,
             rate,
@@ -120,9 +117,11 @@ where
         };
         dev.raw_disable();
 
-        if !(1.MHz()..=15.MHz()).contains(&rate) {
-            return Err(Error::RateOutOfRange);
+        match Megahertz::<u32>::try_from(rate) {
+            Ok(val) if (1u32.MHz()..=15u32.MHz()).contains(&val) => (),
+            _ => return Err(Error::RateOutOfRange),
         }
+
         dev.inner.ctrl.write(|w| w.freq_range()._1_15mhz());
 
         dev.set_startup_delay(&Milliseconds(1))?;
@@ -145,7 +144,7 @@ where
     }
 
     /// Enable the peripheral
-    pub fn enable(self) -> XOsc<Enabled, R> {
+    pub fn enable(self) -> XOsc<Enabled> {
         self.inner.ctrl.write(|w| w.enable().enable());
 
         self.transition(Enabled {
@@ -160,9 +159,9 @@ where
 }
 
 /// # Enabled
-impl<R: ClkRate> XOsc<Enabled, R> {
+impl XOsc<Enabled> {
     /// Transition to the stable state. Acquire a token by calling `await_stable`
-    pub fn stable(self, _: StableToken) -> XOsc<Stable, R> {
+    pub fn stable(self, _: StableToken) -> StableXOsc {
         self.transition(Stable {})
     }
 
@@ -181,7 +180,7 @@ impl<R: ClkRate> XOsc<Enabled, R> {
 
     /// Disable the device returning to the Disabled state. Returns an error with the current
     /// state if the stable token was already taken.
-    pub fn disable(mut self) -> Result<XOsc<Disabled, R>, Self> {
+    pub fn disable(mut self) -> Result<XOsc<Disabled>, Self> {
         if self.state.token.is_none() {
             return Err(self);
         }
@@ -192,17 +191,17 @@ impl<R: ClkRate> XOsc<Enabled, R> {
 }
 
 /// # Stable
-impl<R: ClkRate> XOsc<Stable, R> {
+impl XOsc<Stable> {
     /// This disables the device without checking if the clock is still in use
     // ToDo: Should this be `unsafe`?
-    pub fn disable_unchecked(mut self) -> XOsc<Disabled, R> {
+    pub fn disable_unchecked(mut self) -> XOsc<Disabled> {
         self.raw_disable();
         self.transition(Disabled {})
     }
 }
 
-impl<S: State, R: ClkRate> XOsc<S, R> {
-    fn transition<To: State>(self, to: To) -> XOsc<To, R> {
+impl<S: State> XOsc<S> {
+    fn transition<To: State>(self, to: To) -> XOsc<To> {
         XOsc {
             inner: self.inner,
             rate: self.rate,
@@ -216,14 +215,11 @@ impl<S: State, R: ClkRate> XOsc<S, R> {
 }
 
 #[inline(always)]
-fn delay_cnt<R: ClkRate, D: Duration + FixedPoint<T = u32>>(
-    rate: &R,
-    startup_delay: &D,
-) -> Option<u16> {
+fn delay_cnt<D: Duration + FixedPoint<T = u32>>(rate: &Rate, startup_delay: &D) -> Option<u16> {
     let f_osc = Ratio::from_integer(*rate.integer());
     let t_stable = Ratio::from_integer(*startup_delay.integer());
 
-    let f_unit = R::SCALING_FACTOR;
+    let f_unit = rate.scaling_factor();
     let f_unit = Ratio::new(*f_unit.numerator(), *f_unit.denominator());
 
     let t_unit = D::SCALING_FACTOR;
@@ -248,33 +244,38 @@ fn delay_cnt<R: ClkRate, D: Duration + FixedPoint<T = u32>>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use embedded_time::duration::Extensions as _;
+    use embedded_time::rate::Extensions as _;
 
     #[test]
     fn startup_delay_of_0_should_return_0() {
-        assert_eq!(delay_cnt(&12.MHz(), &Milliseconds(0)), Some(0));
+        assert_eq!(delay_cnt(&12.MHz().into(), &Milliseconds(0)), Some(0));
     }
 
     #[test]
     fn datasheet_example_matches_impl() {
         let delay = &Milliseconds(1);
-        assert_eq!(delay_cnt(&12.MHz(), delay), Some(47));
-        assert_eq!(delay_cnt(&12_000.kHz(), delay), Some(47));
-        assert_eq!(delay_cnt(&12_000_000.Hz(), delay), Some(47));
+        assert_eq!(delay_cnt(&12.MHz().into(), delay), Some(47));
+        assert_eq!(delay_cnt(&12_000.kHz().into(), delay), Some(47));
+        assert_eq!(delay_cnt(&12_000_000.Hz().into(), delay), Some(47));
 
         let delay = &Nanoseconds(1_000_000);
-        assert_eq!(delay_cnt(&12.MHz(), delay), Some(47));
-        assert_eq!(delay_cnt(&12_000.kHz(), delay), Some(47));
-        assert_eq!(delay_cnt(&12_000_000.Hz(), delay), Some(47));
+        assert_eq!(delay_cnt(&12.MHz().into(), delay), Some(47));
+        assert_eq!(delay_cnt(&12_000.kHz().into(), delay), Some(47));
+        assert_eq!(delay_cnt(&12_000_000.Hz().into(), delay), Some(47));
     }
 
     #[test]
     fn high_value_examples() {
         assert_eq!(
-            delay_cnt(&15.MHz(), &279_603_200.nanoseconds()),
+            delay_cnt(&15.MHz().into(), &279_603_200.nanoseconds()),
             Some(0x3fff)
         );
 
         // This should overflow the available 14 bits
-        assert_eq!(delay_cnt(&15.MHz(), &279_603_201.nanoseconds()), None);
+        assert_eq!(
+            delay_cnt(&15.MHz().into(), &279_603_201.nanoseconds()),
+            None
+        );
     }
 }

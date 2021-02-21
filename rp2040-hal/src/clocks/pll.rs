@@ -1,12 +1,14 @@
 //! PLL wrapper
 //!
 
-use super::xosc::StableXOsc;
-use super::{ClkRate, ClkSource};
+use super::ClkSource;
+use super::Rate;
 use crate::clocks::ClkDevice;
+use core::convert::TryInto;
 use core::marker::PhantomData;
 use core::ops::Deref;
-use embedded_time::rate::*;
+use embedded_time::rate;
+use embedded_time::rate::{Hertz, Megahertz};
 use nb::Error::{Other, WouldBlock};
 use pac::pll_sys::RegisterBlock;
 use state::*;
@@ -44,8 +46,7 @@ impl PllDev for pac::PLL_USB {
 /// A list of contraints for the PLL according to datasheet section 2.18.2
 pub mod constraints {
     use core::ops::RangeInclusive;
-    use embedded_time::rate::Hertz;
-    use embedded_time::rate::Megahertz;
+    use embedded_time::rate::{Hertz, Megahertz};
 
     /// Minimum reference clock after reference divider
     pub const MIN_REF_CLK: Megahertz<u32> = Megahertz(5);
@@ -88,9 +89,9 @@ pub struct StableToken<P: PllDev> {
 ///
 /// let p = Peripherals::take().unwrap();
 ///
-/// let xosc = XOsc::new_stable_blocking(p.XOSC, 12.MHz()).unwrap();
+/// let xosc = XOsc::new_stable_blocking(p.XOSC, 12.MHz().into()).unwrap();
 ///
-/// let pll = Pll::new_stable_blocking(p.PLL_SYS, &xosc, 125.MHz()).unwrap();
+/// let pll = Pll::new_stable_blocking(p.PLL_SYS, &xosc, 125.MHz().into()).unwrap();
 ///
 /// // Do things with the clock source
 /// ```
@@ -105,9 +106,9 @@ pub struct StableToken<P: PllDev> {
 ///
 /// let p = Peripherals::take().unwrap();
 ///
-/// let xosc = XOsc::new_stable_blocking(p.XOSC, 12.MHz()).unwrap();
+/// let xosc = XOsc::new_stable_blocking(p.XOSC, 12.MHz().into()).unwrap();
 ///
-/// let pll = Pll::new(p.PLL_SYS, &xosc, 125.MHz()).unwrap();
+/// let pll = Pll::new(p.PLL_SYS, &xosc, 125.MHz().into()).unwrap();
 ///
 /// let mut pll = pll.enable();
 /// let token = nb::block!(pll.await_stable()).unwrap();
@@ -116,40 +117,42 @@ pub struct StableToken<P: PllDev> {
 /// // Do things with the clock source
 /// ```
 ///
-pub struct Pll<Dev: PllDev, Src: ClkSource<StableXOsc<R>, R>, S: State, R: ClkRate> {
+pub struct Pll<Dev: PllDev, Src: ClkSource<DeviceName = pac::XOSC>, S: State> {
     dev: Dev,
     src: Src,
     state: S,
-    _rate: PhantomData<R>,
 }
 
 /// Convenience type for a stable PLL
-pub type StablePll<Dev, Src, R> = Pll<Dev, Src, Stable, R>;
+pub type StablePllSys<Src> = Pll<pac::PLL_SYS, Src, Stable>;
+pub type StablePllUsb<Src> = Pll<pac::PLL_USB, Src, Stable>;
 
-impl<R: ClkRate, Dev: PllDev, Src: ClkSource<StableXOsc<R>, R>> ClkDevice
-    for Pll<Dev, Src, Stable, R>
-{
-}
-impl<R: ClkRate, Dev: PllDev, Src: ClkSource<StableXOsc<R>, R>>
-    ClkSource<Pll<Dev, Src, Stable, R>, R> for Pll<Dev, Src, Stable, R>
-{
-    fn rate(&self) -> R {
-        self.params()
-            .resulting_rate(self.src.rate().as_hz().unwrap())
-            .into()
+impl<Dev: PllDev, Src: ClkSource<DeviceName = pac::XOSC>> ClkDevice for Pll<Dev, Src, Stable> {}
+impl<Dev: PllDev, Src: ClkSource<DeviceName = pac::XOSC>> ClkSource for &Pll<Dev, Src, Stable> {
+    type DeviceName = Dev;
+
+    fn rate(&self) -> rate::Generic<u32> {
+        self.params().resulting_rate(self.src.rate()).into()
     }
 }
 
-impl<Dev: PllDev, Src: ClkSource<StableXOsc<R>, R>, R: ClkRate> Pll<Dev, Src, Disabled, R> {
+impl<Dev: PllDev, Src: ClkSource<DeviceName = pac::XOSC>> Pll<Dev, Src, Disabled> {
     /// Create a new Pll
-    pub fn new(dev: Dev, src: Src, output: R) -> Result<Self, ParameterOutOfRangeError> {
-        let input = src.rate().as_hz().ok_or(ParameterOutOfRangeError {})?;
-        let output = output.as_hz().ok_or(ParameterOutOfRangeError {})?;
+    pub fn new(dev: Dev, src: Src, output: Rate) -> Result<Self, ParameterOutOfRangeError> {
+        let input = src.rate();
+        let output = output;
 
-        let params = PllParams::find(input, output, None, OptimizeFor::LowJitter)
-            .ok_or(ParameterOutOfRangeError {})?;
+        let params = PllParams::find(
+            input.try_into().expect("Input can not be expressed as Hz"),
+            output
+                .try_into()
+                .expect("Output can not be expressed as Hz."),
+            None,
+            OptimizeFor::LowJitter,
+        )
+        .ok_or(ParameterOutOfRangeError {})?;
 
-        if params.resulting_rate(input) > Dev::MAX_OUT_RATE {
+        if params.resulting_rate(input) > Dev::MAX_OUT_RATE.into() {
             return Err(ParameterOutOfRangeError {});
         }
 
@@ -157,7 +160,6 @@ impl<Dev: PllDev, Src: ClkSource<StableXOsc<R>, R>, R: ClkRate> Pll<Dev, Src, Di
             dev,
             src,
             state: Disabled(params),
-            _rate: PhantomData,
         })
     }
 
@@ -166,8 +168,8 @@ impl<Dev: PllDev, Src: ClkSource<StableXOsc<R>, R>, R: ClkRate> Pll<Dev, Src, Di
     pub fn new_stable_blocking(
         dev: Dev,
         src: Src,
-        output: R,
-    ) -> Result<Pll<Dev, Src, Stable, R>, ParameterOutOfRangeError> {
+        output: Rate,
+    ) -> Result<Pll<Dev, Src, Stable>, ParameterOutOfRangeError> {
         let mut pll = Self::new(dev, src, output)?.enable();
         let token = nb::block!(pll.await_stable()).unwrap();
         Ok(pll.stable(token))
@@ -192,7 +194,7 @@ impl<Dev: PllDev, Src: ClkSource<StableXOsc<R>, R>, R: ClkRate> Pll<Dev, Src, Di
 
     /// Set the requested and enable the PLL. Before the PLL can be used for anything is needs to
     /// be stable.
-    pub fn enable(mut self) -> Pll<Dev, Src, Enabled<Dev>, R> {
+    pub fn enable(mut self) -> Pll<Dev, Src, Enabled<Dev>> {
         // Turn of the power, it it may have been enabled before
         self.raw_disable_pwr();
 
@@ -215,9 +217,9 @@ impl<Dev: PllDev, Src: ClkSource<StableXOsc<R>, R>, R: ClkRate> Pll<Dev, Src, Di
     }
 }
 
-impl<Dev: PllDev, Src: ClkSource<StableXOsc<R>, R>, R: ClkRate> Pll<Dev, Src, Enabled<Dev>, R> {
+impl<Dev: PllDev, Src: ClkSource<DeviceName = pac::XOSC>> Pll<Dev, Src, Enabled<Dev>> {
     /// Transition to the stable state. Obtain a token by calling `await_stable`.
-    pub fn stable(self, _: StableToken<Dev>) -> Pll<Dev, Src, Stable, R> {
+    pub fn stable(self, _: StableToken<Dev>) -> Pll<Dev, Src, Stable> {
         // Enable power to the post dividers
         self.dev.pwr.modify(|_, w| w.postdivpd().clear_bit());
 
@@ -239,7 +241,7 @@ impl<Dev: PllDev, Src: ClkSource<StableXOsc<R>, R>, R: ClkRate> Pll<Dev, Src, En
 
     /// Disable the PLL, this can be useful if you can not get the PLL to lock and want to change
     /// settings to try again.
-    pub fn disable(mut self) -> Result<Pll<Dev, Src, Disabled, R>, Self> {
+    pub fn disable(mut self) -> Result<Pll<Dev, Src, Disabled>, Self> {
         if self.state.token.is_none() {
             return Err(self);
         }
@@ -250,22 +252,21 @@ impl<Dev: PllDev, Src: ClkSource<StableXOsc<R>, R>, R: ClkRate> Pll<Dev, Src, En
     }
 }
 
-impl<Dev: PllDev, Src: ClkSource<StableXOsc<R>, R>, R: ClkRate> Pll<Dev, Src, Stable, R> {
+impl<Dev: PllDev, Src: ClkSource<DeviceName = pac::XOSC>> Pll<Dev, Src, Stable> {
     /// Disables the PLL without checking if the output clock is still in use.
-    pub fn disable_unchecked(mut self) -> Result<Pll<Dev, Src, Disabled, R>, Self> {
+    pub fn disable_unchecked(mut self) -> Result<Pll<Dev, Src, Disabled>, Self> {
         self.raw_disable_pwr();
         let next = Disabled(self.params());
         Ok(self.transition(next))
     }
 }
 
-impl<D: PllDev, Sr: ClkSource<StableXOsc<R>, R>, St: State, R: ClkRate> Pll<D, Sr, St, R> {
-    fn transition<To: State>(self, to: To) -> Pll<D, Sr, To, R> {
+impl<D: PllDev, Sr: ClkSource<DeviceName = pac::XOSC>, St: State> Pll<D, Sr, St> {
+    fn transition<To: State>(self, to: To) -> Pll<D, Sr, To> {
         Pll {
             dev: self.dev,
             src: self.src,
             state: to,
-            _rate: self._rate,
         }
     }
 
@@ -304,11 +305,14 @@ pub struct PllParams {
 impl PllParams {
     /// Calculate the output rate for a pll configured with this set of parameters and the given
     /// `input` as reference clock.
-    pub fn resulting_rate(&self, input: Hertz) -> Hertz {
-        input * (self.fb_div as u32)
+    pub fn resulting_rate(&self, input: Rate) -> Rate {
+        // ToDo: Make this more acurate:
+        let integer_part = input.integer() * (self.fb_div as u32)
             / (self.ref_div as u32)
             / (self.post_div1 as u32)
-            / (self.post_div2 as u32)
+            / (self.post_div2 as u32);
+
+        Rate::new(integer_part, *input.scaling_factor())
     }
 
     /// Find a set of settings for the PLL to match the given output.
@@ -335,7 +339,7 @@ impl PllParams {
     /// assert_eq!(params.post_div1(), 4);
     /// assert_eq!(params.post_div2(), 1);
     ///
-    /// assert_eq!(params.resulting_rate(12_000_000.Hz()), 126_000_000u32.Hz());
+    /// assert_eq!(params.resulting_rate(12.MHz().into()), 126.MHz().into());
     /// ```
     pub fn find(
         input: Hertz,
@@ -408,13 +412,14 @@ impl PllParams {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use embedded_time::rate::Extensions;
 
     #[test]
     fn datsheet_example() {
         assert_eq!(
             PllParams::find(
-                12_000_000.Hz(),
-                48_000_000.Hz(),
+                12_000_000.Hz().into(),
+                48_000_000.Hz().into(),
                 None,
                 OptimizeFor::LowJitter
             )
@@ -432,8 +437,8 @@ mod tests {
     fn datsheet_example_low_vco() {
         assert_eq!(
             PllParams::find(
-                12_000_000.Hz(),
-                48_000_000.Hz(),
+                12_000_000.Hz().into(),
+                48_000_000.Hz().into(),
                 None,
                 OptimizeFor::LowPower
             )
@@ -451,8 +456,8 @@ mod tests {
     fn datsheet_example_limited_vco() {
         assert_eq!(
             PllParams::find(
-                12_000_000.Hz(),
-                125_000_000.Hz(),
+                12_000_000.Hz().into(),
+                125_000_000.Hz().into(),
                 None,
                 OptimizeFor::LowPower
             )
@@ -473,9 +478,9 @@ mod tests {
         };
         assert_eq!(
             PllParams::find(
-                12_000_000.Hz(),
-                125_000_000.Hz(),
-                Some(600_000_000.Hz()),
+                12_000_000.Hz().into(),
+                125_000_000.Hz().into(),
+                Some(600_000_000.Hz().into()),
                 OptimizeFor::LowPower
             )
             .unwrap(),
@@ -483,8 +488,8 @@ mod tests {
         );
 
         assert_eq!(
-            expected.resulting_rate(12_000_000.Hz()),
-            126_000_000u32.Hz()
+            expected.resulting_rate(12_000_000.Hz().into()),
+            126_000_000u32.Hz().into()
         )
     }
 }
