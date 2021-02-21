@@ -1,3 +1,5 @@
+#![allow(dead_code)] // ToDo: Use this instead of directly writing registers
+
 //! The clocks block, containing all clock generators
 
 use pac::CLOCKS;
@@ -18,6 +20,12 @@ pub struct SplitClocks {
 
     /// Clock output to GPIO 3
     pub gp_out3: ClkGPOut3,
+
+    /// Clock output to Watchdog and timers
+    pub c_ref: ClkRef,
+
+    /// Clock output to Processor, bus-fabric, memories and memory mapped registers
+    pub sys: ClkSys,
 
     /// Clock output to UART and SPI
     pub peri: ClkPeri,
@@ -59,6 +67,12 @@ impl SplitClocks {
                 share: share.copy(),
             },
             gp_out3: ClkGPOut3 {
+                share: share.copy(),
+            },
+            c_ref: ClkRef {
+                share: share.copy(),
+            },
+            sys: ClkSys {
                 share: share.copy(),
             },
             peri: ClkPeri {
@@ -277,6 +291,14 @@ gp_out! {ClkGPOut0, clk_gpout0_ctrl, clk_gpout0_div}
 gp_out! {ClkGPOut1, clk_gpout1_ctrl, clk_gpout1_div}
 gp_out! {ClkGPOut2, clk_gpout2_ctrl, clk_gpout2_div}
 gp_out! {ClkGPOut3, clk_gpout3_ctrl, clk_gpout3_div}
+
+pub struct ClkRef {
+    share: SharedClocksBlock,
+}
+
+pub struct ClkSys {
+    share: SharedClocksBlock,
+}
 
 clock_generator! {ClkPeri, clk_peri_ctrl}
 

@@ -1,9 +1,7 @@
 //! PLL wrapper
 //!
 
-use super::ClkSource;
-use super::Rate;
-use crate::clocks::ClkDevice;
+use super::unstable::{ClkDevice, ClkSource, Rate};
 use core::convert::TryInto;
 use core::marker::PhantomData;
 use core::ops::Deref;
@@ -88,7 +86,7 @@ pub struct StableToken<P: PllDev> {
 /// use embedded_time::rate::Extensions as _;
 ///
 /// use rp2040_pac::Peripherals;
-/// use rp2040_hal::clocks::XOsc;
+/// use rp2040_hal::clocks::xosc::XOsc;
 /// use rp2040_hal::clocks::pll::Pll;
 ///
 /// let p = Peripherals::take().unwrap();
@@ -105,7 +103,7 @@ pub struct StableToken<P: PllDev> {
 /// use embedded_time::rate::Extensions as _;
 ///
 /// use rp2040_pac::Peripherals;
-/// use rp2040_hal::clocks::XOsc;
+/// use rp2040_hal::clocks::xosc::XOsc;
 /// use rp2040_hal::clocks::pll::Pll;
 ///
 /// let p = Peripherals::take().unwrap();

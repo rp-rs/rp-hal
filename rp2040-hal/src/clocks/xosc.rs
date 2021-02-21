@@ -1,50 +1,52 @@
-use super::Rate;
-use crate::clocks::{ClkDevice, ClkSource};
+//! Wrapper for the quartz oscillator peripheral
+
+use super::unstable::{ClkDevice, ClkSource, Rate};
 use core::convert::TryFrom;
 use embedded_time::rate::{Extensions, Megahertz};
 use embedded_time::{duration::*, fixed_point::FixedPoint};
 use nb::Error::{Other, WouldBlock};
 use num::{rational::Ratio, CheckedDiv, CheckedMul};
+use states::*;
 
-mod sealed {
-    pub trait Sealed {}
+mod states {
+    pub trait State {}
+    pub trait EnabledOrStable: State {}
+
+    pub struct Disabled;
+    pub struct Enabled {
+        pub(super) token: Option<super::StableToken>,
+    }
+
+    pub struct Stable;
+    pub struct Shared {
+        pub(super) outstanding_shares: u32,
+    }
+
+    impl State for Disabled {}
+    impl State for Enabled {}
+    impl State for Stable {}
+    impl State for Shared {}
+
+    impl EnabledOrStable for Enabled {}
+    impl EnabledOrStable for Stable {}
 }
 
-pub trait State: sealed::Sealed {}
-pub trait EnabledOrStable: State {}
-
-pub struct Disabled;
-pub struct Enabled {
-    token: Option<StableToken>,
-}
-pub struct Stable;
-pub struct Shared {
-    outstanding_shares: u32,
-}
-
-impl State for Disabled {}
-impl State for Enabled {}
-impl State for Stable {}
-impl State for Shared {}
-
-impl EnabledOrStable for Enabled {}
-impl EnabledOrStable for Stable {}
-
-impl sealed::Sealed for Disabled {}
-impl sealed::Sealed for Enabled {}
-impl sealed::Sealed for Stable {}
-impl sealed::Sealed for Shared {}
-
+/// A token that can be acquired by `XOsc::await_stable` and proves that the oscillator is stable.
 pub struct StableToken {
     _private: (),
 }
 
+/// Possible errors when creating a XOsc wrapper
 #[derive(Debug)]
 pub enum Error {
+    /// The requested start-up delay would overflow the register
     StartUpDelayOverflows,
+
+    /// The rate given it out of spec
     RateOutOfRange,
 }
 
+/// Error returned if the stable token has already returned in a previous call
 #[derive(Debug)]
 pub struct ErrorTokenAlreadyTaken;
 
@@ -56,7 +58,7 @@ pub struct ErrorTokenAlreadyTaken;
 /// use embedded_time::rate::Extensions as _;
 ///
 /// use rp2040_pac::Peripherals;
-/// use rp2040_hal::clocks::XOsc;
+/// use rp2040_hal::clocks::xosc::XOsc;
 ///
 /// let p = Peripherals::take().unwrap();
 ///
@@ -71,7 +73,7 @@ pub struct ErrorTokenAlreadyTaken;
 /// use embedded_time::duration::Extensions as _;
 ///
 /// use rp2040_pac::Peripherals;
-/// use rp2040_hal::clocks::XOsc;
+/// use rp2040_hal::clocks::xosc::XOsc;
 ///
 /// let p = Peripherals::take().unwrap();
 ///
@@ -91,6 +93,8 @@ pub struct XOsc<S: State> {
     rate: Rate,
     state: S,
 }
+
+/// Convenience type for a Stable oscillator
 pub type StableXOsc = XOsc<Stable>;
 
 impl ClkDevice for StableXOsc {}

@@ -1,148 +1,136 @@
-//! Clock tree configuration
-//!
-//! # Example
-//! The idea behind this design is that you can use the blocks of the clock as similar to normal
-//! Rust as possible. This basically means you can use a clock by value, by reference, with shared
-//! ownership or you can leak them (and thus freeze their state forever).
-//!
-//! ## Borrowed clocks
-//! ```rust no_run
-//! use embedded_time::rate::Extensions as _;
-//!
-//! use rp2040_pac::Peripherals;
-//! use rp2040_hal::clocks::{XOsc, SplitClocks};
-//! use rp2040_hal::clocks::pll::Pll;
-//!
-//! let p = Peripherals::take().unwrap();
-//!
-//! // Setup the clock sources
-//! let xosc = XOsc::new_stable_blocking(p.XOSC, 12.MHz().into()).unwrap();
-//! let pll_sys = Pll::new_stable_blocking(p.PLL_SYS, &xosc, 125.MHz().into()).unwrap();
-//! let pll_usb = Pll::new_stable_blocking(p.PLL_USB, &xosc, 48.MHz().into()).unwrap();
-//!
-//! // Derive the clocks for the different domains
-//! let clocks = SplitClocks::split(p.CLOCKS);
-//!
-//! let clk_peri = clocks.peri;
-//! // clk_peri.switch_to(&pll_sys);
-//!
-//! // ToDo: Use UART
-//! ```
-//!
-//!! ## Leaked clocks
-//! ```rust no_run
-//! use embedded_time::rate::Extensions as _;
-//!
-//! use rp2040_pac::Peripherals;
-//! use rp2040_hal::clocks::{XOsc, SplitClocks};
-//! use rp2040_hal::clocks::pll::Pll;
-//!
-//! let p = Peripherals::take().unwrap();
-//!
-//! // Setup the clock sources
-//! let xosc = XOsc::new_stable_blocking(p.XOSC, 12.MHz().into()).unwrap().leak();
-//! let pll_sys = Pll::new_stable_blocking(p.PLL_SYS, xosc, 125.MHz().into()).unwrap().leak();
-//! let pll_usb = Pll::new_stable_blocking(p.PLL_USB, xosc, 48.MHz().into()).unwrap().leak();
-//!
-//! // XOsc can now go out of scope, since the PLL have leaked copies
-//! drop(xosc);
-//!
-//! let _ = pll_usb;
-//!
-//! // Derive the clocks for the different domains
-//! let clocks = SplitClocks::split(p.CLOCKS);
-//!
-//! let clk_peri = clocks.peri;
-//! // clk_peri.switch_to(pll_sys);
-//!
-//! // ToDo: Use UART
-//! ```
-//!
-//!! ## Shared clocks
-//! ```rust no_run
-//! use embedded_time::rate::Extensions as _;
-//!
-//! use rp2040_pac::Peripherals;
-//! use rp2040_hal::clocks::{XOsc, SplitClocks};
-//! use rp2040_hal::clocks::pll::Pll;
-//!
-//! let p = Peripherals::take().unwrap();
-//!
-//! // Setup the clock sources
-//! let mut xosc = XOsc::new_stable_blocking(p.XOSC, 12.MHz().into()).unwrap().share();
-//! let pll_sys = Pll::new_stable_blocking(p.PLL_SYS, xosc.take_share(), 125.MHz().into()).unwrap().share();
-//! let pll_usb = Pll::new_stable_blocking(p.PLL_USB, xosc.take_share(), 48.MHz().into()).unwrap().share();
-//!
-//! // ToDo: Use shared pll with device
-//!
-//! // Go to power down -> Shutdown PLLs and XOsc
-//! let (pll_sys_dev, src) = pll_sys.un_share().disable().free();
-//! xosc.return_share(src);
-//! let (pll_usb_dev, src) = pll_usb.un_share().disable().free();
-//! xosc.return_share(src);
-//!
-//! assert!(!xosc.has_outstanding_shares());
-//! let disabled_xosc = xosc.un_share().disable();
-//!
-//! // Derive the clocks for the different domains
-//! let clocks = SplitClocks::split(p.CLOCKS);
-//!
-//! let clk_peri = clocks.peri;
-//! // clk_peri.switch_to(pll_sys);
-//!
-//! // ToDo: Use UART
-//! ```
+//! Clock related parts
 
-pub mod generators;
+mod unstable;
+
 pub mod pll;
-mod xosc;
+pub mod xosc;
 
-pub use generators::SplitClocks;
-pub use pll::Pll;
-pub use xosc::XOsc;
+use embedded_time::rate::{Extensions, Hertz, Megahertz};
 
-use core::convert::TryFrom;
-use embedded_time::fixed_point::FixedPoint;
-use embedded_time::rate;
-use embedded_time::rate::*;
-
-/// Type used to represent rates internally to avoid spamming generic type parameters.
-pub type Rate = rate::Generic<u32>;
-
-/// Trait to make it easier to express a simple rate
-pub trait ClkRate:
-    embedded_time::rate::Rate + FixedPoint<T = u32> + Copy + PartialOrd<Megahertz> + From<Hertz>
-{
-    /// Return the rate converted to Hz if possible
-    fn as_hz(&self) -> Option<Hertz>;
+/// A list of the configured and frozen clock rates
+pub struct ClockRates {
+    clk_ref: Megahertz,
+    clk_sys: Megahertz,
+    clk_peri: Megahertz,
+    clk_usb: Megahertz,
+    clk_adc: Megahertz,
+    clk_rtc: Hertz,
 }
 
-impl ClkRate for Megahertz {
-    fn as_hz(&self) -> Option<Hertz> {
-        Hertz::try_from(*self).ok()
+impl ClockRates {
+    /// The clock rate for `clk_ref`
+    pub fn clk_ref(&self) -> Megahertz {
+        self.clk_ref
+    }
+
+    /// The clock rate for `clk_sys`
+    pub fn clk_sys(&self) -> Megahertz {
+        self.clk_sys
+    }
+
+    /// The clock rate for `clk_peri`
+    pub fn clk_peri(&self) -> Megahertz {
+        self.clk_peri
+    }
+
+    /// The clock rate for `clk_usb`
+    pub fn clk_usb(&self) -> Megahertz {
+        self.clk_usb
+    }
+
+    /// The clock rate for `clk_adc`
+    pub fn clk_adc(&self) -> Megahertz {
+        self.clk_adc
+    }
+
+    /// The clock rate for `clk_rtc`
+    pub fn clk_rtc(&self) -> Hertz {
+        self.clk_rtc
     }
 }
 
-impl ClkRate for Kilohertz {
-    fn as_hz(&self) -> Option<Hertz> {
-        Hertz::try_from(*self).ok()
-    }
-}
+/// Initialize all clocks to their nominal rates, according to datasheet section 2.15.3.1
+pub fn init_nominal(
+    xosc: pac::XOSC,
+    pll_sys: pac::PLL_SYS,
+    pll_usb: pac::PLL_USB,
+    clocks: pac::CLOCKS,
+    xosc_rate: embedded_time::rate::Generic<u32>,
+) -> ClockRates {
+    let nominal = ClockRates {
+        clk_ref: 12.MHz(),
+        clk_sys: 125.MHz(),
+        clk_peri: 125.MHz(),
+        clk_usb: 48.MHz(),
+        clk_adc: 48.MHz(),
+        clk_rtc: 46875.Hz(),
+    };
 
-impl ClkRate for Hertz {
-    fn as_hz(&self) -> Option<Hertz> {
-        Some(*self)
-    }
-}
+    // Start and wait for oscillator
+    let xosc = xosc::XOsc::new_stable_blocking(xosc, xosc_rate)
+        .unwrap()
+        .leak();
 
-/// Marker Trait for Clock sourcing devices
-pub trait ClkDevice {}
+    // Start both PLLs
+    let mut pll_sys = pll::Pll::new(pll_sys, xosc, nominal.clk_sys.into())
+        .unwrap()
+        .enable();
+    let mut pll_usb = pll::Pll::new(pll_usb, xosc, nominal.clk_usb.into())
+        .unwrap()
+        .enable();
 
-/// Trait for wrappers around clock sources
-pub trait ClkSource {
-    /// The device this source is referring to. (e.g. `pac::XOSC`)
-    type DeviceName;
+    // Wait for both PLLs to be stable
+    let sys_token = nb::block!(pll_sys.await_stable()).unwrap();
+    let usb_token = nb::block!(pll_usb.await_stable()).unwrap();
 
-    /// Returns the clock rate of the wrapped device.
-    fn rate(&self) -> rate::Generic<u32>;
+    let _pll_sys = pll_sys.stable(sys_token).leak();
+    let _pll_usb = pll_usb.stable(usb_token).leak();
+
+    // ToDo: Replace the code from here down with methods from `self::unstable`
+
+    // Switch clk_ref over to xosc
+    clocks.clk_ref_ctrl.write(|w| w.src().xosc_clksrc());
+
+    // ToDo: figure out which selected bit should be set, so we can wait for it
+    // loop {
+    //     clocks.clk_ref_selected.read().bits()
+    // }
+
+    // Switch clk_sys to pll
+    clocks.clk_sys_ctrl.write(|w| w.src().clksrc_clk_sys_aux());
+    // ToDo: wait for selected to have the correct bit set
+    clocks
+        .clk_sys_ctrl
+        .modify(|_, w| w.auxsrc().clksrc_pll_sys().src().clksrc_clk_sys_aux());
+
+    // Disable peri, usb, adc and rtc clocks so we can switch them without glitching
+    clocks.clk_peri_ctrl.write(|w| w.enable().clear_bit());
+    clocks.clk_usb_ctrl.write(|w| w.enable().clear_bit());
+    clocks.clk_adc_ctrl.write(|w| w.enable().clear_bit());
+    clocks.clk_rtc_ctrl.write(|w| w.enable().clear_bit());
+
+    // ToDo: Wait 2 clocks of the slowest clock
+
+    clocks
+        .clk_peri_ctrl
+        .modify(|_, w| w.auxsrc().clksrc_pll_sys().enable().set_bit());
+
+    clocks
+        .clk_usb_ctrl
+        .modify(|_, w| w.auxsrc().clksrc_pll_usb().enable().set_bit());
+    clocks.clk_usb_div.reset();
+
+    clocks
+        .clk_adc_ctrl
+        .modify(|_, w| w.auxsrc().clksrc_pll_usb().enable().set_bit());
+    clocks.clk_adc_div.reset();
+
+    clocks
+        .clk_rtc_ctrl
+        .modify(|_, w| w.auxsrc().xosc_clksrc().enable().set_bit());
+    clocks
+        .clk_rtc_div
+        .write(|w| unsafe { w.frac().bits(0).int().bits(256) });
+
+    nominal
 }
