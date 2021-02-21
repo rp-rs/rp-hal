@@ -23,10 +23,14 @@ mod state {
         pub(super) token: Option<super::StableToken<P>>,
     }
     pub struct Stable;
+    pub struct Shared {
+        pub(super) outstanding_shares: u32,
+    }
 
     impl State for Disabled {}
     impl<P: PllDev> State for Enabled<P> {}
     impl State for Stable {}
+    impl State for Shared {}
 }
 
 /// All the devices that can be used with this implementation have to implement this marker trait;
@@ -123,8 +127,9 @@ pub struct Pll<Dev: PllDev, Src: ClkSource<DeviceName = pac::XOSC>, S: State> {
     state: S,
 }
 
-/// Convenience type for a stable PLL
+/// Convenience type for a stable SYS PLL
 pub type StablePllSys<Src> = Pll<pac::PLL_SYS, Src, Stable>;
+/// Convenience type for a stable USB PLL
 pub type StablePllUsb<Src> = Pll<pac::PLL_USB, Src, Stable>;
 
 impl<Dev: PllDev, Src: ClkSource<DeviceName = pac::XOSC>> ClkDevice for Pll<Dev, Src, Stable> {}
@@ -132,7 +137,7 @@ impl<Dev: PllDev, Src: ClkSource<DeviceName = pac::XOSC>> ClkSource for &Pll<Dev
     type DeviceName = Dev;
 
     fn rate(&self) -> rate::Generic<u32> {
-        self.params().resulting_rate(self.src.rate()).into()
+        (*self).rate()
     }
 }
 
@@ -254,10 +259,100 @@ impl<Dev: PllDev, Src: ClkSource<DeviceName = pac::XOSC>> Pll<Dev, Src, Enabled<
 
 impl<Dev: PllDev, Src: ClkSource<DeviceName = pac::XOSC>> Pll<Dev, Src, Stable> {
     /// Disables the PLL without checking if the output clock is still in use.
-    pub fn disable_unchecked(mut self) -> Result<Pll<Dev, Src, Disabled>, Self> {
+    pub fn disable(mut self) -> Pll<Dev, Src, Disabled> {
         self.raw_disable_pwr();
         let next = Disabled(self.params());
-        Ok(self.transition(next))
+        self.transition(next)
+    }
+
+    /// Ensure the PLL is never again changed during the runtime
+    ///
+    /// In return you get tokens you can copy to use the PLL generated clock.
+    pub fn leak(self) -> LeakedPll<Dev, Src> {
+        LeakedPll {
+            rate: (&self).rate(),
+            _dev: PhantomData,
+            _src: PhantomData,
+        }
+    }
+
+    /// Share this pll, forbidding any changes for as long as any shares are outstanding.
+    pub fn share(self) -> Pll<Dev, Src, Shared> {
+        self.transition(Shared {
+            outstanding_shares: 0,
+        })
+    }
+}
+
+impl<Dev: PllDev, Src: ClkSource<DeviceName = pac::XOSC>> Pll<Dev, Src, Shared> {
+    /// Take a share of the peripheral.
+    pub fn take_share(&mut self) -> PllShare<Dev> {
+        self.state.outstanding_shares = self
+            .state
+            .outstanding_shares
+            .checked_add(1)
+            .expect("Given out over 2^32 pll shares");
+        PllShare {
+            rate: (&self).rate(),
+            _dev: PhantomData,
+        }
+    }
+
+    /// Return the share to the peripheral
+    pub fn return_share(&mut self, _: PllShare<Dev>) {
+        self.state.outstanding_shares = self
+            .state
+            .outstanding_shares
+            .checked_sub(1)
+            .expect("Returned more pll shares than were given out");
+    }
+
+    /// Check whether not all shares have been returned.
+    pub fn has_outstanding_shares(&self) -> bool {
+        self.state.outstanding_shares > 0
+    }
+
+    /// Returns the xosc back to single ownership
+    ///
+    /// This could be used to deactivate the peripheral.
+    ///
+    /// # Panics
+    /// If there are still outstanding shares. `has_outstanding_shares` can be used to make sure
+    /// all shares were returned.
+    pub fn un_share(self) -> Pll<Dev, Src, Stable> {
+        if self.has_outstanding_shares() {
+            panic!(
+                "Tried to un-share the PLL peripheral while there were still outstanding shares!"
+            );
+        }
+
+        self.transition(Stable {})
+    }
+}
+
+/// A token that proofs that the PLL has been locked into its state and thus will never change.
+#[derive(Copy, Clone)]
+pub struct LeakedPll<Dev, Src> {
+    rate: Rate,
+    _dev: PhantomData<Dev>,
+    _src: PhantomData<Src>,
+}
+impl<Dev, Src> ClkSource for LeakedPll<Dev, Src> {
+    type DeviceName = Dev;
+    fn rate(&self) -> Rate {
+        self.rate
+    }
+}
+
+/// A share of a PLL which can be returned to the PLL to allow changing the PLL state again.
+pub struct PllShare<Dev> {
+    rate: Rate,
+    _dev: PhantomData<Dev>,
+}
+impl<Dev> ClkSource for PllShare<Dev> {
+    type DeviceName = Dev;
+    fn rate(&self) -> Rate {
+        self.rate
     }
 }
 
@@ -281,6 +376,10 @@ impl<D: PllDev, Sr: ClkSource<DeviceName = pac::XOSC>, St: State> Pll<D, Sr, St>
             post_div1: self.dev.prim.read().postdiv1().bits(),
             post_div2: self.dev.prim.read().postdiv2().bits(),
         }
+    }
+
+    fn rate(&self) -> Rate {
+        self.params().resulting_rate(self.src.rate()).into()
     }
 }
 

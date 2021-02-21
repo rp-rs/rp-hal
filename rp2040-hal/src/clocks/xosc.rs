@@ -18,10 +18,14 @@ pub struct Enabled {
     token: Option<StableToken>,
 }
 pub struct Stable;
+pub struct Shared {
+    outstanding_shares: u32,
+}
 
 impl State for Disabled {}
 impl State for Enabled {}
 impl State for Stable {}
+impl State for Shared {}
 
 impl EnabledOrStable for Enabled {}
 impl EnabledOrStable for Stable {}
@@ -29,6 +33,7 @@ impl EnabledOrStable for Stable {}
 impl sealed::Sealed for Disabled {}
 impl sealed::Sealed for Enabled {}
 impl sealed::Sealed for Stable {}
+impl sealed::Sealed for Shared {}
 
 pub struct StableToken {
     _private: (),
@@ -192,11 +197,70 @@ impl XOsc<Enabled> {
 
 /// # Stable
 impl XOsc<Stable> {
-    /// This disables the device without checking if the clock is still in use
-    // ToDo: Should this be `unsafe`?
-    pub fn disable_unchecked(mut self) -> XOsc<Disabled> {
+    /// This disables the device, no devices should be able to still use the peripheral.
+    pub fn disable(mut self) -> XOsc<Disabled> {
         self.raw_disable();
         self.transition(Disabled {})
+    }
+
+    /// Lock the peripheral and return a handle that proves that you did so.
+    ///
+    /// This allows a user to assume that the oscillator won't change during runtime.
+    pub fn leak(self) -> LeakedXOsc {
+        LeakedXOsc { rate: self.rate }
+    }
+
+    /// Transition to sharing the oscillator
+    ///
+    /// This allows multiple parties to use the device and return the shares when they are done.
+    pub fn share(self) -> XOsc<Shared> {
+        self.transition(Shared {
+            outstanding_shares: 0,
+        })
+    }
+}
+
+/// # Shared
+impl XOsc<Shared> {
+    /// Take a share of the peripheral.
+    pub fn take_share(&mut self) -> XOscShare {
+        self.state.outstanding_shares = self
+            .state
+            .outstanding_shares
+            .checked_add(1)
+            .expect("Given out over 2^32 xosc shares");
+        XOscShare { rate: self.rate }
+    }
+
+    /// Return the share to the peripheral
+    pub fn return_share(&mut self, _: XOscShare) {
+        self.state.outstanding_shares = self
+            .state
+            .outstanding_shares
+            .checked_sub(1)
+            .expect("Returned more xosc shares than were given out");
+    }
+
+    /// Check whether not all shares have been returned.
+    pub fn has_outstanding_shares(&self) -> bool {
+        self.state.outstanding_shares > 0
+    }
+
+    /// Returns the xosc back to single ownership
+    ///
+    /// This could be used to deactivate the peripheral.
+    ///
+    /// # Panics
+    /// If there are still outstanding shares. `has_outstanding_shares` can be used to make sure
+    /// all shares were returned.
+    pub fn un_share(self) -> XOsc<Stable> {
+        if self.has_outstanding_shares() {
+            panic!(
+                "Tried to un-share the XOsc peripheral while there were still outstanding shares!"
+            );
+        }
+
+        self.transition(Stable {})
     }
 }
 
@@ -211,6 +275,36 @@ impl<S: State> XOsc<S> {
 
     fn raw_disable(&mut self) {
         self.inner.ctrl.write(|w| w.enable().disable());
+    }
+}
+
+/// A leaked oscillator, which can never be changed again
+///
+/// This makes it easy to pass around oscillator without caring about lifetimes. The original
+/// peripheral is guaranteed to never be freed, as an instance of this type can only be created
+/// by calling `StableXOsc::leak()` which consumes the peripheral.
+#[derive(Copy, Clone, Debug)]
+pub struct LeakedXOsc {
+    rate: Rate,
+}
+impl ClkSource for LeakedXOsc {
+    type DeviceName = pac::XOSC;
+    fn rate(&self) -> Rate {
+        self.rate
+    }
+}
+
+/// A shared oscillator, which can be disabled after all shares were returned
+///
+/// This allows a setup where the oscillator is disabled and enabled multiple times during
+/// the runtime.
+pub struct XOscShare {
+    rate: Rate,
+}
+impl ClkSource for XOscShare {
+    type DeviceName = pac::XOSC;
+    fn rate(&self) -> Rate {
+        self.rate
     }
 }
 
@@ -244,8 +338,7 @@ fn delay_cnt<D: Duration + FixedPoint<T = u32>>(rate: &Rate, startup_delay: &D) 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use embedded_time::duration::Extensions as _;
-    use embedded_time::rate::Extensions as _;
+    use embedded_time::rate::Extensions;
 
     #[test]
     fn startup_delay_of_0_should_return_0() {

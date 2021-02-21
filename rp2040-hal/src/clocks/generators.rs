@@ -1,18 +1,46 @@
+//! The clocks block, containing all clock generators
+
 use pac::CLOCKS;
 use sharing::SharedClocksBlock;
 
+/// Split up of the clocks block
+///
+/// This allows to use the different clock generators and devices independently.
 pub struct SplitClocks {
+    /// Clock output to GPIO 0
     pub gp_out0: ClkGPOut0,
+
+    /// Clock output to GPIO 1
     pub gp_out1: ClkGPOut1,
+
+    /// Clock output to GPIO 2
     pub gp_out2: ClkGPOut2,
+
+    /// Clock output to GPIO 3
     pub gp_out3: ClkGPOut3,
+
+    /// Clock output to UART and SPI
     pub peri: ClkPeri,
+
+    /// Clock output to USB
     pub usb: ClkUsb,
+
+    /// Clock output to ADC
     pub adc: ClkAdc,
+
+    /// Clock output to RTC
     pub rtc: ClkRtc,
+
+    /// Frequency counter (see Type description for details)
     pub frq_cnt: FrequencyCounter,
+
+    /// Resus (see Type description for details)
     pub resus: Resus,
+
+    /// Clock gates (see Type description for details)
     pub gates: ClkGates,
+
+    /// Register block handle (see Type description for details)
     pub _dev: ClockHandle,
 }
 
@@ -59,34 +87,53 @@ impl SplitClocks {
     }
 
     /// Return the PAC register block
+    ///
+    /// Since this function can only be called with a complete set of parts it should be save to
+    /// get the register block back.
     pub fn free(self) -> CLOCKS {
-        // Safety: free() can only be called if all parts have been placed back thus we can release
-        //         the device
         self._dev._private
     }
 }
 
+/// Clock gates used to enable or disable peripherals. See section 2.15.3.5 of the datasheet.
+#[allow(dead_code)] // ToDo: Implement clock gating
 pub struct ClkGates {
     share: SharedClocksBlock,
 }
 
+/// See section 2.15.4 of the datasheet
+#[allow(dead_code)] // ToDo: Implement frequency counting
 pub struct FrequencyCounter {
     share: SharedClocksBlock,
 }
 
+/// See section 2.15.5 of the datasheet
+#[allow(dead_code)] // ToDo: Implement resus device
 pub struct Resus {
     share: SharedClocksBlock,
 }
 
+/// Helper struct to hold the register block so it could be freed again. Does not give any
+/// access to anything, since that should only be possible via the different structs like
+/// `ClkGates`, `ClkSys` or `FrequencyCounter`.
 pub struct ClockHandle {
     _private: CLOCKS,
 }
 
+/// A generator that can be switched only glitching
+///
+/// Provides the method provided in the datasheet to switch glitchless even with these generators.
 pub trait GlitchingClockSwitch<Src> {
+    /// Disable the clock source cleanly
     fn disable(&mut self);
+
+    /// Enable the clock source cleanly
     fn enable(&mut self);
+
+    /// Select the AUX source (glitching allowed)
     fn set_aux_src(&mut self, src: Src);
 
+    /// Switch the clock according to the datasheet, avoiding glitches
     fn switch_glitchless(&mut self, src: Src) {
         self.disable();
 
@@ -99,13 +146,15 @@ pub trait GlitchingClockSwitch<Src> {
     }
 }
 
+/// Parameters for a fractional clock divisor. See datasheet section 2.15.3.3 for details.
 pub struct FractionalDivisor {
     int: u32,
     frac: u8,
 }
 
 impl FractionalDivisor {
-    pub fn new(int: u32, frac: u8) -> Option<Self> {
+    /// Create a new divisor, making sure the integral part fits into the register.
+    pub const fn new(int: u32, frac: u8) -> Option<Self> {
         if int > 0x00_ff_ff_ff {
             return None;
         }
@@ -114,23 +163,35 @@ impl FractionalDivisor {
     }
 }
 
+/// A clock source that can be divided with a fractional value
 pub trait FractionalDiv {
+    /// Get current divider value
     fn div(&self) -> FractionalDivisor;
+    /// Set divider
     fn set_div(&mut self, div: FractionalDivisor);
 }
 
+/// A clock source with an integer divider
 pub trait IntDiv {
+    /// Get current divider value
     fn div(&self) -> u8;
+    /// Set divider
     fn set_div(&mut self, div: u8);
 }
 
+/// A clock generator that has duty cycle correction. See section 2.15.3.4 for details
 pub trait DutyCycleCorrect {
+    /// Returns `true` if the correction is active.
     fn dc50(&self) -> bool;
+    /// Set the correction (`true` => enabled)
     fn set_dc50(&mut self, correct: bool);
 }
 
 macro_rules! clock_generator {
     ($name:ident, $ctrl:ident) => {
+        /// Clock generator for $name
+        ///
+        /// ToDo: Find a good way to add doc comments for all the generators
         pub struct $name {
             share: SharedClocksBlock,
         }
