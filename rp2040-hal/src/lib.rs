@@ -4,6 +4,8 @@
 //! NOTE This HAL is still under active development. This API will remain volatile until 1.0.0
 
 #![warn(missing_docs)]
+#![deny(missing_docs)]
+//#![deny(warnings)]
 #![no_std]
 #![cfg_attr(feature = "embassy-traits", feature(generic_associated_types))]
 #![cfg_attr(feature = "embassy-traits", feature(type_alias_impl_trait))]
@@ -37,3 +39,4 @@ pub mod uart;
 pub mod usb;
 pub mod watchdog;
 pub mod xosc;
+pub mod dma;

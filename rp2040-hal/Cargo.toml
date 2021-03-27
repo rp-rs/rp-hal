@@ -23,6 +23,7 @@ usb-device = "0.2.8"
 vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
 rand_core = "0.6.3"
+embedded-dma = "0.1.2"
 
 futures = { version = "0.3", default-features = false, optional = true }
 
@@ -45,3 +46,6 @@ pio-proc = { git = "https://github.com/rp-rs/pio-rs.git", branch = "main" }
 rt = ["rp2040-pac/rt"]
 embassy-traits = ["embassy_traits", "futures"]
 
+[dependencies.num]
+version = "0.4"
+default-features = false
