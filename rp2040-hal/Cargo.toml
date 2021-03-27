@@ -12,5 +12,10 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 cortex-m = "0.7.1"
 embedded-hal = "0.2.4"
+embedded-dma = "0.1.2"
 nb = "1.0.0"
-rp2040-pac = "0.1.1"
+rp2040-pac = { git = "https://github.com/rp-rs/rp2040-pac", branch = "main", version="0.1.1" }
+
+[dependencies.num]
+version = "0.4"
+default-features = false

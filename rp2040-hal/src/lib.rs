@@ -4,7 +4,7 @@
 //! NOTE This HAL is still under active development. This API will remain volatile until 1.0.0
 
 #![deny(missing_docs)]
-#![deny(warnings)]
+//#![deny(warnings)]
 #![no_std]
 
 extern crate cortex_m;
@@ -24,3 +24,4 @@ pub mod timer;
 pub mod uart;
 pub mod usb;
 pub mod watchdog;
+pub mod dma;
