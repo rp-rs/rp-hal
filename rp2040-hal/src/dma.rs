@@ -1,15 +1,21 @@
+//! DMA
+// See [Chapter 2 Section 5](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 use core::{
     //marker::PhantomData,
     sync::atomic,
 };
 use embedded_dma::{StaticReadBuffer, StaticWriteBuffer};
 
-static COUNTER: atomic::AtomicU16 = atomic::AtomicU16::from(0);
+static COUNTER: u16 = 0;
 
-use num::Unsigned;
+use num::PrimInt;
 use core::{
     sync::atomic::{
         Ordering
+    },
+    ops::{
+        BitOrAssign,
+        BitAndAssign,
     },
     option::Option,
     borrow::BorrowMut,
@@ -19,38 +25,38 @@ use pac::{
     dma::CH,
     Peripherals};
 
-fn get_bit_at<W: Unsigned>(value: W, index: u8) -> bool {
-    value >> index & 1
+fn get_bit_at<W: PrimInt>(value: W, index: u8) -> bool {
+    (value >> index.into()) & W::one() == W::one()
 }
 
-fn set_bit_at<W: Unsigned>(value: &mut W, index: u8) {
-    *value |= 1 >> index;
+fn set_bit_at<W: PrimInt + BitOrAssign>(value: &mut W, index: u8) {
+    *value |= W::one() >> index.into();
 }
 
-fn clear_bit_at<W: Unsigned>(value: &mut W, index: u8) {
-    *value &= !(1 >> index);
+fn clear_bit_at<W: PrimInt + BitAndAssign>(value: &mut W, index: u8) {
+    *value &= !(W::one() >> index.into());
 }
 
 type ChannelIndex = u8;
 
 fn is_channel_acquired(channel: ChannelIndex) -> bool {
-    get_bit_at(&COUNTER, channel)
+    get_bit_at(COUNTER, channel)
 }
 
-fn find_free_channel() -> Option<u16> {
-    let ch_len = Peripherals::take().unwrap().DMA.ch.len();
-    assert!(ch_len <= 12);
-    for n in 1..ch_len {
+fn find_free_channel(channels_amount: usize) -> Option<u8> {
+    assert!(channels_amount <= 12);
+    for n in 1..channels_amount {
         if !is_channel_acquired(n as u8) {
-            n
+            return Some(n as u8);
         }
     }
     None
 }
 
-pub trait Channel {
-    fn acquire(channel: Option<ChannelIndex>) -> Option<&Self>;
-    fn set_read_increment(&self, b: bool);
+/// A DMA channel trait
+pub struct Channel<'a> {
+    /// This is fun haha
+    channel: &'a CH,
 }
 
 mod private_parts {
@@ -59,40 +65,55 @@ mod private_parts {
     }
 }
 
-impl Channel for CH {
-    fn acquire(channel: Option<u8>) -> Option<&Self> {
-        // Need to spinlock COUNTER
+impl<'a> Channel<'a> {
+    /// Acquire
+    pub fn acquire(channel: Option<ChannelIndex>, device_peripherals: &'a Peripherals) -> Option<Channel<'a>> {
+        /// Need to spinlock COUNTER
         let channel = match channel {
             Some(channel) => {
                 if is_channel_acquired(channel) {
                     None
+                } else {
+                    Some(channel)
                 }
-                channel
             }
-            None => find_free_channel()
+            None => find_free_channel(device_peripherals.DMA.ch.len())
         };
-        Peripherals::take().unwrap().DMA.ch.get(channel)
+        match channel {
+            Some(channel) => Some(
+                Channel {
+                    channel: &device_peripherals.DMA.ch[channel as usize]
+                }),
+            None => None
+        }
     }
-    fn set_read_increment(&self, b: bool) {
-        self.ch_ctrl_trig.write(|w| unsafe {
+    /// a
+    pub fn set_read_increment(&self, b: bool) {
+        /// b
+        self.channel.ch_ctrl_trig.write(|w| unsafe {
             w.incr_write().bit(b);
             w
         });
     }
 }
 
+
 mod tests {
+    #![no_main]
+    #![no_std]
     #![allow(unused_imports)]
 
     use crate::dma::Channel;
     use core::any::Any;
+    use pac::{
+        dma::CH,
+        Peripherals,
+    };
 
-    #[test]
-    pub fn my_test() -> () {
-        if let Some(ff) = Channel::acquire(Some(0)){
-            println!("{:?}", ff);
-        }
-
+    fn my_test() -> () {
+        let dp = Peripherals::take().unwrap();
+        let a = Channel::acquire(Some(0), &dp).unwrap();
+        a.set_read_increment(true);
 
         //dma::
         // let dma = Peripherals::take().unwrap().DMA;

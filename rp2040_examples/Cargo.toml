@@ -1,0 +1,13 @@
+[package]
+name = "rp2040_examples"
+version = "0.1.0"
+authors = ["Asaf Fisher <asaffisher@icloud.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cortex-m-rt = "0.6.13"
+panic-semihosting = "0.5.6"
+rp2040-hal = { path = "../rp2040-hal"}
+rp2040-pac = { git = "https://github.com/rp-rs/rp2040-pac", branch = "main", version="0.1.1" }
