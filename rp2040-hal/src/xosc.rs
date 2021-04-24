@@ -92,7 +92,7 @@ impl CrystalOscillator<Disabled> {
 
         const ALLOWED_FREQUENCY_RANGE: RangeInclusive<Megahertz<u32>> = Megahertz(1)..=Megahertz(15);
         const STABLE_DELAY: Milliseconds = Milliseconds(1_u32);
-        const DIVIDER: Fraction = Fraction::new(1, 256);
+        const DIVIDER: Fraction = Fraction::new(256, 1);
 
         if !ALLOWED_FREQUENCY_RANGE.contains(&frequency) {
             return Err(Error::FrequencyOutOfRange)
@@ -103,12 +103,14 @@ impl CrystalOscillator<Disabled> {
             w
         });
 
-        let delay_sec: Seconds = STABLE_DELAY.into();
+        //1 ms = 10e-3 sec and Freq = 1/T where T is in seconds so 1ms converts to 1000Hz
+        let delay_to_hz: Hertz = STABLE_DELAY.to_rate();
 
-        //startup_delay = ((freq_hz * 10e-3) / 256; See Chapter 2, Section 16, §3)
+        //startup_delay = ((freq_hz * 10e-3) / 256) = ((freq_hz / 1000) / 256)
+        //See Chapter 2, Section 16, §3)
         //We do the calculation first.
-        let startup_delay = delay_sec.
-            checked_mul(frequency.integer()).and_then(|r|
+        let startup_delay = frequency.
+            checked_div(delay_to_hz.integer()).and_then(|r|
                  r.to_generic::<u32>(DIVIDER).ok()
              ).
             ok_or(Error::BadArgument)?;
@@ -118,7 +120,7 @@ impl CrystalOscillator<Disabled> {
             map_err(|_|Error::BadArgument)?;
 
         self.device.startup.write(|w| unsafe {
-            w.delay().bits(startup_delay);
+            w.delay().bits(startup_delay+1);
             w
         });
 
