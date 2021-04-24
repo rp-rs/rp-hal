@@ -154,20 +154,26 @@ macro_rules! gpio {
                     }
                 }
 
-                // TODO: Don't allow Unknown since we need to fix up the pad at least
-                impl<MODE> InputPin for $PXi<MODE> {
-                    type Error = Infallible;
+                macro_rules! impl_input_for {
+                    ($MODE:ident) => {
+                        impl InputPin for $PXi<$MODE> {
+                            type Error = Infallible;
 
-                    fn is_low(&self) -> Result<bool, Self::Error> {
-                        Ok(!self.is_high()?)
-                    }
+                            fn is_low(&self) -> Result<bool, Self::Error> {
+                                Ok(!self.is_high()?)
+                            }
 
-                    fn is_high(&self) -> Result<bool, Self::Error> {
-                        unsafe {
-                            Ok((*pac::SIO::ptr()).gpio_in.read().bits() & (1 << $i) != 0)
+                            fn is_high(&self) -> Result<bool, Self::Error> {
+                                unsafe {
+                                    Ok((*pac::SIO::ptr()).gpio_in.read().bits() & (1 << $i) != 0)
+                                }
+                            }
                         }
-                    }
+                    };
                 }
+                // Not allowed for Unknown since we don't know what state the pad is in
+                impl_input_for!(Input);
+                impl_input_for!(Output);
 
                 impl $PXi<Input> {
                     pub fn pull_high(&mut self) {
