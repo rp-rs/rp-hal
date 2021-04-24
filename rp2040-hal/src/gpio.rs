@@ -22,6 +22,20 @@ pub trait GpioExt<PADS, SIO> {
     fn split(self, pads: PADS, sio: SIO, reset: &mut rp2040_pac::RESETS) -> Self::Parts;
 }
 
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+pub enum OutputDriveStrength {
+    Ma2,
+    Ma4,
+    Ma8,
+    Ma12,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+pub enum OutputSlewRate {
+    Slow,
+    Fast,
+}
+
 // Magic numbers from the datasheet
 // const FUNCTION_SPI: u8 = 1;
 // const FUNCTION_UART: u8 = 2;
@@ -41,7 +55,7 @@ macro_rules! gpio {
             use core::convert::Infallible;
             use core::marker::PhantomData;
             use embedded_hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin};
-            use super::{GpioExt, Input, Output, Unknown, FUNCTION_SIO};
+            use super::*;
 
             impl GpioExt<pac::$PADSX, pac::SIO> for pac::$GPIOX {
                 type Parts = Parts;
@@ -66,14 +80,15 @@ macro_rules! gpio {
                 )+
             }
 
-            // Puts pad in default state as far as this crate is concerned:
-            // - Input is enabled
-            // - Output is enabled (if also set in SIO)
-            // - Pull up/down is disabled
-            //
-            // TODO: Drive strength, smitty, slewing
+            // Puts pad in same state as post-reset, according to datasheet
             fn setup_pad_io(pads: &pac::$padsx::RegisterBlock, index: usize) {
-                pads.gpio[index].modify(|_, w| w.ie().set_bit().od().clear_bit().pue().clear_bit().pde().clear_bit());
+                pads.gpio[index].modify(|_, w| w.ie().set_bit()
+                                                .od().clear_bit()
+                                                .pue().clear_bit()
+                                                .pde().set_bit()
+                                                .schmitt().set_bit()
+                                                .drive()._4m_a()
+                                                .slewfast().clear_bit());
             }
 
             fn set_gpio_function(gpios: &pac::$gpiox::RegisterBlock, index: usize, function: u8) {
@@ -81,6 +96,8 @@ macro_rules! gpio {
                     .gpio_ctrl
                     .write_with_zero(|x| unsafe { x.funcsel().bits(function) });
             }
+
+            type PacDriveStrength = pac::$padsx::gpio::DRIVE_A;
 
             $(
                 pub struct $PXi<MODE> {
@@ -175,17 +192,62 @@ macro_rules! gpio {
                 impl_input_for!(Input);
                 impl_input_for!(Output);
 
+                impl $PXi<Output> {
+                    pub fn drive_strength(self, strength: OutputDriveStrength) -> Self {
+                        let converted = match strength {
+                            OutputDriveStrength::Ma2 => PacDriveStrength::_2MA,
+                            OutputDriveStrength::Ma4 => PacDriveStrength::_4MA,
+                            OutputDriveStrength::Ma8 => PacDriveStrength::_8MA,
+                            OutputDriveStrength::Ma12 => PacDriveStrength::_12MA,
+                        };
+                        unsafe {
+                            (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.drive().variant(converted));
+                        }
+                        self
+                    }
+
+                    pub fn slew_rate(self, slew_rate: OutputSlewRate) -> Self {
+                        unsafe {
+                            (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.slewfast().bit(slew_rate == OutputSlewRate::Fast));
+                        }
+                        self
+                    }
+                }
+
                 impl $PXi<Input> {
-                    pub fn pull_high(&mut self) {
+                    pub fn pull_high(self) -> Self {
                         unsafe {
                             (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.pue().set_bit().pde().clear_bit());
                         }
+                        self
                     }
 
-                    pub fn pull_low(&mut self) {
+                    pub fn pull_low(self) -> Self {
                         unsafe {
                             (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.pue().clear_bit().pde().set_bit());
                         }
+                        self
+                    }
+
+                    pub fn float(self) -> Self {
+                        unsafe {
+                            (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.pue().clear_bit().pde().clear_bit());
+                        }
+                        self
+                    }
+
+                    pub fn enable_schmitt_trigger(self) -> Self {
+                        unsafe {
+                            (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.schmitt().set_bit());
+                        }
+                        self
+                    }
+
+                    pub fn disable_schmitt_trigger(self) -> Self {
+                        unsafe {
+                            (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.schmitt().clear_bit());
+                        }
+                        self
                     }
                 }
             )+

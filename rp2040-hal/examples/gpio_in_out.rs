@@ -21,8 +21,7 @@ fn main() -> ! {
 
     let pins = pac.IO_BANK0.split(pac.PADS_BANK0, pac.SIO, &mut pac.RESETS);
     let mut led_pin = pins.gpio25.into_output();
-    let mut button_pin = pins.gpio15.into_input();
-    button_pin.pull_high();
+    let button_pin = pins.gpio15.into_input().pull_high();
 
     loop {
         if button_pin.is_high().unwrap() {
