@@ -7,97 +7,188 @@
 //! ```rust
 //! let mut pac = rp2040_pac::Peripherals::take().unwrap();
 //!
-//! let pins = pac.IO_BANK0.split(&mut pac.RESETS);
-//! let mut led_pin = pins.gpio25.into_output(&mut pac.PADS_BANK0, &mut pac.SIO);
-//!  led_pin.set_low().unwrap();
+//! let pins = pac.IO_BANK0.split(pac.PADS_BANK0, pac.SIO, &mut pac.RESETS);
+//! let mut led_pin = pins.gpio25.into_output();
+//! led_pin.set_high().unwrap();
 //! ```
-use core::convert::Infallible;
-use core::marker::PhantomData;
-use embedded_hal::digital::v2::OutputPin;
-
-pub struct Floating;
-pub struct Input<MODE> {
-    _mode: PhantomData<MODE>,
-}
+pub struct Input;
 pub struct Output;
+pub struct Unknown;
 
-pub trait GpioExt {
+pub trait GpioExt<PADS, SIO> {
     type Parts;
 
     // TODO: Do we need a marker to check that clocks are up?
-    fn split(self, reset: &mut rp2040_pac::RESETS) -> Self::Parts;
+    fn split(self, pads: PADS, sio: SIO, reset: &mut rp2040_pac::RESETS) -> Self::Parts;
 }
 
+// Magic numbers from the datasheet
+// const FUNCTION_SPI: u8 = 1;
+// const FUNCTION_UART: u8 = 2;
+// const FUNCTION_I2C: u8 = 3;
+// const FUNCTION_PWM: u8 = 4;
 const FUNCTION_SIO: u8 = 5;
+// const FUNCTION_PIO0: u8 = 6;
+// const FUNCTION_PIO1: u8 = 7;
+// const FUNCTION_CLOCK: u8 = 8;
+// const FUNCTION_USB: u8 = 9;
 
 macro_rules! gpio {
-    ($GPIOX:ident, $gpiox:ident, $PADSX:ident, [
+    ($GPIOX:ident, $gpiox:ident, $PADSX:ident, $padsx:ident, [
         $($PXi:ident: ($pxi:ident, $i:expr),)+
     ]) => {
-        impl GpioExt for pac::$GPIOX {
-            type Parts = Parts;
+        mod $gpiox {
+            use core::convert::Infallible;
+            use core::marker::PhantomData;
+            use embedded_hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin};
+            use super::{GpioExt, Input, Output, Unknown, FUNCTION_SIO};
 
-            fn split(self, resets: &mut pac::RESETS) -> Parts {
-                resets.reset.modify(|_, w| w.$gpiox().clear_bit());
-                Parts {
-                    $(
-                        $pxi: $PXi { _mode: PhantomData },
-                    )+
+            impl GpioExt<pac::$PADSX, pac::SIO> for pac::$GPIOX {
+                type Parts = Parts;
+
+                fn split(self, pads: pac::$PADSX, sio: pac::SIO, resets: &mut pac::RESETS) -> Parts {
+                    resets.reset.modify(|_, w| w.$gpiox().clear_bit());
+                    Parts {
+                        _pads: pads,
+                        _sio: sio,
+                        $(
+                            $pxi: $PXi { _mode: PhantomData },
+                        )+
+                    }
                 }
             }
-        }
 
-        pub struct Parts {
+            pub struct Parts {
+                _pads: pac::$PADSX,
+                _sio: pac::SIO,
+                $(
+                    pub $pxi: $PXi<Unknown>,
+                )+
+            }
+
+            // Puts pad in default state as far as this crate is concerned:
+            // - Input is enabled
+            // - Output is enabled (if also set in SIO)
+            // - Pull up/down is disabled
+            //
+            // TODO: Drive strength, smitty, slewing
+            fn setup_pad_io(pads: &pac::$padsx::RegisterBlock, index: usize) {
+                pads.gpio[index].modify(|_, w| w.ie().set_bit().od().clear_bit().pue().clear_bit().pde().clear_bit());
+            }
+
+            fn set_gpio_function(gpios: &pac::$gpiox::RegisterBlock, index: usize, function: u8) {
+                gpios.gpio[index]
+                    .gpio_ctrl
+                    .write_with_zero(|x| unsafe { x.funcsel().bits(function) });
+            }
+
             $(
-                pub $pxi: $PXi<Input<Floating>>,
+                pub struct $PXi<MODE> {
+                    _mode: PhantomData<MODE>,
+                }
+
+                // Safety: We own our $i slice of padsx, gpiox, and sio because the
+                // construction of Parts assumes ownership of all 3 and will not release
+                // them. Thus several of the methods below will reconstruct these objects
+                // as-needed
+
+                impl<MODE> $PXi<MODE> {
+                    pub fn into_output(
+                        self,
+                    ) -> $PXi<Output> {
+                        unsafe {
+                            setup_pad_io(&*pac::$PADSX::ptr(), $i);
+                        }
+                        unsafe {
+                            set_gpio_function(&*pac::$GPIOX::ptr(), $i, FUNCTION_SIO);
+                        }
+                        unsafe {
+                            (*pac::SIO::ptr()).gpio_oe_set.write(|x| { x.bits(1 << $i) });
+                        }
+                        $PXi { _mode: PhantomData }
+                    }
+
+                    pub fn into_input(
+                        self,
+                    ) -> $PXi<Input> {
+                        unsafe {
+                            setup_pad_io(&*pac::$PADSX::ptr(), $i);
+                        }
+                        unsafe {
+                            set_gpio_function(&*pac::$GPIOX::ptr(), $i, FUNCTION_SIO);
+                        }
+                        unsafe {
+                            (*pac::SIO::ptr()).gpio_oe_clr.write(|x| { x.bits(1 << $i) });
+                        }
+                        $PXi { _mode: PhantomData }
+                    }
+                }
+
+                impl OutputPin for $PXi<Output> {
+                    type Error = Infallible;
+
+                    fn set_low(&mut self) -> Result<(), Self::Error> {
+                        unsafe {
+                            (*pac::SIO::ptr()).gpio_out_clr.write(|x| x.bits(1 << $i));
+                        }
+                        Ok(())
+                    }
+
+                    fn set_high(&mut self) -> Result<(), Self::Error> {
+                        unsafe {
+                            (*pac::SIO::ptr()).gpio_out_set.write(|x| x.bits(1 << $i));
+                        }
+                        Ok(())
+                    }
+                }
+
+                impl StatefulOutputPin for $PXi<Output> {
+                    fn is_set_low(&self) -> Result<bool, Self::Error> {
+                        Ok(!self.is_set_high()?)
+                    }
+
+                    fn is_set_high(&self) -> Result<bool, Self::Error> {
+                        unsafe {
+                            Ok((*pac::SIO::ptr()).gpio_out_set.read().bits() & (1 << $i) != 0)
+                        }
+                    }
+                }
+
+                // TODO: Don't allow Unknown since we need to fix up the pad at least
+                impl<MODE> InputPin for $PXi<MODE> {
+                    type Error = Infallible;
+
+                    fn is_low(&self) -> Result<bool, Self::Error> {
+                        Ok(!self.is_high()?)
+                    }
+
+                    fn is_high(&self) -> Result<bool, Self::Error> {
+                        unsafe {
+                            Ok((*pac::SIO::ptr()).gpio_in.read().bits() & (1 << $i) != 0)
+                        }
+                    }
+                }
+
+                impl $PXi<Input> {
+                    pub fn pull_high(&mut self) {
+                        unsafe {
+                            (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.pue().set_bit().pde().clear_bit());
+                        }
+                    }
+
+                    pub fn pull_low(&mut self) {
+                        unsafe {
+                            (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.pue().clear_bit().pde().set_bit());
+                        }
+                    }
+                }
             )+
         }
-
-        $(
-            pub struct $PXi<MODE> {
-                _mode: PhantomData<MODE>,
-            }
-
-            impl<MODE> $PXi<MODE> {
-                pub fn into_output(
-                    self,
-                    pads: &mut pac::$PADSX,
-                    sio: &mut pac::SIO,
-                ) -> $PXi<Output> {
-                    pads.gpio[$i].modify(|_, w| w.ie().set_bit().od().clear_bit());
-                    unsafe {
-                        (*pac::$GPIOX::ptr()).gpio[$i]
-                            .gpio_ctrl
-                            .write_with_zero(|x| x.funcsel().bits(FUNCTION_SIO));
-                    }
-                    sio.gpio_oe.modify(|_, x| unsafe { x.bits(1 << $i) });
-                    $PXi { _mode: PhantomData }
-                }
-            }
-
-            impl OutputPin for $PXi<Output> {
-                type Error = Infallible;
-
-                fn set_low(&mut self) -> Result<(), Self::Error> {
-                    unsafe {
-                        (*pac::SIO::ptr()).gpio_out_clr.write(|x| x.bits(1 << $i));
-                    }
-                    Ok(())
-                }
-
-                fn set_high(&mut self) -> Result<(), Self::Error> {
-                    unsafe {
-                        (*pac::SIO::ptr()).gpio_out_set.write(|x| x.bits(1 << $i));
-                    }
-                    Ok(())
-                }
-            }
-        )+
     };
 }
 
 gpio!(
-    IO_BANK0, io_bank0, PADS_BANK0, [
+    IO_BANK0, io_bank0, PADS_BANK0, pads_bank0, [
         Gpio0: (gpio0, 0),
         Gpio1: (gpio1, 1),
         Gpio2: (gpio2, 2),
