@@ -4,16 +4,14 @@
 #![no_std]
 #![no_main]
 
-use panic_halt as _;
-
 use cortex_m_rt::entry;
+use embedded_hal::digital::v2::OutputPin;
+use panic_halt as _;
+use rp2040_hal::prelude::*;
 
 #[link_section = ".boot2"]
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
-
-use embedded_hal::digital::v2::OutputPin;
-use rp2040_hal::prelude::*;
 
 #[entry]
 fn main() -> ! {
