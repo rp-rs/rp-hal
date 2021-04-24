@@ -10,6 +10,6 @@ jobs:
         with:
           toolchain: stable
           target: thumbv6m-none-eabi
-      - run: "cargo check --all"
+      - run: "cargo check --all --examples"
       - run: "cargo fmt -- --check"
       - run: "cargo clippy -- -Dwarnings"
