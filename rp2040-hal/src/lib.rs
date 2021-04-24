@@ -10,7 +10,6 @@
 extern crate cortex_m;
 extern crate embedded_hal as hal;
 extern crate nb;
-extern crate embedded_time;
 
 pub extern crate rp2040_pac as pac;
 
