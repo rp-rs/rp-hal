@@ -1,6 +1,7 @@
 //! Crystal Oscillator (XOSC)
 // See [Chapter 2 Section 16](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 
+use core::convert::TryInto;
 use core::{
     convert::Infallible,
     ops::RangeInclusive
@@ -30,16 +31,13 @@ pub struct Disabled;
 
 /// XOSC is initialized, ie we've given parameters (typestate)
 pub struct Initialized {
-    freq_hz: Hertz<u64>
+    freq_hz: Hertz
 }
 
 /// Stable state (typestate)
 pub struct Stable{
-    freq_hz: Hertz<u64>
+    freq_hz: Hertz
 }
-
-/// XOSC is disabling (typestate)
-pub struct Disabling;
 
 /// XOSC is in dormant mode (see Chapter 2, Section 16, §5)
 pub struct Dormant;
@@ -47,7 +45,6 @@ pub struct Dormant;
 impl State for Disabled {}
 impl State for Initialized {}
 impl State for Stable {}
-impl State for Disabling {}
 impl State for Dormant {}
 
 /// Possible errors when initializing the CrystalOscillator
@@ -91,10 +88,10 @@ impl CrystalOscillator<Disabled> {
     }
 
     /// Initializes the XOSC : frequency range is set, startup delay is calculated and set.
-    pub fn initialize(self, frequency: Megahertz<u32>) -> Result<CrystalOscillator<Initialized>, Error> {
+    pub fn initialize(self, frequency: Hertz) -> Result<CrystalOscillator<Initialized>, Error> {
 
         const ALLOWED_FREQUENCY_RANGE: RangeInclusive<Megahertz<u32>> = Megahertz(1)..=Megahertz(15);
-        const STABLE_DELAY: Milliseconds<u64> = Milliseconds(1_u64);
+        const STABLE_DELAY: Milliseconds = Milliseconds(1_u32);
         const DIVIDER: Fraction = Fraction::new(1, 256);
 
         if !ALLOWED_FREQUENCY_RANGE.contains(&frequency) {
@@ -106,18 +103,22 @@ impl CrystalOscillator<Disabled> {
             w
         });
 
-        let freq_hz: Hertz<u64> = frequency.into();
-        let delay_sec: Seconds<u64> = STABLE_DELAY.into();
+        let delay_sec: Seconds = STABLE_DELAY.into();
 
-        //let startup_delay = ((freq_hz / 1000) + 128) / 256;
+        //startup_delay = ((freq_hz * 10e-3) / 256; See Chapter 2, Section 16, §3)
+        //We do the calculation first.
         let startup_delay = delay_sec.
-            checked_mul(freq_hz.integer()).and_then(|r|
-                 r.to_generic::<u64>(DIVIDER).ok()
+            checked_mul(frequency.integer()).and_then(|r|
+                 r.to_generic::<u32>(DIVIDER).ok()
              ).
             ok_or(Error::BadArgument)?;
 
+        //Then we check if it fits into an u16.
+        let startup_delay: u16 = (*startup_delay.integer()).try_into().
+            map_err(|_|Error::BadArgument)?;
+
         self.device.startup.write(|w| unsafe {
-            w.delay().bits(*startup_delay.integer() as u16);
+            w.delay().bits(startup_delay);
             w
         });
 
@@ -127,7 +128,7 @@ impl CrystalOscillator<Disabled> {
         });
 
         Ok(self.transition(Initialized {
-            freq_hz: freq_hz
+            freq_hz: frequency
         }))
     }
 }
@@ -155,7 +156,7 @@ impl CrystalOscillator<Initialized> {
     pub fn get_stable(self, _token: StableOscillatorToken) -> CrystalOscillator<Stable> {
         let freq_hz = self.state.freq_hz;
         self.transition(Stable {
-            freq_hz:freq_hz
+            freq_hz
         })
     }
 }
@@ -163,22 +164,26 @@ impl CrystalOscillator<Initialized> {
 impl CrystalOscillator<Stable> {
 
     /// Operating frequency of the XOSC in hertz
-    pub fn operating_frequency(&self) -> Hertz<u64> {
+    pub fn operating_frequency(&self) -> Hertz {
         self.state.freq_hz
     }
 
     /// Disables the XOSC
-    pub fn disable(self) -> CrystalOscillator<Disabling> {
+    pub fn disable(self) -> CrystalOscillator<Disabled> {
         self.device.ctrl.modify(|_r,w| {
             w.enable().disable();
             w
         });
 
-        self.transition(Disabling)
+        self.transition(Disabled)
     }
 
-    /// Put the XOSC in dormant state
-    pub fn dormant(self) -> CrystalOscillator<Dormant> {
+    /// Put the XOSC in DORMANT state.
+    /// This method is marked unsafe because prior to switch the XOSC into DORMANT state,
+    /// PLLs must be stopped and IRQs have to be properly configured.
+    /// This method does not do any of that, it merely switches the XOSC to DORMANT state.
+    /// See Chapter 2, Section 16, §5) for details.
+    pub unsafe fn dormant(self) -> CrystalOscillator<Dormant> {
         //taken from the C SDK
         const XOSC_DORMANT_VALUE: u32 = 0x636f6d61;
 
