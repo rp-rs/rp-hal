@@ -7,19 +7,25 @@ use embedded_time::rate::Baud;
 use embedded_time::rate::Hertz;
 use embedded_time::fixed_point::FixedPoint;
 use nb::Error::WouldBlock;
-use rp2040_pac::{
-    uart0::uartlcr_h::W as UART_LCR_H_Writer
-};
 
+use crate::pac::{
+    uart0::{
+        uartlcr_h::W as UART_LCR_H_Writer,
+        RegisterBlock
+    },
+    UART0,
+    UART1
+
+};
 
 /// State of the UART Peripheral.
 pub trait State {}
 
 /// Trait to handle both underlying devices (UART0 & UART1)
-pub trait UARTDevice: Deref<Target = rp2040_pac::uart0::RegisterBlock> {}
+pub trait UARTDevice: Deref<Target = RegisterBlock> {}
 
-impl UARTDevice for rp2040_pac::UART0 {}
-impl UARTDevice for rp2040_pac::UART1 {}
+impl UARTDevice for UART0 {}
+impl UARTDevice for UART1 {}
 
 /// UART is enabled.
 pub struct Enabled;
