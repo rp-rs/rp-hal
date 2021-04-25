@@ -89,7 +89,6 @@ macro_rules! gpio {
             use core::convert::Infallible;
             use core::marker::PhantomData;
             use embedded_hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin};
-            use pac::generic::ResetValue;
             use super::*;
 
             impl GpioExt<pac::$PADSX, pac::SIO> for pac::$GPIOX {
@@ -120,12 +119,6 @@ macro_rules! gpio {
                 )+
             }
 
-            fn reset_pad(pads: &pac::$padsx::RegisterBlock, index: usize) {
-                let reset_value: u32 = pac::$padsx::GPIO::reset_value();
-                // This is safe, we get the value we're setting directly from the PAC
-                pads.gpio[index].write(|w| unsafe { w.bits(reset_value) });
-            }
-
             fn set_gpio_function(gpios: &pac::$gpiox::RegisterBlock, index: usize, function: GpioFunction) {
                 gpios.gpio[index]
                     .gpio_ctrl
@@ -152,7 +145,7 @@ macro_rules! gpio {
                         self,
                     ) -> $PXi<Output> {
                         unsafe {
-                            reset_pad(&*pac::$PADSX::ptr(), $i);
+                            (*pac::$PADSX::ptr()).gpio[$i].reset();
                         }
                         unsafe {
                             set_gpio_function(&*pac::$GPIOX::ptr(), $i, GpioFunction::Sio);
@@ -168,7 +161,7 @@ macro_rules! gpio {
                         self,
                     ) -> $PXi<Input> {
                         unsafe {
-                            reset_pad(&*pac::$PADSX::ptr(), $i);
+                            (*pac::$PADSX::ptr()).gpio[$i].reset();
                         }
                         unsafe {
                             set_gpio_function(&*pac::$GPIOX::ptr(), $i, GpioFunction::Sio);
