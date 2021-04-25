@@ -63,21 +63,6 @@ pub enum OutputSlewRate {
     Fast,
 }
 
-// Magic numbers from the datasheet
-// Order is important! Do not rearrange these
-#[allow(dead_code)]
-enum GpioFunction {
-    Spi = 1,
-    Uart,
-    I2c,
-    Pwn,
-    Sio,
-    Pio0,
-    Pio1,
-    Clock,
-    Usb,
-}
-
 macro_rules! gpio {
     ($GPIOX:ident, $gpiox:ident, $PADSX:ident, $padsx:ident, $gpioxs:expr, [
         $($PXi:ident: ($pxi:ident, $i:expr, $is:expr),)+
@@ -125,12 +110,6 @@ macro_rules! gpio {
                 )+
             }
 
-            fn set_gpio_function(gpios: &pac::$gpiox::RegisterBlock, index: usize, function: GpioFunction) {
-                gpios.gpio[index]
-                    .gpio_ctrl
-                    .write_with_zero(|x| unsafe { x.funcsel().bits(function as _) });
-            }
-
             type PacDriveStrength = pac::$padsx::gpio::DRIVE_A;
 
             $(
@@ -140,41 +119,47 @@ macro_rules! gpio {
                     _mode: PhantomData<MODE>,
                 }
 
-                // Safety: We own our $i slice of padsx, gpiox, and sio because the
-                // construction of Parts assumes ownership of all 3 and will not release
-                // them. Thus several of the methods below will reconstruct these objects
-                // as-needed
-
                 impl<MODE> $PXi<MODE> {
+                    // This is safe because Parts owns the pads, and each pin is responsible
+                    // for its own pad
+                    fn pad(&self) -> &pac::$padsx::GPIO {
+                        unsafe {
+                            &(*pac::$PADSX::ptr()).gpio[$i]
+                        }
+                    }
+
+                    // This is safe because Parts owns the SIO. But callers must only touch their
+                    // own pin
+                    fn sio(&self) -> &pac::sio::RegisterBlock {
+                        unsafe {
+                            &(*pac::SIO::ptr())
+                        }
+                    }
+
+                    // This is safe because Parts owns the bank, and each pin is responsible
+                    // for its own slice of the bank
+                    fn gpio_ctrl(&self) -> &pac::$gpiox::gpio::GPIO_CTRL {
+                        unsafe {
+                            &(*pac::$GPIOX::ptr()).gpio[$i].gpio_ctrl
+                        }
+                    }
+
                     #[doc = "Configure this pin as an output"]
-                    pub fn into_output(
-                        self,
-                    ) -> $PXi<Output> {
-                        unsafe {
-                            (*pac::$PADSX::ptr()).gpio[$i].reset();
-                        }
-                        unsafe {
-                            set_gpio_function(&*pac::$GPIOX::ptr(), $i, GpioFunction::Sio);
-                        }
-                        unsafe {
-                            (*pac::SIO::ptr()).gpio_oe_set.write(|x| { x.bits(1 << $i) });
-                        }
+                    pub fn into_output(self)-> $PXi<Output> {
+                        self.pad().reset();
+                        self.gpio_ctrl().write_with_zero(|x| { x.funcsel().sio_0() });
+                        // TODO: Can we update the PAC to give us a safe register field
+                        //       instead of `bits`?
+                        self.sio().gpio_oe_set.write(|x| unsafe { x.bits(1 << $i) });
                         $PXi { _mode: PhantomData }
                     }
 
                     #[doc = "Configure this pin as an input"]
-                    pub fn into_input(
-                        self,
-                    ) -> $PXi<Input> {
-                        unsafe {
-                            (*pac::$PADSX::ptr()).gpio[$i].reset();
-                        }
-                        unsafe {
-                            set_gpio_function(&*pac::$GPIOX::ptr(), $i, GpioFunction::Sio);
-                        }
-                        unsafe {
-                            (*pac::SIO::ptr()).gpio_oe_clr.write(|x| { x.bits(1 << $i) });
-                        }
+                    pub fn into_input(self) -> $PXi<Input> {
+                        self.pad().reset();
+                        self.gpio_ctrl().write_with_zero(|x| { x.funcsel().sio_0() });
+                        self.sio().gpio_oe_clr.write(|x| unsafe { x.bits(1 << $i) });
+
                         $PXi { _mode: PhantomData }
                     }
                 }
@@ -183,16 +168,12 @@ macro_rules! gpio {
                     type Error = Infallible;
 
                     fn set_low(&mut self) -> Result<(), Self::Error> {
-                        unsafe {
-                            (*pac::SIO::ptr()).gpio_out_clr.write(|x| x.bits(1 << $i));
-                        }
+                        self.sio().gpio_out_clr.write(|x| unsafe { x.bits(1 << $i) });
                         Ok(())
                     }
 
                     fn set_high(&mut self) -> Result<(), Self::Error> {
-                        unsafe {
-                            (*pac::SIO::ptr()).gpio_out_set.write(|x| x.bits(1 << $i));
-                        }
+                        self.sio().gpio_out_set.write(|x| unsafe { x.bits(1 << $i) });
                         Ok(())
                     }
                 }
@@ -203,9 +184,7 @@ macro_rules! gpio {
                     }
 
                     fn is_set_high(&self) -> Result<bool, Self::Error> {
-                        unsafe {
-                            Ok((*pac::SIO::ptr()).gpio_out.read().bits() & (1 << $i) != 0)
-                        }
+                        Ok(self.sio().gpio_out.read().bits() & (1 << $i) != 0)
                     }
                 }
 
@@ -219,9 +198,7 @@ macro_rules! gpio {
                             }
 
                             fn is_high(&self) -> Result<bool, Self::Error> {
-                                unsafe {
-                                    Ok((*pac::SIO::ptr()).gpio_in.read().bits() & (1 << $i) != 0)
-                                }
+                                Ok(self.sio().gpio_in.read().bits() & (1 << $i) != 0)
                             }
                         }
                     };
@@ -239,17 +216,13 @@ macro_rules! gpio {
                             OutputDriveStrength::EightMilliAmps => PacDriveStrength::_8MA,
                             OutputDriveStrength::TwelveMilliAmps => PacDriveStrength::_12MA,
                         };
-                        unsafe {
-                            (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.drive().variant(converted));
-                        }
+                        self.pad().modify(|_, w| w.drive().variant(converted));
                         self
                     }
 
                     #[doc = "Configure the slew rate for this output pin"]
                     pub fn slew_rate(self, slew_rate: OutputSlewRate) -> Self {
-                        unsafe {
-                            (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.slewfast().bit(slew_rate == OutputSlewRate::Fast));
-                        }
+                        self.pad().modify(|_, w| w.slewfast().bit(slew_rate == OutputSlewRate::Fast));
                         self
                     }
                 }
@@ -257,41 +230,31 @@ macro_rules! gpio {
                 impl $PXi<Input> {
                     #[doc = "Pull this input pin high using internal resistors"]
                     pub fn pull_up(self) -> Self {
-                        unsafe {
-                            (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.pue().set_bit().pde().clear_bit());
-                        }
+                        self.pad().modify(|_, w| w.pue().set_bit().pde().clear_bit());
                         self
                     }
 
                     #[doc = "Pull this input pin low using internal resistors"]
                     pub fn pull_down(self) -> Self {
-                        unsafe {
-                            (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.pue().clear_bit().pde().set_bit());
-                        }
+                        self.pad().modify(|_, w| w.pue().clear_bit().pde().set_bit());
                         self
                     }
 
                     #[doc = "Allow this input pin to float (i.e. don't pull it high or low)"]
                     pub fn float(self) -> Self {
-                        unsafe {
-                            (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.pue().clear_bit().pde().clear_bit());
-                        }
+                        self.pad().modify(|_, w| w.pue().clear_bit().pde().clear_bit());
                         self
                     }
 
                     #[doc = "Enable the schmitt trigger for this input pin"]
                     pub fn enable_schmitt_trigger(self) -> Self {
-                        unsafe {
-                            (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.schmitt().set_bit());
-                        }
+                        self.pad().modify(|_, w| w.schmitt().set_bit());
                         self
                     }
 
                     #[doc = "Disable the schmitt trigger for this input pin"]
                     pub fn disable_schmitt_trigger(self) -> Self {
-                        unsafe {
-                            (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.schmitt().clear_bit());
-                        }
+                        self.pad().modify(|_, w| w.schmitt().clear_bit());
                         self
                     }
                 }
