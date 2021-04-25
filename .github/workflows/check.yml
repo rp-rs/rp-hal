@@ -5,11 +5,23 @@ jobs:
     name: Check and Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           target: thumbv6m-none-eabi
-      - run: "cargo check --all --examples"
-      - run: "cargo fmt -- --check"
-      - run: "cargo clippy -- -Dwarnings"
+          override: true
+          profile: minimal
+          components: rustfmt, clippy
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --workspace
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -Dwarnings
