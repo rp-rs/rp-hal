@@ -160,7 +160,7 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
             return Err(Error::VCOFreqOutOfRange)
         }
 
-        if !POSTDIV_RANGE.contains(&config.post_div2) || !POSTDIV_RANGE.contains(&config.post_div2) {
+        if !POSTDIV_RANGE.contains(&config.post_div1) || !POSTDIV_RANGE.contains(&config.post_div2) {
             return Err(Error::PostDivOutOfRage)
         }
 
