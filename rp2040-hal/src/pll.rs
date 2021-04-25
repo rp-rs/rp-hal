@@ -4,7 +4,8 @@
 use core::{
     convert::{
         Infallible,
-        TryFrom
+        TryFrom,
+        TryInto
     },
     marker::PhantomData,
     ops::{
@@ -18,7 +19,8 @@ use embedded_time::{
     fixed_point::FixedPoint,
     rate::{
         Hertz,
-        Generic
+        Generic,
+        Rate
     }
 };
 
@@ -28,10 +30,11 @@ use nb::Error::WouldBlock;
 pub trait State {}
 
 
-/// PLL is disabled but is configured.
-pub struct Disabled {
-    refdiv: u8,
-    vco_freq: Hertz,
+/// PLL is disabled.
+pub struct Disabled;
+
+/// PLL is configured, started and locking into its designated frequency.
+pub struct Locking {
     post_div1: u8,
     post_div2: u8
 }
@@ -39,16 +42,9 @@ pub struct Disabled {
 /// PLL is locked : it delivers a steady frequency.
 pub struct Locked;
 
-/// PLL is locking into its designated frequency.
-pub struct Locking {
-    post_div1: u8,
-    post_div2: u8
-}
-
 impl State for Disabled {}
 impl State for Locked {}
 impl State for Locking {}
-
 
 /// Trait to handle both underlying devices from the PAC (PLL_SYS & PLL_USB)
 pub trait PhaseLockedLoopDevice: Deref<Target = rp2040_pac::pll_sys::RegisterBlock> {}
@@ -97,49 +93,83 @@ pub enum Error {
     BadArgument
 }
 
+
+/// Parameters for a PLL.
+pub struct PLLConfig<R: Rate> {
+
+    /// Voltage Controlled Oscillator frequency.
+    pub vco_freq: R,
+
+    /// Reference divider
+    pub refdiv: u8,
+
+    /// Post Divider 1
+    pub post_div1: u8,
+
+    /// Post Divider 2
+    pub post_div2: u8
+}
+
+/// Common configs for the two PLLs. Both assume the XOSC is cadenced at 12MHz !
+/// See Chapter 2, Section 18, §2
+pub mod common_configs {
+    use super::PLLConfig;
+    use embedded_time::rate::Megahertz;
+
+    /// Default, nominal configuration for PLL_SYS
+    pub const PLL_SYS_125MHZ: PLLConfig<Megahertz> = PLLConfig {
+        vco_freq: Megahertz(1500),
+        refdiv: 1,
+        post_div1: 6,
+        post_div2: 2
+    };
+
+    /// Default, nominal configuration for PLL_USB.
+    pub const PLL_USB_48MHZ: PLLConfig<Megahertz> = PLLConfig {
+        vco_freq: Megahertz(480),
+        refdiv: 1,
+        post_div1: 5,
+        post_div2: 2
+    };
+
+}
+
 impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
 
+    /// Instantiates a new Phase-Locked-Loop device.
+    pub fn new(dev: D) -> PhaseLockedLoop<Disabled, D> {
+        PhaseLockedLoop {
+            state: Disabled,
+            device: dev,
+        }
+    }
 
-    /// Instantiates and configures a new Phase-Locked-Loop device.
-    pub fn new(dev: D, refdiv: u8, vco_freq: Generic<u32>, post_div1: u8, post_div2: u8) -> Result<PhaseLockedLoop<Disabled, D>, Error> {
+    /// Configures and starts the PLL : it switches to Locking state.
+    pub fn initialize<R: Rate>(self, xosc_frequency: Generic<u32>, config: PLLConfig<R>) -> Result<PhaseLockedLoop<Locking, D>, Error>  where R: Into<Hertz> {
 
         const VCO_FREQ_RANGE: RangeInclusive<Hertz<u32>> = Hertz(400_000_000)..=Hertz(1600_000_000);
         const POSTDIV_RANGE: Range<u8> = 1..7;
+        const FBDIV_RANGE: Range<u16> = 16..320;
 
-        let vco_freq = Hertz::<u32>::try_from(vco_freq).map_err(|_| Error::BadArgument)?;
+        let vco_freq: Hertz = config.vco_freq.try_into().map_err(|_| Error::BadArgument)?;
 
         if !VCO_FREQ_RANGE.contains(&vco_freq) {
             return Err(Error::VCOFreqOutOfRange)
         }
 
-        if !POSTDIV_RANGE.contains(&post_div1) || !POSTDIV_RANGE.contains(&post_div2) {
+        if !POSTDIV_RANGE.contains(&config.post_div2) || !POSTDIV_RANGE.contains(&config.post_div2) {
             return Err(Error::PostDivOutOfRage)
         }
 
-        Ok(PhaseLockedLoop {
-            state: Disabled {
-                refdiv, vco_freq, post_div1, post_div2
-            },
-            device: dev,
-        })
-    }
-
-    /// Configures and starts the PLL : it switches to Locking state.
-    pub fn initialize(self, xosc_frequency: Generic<u32>) -> Result<PhaseLockedLoop<Locking, D>, Error>{
-
-        const FBDIV_RANGE: Range<u16> = 16..320;
-
-        let ref_freq_range: Range<Hertz<u32>> = Hertz(5_000_000)..self.state.vco_freq.div(16);
+        let ref_freq_range: Range<Hertz<u32>> = Hertz(5_000_000)..vco_freq.div(16);
 
         // Turn off PLL in case it is already running
         self.device.pwr.reset();
         self.device.fbdiv_int.reset();
 
-        let refdiv = self.state.refdiv;
-
         let ref_freq_hz = Hertz::<u32>::try_from(xosc_frequency).
             map_err(|_| Error::BadArgument)?.
-            checked_div(&(refdiv as u32)).
+            checked_div(&(config.refdiv as u32)).
             ok_or(Error::BadArgument)?;
 
         if !ref_freq_range.contains(&ref_freq_hz) {
@@ -147,12 +177,14 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
         }
 
         self.device.cs.write(|w| unsafe {
-            w.refdiv().bits(refdiv as u8);
+            w.refdiv().bits(config.refdiv);
             w
         });
 
-        let fbdiv = *self.state.vco_freq.checked_div(ref_freq_hz.integer()).
-            ok_or(Error::BadArgument)?.integer() as u16;
+        let fbdiv = vco_freq.checked_div(ref_freq_hz.integer()).
+            ok_or(Error::BadArgument)?;
+
+        let fbdiv: u16 = (*fbdiv.integer()).try_into().map_err(|_| Error::BadArgument)?;
 
         if !FBDIV_RANGE.contains(&fbdiv) {
             return Err(Error::FBDIVOutOfRange)
@@ -160,11 +192,6 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
 
         self.device.fbdiv_int.write(|w| unsafe {
             w.fbdiv_int().bits(fbdiv);
-            w
-        });
-
-        self.device.cs.write(|w| unsafe {
-            w.refdiv().bits(refdiv);
             w
         });
 
@@ -176,8 +203,8 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
             w
         });
 
-        let post_div1 = self.state.post_div1;
-        let post_div2 = self.state.post_div2;
+        let post_div1 = config.post_div1;
+        let post_div2 = config.post_div2;
 
         Ok(self.transition(Locking {
             post_div1, post_div2
