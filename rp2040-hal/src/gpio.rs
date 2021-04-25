@@ -81,6 +81,7 @@ macro_rules! gpio {
 
                 fn split(self, pads: pac::$PADSX, sio: pac::SIO, resets: &mut pac::RESETS) -> Parts {
                     resets.reset.modify(|_, w| w.$gpiox().clear_bit().$padsx().clear_bit());
+                    // TODO: Implement Resets in the HAL
                     while resets.reset_done.read().$gpiox().bit_is_clear() {
                         cortex_m::asm::delay(10);
                     }
