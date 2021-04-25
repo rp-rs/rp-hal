@@ -45,13 +45,13 @@ pub trait GpioExt<PADS, SIO> {
 /// The amount of current that a pin can drive when used as an output
 pub enum OutputDriveStrength {
     /// 2 mA
-    Ma2,
+    TwoMilliAmps,
     /// 4 mA
-    Ma4,
+    FourMilliAmps,
     /// 8 mA
-    Ma8,
+    EightMilliAmps,
     /// 12 mA
-    Ma12,
+    TwelveMilliAmps,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
@@ -64,15 +64,19 @@ pub enum OutputSlewRate {
 }
 
 // Magic numbers from the datasheet
-// const FUNCTION_SPI: u8 = 1;
-// const FUNCTION_UART: u8 = 2;
-// const FUNCTION_I2C: u8 = 3;
-// const FUNCTION_PWM: u8 = 4;
-const FUNCTION_SIO: u8 = 5;
-// const FUNCTION_PIO0: u8 = 6;
-// const FUNCTION_PIO1: u8 = 7;
-// const FUNCTION_CLOCK: u8 = 8;
-// const FUNCTION_USB: u8 = 9;
+// Order is important! Do not rearrange these
+#[allow(dead_code)]
+enum GpioFunction {
+    Spi = 1,
+    Uart,
+    I2c,
+    Pwn,
+    Sio,
+    Pio0,
+    Pio1,
+    Clock,
+    Usb,
+}
 
 macro_rules! gpio {
     ($GPIOX:ident, $gpiox:ident, $PADSX:ident, $padsx:ident, $gpioxs:expr, [
@@ -85,6 +89,7 @@ macro_rules! gpio {
             use core::convert::Infallible;
             use core::marker::PhantomData;
             use embedded_hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin};
+            use pac::generic::ResetValue;
             use super::*;
 
             impl GpioExt<pac::$PADSX, pac::SIO> for pac::$GPIOX {
@@ -115,21 +120,16 @@ macro_rules! gpio {
                 )+
             }
 
-            // Puts pad in same state as post-reset, according to datasheet
-            fn setup_pad_io(pads: &pac::$padsx::RegisterBlock, index: usize) {
-                pads.gpio[index].modify(|_, w| w.ie().set_bit()
-                                                .od().clear_bit()
-                                                .pue().clear_bit()
-                                                .pde().set_bit()
-                                                .schmitt().set_bit()
-                                                .drive()._4m_a()
-                                                .slewfast().clear_bit());
+            fn reset_pad(pads: &pac::$padsx::RegisterBlock, index: usize) {
+                let reset_value: u32 = pac::$padsx::GPIO::reset_value();
+                // This is safe, we get the value we're setting directly from the PAC
+                pads.gpio[index].write(|w| unsafe { w.bits(reset_value) });
             }
 
-            fn set_gpio_function(gpios: &pac::$gpiox::RegisterBlock, index: usize, function: u8) {
+            fn set_gpio_function(gpios: &pac::$gpiox::RegisterBlock, index: usize, function: GpioFunction) {
                 gpios.gpio[index]
                     .gpio_ctrl
-                    .write_with_zero(|x| unsafe { x.funcsel().bits(function) });
+                    .write_with_zero(|x| unsafe { x.funcsel().bits(function as _) });
             }
 
             type PacDriveStrength = pac::$padsx::gpio::DRIVE_A;
@@ -152,10 +152,10 @@ macro_rules! gpio {
                         self,
                     ) -> $PXi<Output> {
                         unsafe {
-                            setup_pad_io(&*pac::$PADSX::ptr(), $i);
+                            reset_pad(&*pac::$PADSX::ptr(), $i);
                         }
                         unsafe {
-                            set_gpio_function(&*pac::$GPIOX::ptr(), $i, FUNCTION_SIO);
+                            set_gpio_function(&*pac::$GPIOX::ptr(), $i, GpioFunction::Sio);
                         }
                         unsafe {
                             (*pac::SIO::ptr()).gpio_oe_set.write(|x| { x.bits(1 << $i) });
@@ -168,10 +168,10 @@ macro_rules! gpio {
                         self,
                     ) -> $PXi<Input> {
                         unsafe {
-                            setup_pad_io(&*pac::$PADSX::ptr(), $i);
+                            reset_pad(&*pac::$PADSX::ptr(), $i);
                         }
                         unsafe {
-                            set_gpio_function(&*pac::$GPIOX::ptr(), $i, FUNCTION_SIO);
+                            set_gpio_function(&*pac::$GPIOX::ptr(), $i, GpioFunction::Sio);
                         }
                         unsafe {
                             (*pac::SIO::ptr()).gpio_oe_clr.write(|x| { x.bits(1 << $i) });
@@ -235,10 +235,10 @@ macro_rules! gpio {
                     #[doc = "Configure the drive strength for this output pin"]
                     pub fn drive_strength(self, strength: OutputDriveStrength) -> Self {
                         let converted = match strength {
-                            OutputDriveStrength::Ma2 => PacDriveStrength::_2MA,
-                            OutputDriveStrength::Ma4 => PacDriveStrength::_4MA,
-                            OutputDriveStrength::Ma8 => PacDriveStrength::_8MA,
-                            OutputDriveStrength::Ma12 => PacDriveStrength::_12MA,
+                            OutputDriveStrength::TwoMilliAmps => PacDriveStrength::_2MA,
+                            OutputDriveStrength::FourMilliAmps => PacDriveStrength::_4MA,
+                            OutputDriveStrength::EightMilliAmps => PacDriveStrength::_8MA,
+                            OutputDriveStrength::TwelveMilliAmps => PacDriveStrength::_12MA,
                         };
                         unsafe {
                             (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.drive().variant(converted));
@@ -257,7 +257,7 @@ macro_rules! gpio {
 
                 impl $PXi<Input> {
                     #[doc = "Pull this input pin high using internal resistors"]
-                    pub fn pull_high(self) -> Self {
+                    pub fn pull_up(self) -> Self {
                         unsafe {
                             (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.pue().set_bit().pde().clear_bit());
                         }
@@ -265,7 +265,7 @@ macro_rules! gpio {
                     }
 
                     #[doc = "Pull this input pin low using internal resistors"]
-                    pub fn pull_low(self) -> Self {
+                    pub fn pull_down(self) -> Self {
                         unsafe {
                             (*pac::$PADSX::ptr()).gpio[$i].modify(|_, w| w.pue().clear_bit().pde().set_bit());
                         }

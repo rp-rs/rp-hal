@@ -21,9 +21,10 @@ fn main() -> ! {
     let mut led_pin = pins.gpio25.into_output();
 
     loop {
-        led_pin.set_low().unwrap();
-        // TODO: I dare not use delays until we've got clocks running
         led_pin.set_high().unwrap();
-        // TODO: Other delay
+        // TODO: Replace with proper 1s delays once we have clocks working
+        cortex_m::asm::delay(500_000);
+        led_pin.set_low().unwrap();
+        cortex_m::asm::delay(500_000);
     }
 }
