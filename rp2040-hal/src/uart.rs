@@ -184,6 +184,15 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
 
     /// Disable this UART Peripheral, falling back to the Disabled state.
     pub fn disable(self) -> UARTPeripheral<Disabled, D> {
+
+        // Disable the UART, both TX and RX
+        self.device.uartcr.write(|w| {
+            w.uarten().clear_bit();
+            w.txe().clear_bit();
+            w.rxe().clear_bit();
+            w
+        });
+
         self.transition(Disabled)
     }
 
