@@ -56,6 +56,18 @@ pub enum Error {
     BadArgument
 }
 
+
+/// Blocking helper method to setup the XOSC without going through all the steps.
+pub fn setup_xosc_blocking(xosc_dev: rp2040_pac::XOSC, frequency: Hertz) -> Result<CrystalOscillator<Stable>, Error> {
+
+    let initialized_xosc = CrystalOscillator::new(xosc_dev).initialize(frequency)?;
+
+    let stable_xosc_token = nb::block!(initialized_xosc.await_stabilization()).unwrap();
+
+    Ok(initialized_xosc.get_stable(stable_xosc_token))
+}
+
+
 /// A Crystal Oscillator.
 pub struct CrystalOscillator<S: State> {
     device: rp2040_pac::XOSC,
