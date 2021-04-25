@@ -95,7 +95,13 @@ macro_rules! gpio {
                 type Parts = Parts;
 
                 fn split(self, pads: pac::$PADSX, sio: pac::SIO, resets: &mut pac::RESETS) -> Parts {
-                    resets.reset.modify(|_, w| w.$gpiox().clear_bit());
+                    resets.reset.modify(|_, w| w.$gpiox().clear_bit().$padsx().clear_bit());
+                    while resets.reset_done.read().$gpiox().bit_is_clear() {
+                        cortex_m::asm::delay(10);
+                    }
+                    while resets.reset_done.read().$padsx().bit_is_clear() {
+                        cortex_m::asm::delay(10);
+                    }
                     Parts {
                         _pads: pads,
                         _sio: sio,
