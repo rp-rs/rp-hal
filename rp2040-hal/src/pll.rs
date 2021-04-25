@@ -131,7 +131,6 @@ pub mod common_configs {
         post_div1: 5,
         post_div2: 2
     };
-
 }
 
 impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
@@ -145,13 +144,17 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
     }
 
     /// Configures and starts the PLL : it switches to Locking state.
-    pub fn initialize<R: Rate>(self, xosc_frequency: Generic<u32>, config: PLLConfig<R>) -> Result<PhaseLockedLoop<Locking, D>, Error>  where R: Into<Hertz> {
+    pub fn initialize<R: Rate>(self, xosc_frequency: Generic<u32>, config: PLLConfig<R>) -> Result<PhaseLockedLoop<Locking, D>, Error> where R: Into<Hertz<u64>>{
 
         const VCO_FREQ_RANGE: RangeInclusive<Hertz<u32>> = Hertz(400_000_000)..=Hertz(1600_000_000);
         const POSTDIV_RANGE: Range<u8> = 1..7;
         const FBDIV_RANGE: Range<u16> = 16..320;
 
-        let vco_freq: Hertz = config.vco_freq.try_into().map_err(|_| Error::BadArgument)?;
+        //First we convert our rate to Hertz<u64> as all other rates can be converted to that.
+        let vco_freq: Hertz<u64> = config.vco_freq.into();
+
+        //Then we try to downscale to u32.
+        let vco_freq: Hertz<u32> = vco_freq.try_into().map_err(|_| Error::BadArgument)?;
 
         if !VCO_FREQ_RANGE.contains(&vco_freq) {
             return Err(Error::VCOFreqOutOfRange)
