@@ -205,7 +205,7 @@ macro_rules! gpio {
 
                     fn is_set_high(&self) -> Result<bool, Self::Error> {
                         unsafe {
-                            Ok((*pac::SIO::ptr()).gpio_out_set.read().bits() & (1 << $i) != 0)
+                            Ok((*pac::SIO::ptr()).gpio_out.read().bits() & (1 << $i) != 0)
                         }
                     }
                 }
