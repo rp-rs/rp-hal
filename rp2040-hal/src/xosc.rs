@@ -13,9 +13,9 @@ use embedded_time::{
     rate::{
         Hertz,
         Megahertz,
+        Rate
     },
     duration::{
-        Seconds,
         Milliseconds,
         Duration
     }
@@ -106,7 +106,7 @@ impl CrystalOscillator<Disabled> {
         });
 
         //1 ms = 10e-3 sec and Freq = 1/T where T is in seconds so 1ms converts to 1000Hz
-        let delay_to_hz: Hertz = STABLE_DELAY.to_rate();
+        let delay_to_hz: Hertz = STABLE_DELAY.to_rate().map_err(|_|Error::BadArgument)?;
 
         //startup_delay = ((freq_hz * 10e-3) / 256) = ((freq_hz / 1000) / 256)
         //See Chapter 2, Section 16, §3)
