@@ -94,7 +94,9 @@ impl CrystalOscillator<Disabled> {
         const STABLE_DELAY: Milliseconds = Milliseconds(1_u32);
         const DIVIDER: Fraction = Fraction::new(256, 1);
 
-        if !ALLOWED_FREQUENCY_RANGE.contains(&frequency) {
+        let freq_mhz: Megahertz = frequency.into();
+
+        if !ALLOWED_FREQUENCY_RANGE.contains(&freq_mhz) {
             return Err(Error::FrequencyOutOfRange)
         }
 
@@ -120,7 +122,7 @@ impl CrystalOscillator<Disabled> {
             map_err(|_|Error::BadArgument)?;
 
         self.device.startup.write(|w| unsafe {
-            w.delay().bits(startup_delay+1);
+            w.delay().bits(startup_delay);
             w
         });
 
