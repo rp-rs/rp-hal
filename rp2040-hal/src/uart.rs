@@ -203,6 +203,14 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
         self.transition(Disabled)
     }
 
+    pub(crate) fn transmit_flushed(&self) -> nb::Result<(), Infallible> {
+
+        if self.device.uartfr.read().txfe().bit_is_set() {
+            Ok(())
+        }
+        else { Err(WouldBlock) }
+    }
+
     fn uart_is_writable(&self) -> bool {
         self.device.uartfr.read().txff().bit_is_clear()
     }
@@ -216,7 +224,7 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
     /// - 0 bytes were written, a WouldBlock Error is returned
     /// - some bytes were written, it is deemed to be a success
     /// Upon success, the number of written bytes is returned.
-    pub fn write<'d>(&self, data: &'d [u8]) -> nb::Result<&'d [u8], Infallible> {
+    pub fn write_raw <'d>(&self, data: &'d [u8]) -> nb::Result<&'d [u8], Infallible> {
 
         let mut bytes_written = 0;
 
@@ -246,7 +254,7 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
     /// - 0 bytes were read, a WouldBlock Error is returned
     /// - some bytes were read, it is deemed to be a success
     /// Upon success, the number of read bytes is returned.
-    pub fn read<'b>(&self, buffer: &'b mut [u8]) -> nb::Result<&'b mut [u8], Infallible> {
+    pub fn read_raw<'b>(&self, buffer: &'b mut [u8]) -> nb::Result<&'b mut [u8], Infallible> {
 
         let mut bytes_read = 0;
 
@@ -277,7 +285,7 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
         let mut temp = data;
 
         while !temp.is_empty() {
-            temp = match self.write(temp) {
+            temp = match self.write_raw(temp) {
                 Ok(remaining) => remaining,
                 Err(WouldBlock) => continue,
                 Err(_) => unreachable!()
@@ -291,7 +299,7 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
         let mut offset = 0;
 
         while offset != buffer.len() {
-            offset += match self.read(&mut buffer[offset..]) {
+            offset += match self.read_raw(&mut buffer[offset..]) {
                 Ok(remaining) => { remaining.len() },
                 Err(WouldBlock) => continue,
                 Err(_) => unreachable!()
