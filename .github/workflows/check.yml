@@ -16,7 +16,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: check
-          args: --workspace
+          args: --workspace --examples
       - uses: actions-rs/cargo@v1
         with:
           command: fmt
