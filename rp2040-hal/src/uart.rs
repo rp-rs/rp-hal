@@ -18,6 +18,12 @@ use crate::pac::{
 
 };
 
+/// Error type for UART operations.
+pub enum Error {
+    /// Bad argument : when things overflow, ...
+    BadArgument
+}
+
 /// State of the UART Peripheral.
 pub trait State {}
 
@@ -149,9 +155,9 @@ impl<S: State, D: UARTDevice> UARTPeripheral<S, D> {
 impl<D: UARTDevice> UARTPeripheral<Disabled, D> {
 
     /// Enables the provided UART device with the given configuration.
-    pub fn enable(mut device: D, config: UARTConfig, frequency: Hertz) -> UARTPeripheral<Enabled, D> {
+    pub fn enable(mut device: D, config: UARTConfig, frequency: Hertz) -> Result<UARTPeripheral<Enabled, D>, Error> {
 
-        let effective_baudrate = configure_baudrate(&mut device, &config.baudrate, &frequency);
+        let effective_baudrate = configure_baudrate(&mut device, &config.baudrate, &frequency)?;
 
         // Enable the UART, both TX and RX
         device.uartcr.write(|w| {
@@ -174,9 +180,9 @@ impl<D: UARTDevice> UARTPeripheral<Disabled, D> {
             w
         });
 
-        UARTPeripheral {
+        Ok(UARTPeripheral {
             device, config, effective_baudrate, _state: Enabled
-        }
+        })
     }
 }
 
@@ -209,7 +215,7 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
     /// - 0 bytes were written, a WouldBlock Error is returned
     /// - some bytes were written, it is deemed to be a success
     /// Upon success, the number of written bytes is returned.
-    pub fn write(&self, data: &[u8]) -> nb::Result<usize, Infallible> {
+    pub fn write<'d>(&self, data: &'d [u8]) -> nb::Result<&'d [u8], Infallible> {
 
         let mut bytes_written = 0;
 
@@ -220,7 +226,7 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
                     return Err(WouldBlock)
                 }
                 else {
-                    return Ok(bytes_written)
+                    return Ok(&data[bytes_written..])
                 }
             }
 
@@ -231,7 +237,7 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
                 w
             })
         }
-        Ok(bytes_written)
+        return Ok(&data[bytes_written..])
     }
 
     /// Reads bytes from the UART.
@@ -239,7 +245,7 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
     /// - 0 bytes were read, a WouldBlock Error is returned
     /// - some bytes were read, it is deemed to be a success
     /// Upon success, the number of read bytes is returned.
-    pub fn read(&self, buffer: &mut [u8]) -> nb::Result<usize, Infallible> {
+    pub fn read<'b>(&self, buffer: &'b mut [u8]) -> nb::Result<&'b mut [u8], Infallible> {
 
         let mut bytes_read = 0;
 
@@ -249,7 +255,7 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
                     return Err(WouldBlock)
                 }
                 else {
-                    return Ok(bytes_read)
+                    break &mut buffer[bytes_read..]
                 }
             }
 
@@ -258,7 +264,7 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
                 bytes_read += 1;
             }
             else {
-                break bytes_read;
+                break &mut buffer[bytes_read..]
             }
         })
     }
@@ -267,18 +273,14 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
     /// This function blocks until the full buffer has been sent.
     pub fn write_full_blocking(&self, data: &[u8]) {
 
-        let mut offset = 0;
+        let mut temp = data;
 
-        while offset != data.len() {
-            offset += match self.write(&data[offset..]) {
-                Ok(written_bytes) => {
-                    written_bytes
-                }
-
+        while !temp.is_empty() {
+            temp = match self.write(temp) {
+                Ok(remaining) => remaining,
                 Err(WouldBlock) => continue,
-
                 Err(_) => unreachable!()
-            };
+            }
         }
     }
 
@@ -289,34 +291,38 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
 
         while offset != buffer.len() {
             offset += match self.read(&mut buffer[offset..]) {
-                Ok(bytes_read) => {
-                    bytes_read
-                }
-
+                Ok(remaining) => { remaining.len() },
                 Err(WouldBlock) => continue,
-
                 Err(_) => unreachable!()
-            };
+            }
         }
     }
-
 }
 
-/// Baudrate configuration. Code loosely inspired from the C SDK.
-fn configure_baudrate(device: &mut dyn UARTDevice, wanted_baudrate: &Baud, frequency: &Hertz) -> Baud {
+/// Baudrate dividers calculation. Code inspired from the C SDK.
+fn calculate_baudrate_dividers(wanted_baudrate: &Baud, frequency: &Hertz) -> Result<(u16, u16), Error> {
 
-    let frequency = *frequency.integer();
+    // baudrate_div = frequency * 8 / wanted_baudrate
+    let baudrate_div = frequency.checked_mul(&8).
+        and_then(|r| r.checked_div(wanted_baudrate.integer())).
+        ok_or(Error::BadArgument)?;
 
-    let baudrate_div = 8 * frequency / *wanted_baudrate.integer();
+    let baudrate_div: u32 = *baudrate_div.integer();
 
-    let (baud_ibrd, baud_fbrd) = match (baudrate_div >> 7, ((baudrate_div & 0x7F) + 1) / 2) {
+    Ok(match (baudrate_div >> 7, ((baudrate_div & 0x7F) + 1) / 2) {
 
         (0, _) => (1, 0),
 
         (ibrd, _) if ibrd >= 65535 => (65535, 0),
 
-        (ibrd, fbrd) => (ibrd, fbrd)
-    };
+        (ibrd, fbrd) => (ibrd as u16, fbrd as u16)
+    })
+}
+
+/// Baudrate configuration. Code loosely inspired from the C SDK.
+fn configure_baudrate(device: &mut dyn UARTDevice, wanted_baudrate: &Baud, frequency: &Hertz) -> Result<Baud, Error> {
+
+    let (baud_ibrd, baud_fbrd) = calculate_baudrate_dividers(wanted_baudrate, frequency)?;
 
     // Load PL011's baud divisor registers
     device.uartibrd.write(|w| unsafe {
@@ -330,11 +336,9 @@ fn configure_baudrate(device: &mut dyn UARTDevice, wanted_baudrate: &Baud, frequ
 
     // PL011 needs a (dummy) line control register write to latch in the
     // divisors. We don't want to actually change LCR contents here.
-    device.uartlcr_h.write(|w| {
-        w
-    });
+    device.uartlcr_h.modify(|_,w| { w });
 
-    Baud((4 * frequency) / (64 * baud_ibrd + baud_fbrd))
+    Ok(Baud((4 * *frequency.integer()) / (64 * baud_ibrd + baud_fbrd) as u32))
 }
 
 
