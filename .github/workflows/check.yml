@@ -1,0 +1,27 @@
+on: [push, pull_request]
+name: CI Checks
+jobs:
+  check:
+    name: Check and Lint
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: thumbv6m-none-eabi
+          override: true
+          profile: minimal
+          components: rustfmt, clippy
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --workspace
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -Dwarnings
