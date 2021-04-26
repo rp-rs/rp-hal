@@ -230,12 +230,12 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
                 }
             }
 
-            bytes_written += 1;
-
             self.device.uartdr.write(|w| unsafe {
                 w.data().bits(*c);
                 w
-            })
+            });
+            
+            bytes_written += 1;
         }
         return Ok(&data[bytes_written..])
     }
