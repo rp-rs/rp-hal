@@ -21,7 +21,10 @@ fn rom_table_lookup<T>(table: *const u16, tag: RomFnTableCode) -> T {
     unsafe {
         let rom_table_lookup_ptr: *const u32 = rom_hword_as_ptr(ROM_TABLE_LOOKUP_PTR);
         let rom_table_lookup: RomTableLookupFn<T> = core::mem::transmute(rom_table_lookup_ptr);
-        rom_table_lookup(rom_hword_as_ptr(table) as *const u16, u16::from_le_bytes(tag) as u32)
+        rom_table_lookup(
+            rom_hword_as_ptr(table) as *const u16,
+            u16::from_le_bytes(tag) as u32,
+        )
     }
 }
 
@@ -342,7 +345,7 @@ double_funcs! {
     0x40 dsin(angle: f64) -> f64;
     /// Return the tangent of angle. angle is in radians, and must be in the range -1024 to 1024
     0x44 dtan(angle: f64) -> f64;
-    /// Return the exponential value of v, i.e. so 
+    /// Return the exponential value of v, i.e. so
     0x4c dexp(v: f64) -> f64;
     /// Return the natural logarithm of v. If v <= 0 return -Infinity
     0x50 dln(v: f64) -> f64;
@@ -371,7 +374,7 @@ double_funcs! {
     /// Convert a double to a signed fixed point 64-bit integer representation where n specifies the
     /// position of the binary point in the resulting fixed point representation - e.g. _double2fix(0.5f,
     /// 16) == 0x8000. This method rounds towards -Infinity, and clamps the resulting integer to lie
-    /// within the range -0x8000000000000000 to 0x7FFFFFFFFFFFFFFF    
+    /// within the range -0x8000000000000000 to 0x7FFFFFFFFFFFFFFF
     0x70 double_to_fix64(v: f64, n: i32) -> i64;
     /// Convert a double to an unsigned 64-bit integer, rounding towards -Infinity, and clamping the
     /// result to lie within the range 0x0000000000000000 to 0xFFFFFFFFFFFFFFFF
