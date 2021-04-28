@@ -266,7 +266,7 @@ float_funcs! {
     /// Convert a float to a signed 64-bit integer, rounding towards -Infinity, and clamping
     /// the result to lie within the range -0x8000000000000000 to 0x7FFFFFFFFFFFFFFF
     0x6c float_to_int64(v: f32) -> i64;
-    ///     Convert a float to a signed fixed point 64-bit integer representation where n
+    /// Convert a float to a signed fixed point 64-bit integer representation where n
     /// specifies the position of the binary point in the resulting fixed point representation -
     /// e.g. _float2fix(0.5f, 16) == 0x8000. This method rounds towards -Infinity, and
     /// clamps the resulting integer to lie within the range -0x8000000000000000 to
