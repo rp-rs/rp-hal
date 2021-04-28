@@ -10,6 +10,7 @@
 extern crate cortex_m;
 extern crate embedded_hal as hal;
 extern crate nb;
+
 pub extern crate rp2040_pac as pac;
 
 pub mod adc;
@@ -24,3 +25,4 @@ pub mod timer;
 pub mod uart;
 pub mod usb;
 pub mod watchdog;
+pub mod xosc;
