@@ -199,10 +199,9 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
         });
 
         // Turn on self.device
-        self.device.pwr.write(|w| unsafe {
-            //w.pd().clear_bit();
-            //w.vcopd().clear_bit();
-            w.bits(0);
+        self.device.pwr.modify(|_,w| {
+            w.pd().clear_bit();
+            w.vcopd().clear_bit();
             w
         });
 
@@ -245,9 +244,8 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Locking, D> {
         });
 
         // Turn on post divider
-        self.device.pwr.write(|w| unsafe {
-            //w.postdivpd().clear_bit();
-            w.bits(0);
+        self.device.pwr.modify(|_,w| {
+            w.postdivpd().clear_bit();
             w
         });
 
