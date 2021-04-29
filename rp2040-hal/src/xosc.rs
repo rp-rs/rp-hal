@@ -203,7 +203,7 @@ impl CrystalOscillator<Stable> {
         //taken from the C SDK
         const XOSC_DORMANT_VALUE: u32 = 0x636f6d61;
 
-        self.device.dormant.write(|w| unsafe {
+        self.device.dormant.write(|w| {
             w.bits(XOSC_DORMANT_VALUE);
             w
         });
