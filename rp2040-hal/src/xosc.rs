@@ -69,7 +69,7 @@ impl<S: State> CrystalOscillator<S> {
     fn transition<To: State>(self, state: To) -> CrystalOscillator<To> {
         CrystalOscillator {
             device: self.device,
-            state: state,
+            state,
         }
     }
 
