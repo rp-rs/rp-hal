@@ -198,7 +198,7 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
             w
         });
 
-        // Turn on self.device
+        // Turn on PLL
         self.device.pwr.modify(|_,w| {
             w.pd().clear_bit();
             w.vcopd().clear_bit();
