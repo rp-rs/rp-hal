@@ -18,7 +18,12 @@ use nb::Error::WouldBlock;
 pub trait State {}
 
 /// PLL is disabled.
-pub struct Disabled;
+pub struct Disabled {
+    refdiv: u8,
+    fbdiv: u16,
+    post_div1: u8,
+    post_div2: u8,
+}
 
 /// PLL is configured, started and locking into its designated frequency.
 pub struct Locking {
@@ -118,19 +123,11 @@ pub mod common_configs {
 
 impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
     /// Instantiates a new Phase-Locked-Loop device.
-    pub fn new(dev: D) -> PhaseLockedLoop<Disabled, D> {
-        PhaseLockedLoop {
-            state: Disabled,
-            device: dev,
-        }
-    }
-
-    /// Configures and starts the PLL : it switches to Locking state.
-    pub fn initialize<R: Rate>(
-        self,
+    pub fn new<R: Rate>(
+        dev: D,
         xosc_frequency: Generic<u32>,
         config: PLLConfig<R>,
-    ) -> Result<PhaseLockedLoop<Locking, D>, Error>
+    ) -> Result<PhaseLockedLoop<Disabled, D>, Error>
     where
         R: Into<Hertz<u64>>,
     {
@@ -155,10 +152,6 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
 
         let ref_freq_range: Range<Hertz<u32>> = Hertz(5_000_000)..vco_freq.div(16);
 
-        // Turn off PLL in case it is already running
-        self.device.pwr.reset();
-        self.device.fbdiv_int.reset();
-
         let ref_freq_hz = Hertz::<u32>::try_from(xosc_frequency)
             .map_err(|_| Error::BadArgument)?
             .checked_div(&(config.refdiv as u32))
@@ -167,11 +160,6 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
         if !ref_freq_range.contains(&ref_freq_hz) {
             return Err(Error::RefFreqOutOfRange);
         }
-
-        self.device.cs.write(|w| unsafe {
-            w.refdiv().bits(config.refdiv);
-            w
-        });
 
         let fbdiv = vco_freq
             .checked_div(ref_freq_hz.integer())
@@ -185,8 +173,34 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
             return Err(Error::FBDIVOutOfRange);
         }
 
+        let refdiv = config.refdiv;
+        let post_div1 = config.post_div1;
+        let post_div2 = config.post_div2;
+
+        Ok(PhaseLockedLoop {
+            state: Disabled {
+                refdiv,
+                fbdiv,
+                post_div1,
+                post_div2,
+            },
+            device: dev,
+        })
+    }
+
+    /// Configures and starts the PLL : it switches to Locking state.
+    pub fn initialize(self) -> PhaseLockedLoop<Locking, D> {
+        // Turn off PLL in case it is already running
+        self.device.pwr.reset();
+        self.device.fbdiv_int.reset();
+
+        self.device.cs.write(|w| unsafe {
+            w.refdiv().bits(self.state.refdiv);
+            w
+        });
+
         self.device.fbdiv_int.write(|w| unsafe {
-            w.fbdiv_int().bits(fbdiv);
+            w.fbdiv_int().bits(self.state.fbdiv);
             w
         });
 
@@ -197,13 +211,13 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
             w
         });
 
-        let post_div1 = config.post_div1;
-        let post_div2 = config.post_div2;
+        let post_div1 = self.state.post_div1;
+        let post_div2 = self.state.post_div2;
 
-        Ok(self.transition(Locking {
+        self.transition(Locking {
             post_div1,
             post_div2,
-        }))
+        })
     }
 }
 
