@@ -9,14 +9,12 @@ mod macros;
 #[derive(Copy, Clone)]
 /// Provides refs to the CLOCKS block.
 pub struct ShareableClocks {
-    _internal: ()
+    _internal: (),
 }
 
 impl ShareableClocks {
     fn new(_clocks: &mut CLOCKS) -> Self {
-        ShareableClocks {
-            _internal: ()
-        }
+        ShareableClocks { _internal: () }
     }
 
     unsafe fn get(&self) -> &clocks::RegisterBlock {
@@ -26,17 +24,16 @@ impl ShareableClocks {
 
 /// Abstraction layer providing Clock Management.
 pub struct ClocksManager {
-    clocks:CLOCKS,
-    shared_clocks: ShareableClocks
+    clocks: CLOCKS,
+    shared_clocks: ShareableClocks,
 }
 impl ClocksManager {
-
     /// Exchanges CLOCKS block against Self.
     pub fn new(mut clocks_block: CLOCKS) -> Self {
         let shared_clocks = ShareableClocks::new(&mut clocks_block);
         ClocksManager {
             clocks: clocks_block,
-            shared_clocks: shared_clocks
+            shared_clocks: shared_clocks,
         }
     }
 
@@ -55,22 +52,20 @@ impl ClocksManager {
     /// Getter for the System Clock
     pub fn sys_clock(&self) -> SystemClock {
         SystemClock {
-            shared_dev: self.shared_clocks.clone()
+            shared_dev: self.shared_clocks.clone(),
         }
     }
 
     /// Getter for the PeripheralClock
     pub fn peripheral_clock(&self) -> PeripheralClock {
         PeripheralClock {
-            shared_dev: self.shared_clocks.clone()
+            shared_dev: self.shared_clocks.clone(),
         }
     }
 }
 
-
 /// For clocks with an integer divider.
 pub trait IntegerDivision {
-
     /// Set integer divider value.
     fn set_int_div(&mut self, div: usize);
 }
@@ -88,75 +83,62 @@ pub trait XOSCClockSource {
 }
 /// For clocks that can have ROSC as source.
 pub trait ROSCClockSource {
-
     /// set ROSC as a source.
     fn set_rosc_src(&mut self);
 }
 /// For clocks that can have ... itself (?) as a source (is that the "glitchless mux" ?)
 pub trait SelfAuxClockSource {
-
     /// Set ...
     fn set_self_aux_src(&mut self);
 }
 /// For clocks that can have the Reference Clock as source.
 pub trait ClockREFClockSource {
-
     /// Set Reference Clock as
     fn set_clkref_src(&mut self);
 }
 /// For clocks that can have the System Clock as an auxilliary source.
 pub trait ClockSYSClockAuxSource {
-
     /// Set System Clock as source.
     fn set_clksys_auxsrc(&mut self);
 }
 /// For clocks that can have XOSC as an auxilliary source.
 pub trait XOSCClockAuxSource {
-
     /// Set XOSC as auxilliary source.
     fn set_xosc_auxsrc(&mut self);
 }
 /// For clocks that can have ROSC as an auxilliary source.
 pub trait ROSCClockAuxSource {
-
     /// Set ROSC as auxilliary source.
     fn set_rosc_auxsrc(&mut self);
 }
 /// For clocks that can have ROSC_PH as an auxilliary source.
 pub trait ROSCPHClockAuxSource {
-
     /// Set ROSC_PH as auxilliary source.
     fn set_rosc_ph_auxsrc(&mut self);
 }
 /// For clocks that can have PLL_USB as an auxilliary source.
 pub trait PLLUSBClockAuxSource {
-
     /// Set PLL_USB as auxilliary source.
     fn set_pll_usb_auxsrc(&mut self);
 }
 /// For clocks that can have PLL_SYS as an auxilliary source.
 pub trait PLLSYSClockAuxSource {
-
     /// Set PLL_SYS as auxilliary source.
     fn set_pll_sys_auxsrc(&mut self);
 }
 /// For clocks that can have gpin0 as an auxilliary source.
 pub trait Gpin0ClockAuxSource {
-
     /// Set clock to be received from gpin0 (auxilliary)
     fn set_gpin0_auxsrc(&mut self);
 }
 /// For clocks that can have gpin1 as an auxilliary source.
 pub trait Gpin1ClockAuxSource {
-
     /// Set clock to be received from gpin1
     fn set_gpin1_auxsrc(&mut self);
 }
 
-
 /// For clocks having a generator.
 pub trait ClockGenerator {
-
     /// Enables the clock.
     fn enable(&mut self);
 
@@ -181,13 +163,11 @@ int_division!(ReferenceClock, clk_ref_div, u8);
 
 /// System Clock
 pub struct SystemClock {
-    shared_dev: ShareableClocks
+    shared_dev: ShareableClocks,
 }
 impl SystemClock {
-
     /// WIP - Helper function to reset source (blocking)
     pub fn reset_source_await(&self) {
-
         let shared_dev = unsafe { self.shared_dev.get() };
 
         shared_dev.clk_sys_ctrl.write(|w| {
@@ -199,7 +179,7 @@ impl SystemClock {
     }
 
     /// WIP - Helper function to select new source (blocking)
-    pub fn await_select(&self, clock:u8) {
+    pub fn await_select(&self, clock: u8) {
         let shared_dev = unsafe { self.shared_dev.get() };
 
         while shared_dev.clk_sys_selected.read().bits() != clock as u32 {
@@ -219,10 +199,9 @@ rosc_auxsource!(SystemClock, clk_sys_ctrl);
 int_division!(SystemClock, clk_sys_div, u32);
 frac_division!(SystemClock, clk_sys_div, u8);
 
-
 /// Peripheral Clock
 pub struct PeripheralClock {
-    shared_dev: ShareableClocks
+    shared_dev: ShareableClocks,
 }
 gpin0_auxsource!(PeripheralClock, clk_peri_ctrl);
 gpin1_auxsource!(PeripheralClock, clk_peri_ctrl);
