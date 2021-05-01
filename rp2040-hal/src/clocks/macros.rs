@@ -1,34 +1,30 @@
 #[macro_use]
 
 macro_rules! int_division {
-     ($name:ident, $div:ident, $u:ty) => {
-
-         impl IntegerDivision for $name {
-             fn set_int_div(&mut self, div: usize) {
-                 unsafe { self.shared_dev.get() }.$div.write(|w| unsafe {
-                     w.int().bits(div as $u);
-                     w
-                 });
-             }
-         }
+    ($name:ident, $div:ident, $u:ty) => {
+        impl IntegerDivision for $name {
+            fn set_int_div(&mut self, div: usize) {
+                unsafe { self.shared_dev.get() }.$div.write(|w| unsafe {
+                    w.int().bits(div as $u);
+                    w
+                });
+            }
+        }
     };
 }
-
 
 macro_rules! frac_division {
-     ($name:ident, $div:ident, $u:ty) => {
-
-         impl FractionDivision for $name {
-             fn set_frac_div(&mut self, div: usize) {
-                 unsafe { self.shared_dev.get() }.$div.write(|w| unsafe {
-                     w.frac().bits(div as $u);
-                     w
-                 });
-             }
-         }
+    ($name:ident, $div:ident, $u:ty) => {
+        impl FractionDivision for $name {
+            fn set_frac_div(&mut self, div: usize) {
+                unsafe { self.shared_dev.get() }.$div.write(|w| unsafe {
+                    w.frac().bits(div as $u);
+                    w
+                });
+            }
+        }
     };
 }
-
 
 macro_rules! clock_generator {
     ($name:ident, $ctrl:ident) => {
@@ -57,10 +53,8 @@ macro_rules! clock_generator {
     };
 }
 
-
 macro_rules! xosc_source {
     ($name:ident, $ctrl:ident) => {
-
         impl XOSCClockSource for $name {
             fn set_xosc_src(&mut self) {
                 unsafe { self.shared_dev.get() }.$ctrl.write(|w| {
@@ -71,7 +65,6 @@ macro_rules! xosc_source {
         }
     };
 }
-
 
 macro_rules! rosc_source {
     ($name:ident, $ctrl:ident) => {
@@ -86,7 +79,6 @@ macro_rules! rosc_source {
     };
 }
 
-
 macro_rules! selfaux_source {
     ($name:ident, $ctrl:ident, $self:ident) => {
         impl SelfAuxClockSource for $name {
@@ -100,7 +92,6 @@ macro_rules! selfaux_source {
     };
 }
 
-
 macro_rules! clockref_source {
     ($name:ident, $ctrl:ident) => {
         impl ClockREFClockSource for $name {
@@ -113,7 +104,6 @@ macro_rules! clockref_source {
         }
     };
 }
-
 
 macro_rules! clocksys_auxsource {
     ($name:ident, $ctrl:ident) => {
@@ -141,7 +131,6 @@ macro_rules! xosc_auxsource {
     };
 }
 
-
 macro_rules! rosc_auxsource {
     ($name:ident, $ctrl:ident) => {
         impl ROSCClockAuxSource for $name {
@@ -154,7 +143,6 @@ macro_rules! rosc_auxsource {
         }
     };
 }
-
 
 macro_rules! rosc_ph_auxsource {
     ($name:ident, $ctrl:ident) => {
@@ -169,7 +157,6 @@ macro_rules! rosc_ph_auxsource {
     };
 }
 
-
 macro_rules! gpin0_auxsource {
     ($name:ident, $ctrl:ident) => {
         impl Gpin0ClockAuxSource for $name {
@@ -182,7 +169,6 @@ macro_rules! gpin0_auxsource {
         }
     };
 }
-
 
 macro_rules! gpin1_auxsource {
     ($name:ident, $ctrl:ident) => {
@@ -197,7 +183,6 @@ macro_rules! gpin1_auxsource {
     };
 }
 
-
 macro_rules! pll_usb_auxsource {
     ($name:ident, $ctrl:ident) => {
         impl PLLUSBClockAuxSource for $name {
@@ -210,7 +195,6 @@ macro_rules! pll_usb_auxsource {
         }
     };
 }
-
 
 macro_rules! pll_sys_auxsource {
     ($name:ident, $ctrl:ident) => {
