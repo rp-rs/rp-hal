@@ -6,6 +6,12 @@ use core::ops::Deref;
 use embedded_time::rate::Baud;
 use embedded_time::rate::Hertz;
 use embedded_time::fixed_point::FixedPoint;
+
+use embedded_hal::serial::{
+    Read,
+    Write
+};
+
 use nb::Error::{
     WouldBlock,
     Other
@@ -434,4 +440,37 @@ fn set_format<'w>(w: &'w mut UART_LCR_H_Writer, data_bits: &DataBits, stop_bits:
     };
 
     w
+}
+
+impl<D: UARTDevice> Read<u8> for UARTPeripheral<Enabled, D> {
+    type Error = Infallible;
+
+    fn read(&mut self) -> nb::Result<u8, Self::Error> {
+
+        let byte: &mut [u8] = &mut [0; 1];
+
+        if let Err(_) = self.read_raw(byte) {
+            Err(WouldBlock)
+        }
+        else {
+            Ok(byte[0])
+        }
+    }
+}
+
+impl<D: UARTDevice> Write<u8> for UARTPeripheral<Enabled, D> {
+    type Error = Infallible;
+
+    fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
+        if let Err(_) = self.write_raw(&[word]) {
+            Err(WouldBlock)
+        }
+        else {
+            Ok(())
+        }
+    }
+
+    fn flush(&mut self) -> nb::Result<(), Self::Error> {
+        self.transmit_flushed()
+    }
 }
