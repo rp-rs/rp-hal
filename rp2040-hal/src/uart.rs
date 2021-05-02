@@ -6,7 +6,10 @@ use core::ops::Deref;
 use embedded_time::rate::Baud;
 use embedded_time::rate::Hertz;
 use embedded_time::fixed_point::FixedPoint;
-use nb::Error::WouldBlock;
+use nb::Error::{
+    WouldBlock,
+    Other
+};
 
 use crate::pac::{
     uart0::{
@@ -23,6 +26,31 @@ use crate::pac::{
 pub enum Error {
     /// Bad argument : when things overflow, ...
     BadArgument
+}
+
+
+/// When there's a read error.
+pub struct ReadError<'err> {
+    /// The type of error
+    pub err_type: ReadErrorType,
+
+    /// Reference to the data that was read but eventually discared because of the error.
+    pub discared: &'err [u8]
+}
+
+/// Possible types of read errors. See Chapter 4, Section 2 §8 - Table 436: "UARTDR Register"
+pub enum ReadErrorType {
+    /// Triggered when the FIFO (or shift-register) is overflowed.
+    Overrun,
+
+    /// Triggered when a break is received
+    Break,
+
+    /// Triggered when there is a parity mismatch between what's received and our settings.
+    Parity,
+
+    /// Triggered when the received character didn't have a valid stop bit.
+    Framing
 }
 
 /// State of the UART Peripheral.
@@ -254,7 +282,7 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
     /// - 0 bytes were read, a WouldBlock Error is returned
     /// - some bytes were read, it is deemed to be a success
     /// Upon success, the number of read bytes is returned.
-    pub fn read_raw<'b>(&self, buffer: &'b mut [u8]) -> nb::Result<&'b mut [u8], Infallible> {
+    pub fn read_raw<'b>(&self, buffer: &'b mut [u8]) -> nb::Result<&'b mut [u8], ReadError<'b>> {
 
         let mut bytes_read = 0;
 
@@ -269,6 +297,31 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
             }
 
             if bytes_read < buffer.len() {
+
+                let mut error: Option<ReadErrorType> = None;
+
+                if self.device.uartdr.read().oe().bit_is_set() {
+                    error = Some(ReadErrorType::Overrun);
+                }
+
+                if self.device.uartdr.read().be().bit_is_set() {
+                    error = Some(ReadErrorType::Break);
+                }
+
+                if self.device.uartdr.read().pe().bit_is_set() {
+                    error = Some(ReadErrorType::Parity);
+                }
+
+                if self.device.uartdr.read().fe().bit_is_set() {
+                    error = Some(ReadErrorType::Framing);
+                }
+
+                if let Some(err_type) = error {
+                    return Err(Other(ReadError {
+                        err_type, discared: buffer
+                    }));
+                }
+
                 buffer[bytes_read] = self.device.uartdr.read().data().bits();
                 bytes_read += 1;
             }
