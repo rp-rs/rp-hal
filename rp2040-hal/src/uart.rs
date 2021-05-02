@@ -3,37 +3,25 @@
 
 use core::convert::Infallible;
 use core::ops::Deref;
+use embedded_time::fixed_point::FixedPoint;
 use embedded_time::rate::Baud;
 use embedded_time::rate::Hertz;
-use embedded_time::fixed_point::FixedPoint;
 
-use embedded_hal::serial::{
-    Read,
-    Write
-};
+use embedded_hal::serial::{Read, Write};
 
-use nb::Error::{
-    WouldBlock,
-    Other
-};
+use nb::Error::{Other, WouldBlock};
 
 use crate::pac::{
-    uart0::{
-        uartlcr_h::W as UART_LCR_H_Writer,
-        RegisterBlock
-    },
-    UART0,
-    UART1
-
+    uart0::{uartlcr_h::W as UART_LCR_H_Writer, RegisterBlock},
+    UART0, UART1,
 };
 
 /// Error type for UART operations.
 #[derive(Debug)]
 pub enum Error {
     /// Bad argument : when things overflow, ...
-    BadArgument
+    BadArgument,
 }
-
 
 /// When there's a read error.
 pub struct ReadError<'err> {
@@ -41,7 +29,7 @@ pub struct ReadError<'err> {
     pub err_type: ReadErrorType,
 
     /// Reference to the data that was read but eventually discared because of the error.
-    pub discared: &'err [u8]
+    pub discared: &'err [u8],
 }
 
 /// Possible types of read errors. See Chapter 4, Section 2 §8 - Table 436: "UARTDR Register"
@@ -56,7 +44,7 @@ pub enum ReadErrorType {
     Parity,
 
     /// Triggered when the received character didn't have a valid stop bit.
-    Framing
+    Framing,
 }
 
 /// State of the UART Peripheral.
@@ -86,7 +74,7 @@ pub enum DataBits {
     /// 7 bits
     Seven,
     /// 8 bits
-    Eight
+    Eight,
 }
 
 /// Stop bits
@@ -95,7 +83,7 @@ pub enum StopBits {
     One,
 
     /// 2 bits
-    Two
+    Two,
 }
 
 /// Parity
@@ -105,21 +93,20 @@ pub enum Parity {
     Odd,
 
     /// Even parity
-    Even
+    Even,
 }
-
 
 /// A struct holding the configuration for an UART device.
 pub struct UARTConfig {
     baudrate: Baud,
     data_bits: DataBits,
     stop_bits: StopBits,
-    parity: Option<Parity>
+    parity: Option<Parity>,
 }
 
 /// Common configurations for UART.
 pub mod common_configs {
-    use super::{ UARTConfig, DataBits, StopBits };
+    use super::{DataBits, StopBits, UARTConfig};
     use embedded_time::rate::Baud;
 
     /// 9600 baud, 8 data bits, no parity, 1 stop bit
@@ -127,7 +114,7 @@ pub mod common_configs {
         baudrate: Baud(9600),
         data_bits: DataBits::Eight,
         stop_bits: StopBits::One,
-        parity: None
+        parity: None,
     };
 
     /// 19200 baud, 8 data bits, no parity, 1 stop bit
@@ -135,7 +122,7 @@ pub mod common_configs {
         baudrate: Baud(19200),
         data_bits: DataBits::Eight,
         stop_bits: StopBits::One,
-        parity: None
+        parity: None,
     };
 
     /// 38400 baud, 8 data bits, no parity, 1 stop bit
@@ -143,7 +130,7 @@ pub mod common_configs {
         baudrate: Baud(38400),
         data_bits: DataBits::Eight,
         stop_bits: StopBits::One,
-        parity: None
+        parity: None,
     };
 
     /// 57600 baud, 8 data bits, no parity, 1 stop bit
@@ -151,7 +138,7 @@ pub mod common_configs {
         baudrate: Baud(57600),
         data_bits: DataBits::Eight,
         stop_bits: StopBits::One,
-        parity: None
+        parity: None,
     };
 
     /// 115200 baud, 8 data bits, no parity, 1 stop bit
@@ -159,7 +146,7 @@ pub mod common_configs {
         baudrate: Baud(115200),
         data_bits: DataBits::Eight,
         stop_bits: StopBits::One,
-        parity: None
+        parity: None,
     };
 }
 
@@ -168,7 +155,7 @@ pub struct UARTPeripheral<S: State, D: UARTDevice> {
     device: D,
     _state: S,
     config: UARTConfig,
-    effective_baudrate: Baud
+    effective_baudrate: Baud,
 }
 
 impl<S: State, D: UARTDevice> UARTPeripheral<S, D> {
@@ -177,21 +164,23 @@ impl<S: State, D: UARTDevice> UARTPeripheral<S, D> {
             device: self.device,
             config: self.config,
             effective_baudrate: self.effective_baudrate,
-            _state: state
+            _state: state,
         }
     }
 
     /// Releases the underlying device.
-    pub fn free(self) -> D{
+    pub fn free(self) -> D {
         self.device
     }
 }
 
 impl<D: UARTDevice> UARTPeripheral<Disabled, D> {
-
     /// Enables the provided UART device with the given configuration.
-    pub fn enable(mut device: D, config: UARTConfig, frequency: Hertz) -> Result<UARTPeripheral<Enabled, D>, Error> {
-
+    pub fn enable(
+        mut device: D,
+        config: UARTConfig,
+        frequency: Hertz,
+    ) -> Result<UARTPeripheral<Enabled, D>, Error> {
         let effective_baudrate = configure_baudrate(&mut device, &config.baudrate, &frequency)?;
 
         // Enable the UART, both TX and RX
@@ -216,16 +205,17 @@ impl<D: UARTDevice> UARTPeripheral<Disabled, D> {
         });
 
         Ok(UARTPeripheral {
-            device, config, effective_baudrate, _state: Enabled
+            device,
+            config,
+            effective_baudrate,
+            _state: Enabled,
         })
     }
 }
 
 impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
-
     /// Disable this UART Peripheral, falling back to the Disabled state.
     pub fn disable(self) -> UARTPeripheral<Disabled, D> {
-
         // Disable the UART, both TX and RX
         self.device.uartcr.write(|w| {
             w.uarten().clear_bit();
@@ -238,11 +228,11 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
     }
 
     pub(crate) fn transmit_flushed(&self) -> nb::Result<(), Infallible> {
-
         if self.device.uartfr.read().txfe().bit_is_set() {
             Ok(())
+        } else {
+            Err(WouldBlock)
         }
-        else { Err(WouldBlock) }
     }
 
     fn uart_is_writable(&self) -> bool {
@@ -258,18 +248,15 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
     /// - 0 bytes were written, a WouldBlock Error is returned
     /// - some bytes were written, it is deemed to be a success
     /// Upon success, the number of written bytes is returned.
-    pub fn write_raw <'d>(&self, data: &'d [u8]) -> nb::Result<&'d [u8], Infallible> {
-
+    pub fn write_raw<'d>(&self, data: &'d [u8]) -> nb::Result<&'d [u8], Infallible> {
         let mut bytes_written = 0;
 
         for c in data {
-
             if !self.uart_is_writable() {
                 if bytes_written == 0 {
-                    return Err(WouldBlock)
-                }
-                else {
-                    return Ok(&data[bytes_written..])
+                    return Err(WouldBlock);
+                } else {
+                    return Ok(&data[bytes_written..]);
                 }
             }
 
@@ -280,7 +267,7 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
 
             bytes_written += 1;
         }
-        return Ok(&data[bytes_written..])
+        return Ok(&data[bytes_written..]);
     }
 
     /// Reads bytes from the UART.
@@ -289,21 +276,18 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
     /// - some bytes were read, it is deemed to be a success
     /// Upon success, the number of read bytes is returned.
     pub fn read_raw<'b>(&self, buffer: &'b mut [u8]) -> nb::Result<&'b mut [u8], ReadError<'b>> {
-
         let mut bytes_read = 0;
 
         Ok(loop {
             if !self.uart_is_readable() {
                 if bytes_read == 0 {
-                    return Err(WouldBlock)
-                }
-                else {
-                    break &mut buffer[bytes_read..]
+                    return Err(WouldBlock);
+                } else {
+                    break &mut buffer[bytes_read..];
                 }
             }
 
             if bytes_read < buffer.len() {
-
                 let mut error: Option<ReadErrorType> = None;
 
                 if self.device.uartdr.read().oe().bit_is_set() {
@@ -324,15 +308,15 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
 
                 if let Some(err_type) = error {
                     return Err(Other(ReadError {
-                        err_type, discared: buffer
+                        err_type,
+                        discared: buffer,
                     }));
                 }
 
                 buffer[bytes_read] = self.device.uartdr.read().data().bits();
                 bytes_read += 1;
-            }
-            else {
-                break &mut buffer[bytes_read..]
+            } else {
+                break &mut buffer[bytes_read..];
             }
         })
     }
@@ -340,14 +324,13 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
     /// Writes bytes to the UART.
     /// This function blocks until the full buffer has been sent.
     pub fn write_full_blocking(&self, data: &[u8]) {
-
         let mut temp = data;
 
         while !temp.is_empty() {
             temp = match self.write_raw(temp) {
                 Ok(remaining) => remaining,
                 Err(WouldBlock) => continue,
-                Err(_) => unreachable!()
+                Err(_) => unreachable!(),
             }
         }
     }
@@ -359,37 +342,42 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
 
         while offset != buffer.len() {
             offset += match self.read_raw(&mut buffer[offset..]) {
-                Ok(remaining) => { remaining.len() },
+                Ok(remaining) => remaining.len(),
                 Err(WouldBlock) => continue,
-                Err(_) => unreachable!()
+                Err(_) => unreachable!(),
             }
         }
     }
 }
 
 /// Baudrate dividers calculation. Code inspired from the C SDK.
-fn calculate_baudrate_dividers(wanted_baudrate: &Baud, frequency: &Hertz) -> Result<(u16, u16), Error> {
-
+fn calculate_baudrate_dividers(
+    wanted_baudrate: &Baud,
+    frequency: &Hertz,
+) -> Result<(u16, u16), Error> {
     // baudrate_div = frequency * 8 / wanted_baudrate
-    let baudrate_div = frequency.checked_mul(&8).
-        and_then(|r| r.checked_div(wanted_baudrate.integer())).
-        ok_or(Error::BadArgument)?;
+    let baudrate_div = frequency
+        .checked_mul(&8)
+        .and_then(|r| r.checked_div(wanted_baudrate.integer()))
+        .ok_or(Error::BadArgument)?;
 
     let baudrate_div: u32 = *baudrate_div.integer();
 
     Ok(match (baudrate_div >> 7, ((baudrate_div & 0x7F) + 1) / 2) {
-
         (0, _) => (1, 0),
 
         (ibrd, _) if ibrd >= 65535 => (65535, 0),
 
-        (ibrd, fbrd) => (ibrd as u16, fbrd as u16)
+        (ibrd, fbrd) => (ibrd as u16, fbrd as u16),
     })
 }
 
 /// Baudrate configuration. Code loosely inspired from the C SDK.
-fn configure_baudrate(device: &mut dyn UARTDevice, wanted_baudrate: &Baud, frequency: &Hertz) -> Result<Baud, Error> {
-
+fn configure_baudrate(
+    device: &mut dyn UARTDevice,
+    wanted_baudrate: &Baud,
+    frequency: &Hertz,
+) -> Result<Baud, Error> {
     let (baud_ibrd, baud_fbrd) = calculate_baudrate_dividers(wanted_baudrate, frequency)?;
 
     // Load PL011's baud divisor registers
@@ -404,39 +392,45 @@ fn configure_baudrate(device: &mut dyn UARTDevice, wanted_baudrate: &Baud, frequ
 
     // PL011 needs a (dummy) line control register write to latch in the
     // divisors. We don't want to actually change LCR contents here.
-    device.uartlcr_h.modify(|_,w| { w });
+    device.uartlcr_h.modify(|_, w| w);
 
-    Ok(Baud((4 * *frequency.integer()) / (64 * baud_ibrd + baud_fbrd) as u32))
+    Ok(Baud(
+        (4 * *frequency.integer()) / (64 * baud_ibrd + baud_fbrd) as u32,
+    ))
 }
 
-
 /// Format configuration. Code loosely inspired from the C SDK.
-fn set_format<'w>(w: &'w mut UART_LCR_H_Writer, data_bits: &DataBits, stop_bits: &StopBits, parity: &Option<Parity>) -> &'w mut UART_LCR_H_Writer {
-
+fn set_format<'w>(
+    w: &'w mut UART_LCR_H_Writer,
+    data_bits: &DataBits,
+    stop_bits: &StopBits,
+    parity: &Option<Parity>,
+) -> &'w mut UART_LCR_H_Writer {
     match parity {
         Some(p) => {
             w.pen().set_bit();
             match p {
                 Parity::Odd => w.eps().bit(false),
-                Parity::Even => w.eps().set_bit()
+                Parity::Even => w.eps().set_bit(),
             };
-        },
-        None => { w.pen().bit(false); }
+        }
+        None => {
+            w.pen().bit(false);
+        }
     };
 
-    unsafe { w.wlen().bits(
-        match data_bits {
-                DataBits::Five => { 0b00 }
-                DataBits::Six => { 0b01 }
-                DataBits::Seven => { 0b10 }
-                DataBits::Eight => { 0b11 }
-            }
-        )
+    unsafe {
+        w.wlen().bits(match data_bits {
+            DataBits::Five => 0b00,
+            DataBits::Six => 0b01,
+            DataBits::Seven => 0b10,
+            DataBits::Eight => 0b11,
+        })
     };
 
     match stop_bits {
         StopBits::One => w.stp2().bit(false),
-        StopBits::Two => w.stp2().set_bit()
+        StopBits::Two => w.stp2().set_bit(),
     };
 
     w
@@ -446,13 +440,11 @@ impl<D: UARTDevice> Read<u8> for UARTPeripheral<Enabled, D> {
     type Error = Infallible;
 
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
-
         let byte: &mut [u8] = &mut [0; 1];
 
         if let Err(_) = self.read_raw(byte) {
             Err(WouldBlock)
-        }
-        else {
+        } else {
             Ok(byte[0])
         }
     }
@@ -464,8 +456,7 @@ impl<D: UARTDevice> Write<u8> for UARTPeripheral<Enabled, D> {
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
         if let Err(_) = self.write_raw(&[word]) {
             Err(WouldBlock)
-        }
-        else {
+        } else {
             Ok(())
         }
     }
