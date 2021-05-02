@@ -337,16 +337,20 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
 
     /// Reads bytes from the UART.
     /// This function blocks until the full buffer has been received.
-    pub fn read_full_blocking(&self, buffer: &mut [u8]) {
+    pub fn read_full_blocking(&self, buffer: &mut [u8]) -> Result<(), ReadErrorType> {
         let mut offset = 0;
 
         while offset != buffer.len() {
             offset += match self.read_raw(&mut buffer[offset..]) {
                 Ok(remaining) => remaining.len(),
-                Err(WouldBlock) => continue,
-                Err(_) => unreachable!(),
+                Err(e) => match e {
+                    Other(inner) => return Err(inner.err_type),
+                    WouldBlock => continue,
+                },
             }
         }
+
+        Ok(())
     }
 }
 
@@ -437,15 +441,17 @@ fn set_format<'w>(
 }
 
 impl<D: UARTDevice> Read<u8> for UARTPeripheral<Enabled, D> {
-    type Error = Infallible;
+    type Error = ReadErrorType;
 
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
         let byte: &mut [u8] = &mut [0; 1];
 
-        if let Err(_) = self.read_raw(byte) {
-            Err(WouldBlock)
-        } else {
-            Ok(byte[0])
+        match self.read_raw(byte) {
+            Ok(_) => Ok(byte[0]),
+            Err(e) => match e {
+                Other(inner) => return Err(Other(inner.err_type)),
+                WouldBlock => return Err(WouldBlock),
+            },
         }
     }
 }
