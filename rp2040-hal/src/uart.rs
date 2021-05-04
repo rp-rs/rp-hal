@@ -354,7 +354,9 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
     }
 }
 
-/// Baudrate dividers calculation. Code inspired from the C SDK.
+/// The PL011 (PrimeCell UART) supports a fractional baud rate divider
+/// From the wanted baudrate, we calculate the divider's two parts: integer and fractional parts.
+/// Code inspired from the C SDK.
 fn calculate_baudrate_dividers(
     wanted_baudrate: &Baud,
     frequency: &Hertz,
@@ -368,9 +370,9 @@ fn calculate_baudrate_dividers(
     Ok(match (baudrate_div >> 7, ((baudrate_div & 0x7F) + 1) / 2) {
         (0, _) => (1, 0),
 
-        (ibrd, _) if ibrd >= 65535 => (65535, 0),
+        (int_part, _) if int_part >= 65535 => (65535, 0),
 
-        (ibrd, fbrd) => (ibrd as u16, fbrd as u16),
+        (int_part, frac_part) => (int_part as u16, frac_part as u16),
     })
 }
 
@@ -380,15 +382,17 @@ fn configure_baudrate(
     wanted_baudrate: &Baud,
     frequency: &Hertz,
 ) -> Result<Baud, Error> {
-    let (baud_ibrd, baud_fbrd) = calculate_baudrate_dividers(wanted_baudrate, frequency)?;
+    let (baud_div_int, baud_div_frac) = calculate_baudrate_dividers(wanted_baudrate, frequency)?;
 
-    // Load PL011's baud divisor registers
+    // First we load the integer part of the divider.
     device.uartibrd.write(|w| unsafe {
-        w.baud_divint().bits(baud_ibrd as u16);
+        w.baud_divint().bits(baud_div_int as u16);
         w
     });
+
+    // Then we load the fractional part of the divider.
     device.uartfbrd.write(|w| unsafe {
-        w.baud_divfrac().bits(baud_fbrd as u8);
+        w.baud_divfrac().bits(baud_div_frac as u8);
         w
     });
 
@@ -397,7 +401,7 @@ fn configure_baudrate(
     device.uartlcr_h.modify(|_, w| w);
 
     Ok(Baud(
-        (4 * *frequency.integer()) / (64 * baud_ibrd + baud_fbrd) as u32,
+        (4 * *frequency.integer()) / (64 * baud_div_int + baud_div_frac) as u32,
     ))
 }
 
