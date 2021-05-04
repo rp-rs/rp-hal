@@ -412,7 +412,7 @@ fn set_format<'w>(
         Some(p) => {
             w.pen().set_bit();
             match p {
-                Parity::Odd => w.eps().bit(false),
+                Parity::Odd => w.eps().clear_bit(),
                 Parity::Even => w.eps().set_bit(),
             };
         }
@@ -431,7 +431,7 @@ fn set_format<'w>(
     };
 
     match stop_bits {
-        StopBits::One => w.stp2().bit(false),
+        StopBits::One => w.stp2().clear_bit(),
         StopBits::Two => w.stp2().set_bit(),
     };
 
