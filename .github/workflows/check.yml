@@ -12,15 +12,11 @@ jobs:
           target: thumbv6m-none-eabi
           override: true
           profile: minimal
-          components: rustfmt, clippy
+          components: clippy
       - uses: actions-rs/cargo@v1
         with:
           command: check
           args: --workspace
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -- --check
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
