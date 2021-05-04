@@ -175,6 +175,8 @@ impl CrystalOscillator<Stable> {
     }
 
     /// Put the XOSC in DORMANT state.
+    ///
+    /// # Safety
     /// This method is marked unsafe because prior to switch the XOSC into DORMANT state,
     /// PLLs must be stopped and IRQs have to be properly configured.
     /// This method does not do any of that, it merely switches the XOSC to DORMANT state.

@@ -1,20 +1,19 @@
 on: [push, pull_request]
-name: CI Checks
+name: Code formatting check
 jobs:
-  check:
-    name: cargo-check
+  fmt:
+    name: Rustfmt
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - run: sudo apt-get update
-      - run: sudo apt-get install gcc-arm-none-eabi
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           target: thumbv6m-none-eabi
           override: true
           profile: minimal
+          components: rustfmt
       - uses: actions-rs/cargo@v1
         with:
-          command: check
-          args: --workspace --examples
+          command: fmt
+          args: -- --check
