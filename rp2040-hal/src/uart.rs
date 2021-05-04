@@ -360,12 +360,10 @@ fn calculate_baudrate_dividers(
     frequency: &Hertz,
 ) -> Result<(u16, u16), Error> {
     // baudrate_div = frequency * 8 / wanted_baudrate
-    let baudrate_div = frequency
-        .checked_mul(&8)
-        .and_then(|r| r.checked_div(wanted_baudrate.integer()))
+    let baudrate_div = frequency.integer()
+        .checked_mul(8)
+        .and_then(|r| r.checked_div(*wanted_baudrate.integer()))
         .ok_or(Error::BadArgument)?;
-
-    let baudrate_div: u32 = *baudrate_div.integer();
 
     Ok(match (baudrate_div >> 7, ((baudrate_div & 0x7F) + 1) / 2) {
         (0, _) => (1, 0),
