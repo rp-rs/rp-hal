@@ -267,7 +267,7 @@ impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
 
             bytes_written += 1;
         }
-        return Ok(&data[bytes_written..]);
+        Ok(&data[bytes_written..])
     }
 
     /// Reads bytes from the UART.
@@ -363,7 +363,8 @@ fn calculate_baudrate_dividers(
 ) -> Result<(u16, u16), Error> {
     // See Chapter 4, Section 2 §7.1 from the datasheet for an explanation of how baudrate is
     // calculated
-    let baudrate_div = frequency.integer()
+    let baudrate_div = frequency
+        .integer()
         .checked_mul(8)
         .and_then(|r| r.checked_div(*wanted_baudrate.integer()))
         .ok_or(Error::BadArgument)?;
@@ -452,8 +453,8 @@ impl<D: UARTDevice> Read<u8> for UARTPeripheral<Enabled, D> {
         match self.read_raw(byte) {
             Ok(_) => Ok(byte[0]),
             Err(e) => match e {
-                Other(inner) => return Err(Other(inner.err_type)),
-                WouldBlock => return Err(WouldBlock),
+                Other(inner) => Err(Other(inner.err_type)),
+                WouldBlock => Err(WouldBlock),
             },
         }
     }
@@ -463,7 +464,7 @@ impl<D: UARTDevice> Write<u8> for UARTPeripheral<Enabled, D> {
     type Error = Infallible;
 
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
-        if let Err(_) = self.write_raw(&[word]) {
+        if self.write_raw(&[word]).is_err() {
             Err(WouldBlock)
         } else {
             Ok(())
