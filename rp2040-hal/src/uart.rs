@@ -361,7 +361,8 @@ fn calculate_baudrate_dividers(
     wanted_baudrate: &Baud,
     frequency: &Hertz,
 ) -> Result<(u16, u16), Error> {
-    // baudrate_div = frequency * 8 / wanted_baudrate
+    // See Chapter 4, Section 2 §7.1 from the datasheet for an explanation of how baudrate is
+    // calculated
     let baudrate_div = frequency.integer()
         .checked_mul(8)
         .and_then(|r| r.checked_div(*wanted_baudrate.integer()))
