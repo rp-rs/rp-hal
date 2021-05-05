@@ -11,7 +11,12 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 cortex-m = "0.7.1"
-embedded-hal = "0.2.4"
-nb = "1.0.0"
-rp2040-pac = "0.1.1"
+embedded-hal = { version = "0.2.4", features = ["unproven"] }
 embedded-time = "0.10.1"
+nb = "1.0.0"
+rp2040-pac = { git = "https://github.com/rp-rs/rp2040-pac", branch="main" }
+
+[dev-dependencies]
+cortex-m-rt = "0.6.13"
+panic-halt = "0.2.0"
+rp2040-boot2 = { git = "https://github.com/rp-rs/rp2040-boot2-rs", branch="main" }
