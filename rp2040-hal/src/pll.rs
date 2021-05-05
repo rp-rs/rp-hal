@@ -54,7 +54,7 @@ impl<S: State, D: PhaseLockedLoopDevice> PhaseLockedLoop<S, D> {
     fn transition<To: State>(self, state: To) -> PhaseLockedLoop<To, D> {
         PhaseLockedLoop {
             device: self.device,
-            state: state,
+            state,
         }
     }
 
@@ -131,7 +131,8 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
     where
         R: Into<Hertz<u64>>,
     {
-        const VCO_FREQ_RANGE: RangeInclusive<Hertz<u32>> = Hertz(400_000_000)..=Hertz(1600_000_000);
+        const VCO_FREQ_RANGE: RangeInclusive<Hertz<u32>> =
+            Hertz(400_000_000)..=Hertz(1_600_000_000);
         const POSTDIV_RANGE: Range<u8> = 1..7;
         const FBDIV_RANGE: Range<u16> = 16..320;
 
