@@ -1,0 +1,20 @@
+on: [push, pull_request]
+name: CI Checks
+jobs:
+  check:
+    name: cargo-check
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo apt-get update
+      - run: sudo apt-get install gcc-arm-none-eabi
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: thumbv6m-none-eabi
+          override: true
+          profile: minimal
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --workspace --examples
