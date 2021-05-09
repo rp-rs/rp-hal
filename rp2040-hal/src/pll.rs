@@ -68,10 +68,10 @@ impl<S: State, D: PhaseLockedLoopDevice> PhaseLockedLoop<S, D> {
 /// See Chapter 2, Section 18 §2 for details on constraints triggering these errors.
 pub enum Error {
     /// Proposed VCO frequency is out of range.
-    VCOFreqOutOfRange,
+    VcoFreqOutOfRange,
 
     /// Feedback Divider value is out of range.
-    FBDIVOutOfRange,
+    FeedbackDivOutOfRange,
 
     /// Post Divider value is out of range.
     PostDivOutOfRage,
@@ -143,7 +143,7 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
         let vco_freq: Hertz<u32> = vco_freq.try_into().map_err(|_| Error::BadArgument)?;
 
         if !VCO_FREQ_RANGE.contains(&vco_freq) {
-            return Err(Error::VCOFreqOutOfRange);
+            return Err(Error::VcoFreqOutOfRange);
         }
 
         if !POSTDIV_RANGE.contains(&config.post_div1) || !POSTDIV_RANGE.contains(&config.post_div2)
@@ -171,7 +171,7 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
             .map_err(|_| Error::BadArgument)?;
 
         if !FBDIV_RANGE.contains(&fbdiv) {
-            return Err(Error::FBDIVOutOfRange);
+            return Err(Error::FeedbackDivOutOfRange);
         }
 
         let refdiv = config.refdiv;
