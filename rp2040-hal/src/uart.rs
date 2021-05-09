@@ -51,10 +51,10 @@ pub enum ReadErrorType {
 pub trait State {}
 
 /// Trait to handle both underlying devices (UART0 & UART1)
-pub trait UARTDevice: Deref<Target = RegisterBlock> {}
+pub trait UartDevice: Deref<Target = RegisterBlock> {}
 
-impl UARTDevice for UART0 {}
-impl UARTDevice for UART1 {}
+impl UartDevice for UART0 {}
+impl UartDevice for UART1 {}
 
 /// UART is enabled.
 pub struct Enabled;
@@ -97,7 +97,7 @@ pub enum Parity {
 }
 
 /// A struct holding the configuration for an UART device.
-pub struct UARTConfig {
+pub struct UartConfig {
     baudrate: Baud,
     data_bits: DataBits,
     stop_bits: StopBits,
@@ -106,11 +106,11 @@ pub struct UARTConfig {
 
 /// Common configurations for UART.
 pub mod common_configs {
-    use super::{DataBits, StopBits, UARTConfig};
+    use super::{DataBits, StopBits, UartConfig};
     use embedded_time::rate::Baud;
 
     /// 9600 baud, 8 data bits, no parity, 1 stop bit
-    pub const _9600_8_N_1: UARTConfig = UARTConfig {
+    pub const _9600_8_N_1: UartConfig = UartConfig {
         baudrate: Baud(9600),
         data_bits: DataBits::Eight,
         stop_bits: StopBits::One,
@@ -118,7 +118,7 @@ pub mod common_configs {
     };
 
     /// 19200 baud, 8 data bits, no parity, 1 stop bit
-    pub const _19200_8_N_1: UARTConfig = UARTConfig {
+    pub const _19200_8_N_1: UartConfig = UartConfig {
         baudrate: Baud(19200),
         data_bits: DataBits::Eight,
         stop_bits: StopBits::One,
@@ -126,7 +126,7 @@ pub mod common_configs {
     };
 
     /// 38400 baud, 8 data bits, no parity, 1 stop bit
-    pub const _38400_8_N_1: UARTConfig = UARTConfig {
+    pub const _38400_8_N_1: UartConfig = UartConfig {
         baudrate: Baud(38400),
         data_bits: DataBits::Eight,
         stop_bits: StopBits::One,
@@ -134,7 +134,7 @@ pub mod common_configs {
     };
 
     /// 57600 baud, 8 data bits, no parity, 1 stop bit
-    pub const _57600_8_N_1: UARTConfig = UARTConfig {
+    pub const _57600_8_N_1: UartConfig = UartConfig {
         baudrate: Baud(57600),
         data_bits: DataBits::Eight,
         stop_bits: StopBits::One,
@@ -142,7 +142,7 @@ pub mod common_configs {
     };
 
     /// 115200 baud, 8 data bits, no parity, 1 stop bit
-    pub const _115200_8_N_1: UARTConfig = UARTConfig {
+    pub const _115200_8_N_1: UartConfig = UartConfig {
         baudrate: Baud(115200),
         data_bits: DataBits::Eight,
         stop_bits: StopBits::One,
@@ -151,16 +151,16 @@ pub mod common_configs {
 }
 
 /// An UART Peripheral based on an underlying UART device.
-pub struct UARTPeripheral<S: State, D: UARTDevice> {
+pub struct UartPeripheral<S: State, D: UartDevice> {
     device: D,
     _state: S,
-    config: UARTConfig,
+    config: UartConfig,
     effective_baudrate: Baud,
 }
 
-impl<S: State, D: UARTDevice> UARTPeripheral<S, D> {
-    fn transition<To: State>(self, state: To) -> UARTPeripheral<To, D> {
-        UARTPeripheral {
+impl<S: State, D: UartDevice> UartPeripheral<S, D> {
+    fn transition<To: State>(self, state: To) -> UartPeripheral<To, D> {
+        UartPeripheral {
             device: self.device,
             config: self.config,
             effective_baudrate: self.effective_baudrate,
@@ -174,13 +174,13 @@ impl<S: State, D: UARTDevice> UARTPeripheral<S, D> {
     }
 }
 
-impl<D: UARTDevice> UARTPeripheral<Disabled, D> {
+impl<D: UartDevice> UartPeripheral<Disabled, D> {
     /// Enables the provided UART device with the given configuration.
     pub fn enable(
         mut device: D,
-        config: UARTConfig,
+        config: UartConfig,
         frequency: Hertz,
-    ) -> Result<UARTPeripheral<Enabled, D>, Error> {
+    ) -> Result<UartPeripheral<Enabled, D>, Error> {
         let effective_baudrate = configure_baudrate(&mut device, &config.baudrate, &frequency)?;
 
         // Enable the UART, both TX and RX
@@ -204,7 +204,7 @@ impl<D: UARTDevice> UARTPeripheral<Disabled, D> {
             w
         });
 
-        Ok(UARTPeripheral {
+        Ok(UartPeripheral {
             device,
             config,
             effective_baudrate,
@@ -213,9 +213,9 @@ impl<D: UARTDevice> UARTPeripheral<Disabled, D> {
     }
 }
 
-impl<D: UARTDevice> UARTPeripheral<Enabled, D> {
+impl<D: UartDevice> UartPeripheral<Enabled, D> {
     /// Disable this UART Peripheral, falling back to the Disabled state.
-    pub fn disable(self) -> UARTPeripheral<Disabled, D> {
+    pub fn disable(self) -> UartPeripheral<Disabled, D> {
         // Disable the UART, both TX and RX
         self.device.uartcr.write(|w| {
             w.uarten().clear_bit();
@@ -380,7 +380,7 @@ fn calculate_baudrate_dividers(
 
 /// Baudrate configuration. Code loosely inspired from the C SDK.
 fn configure_baudrate(
-    device: &mut dyn UARTDevice,
+    device: &mut dyn UartDevice,
     wanted_baudrate: &Baud,
     frequency: &Hertz,
 ) -> Result<Baud, Error> {
@@ -444,7 +444,7 @@ fn set_format<'w>(
     w
 }
 
-impl<D: UARTDevice> Read<u8> for UARTPeripheral<Enabled, D> {
+impl<D: UartDevice> Read<u8> for UartPeripheral<Enabled, D> {
     type Error = ReadErrorType;
 
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
@@ -460,7 +460,7 @@ impl<D: UARTDevice> Read<u8> for UARTPeripheral<Enabled, D> {
     }
 }
 
-impl<D: UARTDevice> Write<u8> for UARTPeripheral<Enabled, D> {
+impl<D: UartDevice> Write<u8> for UartPeripheral<Enabled, D> {
     type Error = Infallible;
 
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
