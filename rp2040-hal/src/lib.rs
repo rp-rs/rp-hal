@@ -16,6 +16,7 @@ pub extern crate rp2040_pac as pac;
 pub mod adc;
 pub mod gpio;
 pub mod i2c;
+pub mod pll;
 pub mod prelude;
 pub mod pwm;
 pub mod rom_data;
