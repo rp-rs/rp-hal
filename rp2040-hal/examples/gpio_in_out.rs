@@ -20,7 +20,9 @@ fn main() -> ! {
     let mut pac = rp2040_pac::Peripherals::take().unwrap();
 
     let sio = Sio::new(pac.SIO);
-    let pins = pac.IO_BANK0.split(pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
+    let pins = pac
+        .IO_BANK0
+        .split(pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
     let mut led_pin = pins.gpio25.into_output();
     let button_pin = pins.gpio15.into_input().pull_up();
 
