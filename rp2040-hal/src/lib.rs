@@ -28,3 +28,4 @@ pub mod uart;
 pub mod usb;
 pub mod watchdog;
 pub mod xosc;
+pub mod sio;

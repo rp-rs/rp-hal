@@ -23,6 +23,7 @@
 //! Output pins support the following options:
 //! - Slew rate (fast or slow)
 //! - Drive strength (2, 4, 8 or 12 mA)
+use crate::sio;
 
 /// Mode marker for an input pin
 pub struct Input;
@@ -64,7 +65,7 @@ pub enum OutputSlewRate {
 }
 
 macro_rules! gpio {
-    ($GPIOX:ident, $gpiox:ident, $PADSX:ident, $padsx:ident, $gpioxs:expr, [
+    ($GPIOX:ident, $gpiox:ident, $siotoken : ident, $PADSX:ident, $padsx:ident, $gpioxs:expr, [
         $($PXi:ident: ($pxi:ident, $i:expr, $is:expr),)+
     ]) => {
         #[doc = "HAL objects for the "]
@@ -76,10 +77,10 @@ macro_rules! gpio {
             use embedded_hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin};
             use super::*;
 
-            impl GpioExt<pac::$PADSX, pac::SIO> for pac::$GPIOX {
+            impl GpioExt<pac::$PADSX, sio::$siotoken> for pac::$GPIOX {
                 type Parts = Parts;
 
-                fn split(self, pads: pac::$PADSX, sio: pac::SIO, resets: &mut pac::RESETS) -> Parts {
+                fn split(self, pads: pac::$PADSX, sio: sio::$siotoken, resets: &mut pac::RESETS) -> Parts {
                     resets.reset.modify(|_, w| w.$gpiox().clear_bit().$padsx().clear_bit());
                     // TODO: Implement Resets in the HAL
                     while resets.reset_done.read().$gpiox().bit_is_clear() {
@@ -103,7 +104,7 @@ macro_rules! gpio {
             #[doc = " pins"]
             pub struct Parts {
                 _pads: pac::$PADSX,
-                _sio: pac::SIO,
+                _sio: sio::$siotoken,
                 $(
                     #[doc = "GPIO pin "]
                     #[doc = $is]
@@ -265,7 +266,7 @@ macro_rules! gpio {
 }
 
 gpio!(
-    IO_BANK0, io_bank0, PADS_BANK0, pads_bank0, "IO_BANK0", [
+    IO_BANK0, io_bank0, SioGpioBank0, PADS_BANK0, pads_bank0, "IO_BANK0", [
         Gpio0: (gpio0, 0, "0"),
         Gpio1: (gpio1, 1, "1"),
         Gpio2: (gpio2, 2, "2"),
