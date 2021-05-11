@@ -21,6 +21,7 @@ pub mod prelude;
 pub mod pwm;
 pub mod rom_data;
 pub mod rtc;
+pub mod sio;
 pub mod spi;
 pub mod ssi;
 pub mod timer;
