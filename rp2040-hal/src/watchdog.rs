@@ -29,7 +29,20 @@ impl Watchdog {
 
         self.watchdog
             .tick
-            .write(|w| unsafe { w.bits(WATCHDOG_TICK_ENABLE_BITS | cycles as u32)})
+            .write(|w| unsafe { w.bits(WATCHDOG_TICK_ENABLE_BITS | cycles as u32) })
+    }
+
+    ///
+    pub fn pause_on_debug(&mut self, pause: bool) {
+        self.watchdog
+            .ctrl
+            .write(|w| {
+                w
+                    .pause_dbg0().bit(pause)
+                    .pause_dbg1().bit(pause)
+                    .pause_jtag().bit(pause)
+
+            })
     }
 
     fn load_counter(&self, counter: u32) {
@@ -38,10 +51,10 @@ impl Watchdog {
             .write(|w| unsafe { w.bits(counter)});
     }
 
-    fn enable(&self) {
+    fn enable(&self, bit: bool) {
         self.watchdog
             .ctrl
-            .write(|w| w.enable().set_bit())
+            .write(|w| w.enable().bit(bit))
     }
 }
 
@@ -61,15 +74,14 @@ impl watchdog::WatchdogEnable for Watchdog {
             .into()
             .integer() * 2;
 
+        self.enable(false);
         self.load_counter(self.delay_ms);
-        self.enable();
+        self.enable(true);
     }
 }
 
 impl watchdog::WatchdogDisable for Watchdog {
     fn disable(&mut self) {
-        self.watchdog
-            .ctrl
-            .write(|w| w.enable().clear_bit())
+        self.enable(false)
     }
 }
