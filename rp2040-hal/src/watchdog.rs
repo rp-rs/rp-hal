@@ -8,15 +8,14 @@ use embedded_time::{
 use crate::pac::WATCHDOG;
 
 
-//const MAX_LOAD: u32 = 0x7FFFFF;
-
-
+///
 pub struct Watchdog {
     watchdog: WATCHDOG,
     delay_ms: u32,
 }
 
 impl Watchdog {
+    ///
     pub fn new(watchdog: WATCHDOG) -> Self {
         Self {
             watchdog,
@@ -24,6 +23,7 @@ impl Watchdog {
         }
     }
 
+    ///
     pub fn enable_tick_generation(&mut self, cycles: u8) {
         const WATCHDOG_TICK_ENABLE_BITS: u32 = 0x200;
 
@@ -57,11 +57,11 @@ impl watchdog::WatchdogEnable for Watchdog {
     /// Due to a logic error, the watchdog decrements by 2 and
     /// value must be compensated; see RP2040-E1
     fn start<T: Into<Self::Time>>(&mut self, period: T) {
-        let delay_ms = period
+        self.delay_ms = period
             .into()
             .integer() * 2;
 
-        self.load_counter(delay_ms);
+        self.load_counter(self.delay_ms);
         self.enable();
     }
 }
