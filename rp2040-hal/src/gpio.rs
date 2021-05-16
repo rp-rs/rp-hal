@@ -77,18 +77,15 @@ macro_rules! gpio {
             use embedded_hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin};
             use super::*;
 
+            use crate::resets::SubsystemReset;
+
             impl GpioExt<pac::$PADSX, sio::$siotoken> for pac::$GPIOX {
                 type Parts = Parts;
 
                 fn split(self, pads: pac::$PADSX, sio: sio::$siotoken, resets: &mut pac::RESETS) -> Parts {
-                    resets.reset.modify(|_, w| w.$gpiox().clear_bit().$padsx().clear_bit());
-                    // TODO: Implement Resets in the HAL
-                    while resets.reset_done.read().$gpiox().bit_is_clear() {
-                        cortex_m::asm::delay(10);
-                    }
-                    while resets.reset_done.read().$padsx().bit_is_clear() {
-                        cortex_m::asm::delay(10);
-                    }
+                    // FIXME: bring both of these up at the same time
+                    self.reset_bring_up(resets);
+                    pads.reset_bring_up(resets);
                     Parts {
                         _pads: pads,
                         _sio: sio,

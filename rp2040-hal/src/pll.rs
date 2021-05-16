@@ -14,6 +14,8 @@ use embedded_time::{
 
 use nb::Error::WouldBlock;
 
+use crate::resets::SubsystemReset;
+
 /// State of the PLL
 pub trait State {}
 
@@ -39,7 +41,10 @@ impl State for Locked {}
 impl State for Locking {}
 
 /// Trait to handle both underlying devices from the PAC (PLL_SYS & PLL_USB)
-pub trait PhaseLockedLoopDevice: Deref<Target = rp2040_pac::pll_sys::RegisterBlock> {}
+pub trait PhaseLockedLoopDevice:
+    Deref<Target = rp2040_pac::pll_sys::RegisterBlock> + SubsystemReset
+{
+}
 
 impl PhaseLockedLoopDevice for rp2040_pac::PLL_SYS {}
 impl PhaseLockedLoopDevice for rp2040_pac::PLL_USB {}
@@ -190,7 +195,9 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
     }
 
     /// Configures and starts the PLL : it switches to Locking state.
-    pub fn initialize(self) -> PhaseLockedLoop<Locking, D> {
+    pub fn initialize(self, resets: &mut rp2040_pac::RESETS) -> PhaseLockedLoop<Locking, D> {
+        self.device.reset_bring_up(resets);
+
         // Turn off PLL in case it is already running
         self.device.pwr.reset();
         self.device.fbdiv_int.reset();

@@ -19,6 +19,7 @@ pub mod i2c;
 pub mod pll;
 pub mod prelude;
 pub mod pwm;
+pub mod resets;
 pub mod rom_data;
 pub mod rtc;
 pub mod sio;
