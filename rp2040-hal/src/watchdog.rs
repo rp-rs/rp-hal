@@ -1,12 +1,8 @@
 //! Watchdog
 // See [Chapter 4 Section 7](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
-use embedded_hal::watchdog;
-use embedded_time::{
-    duration,
-    fixed_point::FixedPoint,
-};
 use crate::pac::WATCHDOG;
-
+use embedded_hal::watchdog;
+use embedded_time::{duration, fixed_point::FixedPoint};
 
 ///
 pub struct Watchdog {
@@ -34,27 +30,22 @@ impl Watchdog {
 
     ///
     pub fn pause_on_debug(&mut self, pause: bool) {
-        self.watchdog
-            .ctrl
-            .write(|w| {
-                w
-                    .pause_dbg0().bit(pause)
-                    .pause_dbg1().bit(pause)
-                    .pause_jtag().bit(pause)
-
-            })
+        self.watchdog.ctrl.write(|w| {
+            w.pause_dbg0()
+                .bit(pause)
+                .pause_dbg1()
+                .bit(pause)
+                .pause_jtag()
+                .bit(pause)
+        })
     }
 
     fn load_counter(&self, counter: u32) {
-        self.watchdog
-            .load
-            .write(|w| unsafe { w.bits(counter)});
+        self.watchdog.load.write(|w| unsafe { w.bits(counter) });
     }
 
     fn enable(&self, bit: bool) {
-        self.watchdog
-            .ctrl
-            .write(|w| w.enable().bit(bit))
+        self.watchdog.ctrl.write(|w| w.enable().bit(bit))
     }
 }
 
@@ -67,12 +58,16 @@ impl watchdog::Watchdog for Watchdog {
 impl watchdog::WatchdogEnable for Watchdog {
     type Time = duration::Microseconds;
 
-    /// Due to a logic error, the watchdog decrements by 2 and
-    /// value must be compensated; see RP2040-E1
     fn start<T: Into<Self::Time>>(&mut self, period: T) {
-        self.delay_ms = period
-            .into()
-            .integer() * 2;
+        const MAX_PERIOD: u32 = 0x7FFFFF;
+
+        // Due to a logic error, the watchdog decrements by 2 and
+        // the load value must be compensated; see RP2040-E1
+        self.delay_ms = period.into().integer() * 2;
+
+        if self.delay_ms > MAX_PERIOD {
+            panic!("Period cannot exceed maximum load value of {}", MAX_PERIOD);
+        }
 
         self.enable(false);
         self.load_counter(self.delay_ms);
