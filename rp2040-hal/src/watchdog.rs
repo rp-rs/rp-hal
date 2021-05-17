@@ -4,14 +4,14 @@ use crate::pac::WATCHDOG;
 use embedded_hal::watchdog;
 use embedded_time::{duration, fixed_point::FixedPoint};
 
-///
+/// Watchdog peripheral
 pub struct Watchdog {
     watchdog: WATCHDOG,
     delay_ms: u32,
 }
 
 impl Watchdog {
-    ///
+    /// Create a new [`Watchdog`]
     pub fn new(watchdog: WATCHDOG) -> Self {
         Self {
             watchdog,
@@ -19,7 +19,11 @@ impl Watchdog {
         }
     }
 
+    /// Starts tick generation on clk_tick which is driven from clk_ref.
     ///
+    /// # Arguments
+    ///
+    /// * `cycles` - Total number of tick cycles before the next tick is generated.
     pub fn enable_tick_generation(&mut self, cycles: u8) {
         const WATCHDOG_TICK_ENABLE_BITS: u32 = 0x200;
 
@@ -28,7 +32,12 @@ impl Watchdog {
             .write(|w| unsafe { w.bits(WATCHDOG_TICK_ENABLE_BITS | cycles as u32) })
     }
 
+    /// Defines whether or not the watchdog timer should be paused when processor(s) are in debug mode
+    /// or when JTAG is accessing bus fabric
     ///
+    /// # Arguments
+    ///
+    /// * `pause` - If true, watchdog timer will be paused
     pub fn pause_on_debug(&mut self, pause: bool) {
         self.watchdog.ctrl.write(|w| {
             w.pause_dbg0()
@@ -59,7 +68,7 @@ impl watchdog::WatchdogEnable for Watchdog {
     type Time = duration::Microseconds;
 
     fn start<T: Into<Self::Time>>(&mut self, period: T) {
-        const MAX_PERIOD: u32 = 0x7FFFFF;
+        const MAX_PERIOD: u32 = 0xFFFFFF;
 
         // Due to a logic error, the watchdog decrements by 2 and
         // the load value must be compensated; see RP2040-E1
