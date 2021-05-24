@@ -3,18 +3,24 @@
 //! To be able to partition parts of the SIO block to other modules:
 //!
 //! ```rust
-//! let sio = Sio::new(pac.SIO);
+//! let mut peripherals = pac::Peripherals::take().unwrap();
+//! let sio = Sio::new(peripherals.SIO);
 //! ```
 //!
 //! And then for example
 //!
 //! ```rust
-//! let pins = pac.IO_BANK0.split(pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
+//! let pins = gpio:Pins::new(pac.IO_BANK0, pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
 //! ```
 use super::*;
 
 /// Marker struct for ownership of SIO gpio bank0
 pub struct SioGpioBank0 {
+    _private: (),
+}
+
+/// Marker struct for ownership of SIO gpio qspi
+pub struct SioGpioQspi {
     _private: (),
 }
 
@@ -36,10 +42,11 @@ pub struct Sio {
     _sio: pac::SIO,
     /// GPIO Bank 0 registers
     pub gpio_bank0: SioGpioBank0,
+    /// GPIO QSPI registers
+    pub gpio_qspi: SioGpioQspi,
     /// 8-cycle hardware divide/modulo module
     pub hwdivider: HwDivider,
     // we can hand out other things here, for example:
-    // gpio_qspi
     // interp0
     // interp1
 }
@@ -50,6 +57,7 @@ impl Sio {
             _sio: sio,
 
             gpio_bank0: SioGpioBank0 { _private: () },
+            gpio_qspi: SioGpioQspi { _private: () },
 
             hwdivider: HwDivider { _private: () },
         }

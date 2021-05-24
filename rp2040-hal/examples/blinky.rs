@@ -6,8 +6,10 @@
 
 use cortex_m_rt::entry;
 use embedded_hal::digital::v2::OutputPin;
+use hal::pac;
+use hal::sio::Sio;
 use panic_halt as _;
-use rp2040_hal::prelude::*;
+use rp2040_hal as hal;
 
 #[link_section = ".boot2"]
 #[used]
@@ -15,13 +17,16 @@ pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
 
 #[entry]
 fn main() -> ! {
-    let mut pac = rp2040_pac::Peripherals::take().unwrap();
+    let mut pac = pac::Peripherals::take().unwrap();
 
     let sio = Sio::new(pac.SIO);
-    let pins = pac
-        .IO_BANK0
-        .split(pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
-    let mut led_pin = pins.gpio25.into_output();
+    let pins = hal::gpio::Pins::new(
+        pac.IO_BANK0,
+        pac.PADS_BANK0,
+        sio.gpio_bank0,
+        &mut pac.RESETS,
+    );
+    let mut led_pin = pins.gpio25.into_push_pull_output();
 
     loop {
         led_pin.set_high().unwrap();
