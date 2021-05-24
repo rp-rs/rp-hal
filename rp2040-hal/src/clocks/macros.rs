@@ -1,5 +1,3 @@
-#[macro_use]
-
 macro_rules! int_division {
     ($name:ident, $div:ident, $u:ty) => {
         impl IntegerDivision for $name {
