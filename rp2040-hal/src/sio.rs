@@ -19,15 +19,30 @@ pub struct SioGpioBank0 {
     _private: PhantomData<u32>,
 }
 
+/// Marker struct for ownership of divide/modulo
+pub struct HwDivide {
+    _private: PhantomData<u32>,
+}
+
+/// Result from signed divide/modulo operation
+pub struct DivResult<T> {
+    /// The remainder result from signed divide/modulo operation
+    pub remainder: T,
+    /// The quotient result from signed divide/modulo operation
+    pub quotient: T,
+}
+
 /// Struct containing ownership markers for managing ownership of the SIO registers.
 pub struct Sio {
-    _sio: pac::SIO,
+    /// SIO
+    pub sio: pac::SIO,
 
     /// GPIO Bank 0 registers
     pub gpio_bank0: SioGpioBank0,
+    /// 8-cycle hardware divide/modulo module
+    pub hw_divide: HwDivide,
     // we can hand out other things here, for example:
     // gpio_qspi
-    // divider
     // interp0
     // interp1
 }
@@ -35,117 +50,53 @@ impl Sio {
     /// Create `Sio` from the PAC.
     pub fn new(sio: pac::SIO) -> Self {
         Self {
-            _sio: sio,
+            sio,
 
             gpio_bank0: SioGpioBank0 {
+                _private: PhantomData,
+            },
+
+            hw_divide: HwDivide {
                 _private: PhantomData,
             },
         }
     }
 }
 
-/// 8-cycle unsigned divide/modulo
-pub struct DivModUnsigned {
-    dividend: u32,
-    divisor: u32,
-}
+/// Perform hardware unsigned divide/module operation
+pub fn div_unsigned(sio: &pac::SIO, dividend: u32, divisor: u32) -> DivResult<u32> {
+    sio.div_sdividend.write(|w| unsafe { w.bits(dividend) });
 
-/// 8-cycle signed divide/modulo
-pub struct DivModSigned {
-    dividend: i32,
-    divisor: i32,
-}
+    sio.div_sdivisor.write(|w| unsafe { w.bits(divisor) });
 
-/// Struct containing result from unsigned divide/modulo operation
-pub struct DivModUnsignedResult {
-    /// The remainder result from unsigned divide/modulo operation
-    pub remainder: u32,
-    /// The quotient result from unsigned divide/modulo operation
-    pub quotient: u32,
-}
+    cortex_m::asm::delay(8);
 
-/// Struct containing result from signed divide/modulo operation
-pub struct DivModSignedResult {
-    /// The remainder result from signed divide/modulo operation
-    pub remainder: i32,
-    /// The quotient result from signed divide/modulo operation
-    pub quotient: i32,
-}
+    // Note: quotient must be read last
+    let remainder = sio.div_remainder.read().bits();
+    let quotient = sio.div_quotient.read().bits();
 
-impl DivModUnsigned {
-    fn sio(&self) -> &pac::sio::RegisterBlock {
-        unsafe { &(*pac::SIO::ptr()) }
-    }
-
-    /// Create a new [`DivModUnsigned`]
-    pub fn new(dividend: u32, divisor: u32) -> Self {
-        Self { dividend, divisor }
-    }
-
-    /// Perform unsigned divide/module operation
-    /// ```rust
-    /// let hwdivmod = DivModUnsigned::new(500, 7);
-    /// let div_mod_result = hwdivmod.unsigned_div_mod();
-    /// let remainder = div_mod_result.remainder;
-    /// let quotient = div_mod_result.quotient;
-    /// ```
-    pub fn unsigned_div_mod(&self) -> DivModUnsignedResult {
-        self.sio()
-            .div_udividend
-            .write(|w| unsafe { w.bits(self.dividend) });
-
-        self.sio()
-            .div_udivisor
-            .write(|w| unsafe { w.bits(self.divisor) });
-
-        cortex_m::asm::delay(8);
-
-        // Note: quotient must be read last
-        let remainder = self.sio().div_remainder.read().bits();
-        let quotient = self.sio().div_quotient.read().bits();
-
-        DivModUnsignedResult {
-            remainder,
-            quotient,
-        }
+    DivResult {
+        remainder,
+        quotient,
     }
 }
 
-impl DivModSigned {
-    fn sio(&self) -> &pac::sio::RegisterBlock {
-        unsafe { &(*pac::SIO::ptr()) }
-    }
+/// Perform hardware signed divide/module operation
+pub fn div_signed(sio: &pac::SIO, dividend: i32, divisor: i32) -> DivResult<i32> {
+    sio.div_sdividend
+        .write(|w| unsafe { w.bits(dividend as u32) });
 
-    /// Create a new [`DivModSigned`]
-    pub fn new(dividend: i32, divisor: i32) -> Self {
-        Self { dividend, divisor }
-    }
+    sio.div_sdivisor
+        .write(|w| unsafe { w.bits(divisor as u32) });
 
-    /// Perform signed divide/module operation
-    /// ```rust
-    /// let hwdivmod = DivModSigned::new(-500, 7);
-    /// let div_mod_result = hwdivmod.signed_div_mod();
-    /// let remainder = div_mod_result.remainder;
-    /// let quotient = div_mod_result.quotient;
-    /// ```
-    pub fn signed_div_mod(&self) -> DivModSignedResult {
-        self.sio()
-            .div_sdividend
-            .write(|w| unsafe { w.bits(self.dividend as u32) });
+    cortex_m::asm::delay(8);
 
-        self.sio()
-            .div_sdivisor
-            .write(|w| unsafe { w.bits(self.divisor as u32) });
+    // Note: quotient must be read last
+    let remainder = sio.div_remainder.read().bits() as i32;
+    let quotient = sio.div_quotient.read().bits() as i32;
 
-        cortex_m::asm::delay(8);
-
-        // Note: quotient must be read last
-        let remainder = self.sio().div_remainder.read().bits() as i32;
-        let quotient = self.sio().div_quotient.read().bits() as i32;
-
-        DivModSignedResult {
-            remainder,
-            quotient,
-        }
+    DivResult {
+        remainder,
+        quotient,
     }
 }
