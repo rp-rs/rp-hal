@@ -24,11 +24,11 @@ pub struct HwDivide {
     _private: PhantomData<u32>,
 }
 
-/// Result from signed divide/modulo operation
+/// Result from divide/modulo operation
 pub struct DivResult<T> {
-    /// The remainder result from signed divide/modulo operation
+    /// The remainder result from divide/modulo operation
     pub remainder: T,
-    /// The quotient result from signed divide/modulo operation
+    /// The quotient result from divide/modulo operation
     pub quotient: T,
 }
 
@@ -36,7 +36,6 @@ pub struct DivResult<T> {
 pub struct Sio {
     /// SIO
     pub sio: pac::SIO,
-
     /// GPIO Bank 0 registers
     pub gpio_bank0: SioGpioBank0,
     /// 8-cycle hardware divide/modulo module
