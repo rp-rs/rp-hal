@@ -62,39 +62,43 @@ impl Sio {
 }
 
 /// Perform hardware unsigned divide/module operation
-pub fn div_unsigned(sio: &pac::SIO, dividend: u32, divisor: u32) -> DivResult<u32> {
-    sio.div_sdividend.write(|w| unsafe { w.bits(dividend) });
+impl HwDivider {
+    pub fn unsigned(&self, dividend: u32, divisor: u32) -> DivResult<u32> {
+        let sio = unsafe { &(*pac::SIO::ptr()) };
+        sio.div_sdividend.write(|w| unsafe { w.bits(dividend) });
 
-    sio.div_sdivisor.write(|w| unsafe { w.bits(divisor) });
+        sio.div_sdivisor.write(|w| unsafe { w.bits(divisor) });
 
-    cortex_m::asm::delay(8);
+        cortex_m::asm::delay(8);
 
-    // Note: quotient must be read last
-    let remainder = sio.div_remainder.read().bits();
-    let quotient = sio.div_quotient.read().bits();
+        // Note: quotient must be read last
+        let remainder = sio.div_remainder.read().bits();
+        let quotient = sio.div_quotient.read().bits();
 
-    DivResult {
-        remainder,
-        quotient,
+        DivResult {
+            remainder,
+            quotient,
+        }
     }
-}
 
 /// Perform hardware signed divide/module operation
-pub fn div_signed(sio: &pac::SIO, dividend: i32, divisor: i32) -> DivResult<i32> {
-    sio.div_sdividend
-        .write(|w| unsafe { w.bits(dividend as u32) });
+    pub fn signed(&self, dividend: i32, divisor: i32) -> DivResult<i32> {
+        let sio = unsafe { &(*pac::SIO::ptr()) };
+        sio.div_sdividend
+            .write(|w| unsafe { w.bits(dividend as u32) });
 
-    sio.div_sdivisor
-        .write(|w| unsafe { w.bits(divisor as u32) });
+        sio.div_sdivisor
+            .write(|w| unsafe { w.bits(divisor as u32) });
 
-    cortex_m::asm::delay(8);
+        cortex_m::asm::delay(8);
 
-    // Note: quotient must be read last
-    let remainder = sio.div_remainder.read().bits() as i32;
-    let quotient = sio.div_quotient.read().bits() as i32;
+        // Note: quotient must be read last
+        let remainder = sio.div_remainder.read().bits() as i32;
+        let quotient = sio.div_quotient.read().bits() as i32;
 
-    DivResult {
-        remainder,
-        quotient,
+        DivResult {
+            remainder,
+            quotient,
+        }
     }
 }
