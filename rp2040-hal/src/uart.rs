@@ -16,6 +16,8 @@ use crate::pac::{
     UART0, UART1,
 };
 
+use crate::resets::SubsystemReset;
+
 /// Error type for UART operations.
 #[derive(Debug)]
 pub enum Error {
@@ -51,7 +53,7 @@ pub enum ReadErrorType {
 pub trait State {}
 
 /// Trait to handle both underlying devices (UART0 & UART1)
-pub trait UartDevice: Deref<Target = RegisterBlock> {}
+pub trait UartDevice: Deref<Target = RegisterBlock> + SubsystemReset {}
 
 impl UartDevice for UART0 {}
 impl UartDevice for UART1 {}
@@ -178,9 +180,12 @@ impl<D: UartDevice> UartPeripheral<Disabled, D> {
     /// Enables the provided UART device with the given configuration.
     pub fn enable(
         mut device: D,
+        resets: &mut pac::RESETS,
         config: UartConfig,
         frequency: Hertz,
     ) -> Result<UartPeripheral<Enabled, D>, Error> {
+        device.reset_bring_up(resets);
+
         let effective_baudrate = configure_baudrate(&mut device, &config.baudrate, &frequency)?;
 
         // Enable the UART, both TX and RX
