@@ -19,16 +19,16 @@ pub struct SioGpioBank0 {
     _private: PhantomData<u32>,
 }
 
-/// Marker struct for ownership of divide/modulo
+/// Marker struct for ownership of divide/modulo module
 pub struct HwDivider {
     _private: PhantomData<u32>,
 }
 
-/// Result from divide/modulo operation
+/// Result of divide/modulo operation
 pub struct DivResult<T> {
-    /// The remainder result from divide/modulo operation
+    /// The remainder of divide/modulo operation
     pub remainder: T,
-    /// The quotient result from divide/modulo operation
+    /// The quotient of divide/modulo operation
     pub quotient: T,
 }
 
@@ -61,8 +61,8 @@ impl Sio {
     }
 }
 
-/// Perform hardware unsigned divide/module operation
 impl HwDivider {
+    /// Perform hardware unsigned divide/modulo operation
     pub fn unsigned(&self, dividend: u32, divisor: u32) -> DivResult<u32> {
         let sio = unsafe { &(*pac::SIO::ptr()) };
         sio.div_sdividend.write(|w| unsafe { w.bits(dividend) });
@@ -81,7 +81,7 @@ impl HwDivider {
         }
     }
 
-/// Perform hardware signed divide/module operation
+    /// Perform hardware signed divide/modulo operation
     pub fn signed(&self, dividend: i32, divisor: i32) -> DivResult<i32> {
         let sio = unsafe { &(*pac::SIO::ptr()) };
         sio.div_sdividend
