@@ -12,16 +12,15 @@
 //! let pins = pac.IO_BANK0.split(pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
 //! ```
 use super::*;
-use core::marker::PhantomData;
 
 /// Marker struct for ownership of SIO gpio bank0
 pub struct SioGpioBank0 {
-    _private: PhantomData<u32>,
+    _private: (),
 }
 
 /// Marker struct for ownership of divide/modulo module
 pub struct HwDivider {
-    _private: PhantomData<u32>,
+    _private: (),
 }
 
 /// Result of divide/modulo operation
@@ -50,13 +49,9 @@ impl Sio {
         Self {
             _sio: sio,
 
-            gpio_bank0: SioGpioBank0 {
-                _private: PhantomData,
-            },
+            gpio_bank0: SioGpioBank0 { _private: () },
 
-            hwdivider: HwDivider {
-                _private: PhantomData,
-            },
+            hwdivider: HwDivider { _private: () },
         }
     }
 }
