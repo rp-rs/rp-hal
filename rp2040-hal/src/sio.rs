@@ -20,7 +20,7 @@ pub struct SioGpioBank0 {
 }
 
 /// Marker struct for ownership of divide/modulo
-pub struct HwDivide {
+pub struct HwDivider {
     _private: PhantomData<u32>,
 }
 
@@ -34,12 +34,11 @@ pub struct DivResult<T> {
 
 /// Struct containing ownership markers for managing ownership of the SIO registers.
 pub struct Sio {
-    /// SIO
-    pub sio: pac::SIO,
+    _sio: pac::SIO,
     /// GPIO Bank 0 registers
     pub gpio_bank0: SioGpioBank0,
     /// 8-cycle hardware divide/modulo module
-    pub hw_divide: HwDivide,
+    pub hwdivider: HwDivider,
     // we can hand out other things here, for example:
     // gpio_qspi
     // interp0
@@ -49,13 +48,13 @@ impl Sio {
     /// Create `Sio` from the PAC.
     pub fn new(sio: pac::SIO) -> Self {
         Self {
-            sio,
+            _sio: sio,
 
             gpio_bank0: SioGpioBank0 {
                 _private: PhantomData,
             },
 
-            hw_divide: HwDivide {
+            hwdivider: HwDivider {
                 _private: PhantomData,
             },
         }
