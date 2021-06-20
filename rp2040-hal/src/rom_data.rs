@@ -52,6 +52,25 @@ macro_rules! rom_funcs {
     }
 }
 
+macro_rules! rom_funcs_unsafe {
+    (
+        $(
+            $(#[$outer:meta])*
+            $c:literal $name:ident (
+                $( $aname:ident : $aty:ty ),*
+            ) -> $ret:ty ;
+        )*
+    ) => {
+        $(
+            $(#[$outer])*
+            pub unsafe fn $name($( $aname:$aty ),*) -> $ret{
+                let func:  extern "C" fn( $( $aty ),* ) -> $ret = rom_table_lookup(FUNC_TABLE, *$c);
+                func($( $aname ),*)
+            }
+        )*
+    }
+}
+
 rom_funcs! {
     /// Return a count of the number of 1 bits in value.
     b"P3" popcount32(value: u32) -> u32;
@@ -65,6 +84,20 @@ rom_funcs! {
     /// Return the number of consecutive low order 0 bits of value. If value is zero, returns 32.
     b"T3" ctz32(value: u32) -> u32;
 
+    /// Resets the RP2040 and uses the watchdog facility to re-start in BOOTSEL mode:
+    ///   * gpio_activity_pin_mask is provided to enable an 'activity light' via GPIO attached LED
+    ///     for the USB Mass Storage Device:
+    ///     * 0 No pins are used as per cold boot.
+    ///     * Otherwise a single bit set indicating which GPIO pin should be set to output and
+    ///       raised whenever there is mass storage activity from the host.
+    ///  * disable_interface_mask may be used to control the exposed USB interfaces:
+    ///    * 0 To enable both interfaces (as per cold boot).
+    ///    * 1 To disable the USB Mass Storage Interface.
+    ///    * 2 to Disable the USB PICOBOOT Interface.
+    b"UB" reset_to_usb_boot(gpio_activity_pin_mask: u32, disable_interface_mask: u32) -> ();
+}
+
+rom_funcs_unsafe! {
     /// Sets n bytes start at ptr to the value c and returns ptr
     b"MS" memset(ptr: *mut u8, c: u8, n: u8) -> *mut u8;
 
@@ -112,18 +145,6 @@ rom_funcs! {
     /// that the freshly-programmed code and data is visible to the debug host, without having to
     /// know exactly what kind of flash device is connected.
     b"CX" flash_enter_cmd_xip() -> ();
-
-    /// Resets the RP2040 and uses the watchdog facility to re-start in BOOTSEL mode:
-    ///   * gpio_activity_pin_mask is provided to enable an 'activity light' via GPIO attached LED
-    ///     for the USB Mass Storage Device:
-    ///     * 0 No pins are used as per cold boot.
-    ///     * Otherwise a single bit set indicating which GPIO pin should be set to output and
-    ///       raised whenever there is mass storage activity from the host.
-    ///  * disable_interface_mask may be used to control the exposed USB interfaces:
-    ///    * 0 To enable both interfaces (as per cold boot).
-    ///    * 1 To disable the USB Mass Storage Interface.
-    ///    * 2 to Disable the USB PICOBOOT Interface.
-    b"UB" reset_to_usb_boot(gpio_activity_pin_mask: u32, disable_interface_mask: u32) -> ();
 
     /// This is the method that is entered by core 1 on reset to wait to be launched by core 0.
     /// There are few cases where you should call this method (resetting core 1 is much better).
