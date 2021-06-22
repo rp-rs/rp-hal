@@ -22,6 +22,9 @@
 //! ```rust
 //! pin.pwm0.min_config(); // Doesn't change config settings that could be shared between pins
 //!
+//! pwm_pin.get_duty();
+//! pwm_pin.get_max_duty();
+//!
 //! pwm_pin.set_ph_correct().unwrap(); // Run in phase correct mode
 //! pwm_pin.clr_ph_correct().unwrap(); // Don't run in phase correct mode
 //!
@@ -60,7 +63,6 @@ macro_rules! pwm {
         #[doc = $pwmxs]
         #[doc = " bank of PWM pins"]
         pub mod $pwmx {
-            use core::convert::Infallible;
             use embedded_hal::PwmPin;
             use super::*;
 
@@ -149,20 +151,16 @@ macro_rules! pwm {
                     }
 
                     #[doc = "Sets up a pin with the default configurations"]
-                    pub fn default_config(self) -> $PXi {
-                        self.csr().write(|w| w.ph_correct().clear_bit()); //Disable ph_correct
-                        self.div().write(|w| unsafe { w.int().bits(0x01u8) }); //Set clock divider to 1
-                        self.csr().write(|w| w.divmode().div()); //Sets counter to go at rate dictated by fractional divider (not gated)                        
-                        self.top().write(|w| unsafe { w.$topi().bits(0xffffu16) }); //Set TOP register to max value
+                    pub fn default_config(mut self) -> $PXi {
+                        self.clr_ph_correct();
+                        self.set_div_int(1);
+                        self.set_div_frac(0);
+                        self.divmode_div();
+                        self.set_top(0xffffu16);
                         self.ctr().write(|w| unsafe { w.$ctri().bits(0x0000u16) }); //Reset the counter
 
-                        if ($i % 2 == 0) {
-                            self.cc().write(|w| unsafe { w.a().bits(0x0000u16) }); //Default duty cycle of 0%
-                            self.csr().write(|w| w.a_inv().clear_bit()); //Don't invert the channel
-                        } else {
-                            self.cc().write(|w| unsafe { w.b().bits(0x0000u16) });
-                            self.csr().write(|w| w.b_inv().clear_bit());
-                        }
+                        self.set_duty(0); //Default duty cycle of 0%
+                        self.clr_inv(); //Don't invert the channel
 
                         self.pad().write(|w| w.ie().set_bit());
                         self.pad().write(|w| w.od().clear_bit());
@@ -181,77 +179,66 @@ macro_rules! pwm {
                     }
 
                     #[doc = "Enables phase correct mode"]
-                    pub fn set_ph_correct(&self) -> Result<(), Infallible> {
+                    pub fn set_ph_correct(&self) {
                         self.csr().write(|w| w.ph_correct().set_bit());
-                        Ok(())
                     }
 
                     #[doc = "Disales phase correct mode"]
-                    pub fn clr_ph_correct(&self) -> Result<(), Infallible> {
+                    pub fn clr_ph_correct(&self) {
                         self.csr().write(|w| w.ph_correct().clear_bit());
-                        Ok(())
                     }
 
                     #[doc = "Sets the integer part of the clock divider"]
-                    pub fn set_div_int(&self, value: u8) -> Result<(), Infallible> {
+                    pub fn set_div_int(&self, value: u8) {
                         self.div().write(|w| unsafe { w.int().bits(value) });
-                        Ok(())
                     }
 
                     #[doc = "Sets the fractional part of the clock divider"]
-                    pub fn set_div_frac(&self, value: u8) -> Result<(), Infallible> {
+                    pub fn set_div_frac(&self, value: u8) {
                         self.div().write(|w| unsafe { w.frac().bits(value) });
-                        Ok(())
                     }
 
                     #[doc = "Enables output inversion"]
-                    pub fn set_inv(&self) -> Result<(), Infallible> {
+                    pub fn set_inv(&self) {
                         if ($i % 2 == 0) {
                             self.csr().write(|w| w.a_inv().set_bit());
                         } else {
                             self.csr().write(|w| w.b_inv().set_bit());
                         }
-                        Ok(())
                     }
 
                     #[doc = "Disables output inversion"]
-                    pub fn clr_inv(&self) -> Result<(), Infallible> {
+                    pub fn clr_inv(&self) {
                         if ($i % 2 == 0) {
                             self.csr().write(|w| w.a_inv().clear_bit());
                         } else {
                             self.csr().write(|w| w.b_inv().clear_bit());
                         }
-                        Ok(())
                     }
 
                     #[doc = "Sets the top register value"]
-                    pub fn set_top(&self, value: u16) -> Result<(), Infallible> {
+                    pub fn set_top(&self, value: u16) {
                         self.top().write(|w| unsafe { w.$topi().bits(value) });
-                        Ok(())
                     }
 
                     #[doc = "Sets the divmode to div. Use this if you aren't reading a PWM input."]
-                    pub fn divmode_div(&self) -> Result<(), Infallible> {
+                    pub fn divmode_div(&self) {
                         self.csr().write(|w| w.divmode().div());
-                        Ok(())
                     }
 
                     #[doc = "Sets the divmode to level."]
-                    pub fn divmode_level(&self) -> Result<(), Infallible> {
+                    pub fn divmode_level(&self) {
                         self.csr().write(|w| w.divmode().level());
-                        Ok(())
                     }
 
                     #[doc = "Sets the divmode to rise."]
-                    pub fn divmode_rise(&self) -> Result<(), Infallible> {
+                    pub fn divmode_rise(&self) {
                         self.csr().write(|w| w.divmode().rise());
-                        Ok(())
                     }
 
                     #[doc = "Sets the divmode to fall."]
-                    pub fn divmode_fall(&self) -> Result<(), Infallible> {
+                    pub fn divmode_fall(&self) {
                         self.csr().write(|w| w.divmode().div());
-                        Ok(())
                     }
                 }
 
