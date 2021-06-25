@@ -6,7 +6,8 @@
 //! ```rust
 //! use rp2040_hal::prelude::*;
 //! let mut pac = rp2040_pac::Peripherals::take().unwrap();
-//! let pins = pac.IO_BANK0.split(pac.PADS_BANK0, pac.SIO, &mut pac.RESETS);
+//! let sio = Sio::new(pac.SIO);
+//! let pins = pac.IO_BANK0.split(pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
 //! ```
 //!
 //! Once you have the GPIO pins struct, you can take individual pins and configure them:
