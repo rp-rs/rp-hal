@@ -33,7 +33,7 @@ impl ClocksManager {
         let shared_clocks = ShareableClocks::new(&mut clocks_block);
         ClocksManager {
             clocks: clocks_block,
-            shared_clocks: shared_clocks,
+            shared_clocks,
         }
     }
 
@@ -45,21 +45,21 @@ impl ClocksManager {
     /// Getter for the Reference Clock.
     pub fn ref_clock(&self) -> ReferenceClock {
         ReferenceClock {
-            shared_dev: self.shared_clocks.clone(),
+            shared_dev: self.shared_clocks,
         }
     }
 
     /// Getter for the System Clock
     pub fn sys_clock(&self) -> SystemClock {
         SystemClock {
-            shared_dev: self.shared_clocks.clone(),
+            shared_dev: self.shared_clocks,
         }
     }
 
     /// Getter for the PeripheralClock
     pub fn peripheral_clock(&self) -> PeripheralClock {
         PeripheralClock {
-            shared_dev: self.shared_clocks.clone(),
+            shared_dev: self.shared_clocks,
         }
     }
 }
