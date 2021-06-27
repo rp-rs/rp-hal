@@ -118,6 +118,58 @@ macro_rules! clocksys_auxsource {
     };
 }
 
+macro_rules! clockusb_auxsource {
+    ($name:ident, $ctrl:ident) => {
+        impl ClockUSBClockAuxSource for $name {
+            fn set_clkusb_auxsrc(&mut self) {
+                unsafe { self.shared_dev.get() }.$ctrl.modify(|_, w| {
+                    w.auxsrc().clk_usb();
+                    w
+                });
+            }
+        }
+    };
+}
+
+macro_rules! clockadc_auxsource {
+    ($name:ident, $ctrl:ident) => {
+        impl ClockADCClockAuxSource for $name {
+            fn set_clkadc_auxsrc(&mut self) {
+                unsafe { self.shared_dev.get() }.$ctrl.modify(|_, w| {
+                    w.auxsrc().clk_adc();
+                    w
+                });
+            }
+        }
+    };
+}
+
+macro_rules! clockrtc_auxsource {
+    ($name:ident, $ctrl:ident) => {
+        impl ClockRTCClockAuxSource for $name {
+            fn set_clkrtc_auxsrc(&mut self) {
+                unsafe { self.shared_dev.get() }.$ctrl.modify(|_, w| {
+                    w.auxsrc().clk_rtc();
+                    w
+                });
+            }
+        }
+    };
+}
+
+macro_rules! clockref_auxsource {
+    ($name:ident, $ctrl:ident) => {
+        impl ClockRefClockAuxSource for $name {
+            fn set_clkref_auxsrc(&mut self) {
+                unsafe { self.shared_dev.get() }.$ctrl.modify(|_, w| {
+                    w.auxsrc().clk_ref();
+                    w
+                });
+            }
+        }
+    };
+}
+
 macro_rules! xosc_auxsource {
     ($name:ident, $ctrl:ident) => {
         impl XOSCClockAuxSource for $name {
