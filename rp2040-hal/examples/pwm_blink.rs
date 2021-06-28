@@ -16,6 +16,8 @@ fn main() -> ! {
 
     let mut pwm_pin = Pwm0::new(0);
 
+    //Instead of having it take references to all of these pac objects, eventually this should just
+    //take ownership of a GPIO pin.
     pwm_pin.default_config(&mut pac.PWM, &mut pac.PADS_BANK0, &mut pac.IO_BANK0, &mut pac.RESETS);
 
     pwm_pin.set_ph_correct();

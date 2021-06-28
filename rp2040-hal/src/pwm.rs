@@ -209,11 +209,6 @@ impl $PXi {
     pub fn divmode_fall(&self) {
         self.csr().write(|w| w.divmode().div());
     }
-
-    #[doc = "test"]
-    pub fn test(&self) -> usize {
-        self.pin
-    }
 }
 
 impl PwmPin for $PXi {
