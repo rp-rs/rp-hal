@@ -81,7 +81,7 @@ impl From<DynPinMode> for ModeFields {
                     Uart => 2,
                     I2C => 3,
                     Pwm => 4,
-                    // Pio => 5
+                    // SIO is 5, but isn't an alternate function but is instead for using the pin as GPIO
                     Pio0 => 6,
                     Pio1 => 7,
                     Clock => 8,

@@ -415,12 +415,10 @@ impl DynPin {
         Ok(self._read()? == true)
     }
     #[inline]
-    #[allow(clippy::bool_comparison)] // more explicit this way
     fn _set_low(&mut self) -> Result<(), Error> {
         self._write(false)
     }
     #[inline]
-    #[allow(clippy::bool_comparison)] // more explicit this way
     fn _set_high(&mut self) -> Result<(), Error> {
         self._write(true)
     }
