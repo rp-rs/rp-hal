@@ -17,7 +17,7 @@
 //! Type-level [`Pin`]s are parameterized by two type-level enums, [`PinId`] and
 //! [`PinMode`].
 //!
-//! A `PinId` identifies a pin by it's group (A, B, C or D) and pin number. Each
+//! A `PinId` identifies a pin by it's group (BANK0 or QSPI) and pin number. Each
 //! `PinId` instance is named according to its datasheet identifier, e.g.
 //! [`Gpio0`](`bank0::Gpio0`).
 //!
