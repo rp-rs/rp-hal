@@ -86,10 +86,7 @@ hal::bsp_pins!(
         name: i2c_scl,
         aliases: { FunctionI2C: Scl }
     },
-    Gpio22 {
-        name: i2c_int,
-        aliases: { FunctionI2C: Int }
-    },
+    Gpio22 { name: i2c_int },
     Gpio25 { name: led },
     Gpio26 { name: adc0 },
     Gpio27 { name: adc1 },
