@@ -53,12 +53,12 @@ impl ShareableClocks {
 
 const XOSC_MHZ: u32 = 12_000_000_u32;
 
-fn make_div<S: TryInto<Hertz<u32>>, F: TryInto<Hertz<u32>>>(
+fn make_div<S: TryInto<Hertz<u64>>, F: TryInto<Hertz<u64>>>(
     src_freq: S,
     freq: F,
 ) -> Result<u32, ()> {
-    let src_freq = u64::from(*src_freq.try_into().map_err(|_| ())?.integer());
-    let freq = (*freq.try_into().map_err(|_| ())?.integer()).into();
+    let src_freq = *src_freq.try_into().map_err(|_| ())?.integer();
+    let freq = *freq.try_into().map_err(|_| ())?.integer();
     let div: u64 = (src_freq << 8).wrapping_div(freq);
     Ok(div as u32)
 }
@@ -94,6 +94,7 @@ impl ClocksManager {
         // CLK_REF = XOSC (12MHz) / 1 = 12MHz
         let mut ref_clock = self.ref_clock();
         let div = make_div(12u32.MHz(), 12u32.MHz()).unwrap();
+        // If increasing divisor, set divisor before source.
         if div > ref_clock.get_div() {
             ref_clock.set_div(div);
         }
@@ -104,6 +105,7 @@ impl ClocksManager {
         // CLK SYS = PLL SYS (125MHz) / 1 = 125MHz
         let mut sys_clock = self.sys_clock();
         let div = make_div(125u32.MHz(), 125u32.MHz()).unwrap();
+        // If increasing divisor, set divisor before source.
         if div > sys_clock.get_div() {
             sys_clock.set_div(div);
         }
@@ -115,6 +117,7 @@ impl ClocksManager {
         // CLK USB = PLL USB (48MHz) / 1 = 48MHz
         let mut usb_clock = self.usb_clock();
         let div = make_div(48u32.MHz(), 48u32.MHz()).unwrap();
+        // If increasing divisor, set divisor before source.
         if div > usb_clock.get_div() {
             usb_clock.set_div(div);
         }
@@ -126,6 +129,7 @@ impl ClocksManager {
         // CLK ADC = PLL USB (48MHZ) / 1 = 48MHz
         let mut adc_clock = self.adc_clock();
         let div = make_div(48u32.MHz(), 48u32.MHz()).unwrap();
+        // If increasing divisor, set divisor before source.
         if div > adc_clock.get_div() {
             adc_clock.set_div(div);
         }
@@ -137,6 +141,7 @@ impl ClocksManager {
         // CLK RTC = PLL USB (48MHz) / 1024 = 46875Hz
         let mut rtc_clock = self.rtc_clock();
         let div = make_div(48u32.MHz(), 46875u32.Hz()).unwrap();
+        // If increasing divisor, set divisor before source.
         if div > rtc_clock.get_div() {
             rtc_clock.set_div(div);
         }
@@ -468,7 +473,7 @@ impl ReferenceClock {
     pub fn await_select(&self, clock: u8) {
         let shared_dev = unsafe { self.shared_dev.get() };
 
-        while (shared_dev.clk_ref_selected.read().bits() & 1 << clock) == 0 {
+        while (shared_dev.clk_ref_selected.read().bits() & (1 << clock)) == 0 {
             cortex_m::asm::nop();
         }
     }
@@ -505,7 +510,7 @@ impl SystemClock {
     pub fn await_select(&self, clock: u8) {
         let shared_dev = unsafe { self.shared_dev.get() };
 
-        while (shared_dev.clk_sys_selected.read().bits() & 1 << clock) == 0 {
+        while (shared_dev.clk_sys_selected.read().bits() & (1 << clock)) == 0 {
             cortex_m::asm::nop();
         }
     }
