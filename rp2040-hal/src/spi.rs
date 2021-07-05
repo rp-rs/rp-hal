@@ -8,7 +8,6 @@
 //! let sio = Sio::new(p.SIO);
 //! let gpio_pins = Pins::new(p.IO_BANK0, p.PADS_BANK0, sio.gpio_bank0, &mut p.RESETS);
 //!
-//! // Color
 //! let _ = gpio_pins.spi_sclk.into_mode::<FunctionSpi>();
 //! let _ = gpio_pins.spi_mosi.into_mode::<FunctionSpi>();
 //!
@@ -77,11 +76,11 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
             state: PhantomData,
         }
     }
-    /// Set baudrate based on system clock
+    /// Set baudrate based on peripheral clock
     ///
-    /// Typically the systemclock is set to 125_000_000
-    fn set_baudrate(&mut self, sys_freqency: u32, baudrate: u32) -> u32 {
-        let freq_in = sys_freqency;
+    /// Typically the peripheral clock is set to 125_000_000
+    fn set_baudrate(&mut self, peri_frequency: u32, baudrate: u32) -> u32 {
+        let freq_in = peri_frequency;
         let mut prescale: u8 = u8::MAX;
         let mut postdiv: u8 = 1;
 
@@ -91,7 +90,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
             // We need to use an saturating_mul here because with a high baudrate certain invalid prescale
             // values might not fit in u32. However we can be sure those values exeed the max sys_clk frequency
             // So clamping a u32::MAX is fine here...
-            if (freq_in) < ((prescale_option + 2) * 256).saturating_mul(baudrate) {
+            if freq_in < ((prescale_option + 2) * 256).saturating_mul(baudrate) {
                 prescale = prescale_option as u8;
                 break;
             }
@@ -102,7 +101,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
 
         // Find largest post-divide which makes output <= baudrate. Post-divide is
         // an integer in the range 1 to 256 inclusive.
-        for postdiv_option in (1..256u32).rev() {
+        for postdiv_option in (1..=256u32).rev() {
             if freq_in / (prescale as u32 * (postdiv_option - 1)) > baudrate {
                 postdiv = postdiv_option as u8;
                 break;
@@ -136,14 +135,14 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
     pub fn init(
         mut self,
         resets: &mut RESETS,
-        sys_freqency: u32,
+        peri_frequency: u32,
         baudrate: u32,
         mode: &Mode,
     ) -> Spi<Enabled, D, DS> {
         self.device.reset_bring_down(resets);
         self.device.reset_bring_up(resets);
 
-        self.set_baudrate(sys_freqency, baudrate);
+        self.set_baudrate(peri_frequency, baudrate);
         self.set_format(DS as u8, mode);
         // Always enable DREQ signals -- harmless if DMA is not listening
         self.device
@@ -164,9 +163,6 @@ impl<D: SpiDevice, const DS: u8> Spi<Enabled, D, DS> {
     fn is_readable(&self) -> bool {
         self.device.sspsr.read().rne().bit_is_set()
     }
-    // fn is_busy(&self) -> bool {
-    //     self.device.sspsr.read().bsy().bit_is_set()
-    // }
 
     /// Disable the spi to reset its configuration
     pub fn disable(self) -> Spi<Disabled, D, DS> {
