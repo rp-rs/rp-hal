@@ -11,13 +11,14 @@
 //! let _ = gpio_pins.spi_sclk.into_mode::<FunctionSpi>();
 //! let _ = gpio_pins.spi_mosi.into_mode::<FunctionSpi>();
 //!
-//! let spi = Spi::<_, _, 8>::new(p.SPI0).init(&mut p.RESETS, 125_000_000, 16_000_000, &MODE_0);
+//! let spi = Spi::<_, _, 8>::new(p.SPI0).init(&mut p.RESETS, 125_000_000.Hz(), 16_000_000.Hz(), &MODE_0);
 //! ```
 
 use crate::resets::SubsystemReset;
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
 use embedded_hal::blocking::spi;
 use embedded_hal::spi::{FullDuplex, Mode, Phase, Polarity};
+use embedded_time::rate::*;
 use pac::RESETS;
 
 /// State of the SPI
@@ -79,8 +80,13 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
     /// Set baudrate based on peripheral clock
     ///
     /// Typically the peripheral clock is set to 125_000_000
-    fn set_baudrate(&mut self, peri_frequency: u32, baudrate: u32) -> u32 {
-        let freq_in = peri_frequency;
+    fn set_baudrate<F: Into<Hertz<u32>>, B: Into<Hertz<u32>>>(
+        &mut self,
+        peri_frequency: F,
+        baudrate: B,
+    ) -> Hertz {
+        let freq_in = *peri_frequency.into().integer();
+        let baudrate = *baudrate.into().integer();
         let mut prescale: u8 = u8::MAX;
         let mut postdiv: u8 = 1;
 
@@ -116,7 +122,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
             .modify(|_, w| unsafe { w.scr().bits(postdiv - 1) });
 
         // Return the frequency we were able to achieve
-        freq_in / (prescale as u32 * postdiv as u32)
+        (freq_in / (prescale as u32 * postdiv as u32)).Hz()
     }
 
     /// Set format and datasize
@@ -132,11 +138,11 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
     }
 
     /// Initialize the SPI
-    pub fn init(
+    pub fn init<F: Into<Hertz<u32>>, B: Into<Hertz<u32>>>(
         mut self,
         resets: &mut RESETS,
-        peri_frequency: u32,
-        baudrate: u32,
+        peri_frequency: F,
+        baudrate: B,
         mode: &Mode,
     ) -> Spi<Enabled, D, DS> {
         self.device.reset_bring_down(resets);
