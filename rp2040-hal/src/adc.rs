@@ -47,14 +47,14 @@ impl Adc {
     }
 
     /// Enable temperature sensor, returns a channel to use
-    pub fn enable_temp_sensor(self) -> TempSense {
+    pub fn enable_temp_sensor(&mut self) -> TempSense {
         self.device.cs.modify(|_, w| w.ts_en().set_bit());
 
         TempSense { __private: () }
     }
 
     /// Disable temperature sensor, consumes channel
-    pub fn disable_temp_sensor(self, _: TempSense) {
+    pub fn disable_temp_sensor(&mut self, _: TempSense) {
         self.device.cs.modify(|_, w| w.ts_en().clear_bit());
     }
 }
