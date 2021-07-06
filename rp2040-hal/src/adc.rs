@@ -14,6 +14,8 @@ use crate::{
     resets::SubsystemReset,
 };
 
+const TEMPERATURE_SENSOR_CHANNEL: u8 = 4;
+
 /// Adc
 pub struct Adc {
     device: ADC,
@@ -25,13 +27,11 @@ impl Adc {
         device.reset_bring_down(resets);
         device.reset_bring_up(resets);
 
-        // Enable adc and temp sensor
+        // Enable adc
         device.cs.write(|w| w.en().set_bit());
 
         // Wait for adc ready
-        while !device.cs.read().ready().bit_is_set() {
-            cortex_m::asm::nop();
-        }
+        while !device.cs.read().ready().bit_is_set() {}
 
         Self { device }
     }
@@ -44,6 +44,18 @@ impl Adc {
     /// Read single
     pub fn read_single(&self) -> u16 {
         self.device.result.read().result().bits()
+    }
+
+    /// Enable temperature sensor, returns a channel to use
+    pub fn enable_temp_sensor(self) -> TempSense {
+        self.device.cs.modify(|_, w| w.ts_en().set_bit());
+
+        TempSense { __private: () }
+    }
+
+    /// Disable temperature sensor, consumes channel
+    pub fn disable_temp_sensor(self, _: TempSense) {
+        self.device.cs.modify(|_, w| w.ts_en().clear_bit());
     }
 }
 
@@ -65,13 +77,15 @@ channel!(Gpio28, 2);
 channel!(Gpio29, 3);
 
 /// Internal temperature sensor type
-pub struct TempSense;
+pub struct TempSense {
+    __private: (),
+}
 
 impl Channel<Adc> for TempSense {
     type ID = u8; // ADC channels are identified numerically
 
     fn channel() -> u8 {
-        4
+        TEMPERATURE_SENSOR_CHANNEL
     }
 }
 
