@@ -13,3 +13,7 @@ license = "MIT OR Apache-2.0"
 cortex-m = "0.7.2"
 rp2040-hal = { path = "../../rp2040-hal", version = "0.1.0" }
 cortex-m-rt = { version = "0.6.14", optional = true }
+
+[features]
+default = ["rt"]
+rt = ["cortex-m-rt","rp2040-hal/rt"]
