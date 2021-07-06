@@ -29,7 +29,7 @@ use crate::{
     watchdog::Watchdog,
     xosc::{CrystalOscillator, Stable},
 };
-use core::convert::TryInto;
+use core::{convert::TryInto, marker::PhantomData};
 use embedded_time::rate::*;
 use pac::{clocks, CLOCKS, PLL_SYS, PLL_USB};
 
@@ -92,26 +92,26 @@ impl ClocksManager {
     ) {
         // Configure clocks
         // CLK_REF = XOSC (12MHz) / 1 = 12MHz
-        let mut ref_clock = self.ref_clock();
+        let mut ref_clock = self.reference_clock();
         let div = make_div(12u32.MHz(), 12u32.MHz()).unwrap();
         // If increasing divisor, set divisor before source.
         if div > ref_clock.get_div() {
             ref_clock.set_div(div);
         }
-        ref_clock.set_xosc_src();
-        ref_clock.await_select(2);
+        let clock_token = ref_clock.set_xosc_src();
+        nb::block!(ref_clock.await_select(&clock_token)).unwrap();
         ref_clock.set_div(div);
 
         // CLK SYS = PLL SYS (125MHz) / 1 = 125MHz
-        let mut sys_clock = self.sys_clock();
+        let mut sys_clock = self.system_clock();
         let div = make_div(125u32.MHz(), 125u32.MHz()).unwrap();
         // If increasing divisor, set divisor before source.
         if div > sys_clock.get_div() {
             sys_clock.set_div(div);
         }
         sys_clock.set_pll_sys_auxsrc();
-        sys_clock.set_self_aux_src();
-        sys_clock.await_select(1);
+        let clock_token = sys_clock.set_self_aux_src();
+        nb::block!(sys_clock.await_select(&clock_token)).unwrap();
         sys_clock.set_div(div);
 
         // CLK USB = PLL USB (48MHz) / 1 = 48MHz
@@ -162,92 +162,6 @@ impl ClocksManager {
     pub fn free(self) -> CLOCKS {
         self.clocks
     }
-
-    /// Getter for the GPIO Output 0 Clock.
-    pub fn gpio_output0_clock(&self) -> GpioOutput0Clock {
-        GpioOutput0Clock {
-            shared_dev: self.shared_clocks,
-        }
-    }
-
-    /// Getter for the GPIO Output 1 Clock.
-    pub fn gpio_output1_clock(&self) -> GpioOutput1Clock {
-        GpioOutput1Clock {
-            shared_dev: self.shared_clocks,
-        }
-    }
-
-    /// Getter for the GPIO Output 2 Clock.
-    pub fn gpio_output2_clock(&self) -> GpioOutput2Clock {
-        GpioOutput2Clock {
-            shared_dev: self.shared_clocks,
-        }
-    }
-
-    /// Getter for the GPIO Output 3 Clock.
-    pub fn gpio_output3_clock(&self) -> GpioOutput3Clock {
-        GpioOutput3Clock {
-            shared_dev: self.shared_clocks,
-        }
-    }
-
-    /// Getter for the Reference Clock.
-    pub fn ref_clock(&self) -> ReferenceClock {
-        ReferenceClock {
-            shared_dev: self.shared_clocks,
-        }
-    }
-
-    /// Getter for the System Clock
-    pub fn sys_clock(&self) -> SystemClock {
-        SystemClock {
-            shared_dev: self.shared_clocks,
-        }
-    }
-
-    /// Getter for the PeripheralClock
-    pub fn peripheral_clock(&self) -> PeripheralClock {
-        PeripheralClock {
-            shared_dev: self.shared_clocks,
-        }
-    }
-
-    /// Getter for the Usb Clock
-    pub fn usb_clock(&self) -> UsbClock {
-        UsbClock {
-            shared_dev: self.shared_clocks,
-        }
-    }
-
-    /// Getter for the Adc Clock
-    pub fn adc_clock(&self) -> AdcClock {
-        AdcClock {
-            shared_dev: self.shared_clocks,
-        }
-    }
-
-    /// Getter for the Rtc Clock
-    pub fn rtc_clock(&self) -> RtcClock {
-        RtcClock {
-            shared_dev: self.shared_clocks,
-        }
-    }
-}
-
-/// For clocks with an integer divider.
-pub trait IntegerDivision {
-    /// Set integer divider value.
-    fn set_int_div(&mut self, div: usize);
-    /// Get integer diveder value.
-    fn get_int_div(&self) -> usize;
-}
-
-/// For clocks with a fraction divider.
-pub trait FractionDivision {
-    /// Set fraction divider value.
-    fn set_frac_div(&mut self, div: usize);
-    /// Get fraction divider value.
-    fn get_frac_div(&self) -> usize;
 }
 
 /// For clocks with a divider
@@ -258,25 +172,43 @@ pub trait ClockDivision {
     fn get_div(&self) -> u32;
 }
 
+/// Clock with glitchless source
+pub trait GlitchlessClock {
+    /// Self type to hand to ChangingClockToken
+    type Clock: GlitchlessClock;
+
+    /// Await switching clock sources without glitches. Needs a token that is returned when setting
+    fn await_select(
+        &self,
+        clock_token: &ChangingClockToken<Self::Clock>,
+    ) -> nb::Result<(), ()>;
+}
+
+/// Token which can be used to await the glitchless switch
+pub struct ChangingClockToken<G: GlitchlessClock> {
+    clock_nr: u8,
+    clock: PhantomData<G>,
+}
+
 /// For clocks that can have XOSC as source.
-pub trait XOSCClockSource {
+pub trait XOSCClockSource<G: GlitchlessClock> {
     /// Set XOSC as a source.
-    fn set_xosc_src(&mut self);
+    fn set_xosc_src(&mut self) -> ChangingClockToken<G>;
 }
 /// For clocks that can have ROSC as source.
-pub trait ROSCClockSource {
+pub trait ROSCClockSource<G: GlitchlessClock> {
     /// set ROSC as a source.
-    fn set_rosc_src(&mut self);
+    fn set_rosc_src(&mut self) -> ChangingClockToken<G>;
 }
-/// For clocks that can have ... itself (?) as a source (is that the "glitchless mux" ?)
-pub trait SelfAuxClockSource {
+/// For clocks that also have an aux source
+pub trait SelfAuxClockSource<G: GlitchlessClock> {
     /// Set ...
-    fn set_self_aux_src(&mut self);
+    fn set_self_aux_src(&mut self) -> ChangingClockToken<G>;
 }
 /// For clocks that can have the Reference Clock as source.
-pub trait ClockREFClockSource {
+pub trait ClockREFClockSource<G: GlitchlessClock> {
     /// Set Reference Clock as
-    fn set_clkref_src(&mut self);
+    fn set_clkref_src(&mut self) -> ChangingClockToken<G>;
 }
 /// For clocks that can have the System Clock as an auxilliary source.
 pub trait ClockSYSClockAuxSource {
@@ -355,242 +287,63 @@ pub trait ClockGenerator {
     fn kill(&mut self);
 }
 
-/// GPIO Output 0 Clock
-pub struct GpioOutput0Clock {
-    shared_dev: ShareableClocks,
+clock! {
+    /// GPIO Output 0 Clock
+    (GpioOutput0Clock, clk_gpout0, auxsrc=[pll_sys, gpin0, gpin1, pll_usb, rosc, xosc, clocksys, clockusb, clockadc, clockrtc, clockref])
+}
+clock! {
+    /// GPIO Output 1 Clock
+    (GpioOutput1Clock, clk_gpout1, auxsrc=[gpin0, gpin1, pll_usb, rosc, xosc, clocksys, clockusb, clockadc, clockrtc, clockref])
+}
+clock! {
+    /// GPIO Output 2 Clock
+    (GpioOutput2Clock, clk_gpout2, auxsrc=[gpin0, gpin1, pll_usb, rosc_ph, xosc, clocksys, clockusb, clockadc, clockrtc, clockref])
+}
+clock! {
+    /// GPIO Output 3 Clock
+    (GpioOutput3Clock, clk_gpout3, auxsrc=[gpin0, gpin1, pll_usb, rosc_ph, xosc, clocksys, clockusb, clockadc, clockrtc, clockref])
+}
+clock! {
+    /// Reference Clock
+    (ReferenceClock, clk_ref, src=[rosc, selfaux, xosc], auxsrc=[pll_usb, gpin0, gpin1])
+}
+clock! {
+    /// System Clock
+    (SystemClock, clk_sys, src=[clockref, selfaux], auxsrc=[pll_sys, pll_usb, rosc, xosc, gpin0, gpin1])
+}
+clock! {
+    /// Peripheral Clock
+    (PeripheralClock, clk_peri, auxsrc=[clocksys, pll_sys, pll_usb, rosc_ph, xosc, gpin0, gpin1], nodiv)
+}
+clock! {
+    /// USB Clock
+    (UsbClock, clk_usb, auxsrc=[pll_usb, pll_sys, rosc_ph, xosc, gpin0, gpin1])
+}
+clock! {
+    /// Adc Clock
+    (AdcClock, clk_adc, auxsrc=[pll_usb, pll_sys, rosc_ph, xosc, gpin0, gpin1])
+}
+clock! {
+    /// RTC Clock
+    (RtcClock, clk_rtc, auxsrc=[pll_usb, pll_sys, rosc_ph, xosc, gpin0, gpin1])
 }
 
-clock_generator!(GpioOutput0Clock, clk_gpout0_ctrl);
+impl SystemClock {
+    fn get_default_clock_source(&self) -> pac::clocks::clk_sys_ctrl::SRC_A {
+        pac::clocks::clk_sys_ctrl::SRC_A::CLK_REF
+    }
 
-// Clock aux sources
-pll_sys_auxsource!(GpioOutput0Clock, clk_gpout0_ctrl);
-gpin0_auxsource!(GpioOutput0Clock, clk_gpout0_ctrl);
-gpin1_auxsource!(GpioOutput0Clock, clk_gpout0_ctrl);
-pll_usb_auxsource!(GpioOutput0Clock, clk_gpout0_ctrl);
-rosc_auxsource!(GpioOutput0Clock, clk_gpout0_ctrl);
-xosc_auxsource!(GpioOutput0Clock, clk_gpout0_ctrl);
-clocksys_auxsource!(GpioOutput0Clock, clk_gpout0_ctrl);
-clockusb_auxsource!(GpioOutput0Clock, clk_gpout0_ctrl);
-clockadc_auxsource!(GpioOutput0Clock, clk_gpout0_ctrl);
-clockrtc_auxsource!(GpioOutput0Clock, clk_gpout0_ctrl);
-clockref_auxsource!(GpioOutput0Clock, clk_gpout0_ctrl);
-
-division!(GpioOutput0Clock, clk_gpout0_div);
-int_division!(GpioOutput0Clock, clk_gpout0_div, u32);
-frac_division!(GpioOutput0Clock, clk_gpout0_div, u8);
-
-/// GPIO Output 1 Clock
-pub struct GpioOutput1Clock {
-    shared_dev: ShareableClocks,
-}
-
-clock_generator!(GpioOutput1Clock, clk_gpout1_ctrl);
-
-// Clock aux sources
-pll_sys_auxsource!(GpioOutput1Clock, clk_gpout1_ctrl);
-gpin0_auxsource!(GpioOutput1Clock, clk_gpout1_ctrl);
-gpin1_auxsource!(GpioOutput1Clock, clk_gpout1_ctrl);
-pll_usb_auxsource!(GpioOutput1Clock, clk_gpout1_ctrl);
-rosc_auxsource!(GpioOutput1Clock, clk_gpout1_ctrl);
-xosc_auxsource!(GpioOutput1Clock, clk_gpout1_ctrl);
-clocksys_auxsource!(GpioOutput1Clock, clk_gpout1_ctrl);
-clockusb_auxsource!(GpioOutput1Clock, clk_gpout1_ctrl);
-clockadc_auxsource!(GpioOutput1Clock, clk_gpout1_ctrl);
-clockrtc_auxsource!(GpioOutput1Clock, clk_gpout1_ctrl);
-clockref_auxsource!(GpioOutput1Clock, clk_gpout1_ctrl);
-
-division!(GpioOutput1Clock, clk_gpout1_div);
-int_division!(GpioOutput1Clock, clk_gpout1_div, u32);
-frac_division!(GpioOutput1Clock, clk_gpout1_div, u8);
-
-/// GPIO Output 2 Clock
-pub struct GpioOutput2Clock {
-    shared_dev: ShareableClocks,
-}
-
-clock_generator!(GpioOutput2Clock, clk_gpout2_ctrl);
-
-// Clock aux sources
-pll_sys_auxsource!(GpioOutput2Clock, clk_gpout2_ctrl);
-gpin0_auxsource!(GpioOutput2Clock, clk_gpout2_ctrl);
-gpin1_auxsource!(GpioOutput2Clock, clk_gpout2_ctrl);
-pll_usb_auxsource!(GpioOutput2Clock, clk_gpout2_ctrl);
-rosc_ph_auxsource!(GpioOutput2Clock, clk_gpout2_ctrl);
-xosc_auxsource!(GpioOutput2Clock, clk_gpout2_ctrl);
-clocksys_auxsource!(GpioOutput2Clock, clk_gpout2_ctrl);
-clockusb_auxsource!(GpioOutput2Clock, clk_gpout2_ctrl);
-clockadc_auxsource!(GpioOutput2Clock, clk_gpout2_ctrl);
-clockrtc_auxsource!(GpioOutput2Clock, clk_gpout2_ctrl);
-clockref_auxsource!(GpioOutput2Clock, clk_gpout2_ctrl);
-
-division!(GpioOutput2Clock, clk_gpout2_div);
-int_division!(GpioOutput2Clock, clk_gpout2_div, u32);
-frac_division!(GpioOutput2Clock, clk_gpout2_div, u8);
-
-/// GPIO Output 3 Clock
-pub struct GpioOutput3Clock {
-    shared_dev: ShareableClocks,
-}
-
-clock_generator!(GpioOutput3Clock, clk_gpout3_ctrl);
-
-// Clock aux sources
-pll_sys_auxsource!(GpioOutput3Clock, clk_gpout3_ctrl);
-gpin0_auxsource!(GpioOutput3Clock, clk_gpout3_ctrl);
-gpin1_auxsource!(GpioOutput3Clock, clk_gpout3_ctrl);
-pll_usb_auxsource!(GpioOutput3Clock, clk_gpout3_ctrl);
-rosc_ph_auxsource!(GpioOutput3Clock, clk_gpout3_ctrl);
-xosc_auxsource!(GpioOutput3Clock, clk_gpout3_ctrl);
-clocksys_auxsource!(GpioOutput3Clock, clk_gpout3_ctrl);
-clockusb_auxsource!(GpioOutput3Clock, clk_gpout3_ctrl);
-clockadc_auxsource!(GpioOutput3Clock, clk_gpout3_ctrl);
-clockrtc_auxsource!(GpioOutput3Clock, clk_gpout3_ctrl);
-clockref_auxsource!(GpioOutput3Clock, clk_gpout3_ctrl);
-
-division!(GpioOutput3Clock, clk_gpout3_div);
-int_division!(GpioOutput3Clock, clk_gpout3_div, u32);
-frac_division!(GpioOutput3Clock, clk_gpout3_div, u8);
-
-/// Reference Clock
-pub struct ReferenceClock {
-    shared_dev: ShareableClocks,
+    fn get_aux_source(&self) -> pac::clocks::clk_sys_ctrl::SRC_A {
+        pac::clocks::clk_sys_ctrl::SRC_A::CLKSRC_CLK_SYS_AUX
+    }
 }
 
 impl ReferenceClock {
-    /// WIP - Helper function to reset source (blocking)
-    pub fn reset_source_await(&mut self) {
-        let shared_dev = unsafe { self.shared_dev.get() };
-
-        shared_dev.clk_ref_ctrl.write(|w| {
-            unsafe { w.src().bits(0) }
-        });
-
-        self.await_select(0x0);
+    fn get_default_clock_source(&self) -> pac::clocks::clk_ref_ctrl::SRC_A {
+        pac::clocks::clk_ref_ctrl::SRC_A::ROSC_CLKSRC_PH
     }
 
-    /// WIP - Helper function to select new source (blocking)
-    pub fn await_select(&self, clock: u8) {
-        let shared_dev = unsafe { self.shared_dev.get() };
-
-        while (shared_dev.clk_ref_selected.read().bits() & (1 << clock)) == 0 {
-            cortex_m::asm::nop();
-        }
+    fn get_aux_source(&self) -> pac::clocks::clk_ref_ctrl::SRC_A {
+        pac::clocks::clk_ref_ctrl::SRC_A::CLKSRC_CLK_REF_AUX
     }
 }
-
-rosc_source!(ReferenceClock, clk_ref_ctrl);
-selfaux_source!(ReferenceClock, clk_ref_ctrl, clksrc_clk_ref_aux);
-xosc_source!(ReferenceClock, clk_ref_ctrl);
-
-// Clock aux sources
-pll_usb_auxsource!(ReferenceClock, clk_ref_ctrl);
-gpin0_auxsource!(ReferenceClock, clk_ref_ctrl);
-gpin1_auxsource!(ReferenceClock, clk_ref_ctrl);
-
-division!(ReferenceClock, clk_ref_div);
-/// System Clock
-pub struct SystemClock {
-    shared_dev: ShareableClocks,
-}
-impl SystemClock {
-    /// WIP - Helper function to reset source (blocking)
-    pub fn reset_source_await(&mut self) {
-        let shared_dev = unsafe { self.shared_dev.get() };
-
-        shared_dev.clk_sys_ctrl.write(|w| {
-            w.src().clear_bit()
-        });
-
-        self.await_select(0x0);
-    }
-
-    /// WIP - Helper function to select new source (blocking)
-    pub fn await_select(&self, clock: u8) {
-        let shared_dev = unsafe { self.shared_dev.get() };
-
-        while (shared_dev.clk_sys_selected.read().bits() & (1 << clock)) == 0 {
-            cortex_m::asm::nop();
-        }
-    }
-}
-
-// Clock glitchless sources
-clockref_source!(SystemClock, clk_sys_ctrl);
-selfaux_source!(SystemClock, clk_sys_ctrl, clksrc_clk_sys_aux);
-
-// Clock aux sources
-pll_sys_auxsource!(SystemClock, clk_sys_ctrl);
-pll_usb_auxsource!(SystemClock, clk_sys_ctrl);
-rosc_auxsource!(SystemClock, clk_sys_ctrl);
-xosc_auxsource!(SystemClock, clk_sys_ctrl);
-gpin0_auxsource!(SystemClock, clk_sys_ctrl);
-gpin1_auxsource!(SystemClock, clk_sys_ctrl);
-
-division!(SystemClock, clk_sys_div);
-int_division!(SystemClock, clk_sys_div, u32);
-frac_division!(SystemClock, clk_sys_div, u8);
-
-/// Peripheral Clock
-pub struct PeripheralClock {
-    shared_dev: ShareableClocks,
-}
-clock_generator!(PeripheralClock, clk_peri_ctrl);
-
-// Clock aux sources
-clocksys_auxsource!(PeripheralClock, clk_peri_ctrl);
-pll_sys_auxsource!(PeripheralClock, clk_peri_ctrl);
-pll_usb_auxsource!(PeripheralClock, clk_peri_ctrl);
-rosc_ph_auxsource!(PeripheralClock, clk_peri_ctrl);
-xosc_auxsource!(PeripheralClock, clk_peri_ctrl);
-gpin0_auxsource!(PeripheralClock, clk_peri_ctrl);
-gpin1_auxsource!(PeripheralClock, clk_peri_ctrl);
-
-/// USB Clock
-pub struct UsbClock {
-    shared_dev: ShareableClocks,
-}
-clock_generator!(UsbClock, clk_usb_ctrl);
-
-// Clock aux sources
-pll_usb_auxsource!(UsbClock, clk_usb_ctrl);
-pll_sys_auxsource!(UsbClock, clk_usb_ctrl);
-rosc_ph_auxsource!(UsbClock, clk_usb_ctrl);
-xosc_auxsource!(UsbClock, clk_usb_ctrl);
-gpin0_auxsource!(UsbClock, clk_usb_ctrl);
-gpin1_auxsource!(UsbClock, clk_usb_ctrl);
-
-division!(UsbClock, clk_usb_div);
-
-/// Adc Clock
-pub struct AdcClock {
-    shared_dev: ShareableClocks,
-}
-clock_generator!(AdcClock, clk_adc_ctrl);
-
-// Clock aux sources
-pll_usb_auxsource!(AdcClock, clk_adc_ctrl);
-pll_sys_auxsource!(AdcClock, clk_adc_ctrl);
-rosc_ph_auxsource!(AdcClock, clk_adc_ctrl);
-xosc_auxsource!(AdcClock, clk_adc_ctrl);
-gpin0_auxsource!(AdcClock, clk_adc_ctrl);
-gpin1_auxsource!(AdcClock, clk_adc_ctrl);
-
-division!(AdcClock, clk_adc_div);
-
-/// RTC Clock
-pub struct RtcClock {
-    shared_dev: ShareableClocks,
-}
-clock_generator!(RtcClock, clk_rtc_ctrl);
-
-// Clock aux sources
-pll_usb_auxsource!(RtcClock, clk_rtc_ctrl);
-pll_sys_auxsource!(RtcClock, clk_rtc_ctrl);
-rosc_ph_auxsource!(RtcClock, clk_rtc_ctrl);
-xosc_auxsource!(RtcClock, clk_rtc_ctrl);
-gpin0_auxsource!(RtcClock, clk_rtc_ctrl);
-gpin1_auxsource!(RtcClock, clk_rtc_ctrl);
-
-division!(RtcClock, clk_rtc_div);
-int_division!(RtcClock, clk_rtc_div, u32);
-frac_division!(RtcClock, clk_rtc_div, u8);
