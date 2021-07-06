@@ -462,8 +462,7 @@ impl ReferenceClock {
         let shared_dev = unsafe { self.shared_dev.get() };
 
         shared_dev.clk_ref_ctrl.write(|w| {
-            unsafe { w.src().bits(0) };
-            w
+            unsafe { w.src().bits(0) }
         });
 
         self.await_select(0x0);
@@ -499,8 +498,7 @@ impl SystemClock {
         let shared_dev = unsafe { self.shared_dev.get() };
 
         shared_dev.clk_sys_ctrl.write(|w| {
-            w.src().clear_bit();
-            w
+            w.src().clear_bit()
         });
 
         self.await_select(0x0);
