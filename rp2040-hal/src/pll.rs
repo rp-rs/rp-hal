@@ -13,8 +13,9 @@ use embedded_time::{
 };
 
 use nb::Error::WouldBlock;
+use pac::RESETS;
 
-use crate::resets::SubsystemReset;
+use crate::{clocks::ClocksManager, resets::SubsystemReset};
 
 /// State of the PLL
 pub trait State {}
@@ -263,4 +264,29 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Locking, D> {
 
         self.transition(Locked)
     }
+}
+
+/// Blocking helper method to setup the PLL without going through all the steps.
+pub fn setup_pll_blocking<D: PhaseLockedLoopDevice, R: Rate>(
+    dev: D,
+    xosc_frequency: Generic<u32>,
+    config: PLLConfig<R>,
+    clocks: &mut ClocksManager,
+    resets: &mut RESETS,
+) -> Result<PhaseLockedLoop<Locked, D>, Error>
+where
+    R: Into<Hertz<u64>>,
+{
+    // Before we touch PLLs, switch sys and ref cleanly away from their aux sources.
+    let mut sys_clock = clocks.sys_clock();
+    sys_clock.reset_source_await();
+
+    let mut ref_clock = clocks.ref_clock();
+    ref_clock.reset_source_await();
+
+    let initialized_pll = PhaseLockedLoop::new(dev, xosc_frequency, config)?.initialize(resets);
+
+    let locked_pll_token = nb::block!(initialized_pll.await_lock()).unwrap();
+
+    Ok(initialized_pll.get_locked(locked_pll_token))
 }

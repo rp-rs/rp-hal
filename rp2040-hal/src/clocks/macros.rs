@@ -7,6 +7,10 @@ macro_rules! int_division {
                     w
                 });
             }
+
+            fn get_int_div(&self) -> usize {
+                unsafe { self.shared_dev.get() }.$div.read().int().bits() as usize
+            }
         }
     };
 }
@@ -19,6 +23,32 @@ macro_rules! frac_division {
                     w.frac().bits(div as $u);
                     w
                 });
+            }
+
+            fn get_frac_div(&self) -> usize {
+                unsafe { self.shared_dev.get() }
+                    .$div
+                    .read()
+                    .frac()
+                    .bits()
+                    .into()
+            }
+        }
+    };
+}
+
+macro_rules! division {
+    ($name:ident, $div:ident) => {
+        impl ClockDivision for $name {
+            fn set_div(&mut self, div: u32) {
+                unsafe { self.shared_dev.get() }.$div.modify(|_, w| unsafe {
+                    w.bits(div);
+                    w
+                });
+            }
+
+            fn get_div(&self) -> u32 {
+                unsafe { self.shared_dev.get() }.$div.read().bits()
             }
         }
     };
