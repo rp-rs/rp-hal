@@ -5,6 +5,7 @@ use rp2040_pac as pac;
 mod private {
     pub trait SubsystemReset {
         fn reset_bring_up(&self, resets: &mut pac::RESETS);
+        fn reset_bring_down(&self, resets: &mut pac::RESETS);
     }
 }
 
@@ -16,6 +17,9 @@ macro_rules! generate_reset {
             fn reset_bring_up(&self, resets: &mut pac::RESETS) {
                 resets.reset.modify(|_, w| w.$module().clear_bit());
                 while resets.reset_done.read().$module().bit_is_clear() {}
+            }
+            fn reset_bring_down(&self, resets: &mut pac::RESETS) {
+                resets.reset.modify(|_, w| w.$module().set_bit());
             }
         }
     };
