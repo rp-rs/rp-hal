@@ -143,7 +143,11 @@ macro_rules! hal {
                     assert!(freq <= 1_000_000);
 
                     unsafe {
-                        (*RESETS::ptr()).reset.write(|w| w.$i2cX().set_bit());
+                        // Reset
+                        let resets =  &*RESETS::ptr();
+                        resets.reset.write(|w| w.$i2cX().set_bit());
+                        resets.reset.write(|w| w.$i2cX().clear_bit());
+                        while resets.reset_done.read().$i2cX().bit_is_clear() {}
                     }
 
                     I2c { i2c, pins }
