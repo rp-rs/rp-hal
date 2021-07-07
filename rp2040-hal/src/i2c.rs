@@ -5,8 +5,9 @@ use crate::gpio::pin::bank0::{
     Gpio0, Gpio1, Gpio10, Gpio11, Gpio12, Gpio13, Gpio14, Gpio15, Gpio16, Gpio17, Gpio18, Gpio19,
     Gpio2, Gpio20, Gpio21, Gpio26, Gpio27, Gpio3, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8, Gpio9,
 };
+use embedded_time::rate::Hertz;
+use hal::blocking::i2c::{Write, WriteRead};
 use rp2040_pac::{I2C0, I2C1};
-//use hal::blocking::i2c::{Write, WriteRead};
 
 /// I2C error
 #[non_exhaustive]
@@ -22,6 +23,7 @@ pub enum Error {
     // Alert, // SMBUS mode only
 }
 
+#[doc(hidden)]
 mod sealed {
 
     use crate::gpio::pin::bank0::{
@@ -121,10 +123,10 @@ pub struct I2c<I2C, PINS> {
             }
         }
     };
-}
+}*/
 
 macro_rules! hal {
-    ($($I2CX:ident: ($i2cX:ident, $i2cXen:ident, $i2cXrst:ident),)+) => {
+    ($($I2CX:ident: ($i2cX:ident),)+) => {
         $(
             impl<SCL, SDA> I2c<$I2CX, (SCL, SDA)> {
                 /// Configures the I2C peripheral to work in master mode
@@ -132,22 +134,20 @@ macro_rules! hal {
                     i2c: $I2CX,
                     pins: (SCL, SDA),
                     freq: F,
-                    clocks: Clocks,
-                    apb1: &mut APB1,
                 ) -> Self where
                     F: Into<Hertz>,
                     SCL: SclPin<$I2CX>,
                     SDA: SdaPin<$I2CX>,
                 {
-                    apb1.enr().modify(|_, w| w.$i2cXen().enabled());
+                    /*apb1.enr().modify(|_, w| w.$i2cXen().enabled());
                     apb1.rstr().modify(|_, w| w.$i2cXrst().set_bit());
-                    apb1.rstr().modify(|_, w| w.$i2cXrst().clear_bit());
+                    apb1.rstr().modify(|_, w| w.$i2cXrst().clear_bit());*/
 
                     let freq = freq.into().0;
 
                     assert!(freq <= 1_000_000);
 
-                    // TODO review compliance with the timing requirements of I2C
+                    /*// TODO review compliance with the timing requirements of I2C
                     // t_I2CCLK = 1 / PCLK1
                     // t_PRESC  = (PRESC + 1) * t_I2CCLK
                     // t_SCLL   = (SCLL + 1) * t_PRESC
@@ -218,7 +218,7 @@ macro_rules! hal {
                     });
 
                     // Enable the peripheral
-                    i2c.cr1.write(|w| w.pe().set_bit());
+                    i2c.cr1.write(|w| w.pe().set_bit());*/
 
                     I2c { i2c, pins }
                 }
@@ -232,11 +232,11 @@ macro_rules! hal {
             impl<PINS> Write for I2c<$I2CX, PINS> {
                 type Error = Error;
 
-                fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Error> {
+                fn write(&mut self, _addr: u8, bytes: &[u8]) -> Result<(), Error> {
                     // TODO support transfers of more than 255 bytes
                     assert!(bytes.len() < 256 && bytes.len() > 0);
 
-                    // START and prepare to send `bytes`
+                    /*// START and prepare to send `bytes`
                     self.i2c.cr2.write(|w| {
                         w.sadd1()
                             .bits(addr)
@@ -262,7 +262,7 @@ macro_rules! hal {
                     // Wait until the last transmission is finished ???
                     // busy_wait!(self.i2c, busy);
 
-                    // automatic STOP
+                    // automatic STOP*/
 
                     Ok(())
                 }
@@ -273,14 +273,14 @@ macro_rules! hal {
 
                 fn write_read(
                     &mut self,
-                    addr: u8,
+                    _addr: u8,
                     bytes: &[u8],
                     buffer: &mut [u8],
                 ) -> Result<(), Error> {
                     // TODO support transfers of more than 255 bytes
                     assert!(bytes.len() < 256 && bytes.len() > 0);
                     assert!(buffer.len() < 256 && buffer.len() > 0);
-
+                /*
                     // TODO do we have to explicitly wait here if the bus is busy (e.g. another
                     // master is communicating)?
 
@@ -333,6 +333,8 @@ macro_rules! hal {
 
                     // automatic STOP
 
+                    */
+
                     Ok(())
                 }
             }
@@ -341,8 +343,6 @@ macro_rules! hal {
 }
 
 hal! {
-    I2C1: (i2c1, i2c1en, i2c1rst),
-    I2C2: (i2c2, i2c2en, i2c2rst),
+    I2C0: (i2c0),
+    I2C1: (i2c1),
 }
-
-*/
