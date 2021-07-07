@@ -35,7 +35,7 @@
 //! pwm_pin.set_inv().unwrap(); // Invert the output
 //! pwm_pin.clr_inv().unwrap(); // Don't invert the output
 //!
-//! pwm_pin.set_top(value: u16).unwrap(); // To set the TOP register 
+//! pwm_pin.set_top(value: u16).unwrap(); // To set the TOP register
 //!
 //! pwm_pin.divmode_div().unwrap(); // Default divmode. Counts up at a rate dictated by div.
 //! pwm_pin.divmode_level().unwrap(); // These 3 divmodes can be used with a PWM B pin to read PWM inputs.
@@ -47,9 +47,9 @@
 //! min_config() leaves those registers in the state they were before it was called (Careful, this can lead to unexpected behavior)
 //! It's recommended to only call min_config() after calling default_config() on a pin that shares a PWM block.
 
-use embedded_hal::PwmPin;
-use crate::resets::SubsystemReset;
 use super::*;
+use crate::resets::SubsystemReset;
+use embedded_hal::PwmPin;
 
 macro_rules! pwm {
     ($PWMX:ident, $pwmx:ident, [
@@ -256,4 +256,3 @@ pwm! {
         Pwm7: (pwm7, "pwm7", [14, 15], 7),
     ]
 }
-
