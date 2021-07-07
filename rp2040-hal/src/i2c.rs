@@ -157,7 +157,7 @@ macro_rules! hal {
                         while resets.reset_done.read().$i2cX().bit_is_clear() {}
                     }
 
-                    i2c.ic_enable.write(|w| w.enable().clear_bit());
+                    i2c.ic_enable.write(|w| w.enable().disabled());
 
                     i2c.ic_con.write(|w| {
                         w.speed().fast();
@@ -213,7 +213,7 @@ macro_rules! hal {
                         i2c.ic_sda_hold.write(|w| w.ic_sda_tx_hold().bits(sda_tx_hold_count as u16));
                     }
 
-                    i2c.ic_enable.write(|w| w.enable().set_bit());
+                    i2c.ic_enable.write(|w| w.enable().enabled());
 
                     I2c { i2c, pins }
                 }
@@ -234,6 +234,14 @@ macro_rules! hal {
                     assert!(addr < 0x80);
                     assert!(!i2c_reserved_addr(addr));
                     assert!(bytes.len() != 0);
+
+                    self.i2c.ic_enable.write(|w| w.enable().disabled());
+                    self.i2c.ic_tar.write(|w| unsafe { w.ic_tar().bits(addr as u16) });
+                    self.i2c.ic_enable.write(|w| w.enable().enabled());
+
+                    //for byte in bytes {
+
+                    //}
 
                     Ok(())
                 }
