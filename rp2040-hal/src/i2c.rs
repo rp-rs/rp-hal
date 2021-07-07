@@ -127,6 +127,10 @@ pub struct I2c<I2C, PINS> {
     };
 }*/
 
+fn i2c_reserved_addr(addr: u8) -> bool {
+    (addr & 0x78) == 0 || (addr & 0x78) == 0x78
+}
+
 macro_rules! hal {
     ($($I2CX:ident: ($i2cX:ident),)+) => {
         $(
@@ -174,6 +178,7 @@ macro_rules! hal {
                     let freq_in = 125_000_000;
 
                     // TODO there are some subtleties to I2C timing which we are completely ignoring here
+                    // See: https://github.com/raspberrypi/pico-sdk/blob/bfcbefafc5d2a210551a4d9d80b4303d4ae0adf7/src/rp2_common/hardware_i2c/i2c.c#L69
                     let period = (freq_in + freq / 2) / freq;
                     let hcnt = period * 3 / 5; // oof this one hurts
                     let lcnt = period - hcnt;
@@ -184,10 +189,28 @@ macro_rules! hal {
                     assert!(hcnt > 8);
                     assert!(lcnt > 8);
 
+                    // Per I2C-bus specification a device in standard or fast mode must
+                    // internally provide a hold time of at least 300ns for the SDA signal to
+                    // bridge the undefined region of the falling edge of SCL. A smaller hold
+                    // time of 120ns is used for fast mode plus.
+                    let sda_tx_hold_count = if (freq < 1000000) {
+                        // sda_tx_hold_count = freq_in [cycles/s] * 300ns * (1s / 1e9ns)
+                        // Reduce 300/1e9 to 3/1e7 to avoid numbers that don't fit in uint.
+                        // Add 1 to avoid division truncation.
+                        ((freq_in * 3) / 10000000) + 1
+                    } else {
+                        // sda_tx_hold_count = freq_in [cycles/s] * 120ns * (1s / 1e9ns)
+                        // Reduce 120/1e9 to 3/25e6 to avoid numbers that don't fit in uint.
+                        // Add 1 to avoid division truncation.
+                        ((freq_in * 3) / 25000000) + 1
+                    };
+                    assert!(sda_tx_hold_count <= lcnt - 2);
+
                     unsafe {
                         i2c.ic_fs_scl_hcnt.write(|w| w.ic_fs_scl_hcnt().bits(hcnt as u16));
                         i2c.ic_fs_scl_lcnt.write(|w| w.ic_fs_scl_lcnt().bits(lcnt as u16));
                         i2c.ic_fs_spklen.write(|w| w.ic_fs_spklen().bits(if lcnt < 16 { 1 } else { (lcnt / 16) as u8 }));
+                        i2c.ic_sda_hold.write(|w| w.ic_sda_tx_hold().bits(sda_tx_hold_count as u16));
                     }
 
                     i2c.ic_enable.write(|w| w.enable().set_bit());
@@ -204,9 +227,13 @@ macro_rules! hal {
             impl<PINS> Write for I2c<$I2CX, PINS> {
                 type Error = Error;
 
-                fn write(&mut self, _addr: u8, bytes: &[u8]) -> Result<(), Error> {
+                fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Error> {
                     // TODO support transfers of more than 255 bytes
                     assert!(bytes.len() < 256 && bytes.len() > 0);
+
+                    assert!(addr < 0x80);
+                    assert!(!i2c_reserved_addr(addr));
+                    assert!(bytes.len() != 0);
 
                     Ok(())
                 }
@@ -217,13 +244,17 @@ macro_rules! hal {
 
                 fn write_read(
                     &mut self,
-                    _addr: u8,
+                    addr: u8,
                     bytes: &[u8],
                     buffer: &mut [u8],
                 ) -> Result<(), Error> {
                     // TODO support transfers of more than 255 bytes
                     assert!(bytes.len() < 256 && bytes.len() > 0);
                     assert!(buffer.len() < 256 && buffer.len() > 0);
+
+                    assert!(addr < 0x80);
+                    assert!(!i2c_reserved_addr(addr));
+                    assert!(bytes.len() != 0);
 
 
                     Ok(())
