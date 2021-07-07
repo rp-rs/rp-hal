@@ -1,4 +1,6 @@
 //! Inter-Integrated Circuit (I2C) bus
+// Based on: https://github.com/raspberrypi/pico-sdk/blob/master/src/rp2_common/hardware_i2c/i2c.c
+// Structure from: https://github.com/japaric/stm32f30x-hal/blob/master/src/i2c.rs
 // See [Chapter 4 Section 3](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 
 use crate::gpio::pin::bank0::{
@@ -141,14 +143,54 @@ macro_rules! hal {
                 {
                     let freq = freq.into().0;
                     assert!(freq <= 1_000_000);
+                    assert!(freq > 0);
 
                     unsafe {
-                        // Reset
+                        // Reset i2c hardware
                         let resets =  &*RESETS::ptr();
                         resets.reset.write(|w| w.$i2cX().set_bit());
                         resets.reset.write(|w| w.$i2cX().clear_bit());
                         while resets.reset_done.read().$i2cX().bit_is_clear() {}
                     }
+
+                    i2c.ic_enable.write(|w| w.enable().clear_bit());
+
+                    i2c.ic_con.write(|w| {
+                        w.speed().fast();
+                        w.master_mode().enabled();
+                        w.ic_slave_disable().slave_disabled();
+                        w.ic_restart_en().enabled()
+                    });
+
+                    i2c.ic_tx_tl.write(|w| unsafe { w.tx_tl().bits(0) });
+                    i2c.ic_rx_tl.write(|w| unsafe { w.rx_tl().bits(0) });
+
+                    i2c.ic_dma_cr.write(|w| {
+                        w.tdmae().enabled();
+                        w.rdmae().enabled()
+                    });
+
+                    // TODO: Get value from clocks
+                    let freq_in = 125_000_000;
+
+                    // TODO there are some subtleties to I2C timing which we are completely ignoring here
+                    let period = (freq_in + freq / 2) / freq;
+                    let hcnt = period * 3 / 5; // oof this one hurts
+                    let lcnt = period - hcnt;
+
+                    // Check for out-of-range divisors:
+                    assert!(hcnt < 0xffff);
+                    assert!(lcnt < 0xffff);
+                    assert!(hcnt > 8);
+                    assert!(lcnt > 8);
+
+                    unsafe {
+                        i2c.ic_fs_scl_hcnt.write(|w| w.ic_fs_scl_hcnt().bits(hcnt as u16));
+                        i2c.ic_fs_scl_lcnt.write(|w| w.ic_fs_scl_lcnt().bits(lcnt as u16));
+                        i2c.ic_fs_spklen.write(|w| w.ic_fs_spklen().bits(if lcnt < 16 { 1 } else { (lcnt / 16) as u8 }));
+                    }
+
+                    i2c.ic_enable.write(|w| w.enable().set_bit());
 
                     I2c { i2c, pins }
                 }
