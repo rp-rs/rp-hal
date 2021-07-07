@@ -15,6 +15,7 @@ use rp2040_pac::{I2C0, I2C1, RESETS};
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum Error {
+    /// I2c abort with error
     Abort(u32),
 }
 
@@ -102,24 +103,6 @@ pub struct I2c<I2C, PINS> {
     pins: PINS,
 }
 
-/*macro_rules! busy_wait {
-    ($i2c:expr, $flag:ident) => {
-        loop {
-            let isr = $i2c.isr.read();
-
-            if isr.berr().bit_is_set() {
-                return Err(Error::Bus);
-            } else if isr.arlo().bit_is_set() {
-                return Err(Error::Arbitration);
-            } else if isr.$flag().bit_is_set() {
-                break;
-            } else {
-                // try again
-            }
-        }
-    };
-}*/
-
 fn i2c_reserved_addr(addr: u8) -> bool {
     (addr & 0x78) == 0 || (addr & 0x78) == 0x78
 }
@@ -168,7 +151,7 @@ impl<SCL, SDA> I2c<I2C0, (SCL, SDA)> {
         // TODO: Get value from clocks
         let freq_in = 125_000_000;
 
-        // TODO there are some subtleties to I2C timing which we are completely ignoring here
+        // There are some subtleties to I2C timing which we are completely ignoring here
         // See: https://github.com/raspberrypi/pico-sdk/blob/bfcbefafc5d2a210551a4d9d80b4303d4ae0adf7/src/rp2_common/hardware_i2c/i2c.c#L69
         let period = (freq_in + freq / 2) / freq;
         let hcnt = period * 3 / 5; // oof this one hurts
@@ -271,9 +254,6 @@ impl<PINS> Write for I2c<I2C0, PINS> {
                 // If the transaction was aborted or if it completed
                 // successfully wait until the STOP condition has occured.
 
-                // TODO Could there be an abort while waiting for the STOP
-                // condition here? If so, additional code would be needed here
-                // to take care of the abort.
                 while self.i2c.ic_raw_intr_stat.read().stop_det().is_inactive() {}
 
                 self.i2c.ic_clr_stop_det.read().clr_stop_det();
@@ -306,7 +286,92 @@ impl<PINS> WriteRead for I2c<I2C0, PINS> {
         assert!(addr < 0x80);
         assert!(!i2c_reserved_addr(addr));
 
-        Ok(())
+        self.i2c.ic_enable.write(|w| w.enable().disabled());
+        self.i2c
+            .ic_tar
+            .write(|w| unsafe { w.ic_tar().bits(addr as u16) });
+        self.i2c.ic_enable.write(|w| w.enable().enabled());
+
+        let mut abort = false;
+        let mut abort_reason = 0;
+
+        for byte in bytes {
+            self.i2c.ic_data_cmd.write(|w| {
+                w.stop().disable();
+                unsafe { w.dat().bits(*byte) }
+            });
+
+            // Wait until the transmission of the address/data from the internal
+            // shift register has completed. For this to function correctly, the
+            // TX_EMPTY_CTRL flag in IC_CON must be set. The TX_EMPTY_CTRL flag
+            // was set in i2c_init.
+            while self.i2c.ic_raw_intr_stat.read().tx_empty().is_inactive() {}
+
+            abort_reason = self.i2c.ic_tx_abrt_source.read().bits();
+            if abort_reason != 0 {
+                // Note clearing the abort flag also clears the reason, and
+                // this instance of flag is clear-on-read! Note also the
+                // IC_CLR_TX_ABRT register always reads as 0.
+                self.i2c.ic_clr_tx_abrt.read().clr_tx_abrt();
+                abort = true;
+            }
+
+            if abort {
+                // If the transaction was aborted or if it completed
+                // successfully wait until the STOP condition has occured.
+
+                while self.i2c.ic_raw_intr_stat.read().stop_det().is_inactive() {}
+
+                self.i2c.ic_clr_stop_det.read().clr_stop_det();
+            }
+
+            // Note the hardware issues a STOP automatically on an abort condition.
+            // Note also the hardware clears RX FIFO as well as TX on abort,
+            // ecause we set hwparam IC_AVOID_RX_FIFO_FLUSH_ON_TX_ABRT to 0.
+            if abort {
+                break;
+            }
+        }
+
+        for (i, byte) in buffer.iter_mut().enumerate() {
+            let first = i == 0;
+            let last = i == bytes.len() - 1;
+
+            while 16 - self.i2c.ic_txflr.read().txflr().bits() > 0 {}
+
+            self.i2c.ic_data_cmd.write(|w| {
+                if first {
+                    w.restart().enable();
+                } else {
+                    w.restart().disable();
+                }
+
+                if last {
+                    w.stop().enable();
+                } else {
+                    w.stop().disable();
+                }
+
+                w.cmd().read()
+            });
+
+            while !abort && self.i2c.ic_rxflr.read().bits() == 0 {
+                abort_reason = self.i2c.ic_tx_abrt_source.read().bits();
+                abort = self.i2c.ic_clr_tx_abrt.read().bits() > 0;
+            }
+
+            if abort {
+                break;
+            }
+
+            *byte = self.i2c.ic_data_cmd.read().dat().bits();
+        }
+
+        if abort {
+            Err(Error::Abort(abort_reason))
+        } else {
+            Ok(())
+        }
     }
 }
 /*         )+
