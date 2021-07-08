@@ -82,7 +82,7 @@ macro_rules! hal {
         $(
             impl<Sda: PinId + BankPinId, Scl: PinId + BankPinId> I2C<$I2CX, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)> {
                 /// Configures the I2C peripheral to work in master mode
-                pub fn $i2cX<F, SclMode, SdaMode>(
+                pub fn $i2cX<F, SdaMode, SclMode>(
                     i2c: $I2CX,
                     sda_pin: Pin<Sda, SdaMode>,
                     scl_pin: Pin<Scl, SclMode>,
