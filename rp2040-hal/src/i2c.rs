@@ -68,20 +68,20 @@ impl SdaPin<I2C1> for Gpio26 {}
 impl SclPin<I2C1> for Gpio27 {}
 
 /// I2C pin pair
-pub trait I2CPinPair {}
+pub unsafe trait I2CPinPair {}
 
-impl I2CPinPair for (Gpio0, Gpio1) {}
-impl I2CPinPair for (Gpio2, Gpio3) {}
-impl I2CPinPair for (Gpio4, Gpio5) {}
-impl I2CPinPair for (Gpio6, Gpio7) {}
-impl I2CPinPair for (Gpio8, Gpio9) {}
-impl I2CPinPair for (Gpio10, Gpio11) {}
-impl I2CPinPair for (Gpio12, Gpio13) {}
-impl I2CPinPair for (Gpio14, Gpio15) {}
-impl I2CPinPair for (Gpio16, Gpio17) {}
-impl I2CPinPair for (Gpio18, Gpio19) {}
-impl I2CPinPair for (Gpio20, Gpio21) {}
-impl I2CPinPair for (Gpio26, Gpio27) {}
+unsafe impl I2CPinPair for (Gpio0, Gpio1) {}
+unsafe impl I2CPinPair for (Gpio2, Gpio3) {}
+unsafe impl I2CPinPair for (Gpio4, Gpio5) {}
+unsafe impl I2CPinPair for (Gpio6, Gpio7) {}
+unsafe impl I2CPinPair for (Gpio8, Gpio9) {}
+unsafe impl I2CPinPair for (Gpio10, Gpio11) {}
+unsafe impl I2CPinPair for (Gpio12, Gpio13) {}
+unsafe impl I2CPinPair for (Gpio14, Gpio15) {}
+unsafe impl I2CPinPair for (Gpio16, Gpio17) {}
+unsafe impl I2CPinPair for (Gpio18, Gpio19) {}
+unsafe impl I2CPinPair for (Gpio20, Gpio21) {}
+unsafe impl I2CPinPair for (Gpio26, Gpio27) {}
 
 /// I2C peripheral operating in master mode
 pub struct I2C<I2C, Pins> {
