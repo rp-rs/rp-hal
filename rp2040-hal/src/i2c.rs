@@ -98,7 +98,7 @@ impl SdaPin<I2C1> for Gpio26 {}
 impl SclPin<I2C1> for Gpio27 {}
 
 /// I2C peripheral operating in master mode
-pub struct I2c<I2C, PINS> {
+pub struct I2C<I2C, PINS> {
     i2c: I2C,
     pins: PINS,
 }
@@ -110,7 +110,7 @@ fn i2c_reserved_addr(addr: u8) -> bool {
 macro_rules! hal {
     ($($I2CX:ident: ($i2cX:ident),)+) => {
         $(
-            impl<SCL, SDA> I2c<$I2CX, (SCL, SDA)> {
+            impl<SCL, SDA> I2C<$I2CX, (SCL, SDA)> {
                 /// Configures the I2C peripheral to work in master mode
                 pub fn $i2cX<F>(i2c: $I2CX, pins: (SCL, SDA), freq: F) -> Self
                 where
@@ -195,7 +195,7 @@ macro_rules! hal {
 
                     i2c.ic_enable.write(|w| w.enable().enabled());
 
-                    I2c { i2c, pins }
+                    I2C { i2c, pins }
                 }
 
                 /// Releases the I2C peripheral and associated pins
@@ -204,7 +204,7 @@ macro_rules! hal {
                 }
             }
 
-            impl<PINS> Write for I2c<$I2CX, PINS> {
+            impl<PINS> Write for I2C<$I2CX, PINS> {
                 type Error = Error;
 
                 fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Error> {
@@ -275,7 +275,7 @@ macro_rules! hal {
                 }
             }
 
-            impl<PINS> WriteRead for I2c<$I2CX, PINS> {
+            impl<PINS> WriteRead for I2C<$I2CX, PINS> {
                 type Error = Error;
 
                 fn write_read(&mut self, addr: u8, bytes: &[u8], buffer: &mut [u8]) -> Result<(), Error> {
