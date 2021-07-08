@@ -3,9 +3,13 @@
 // Structure from: https://github.com/japaric/stm32f30x-hal/blob/master/src/i2c.rs
 // See [Chapter 4 Section 3](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 
-use crate::gpio::pin::bank0::{
-    Gpio0, Gpio1, Gpio10, Gpio11, Gpio12, Gpio13, Gpio14, Gpio15, Gpio16, Gpio17, Gpio18, Gpio19,
-    Gpio2, Gpio20, Gpio21, Gpio26, Gpio27, Gpio3, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8, Gpio9,
+use crate::{
+    gpio::pin::bank0::{
+        Gpio0, Gpio1, Gpio10, Gpio11, Gpio12, Gpio13, Gpio14, Gpio15, Gpio16, Gpio17, Gpio18,
+        Gpio19, Gpio2, Gpio20, Gpio21, Gpio26, Gpio27, Gpio3, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8,
+        Gpio9,
+    },
+    typelevel::Sealed,
 };
 use embedded_time::rate::Hertz;
 use hal::blocking::i2c::{Write, WriteRead};
@@ -15,51 +19,15 @@ use rp2040_pac::{I2C0, I2C1, RESETS};
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum Error {
-    /// I2c abort with error
+    /// I2C abort with error
     Abort(u32),
 }
 
-#[doc(hidden)]
-mod sealed {
-
-    use crate::gpio::pin::bank0::{
-        Gpio0, Gpio1, Gpio10, Gpio11, Gpio12, Gpio13, Gpio14, Gpio15, Gpio16, Gpio17, Gpio18,
-        Gpio19, Gpio2, Gpio20, Gpio21, Gpio26, Gpio27, Gpio3, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8,
-        Gpio9,
-    };
-
-    pub trait Sealed {}
-    impl Sealed for Gpio0 {}
-    impl Sealed for Gpio1 {}
-    impl Sealed for Gpio2 {}
-    impl Sealed for Gpio3 {}
-    impl Sealed for Gpio4 {}
-    impl Sealed for Gpio5 {}
-    impl Sealed for Gpio6 {}
-    impl Sealed for Gpio7 {}
-    impl Sealed for Gpio8 {}
-    impl Sealed for Gpio9 {}
-    impl Sealed for Gpio10 {}
-    impl Sealed for Gpio11 {}
-    impl Sealed for Gpio12 {}
-    impl Sealed for Gpio13 {}
-    impl Sealed for Gpio14 {}
-    impl Sealed for Gpio15 {}
-    impl Sealed for Gpio16 {}
-    impl Sealed for Gpio17 {}
-    impl Sealed for Gpio18 {}
-    impl Sealed for Gpio19 {}
-    impl Sealed for Gpio20 {}
-    impl Sealed for Gpio21 {}
-    impl Sealed for Gpio26 {}
-    impl Sealed for Gpio27 {}
-}
-
 /// SCL pin
-pub trait SclPin<I2C>: sealed::Sealed {}
+pub trait SclPin<I2C>: Sealed {}
 
 /// SDA pin
-pub trait SdaPin<I2C>: sealed::Sealed {}
+pub trait SdaPin<I2C>: Sealed {}
 
 impl SdaPin<I2C0> for Gpio0 {}
 impl SclPin<I2C0> for Gpio1 {}
@@ -112,7 +80,7 @@ macro_rules! hal {
         $(
             impl<SCL, SDA> I2C<$I2CX, (SCL, SDA)> {
                 /// Configures the I2C peripheral to work in master mode
-                pub fn $i2cX<F>(i2c: $I2CX, pins: (SCL, SDA), freq: F) -> Self
+                pub fn $i2cX<F>(i2c: $I2CX, pins: (SCL, SDA), freq: F, resets: &mut RESETS) -> Self
                 where
                     F: Into<Hertz>,
                     SCL: SclPin<$I2CX>,
@@ -122,13 +90,9 @@ macro_rules! hal {
                     assert!(freq <= 1_000_000);
                     assert!(freq > 0);
 
-                    unsafe {
-                        // Reset i2c hardware
-                        let resets = &*RESETS::ptr();
-                        resets.reset.write(|w| w.$i2cX().set_bit());
-                        resets.reset.write(|w| w.$i2cX().clear_bit());
-                        while resets.reset_done.read().$i2cX().bit_is_clear() {}
-                    }
+                    resets.reset.write(|w| w.$i2cX().set_bit());
+                    resets.reset.write(|w| w.$i2cX().clear_bit());
+                    while resets.reset_done.read().$i2cX().bit_is_clear() {}
 
                     i2c.ic_enable.write(|w| w.enable().disabled());
 
