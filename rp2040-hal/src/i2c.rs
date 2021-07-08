@@ -9,6 +9,7 @@ use crate::{
         Gpio19, Gpio2, Gpio20, Gpio21, Gpio26, Gpio27, Gpio3, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8,
         Gpio9,
     },
+    resets::SubsystemReset,
     typelevel::Sealed,
 };
 use embedded_time::rate::Hertz;
@@ -90,9 +91,8 @@ macro_rules! hal {
                     assert!(freq <= 1_000_000);
                     assert!(freq > 0);
 
-                    resets.reset.write(|w| w.$i2cX().set_bit());
-                    resets.reset.write(|w| w.$i2cX().clear_bit());
-                    while resets.reset_done.read().$i2cX().bit_is_clear() {}
+                    i2c.reset_bring_down(resets);
+                    i2c.reset_bring_up(resets);
 
                     i2c.ic_enable.write(|w| w.enable().disabled());
 
