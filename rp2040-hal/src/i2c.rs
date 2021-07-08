@@ -81,15 +81,16 @@ macro_rules! hal {
         $(
             impl<SCL, SDA> I2C<$I2CX, (SCL, SDA)> {
                 /// Configures the I2C peripheral to work in master mode
-                pub fn $i2cX<F>(i2c: $I2CX, pins: (SCL, SDA), freq: F, resets: &mut RESETS) -> Self
+                pub fn $i2cX<F>(i2c: $I2CX, scl_pin: SCL, sda_pin: SDA, freq: F, resets: &mut RESETS) -> Self
                 where
-                    F: Into<Hertz>,
+                    F: Into<Hertz<u64>>,
                     SCL: SclPin<$I2CX>,
                     SDA: SdaPin<$I2CX>,
                 {
                     let freq = freq.into().0;
                     assert!(freq <= 1_000_000);
                     assert!(freq > 0);
+                    let freq = freq as u32;
 
                     i2c.reset_bring_down(resets);
                     i2c.reset_bring_up(resets);
@@ -159,7 +160,7 @@ macro_rules! hal {
 
                     i2c.ic_enable.write(|w| w.enable().enabled());
 
-                    I2C { i2c, pins }
+                    I2C { i2c, pins: (scl_pin, sda_pin) }
                 }
 
                 /// Releases the I2C peripheral and associated pins
