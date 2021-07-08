@@ -23,6 +23,7 @@ pub mod prelude;
 pub mod pwm;
 pub mod resets;
 pub mod rom_data;
+pub mod rosc;
 pub mod rtc;
 pub mod sio;
 pub mod spi;

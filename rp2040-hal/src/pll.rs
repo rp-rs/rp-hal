@@ -26,16 +26,20 @@ pub struct Disabled {
     fbdiv: u16,
     post_div1: u8,
     post_div2: u8,
+    frequency: Hertz,
 }
 
 /// PLL is configured, started and locking into its designated frequency.
 pub struct Locking {
     post_div1: u8,
     post_div2: u8,
+    frequency: Hertz,
 }
 
 /// PLL is locked : it delivers a steady frequency.
-pub struct Locked;
+pub struct Locked {
+    frequency: Hertz,
+}
 
 impl State for Disabled {}
 impl State for Locked {}
@@ -183,6 +187,8 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
         let refdiv = config.refdiv;
         let post_div1 = config.post_div1;
         let post_div2 = config.post_div2;
+        let frequency: Hertz =
+            (ref_freq_hz / refdiv as u32) * fbdiv as u32 / (post_div1 as u32 * post_div2 as u32);
 
         Ok(PhaseLockedLoop {
             state: Disabled {
@@ -190,6 +196,7 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
                 fbdiv,
                 post_div1,
                 post_div2,
+                frequency,
             },
             device: dev,
         })
@@ -222,10 +229,12 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
 
         let post_div1 = self.state.post_div1;
         let post_div2 = self.state.post_div2;
+        let frequency = self.state.frequency;
 
         self.transition(Locking {
             post_div1,
             post_div2,
+            frequency,
         })
     }
 }
@@ -262,7 +271,16 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Locking, D> {
             w
         });
 
-        self.transition(Locked)
+        let frequency = self.state.frequency;
+
+        self.transition(Locked { frequency })
+    }
+}
+
+impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Locked, D> {
+    /// Get the operating frequency for the PLL
+    pub fn operating_frequency(&self) -> Hertz {
+        self.state.frequency
     }
 }
 
@@ -278,11 +296,11 @@ where
     R: Into<Hertz<u64>>,
 {
     // Before we touch PLLs, switch sys and ref cleanly away from their aux sources.
-    let mut sys_clock = clocks.sys_clock();
-    sys_clock.reset_source_await();
+    let mut sys_clock = clocks.system_clock();
+    nb::block!(sys_clock.reset_source_await()).unwrap();
 
-    let mut ref_clock = clocks.ref_clock();
-    ref_clock.reset_source_await();
+    let mut ref_clock = clocks.reference_clock();
+    nb::block!(ref_clock.reset_source_await()).unwrap();
 
     let initialized_pll = PhaseLockedLoop::new(dev, xosc_frequency, config)?.initialize(resets);
 
