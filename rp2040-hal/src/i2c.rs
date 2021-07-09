@@ -9,7 +9,7 @@ use crate::{
         Gpio18, Gpio19, Gpio2, Gpio20, Gpio21, Gpio26, Gpio27, Gpio3, Gpio4, Gpio5, Gpio6, Gpio7,
         Gpio8, Gpio9,
     },
-    gpio::pin::{FunctionI2C, Pin, PinId, PinMode, ValidPinMode},
+    gpio::pin::{FunctionI2C, Pin, PinId},
     resets::SubsystemReset,
     typelevel::Sealed,
 };
@@ -82,22 +82,17 @@ macro_rules! hal {
         $(
             impl<Sda: PinId + BankPinId, Scl: PinId + BankPinId> I2C<$I2CX, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)> {
                 /// Configures the I2C peripheral to work in master mode
-                pub fn $i2cX<F, SdaMode, SclMode>(
+                pub fn $i2cX<F>(
                     i2c: $I2CX,
-                    sda_pin: Pin<Sda, SdaMode>,
-                    scl_pin: Pin<Scl, SclMode>,
+                    sda_pin: Pin<Sda, FunctionI2C>,
+                    scl_pin: Pin<Scl, FunctionI2C>,
                     freq: F,
                     resets: &mut RESETS) -> Self
                 where
                     F: Into<Hertz<u64>>,
                     Sda: SdaPin<$I2CX>,
                     Scl: SclPin<$I2CX>,
-                    SdaMode: PinMode + ValidPinMode<Sda>,
-                    SclMode: PinMode + ValidPinMode<Scl>,
                 {
-                    let sda_pin = sda_pin.into_mode::<FunctionI2C>();
-                    let scl_pin = scl_pin.into_mode::<FunctionI2C>();
-
                     let freq = freq.into().0;
                     assert!(freq <= 1_000_000);
                     assert!(freq > 0);
