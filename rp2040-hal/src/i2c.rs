@@ -67,22 +67,6 @@ impl SclPin<I2C0> for Gpio21 {}
 impl SdaPin<I2C1> for Gpio26 {}
 impl SclPin<I2C1> for Gpio27 {}
 
-/// I2C pin pair
-pub unsafe trait I2CPinPair {}
-
-unsafe impl I2CPinPair for (Gpio0, Gpio1) {}
-unsafe impl I2CPinPair for (Gpio2, Gpio3) {}
-unsafe impl I2CPinPair for (Gpio4, Gpio5) {}
-unsafe impl I2CPinPair for (Gpio6, Gpio7) {}
-unsafe impl I2CPinPair for (Gpio8, Gpio9) {}
-unsafe impl I2CPinPair for (Gpio10, Gpio11) {}
-unsafe impl I2CPinPair for (Gpio12, Gpio13) {}
-unsafe impl I2CPinPair for (Gpio14, Gpio15) {}
-unsafe impl I2CPinPair for (Gpio16, Gpio17) {}
-unsafe impl I2CPinPair for (Gpio18, Gpio19) {}
-unsafe impl I2CPinPair for (Gpio20, Gpio21) {}
-unsafe impl I2CPinPair for (Gpio26, Gpio27) {}
-
 /// I2C peripheral operating in master mode
 pub struct I2C<I2C, Pins> {
     i2c: I2C,
@@ -110,7 +94,6 @@ macro_rules! hal {
                     Scl: SclPin<$I2CX>,
                     SdaMode: PinMode + ValidPinMode<Sda>,
                     SclMode: PinMode + ValidPinMode<Scl>,
-                    (Sda, Scl): I2CPinPair,
                 {
                     let sda_pin = sda_pin.into_mode::<FunctionI2C>();
                     let scl_pin = scl_pin.into_mode::<FunctionI2C>();
