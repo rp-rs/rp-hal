@@ -4,6 +4,7 @@
 // See [Chapter 4 Section 3](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 
 use crate::{
+    clocks::available_clocks::SystemClock,
     gpio::pin::bank0::{
         BankPinId, Gpio0, Gpio1, Gpio10, Gpio11, Gpio12, Gpio13, Gpio14, Gpio15, Gpio16, Gpio17,
         Gpio18, Gpio19, Gpio2, Gpio20, Gpio21, Gpio26, Gpio27, Gpio3, Gpio4, Gpio5, Gpio6, Gpio7,
@@ -87,7 +88,8 @@ macro_rules! hal {
                     sda_pin: Pin<Sda, FunctionI2C>,
                     scl_pin: Pin<Scl, FunctionI2C>,
                     freq: F,
-                    resets: &mut RESETS) -> Self
+                    resets: &mut RESETS,
+                    system_clock: SystemClock) -> Self
                 where
                     F: Into<Hertz<u64>>,
                     Sda: SdaPin<$I2CX>,
@@ -119,8 +121,7 @@ macro_rules! hal {
                         w.rdmae().enabled()
                     });
 
-                    // TODO: Get value from clocks
-                    let freq_in = 125_000_000;
+                    let freq_in = system_clock.freq().0;
 
                     // There are some subtleties to I2C timing which we are completely ignoring here
                     // See: https://github.com/raspberrypi/pico-sdk/blob/bfcbefafc5d2a210551a4d9d80b4303d4ae0adf7/src/rp2_common/hardware_i2c/i2c.c#L69
