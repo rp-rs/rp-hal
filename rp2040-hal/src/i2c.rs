@@ -4,7 +4,6 @@
 // See [Chapter 4 Section 3](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 
 use crate::{
-    clocks::available_clocks::SystemClock,
     gpio::pin::bank0::{
         BankPinId, Gpio0, Gpio1, Gpio10, Gpio11, Gpio12, Gpio13, Gpio14, Gpio15, Gpio16, Gpio17,
         Gpio18, Gpio19, Gpio2, Gpio20, Gpio21, Gpio26, Gpio27, Gpio3, Gpio4, Gpio5, Gpio6, Gpio7,
@@ -83,17 +82,18 @@ macro_rules! hal {
         $(
             impl<Sda: PinId + BankPinId, Scl: PinId + BankPinId> I2C<$I2CX, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)> {
                 /// Configures the I2C peripheral to work in master mode
-                pub fn $i2cX<F>(
+                pub fn $i2cX<F, SystemF>(
                     i2c: $I2CX,
                     sda_pin: Pin<Sda, FunctionI2C>,
                     scl_pin: Pin<Scl, FunctionI2C>,
                     freq: F,
                     resets: &mut RESETS,
-                    system_clock: SystemClock) -> Self
+                    system_clock: SystemF) -> Self
                 where
                     F: Into<Hertz<u64>>,
                     Sda: SdaPin<$I2CX>,
                     Scl: SclPin<$I2CX>,
+                    SystemF: Into<Hertz<u32>>,
                 {
                     let freq = freq.into().0;
                     assert!(freq <= 1_000_000);
@@ -121,7 +121,7 @@ macro_rules! hal {
                         w.rdmae().enabled()
                     });
 
-                    let freq_in = system_clock.freq().0;
+                    let freq_in = system_clock.into().0;
 
                     // There are some subtleties to I2C timing which we are completely ignoring here
                     // See: https://github.com/raspberrypi/pico-sdk/blob/bfcbefafc5d2a210551a4d9d80b4303d4ae0adf7/src/rp2_common/hardware_i2c/i2c.c#L69
