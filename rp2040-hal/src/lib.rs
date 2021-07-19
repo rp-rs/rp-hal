@@ -3,7 +3,7 @@
 //! This is an implementation of the [`embedded-hal`] traits for the RP2040 microcontroller
 //! NOTE This HAL is still under active development. This API will remain volatile until 1.0.0
 
-#![deny(missing_docs)]
+#![warn(missing_docs)]
 #![no_std]
 
 extern crate cortex_m;
