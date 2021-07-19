@@ -10,6 +10,7 @@ extern crate cortex_m;
 extern crate embedded_hal as hal;
 extern crate nb;
 pub use paste;
+pub use rp2040::Rp2040;
 
 pub extern crate rp2040_pac as pac;
 
@@ -23,6 +24,7 @@ pub mod pwm;
 pub mod resets;
 pub mod rom_data;
 pub mod rosc;
+mod rp2040;
 pub mod rtc;
 pub mod sio;
 pub mod spi;
