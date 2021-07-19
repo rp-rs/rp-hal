@@ -4,7 +4,6 @@
 //! NOTE This HAL is still under active development. This API will remain volatile until 1.0.0
 
 #![deny(missing_docs)]
-#![deny(warnings)]
 #![no_std]
 
 extern crate cortex_m;
