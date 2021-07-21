@@ -44,7 +44,8 @@ fn main() -> ! {
     lcd.clear(&mut delay_provider).unwrap();
     lcd.write_str("rp-hal on", &mut delay_provider).unwrap();
     lcd.set_cursor_pos(40, &mut delay_provider).unwrap();
-    lcd.set_cursor_visibility(hd44780::Cursor::Visible, &mut delay_provider).unwrap();
+    lcd.set_cursor_visibility(hd44780::Cursor::Visible, &mut delay_provider)
+        .unwrap();
     lcd.write_str("HD44780!", &mut delay_provider).unwrap();
 
     loop {}
