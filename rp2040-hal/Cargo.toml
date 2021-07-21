@@ -17,10 +17,12 @@ nb = "1.0"
 rp2040-pac = { git = "https://github.com/rp-rs/rp2040-pac", branch="main" }
 paste = "1.0"
 
+
 [dev-dependencies]
 cortex-m-rt = "0.6.14"
 panic-halt = "0.2.0"
 rp2040-boot2 = { git = "https://github.com/rp-rs/rp2040-boot2-rs", branch="main" }
+hd44780-driver = "0.4.0"
 
 [features]
 rt = ["rp2040-pac/rt"]
