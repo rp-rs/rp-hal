@@ -4,9 +4,9 @@
 use cortex_m_rt::entry;
 use hal::pac;
 use hal::sio::Sio;
+use hd44780_driver as hd44780;
 use panic_halt as _;
 use rp2040_hal as hal;
-use hd44780_driver as hd44780;
 
 #[link_section = ".boot2"]
 #[used]
