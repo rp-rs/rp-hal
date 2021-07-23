@@ -19,7 +19,7 @@ fn main() -> ! {
 
     // AHL bus speed default
     let mut delay_provider = cortex_m::delay::Delay::new(core.SYST, 12_000_000);
-    
+
     let sio = Sio::new(pac.SIO);
     let pins = hal::gpio::Pins::new(
         pac.IO_BANK0,
