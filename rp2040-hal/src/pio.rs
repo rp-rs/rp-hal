@@ -1,10 +1,18 @@
 //! Programmable IO (PIO)
 /// See [Chapter 3](https://rptl.io/pico-datasheet) for more details.
+use crate::resets::SubsystemReset;
+use pio::{Program, SideSet, Wrap};
 
 const PIO_INSTRUCTION_COUNT: usize = 32;
 
 /// PIO Instance
-pub trait Instance: core::ops::Deref<Target = rp2040_pac::pio0::RegisterBlock> {}
+pub trait Instance:
+    core::ops::Deref<Target = rp2040_pac::pio0::RegisterBlock> + SubsystemReset
+{
+}
+
+impl Instance for rp2040_pac::PIO0 {}
+impl Instance for rp2040_pac::PIO1 {}
 
 /// Programmable IO Block
 pub struct PIO<P: Instance> {
@@ -24,7 +32,9 @@ impl<P: Instance> core::fmt::Debug for PIO<P> {
 
 impl<P: Instance> PIO<P> {
     /// Create a new PIO wrapper.
-    pub fn new(pio: P) -> Self {
+    pub fn new(pio: P, resets: &mut pac::RESETS) -> Self {
+        pio.reset_bring_up(resets);
+
         PIO {
             used_instruction_space: core::cell::Cell::new(0),
             state_machines: [
@@ -77,7 +87,7 @@ impl<P: Instance> PIO<P> {
                     Some(origin as usize)
                 }
             } else {
-                for i in (32 - i.len())..=0 {
+                for i in (0..=32 - i.len()).rev() {
                     if self.used_instruction_space.get() & (mask << i) == 0 {
                         return Some(i);
                     }
@@ -112,31 +122,34 @@ pub struct StateMachine<P: Instance> {
 impl<P: Instance> StateMachine<P> {
     /// Start and stop the state machine.
     pub fn set_enabled(&self, enabled: bool) {
-        let bits = self.block().ctrl.read().sm_enable().bits();
-        let bits = (bits & !(1 << self.id)) | ((enabled as u8) << self.id);
-        self.block()
-            .ctrl
-            .write(|w| unsafe { w.sm_enable().bits(bits) });
+        let mask = 1 << self.id;
+        if enabled {
+            self.block()
+                .ctrl
+                .modify(|r, w| unsafe { w.sm_enable().bits(r.sm_enable().bits() | mask) })
+        } else {
+            self.block()
+                .ctrl
+                .modify(|r, w| unsafe { w.sm_enable().bits(r.sm_enable().bits() & !mask) })
+        }
     }
 
     fn restart(&self) {
-        let bits = self.block().ctrl.read().sm_restart().bits() | 1 << self.id;
         self.block()
             .ctrl
-            .write(|w| unsafe { w.sm_restart().bits(bits) });
+            .write(|w| unsafe { w.sm_restart().bits(1 << self.id) });
     }
 
     fn reset_clock(&self) {
-        let bits = self.block().ctrl.read().clkdiv_restart().bits() | 1 << self.id;
         self.block()
             .ctrl
-            .write(|w| unsafe { w.clkdiv_restart().bits(bits) });
+            .write(|w| unsafe { w.clkdiv_restart().bits(1 << self.id) });
     }
 
     fn set_clock_divisor(&self, divisor: f32) {
         // sm frequency = clock freq / (CLKDIV_INT + CLKDIV_FRAC / 256)
         let int = divisor as u16;
-        let frac = (divisor.fract() * 256.0) as u8;
+        let frac = ((divisor - int as f32) * 256.0) as u8;
 
         self.sm().sm_clkdiv.write(|w| {
             unsafe {
@@ -184,96 +197,124 @@ impl<P: Instance> StateMachine<P> {
     }
 }
 
+/// Comparison used for `mov x, status` instruction.
+#[derive(Debug, Clone, Copy)]
+pub enum MovStatusConfig {
+    /// The `mov x, status` instruction returns all ones if TX FIFO level is below the set status, otherwise all zeros.
+    Tx(u8),
+    /// The `mov x, status` instruction returns all ones if RX FIFO level is below the set status, otherwise all zeros.
+    Rx(u8),
+}
+
+/// Shift direction for input and output shifting.
+#[derive(Debug, Clone, Copy)]
+pub enum ShiftDirection {
+    /// Shift register to left.
+    Left,
+    /// Shift register to right.
+    Right,
+}
+
+impl ShiftDirection {
+    fn bit(self) -> bool {
+        match self {
+            Self::Left => false,
+            Self::Right => true,
+        }
+    }
+}
+
 /// Builder to deploy a fully configured PIO program on one of the state
 /// machines.
 #[derive(Debug)]
 pub struct PIOBuilder<'a> {
-    instructions: &'a [u16],
-    instruction_offset: Option<u8>,
-    // wrap program from top to bottom
-    wrap_top: u8,
-    wrap_bottom: u8,
-    // sideset is optional
-    side_en: bool,
-    // sideset sets pindirs
-    side_pindir: bool,
-    // gpio pin used by `jmp pin` instr
-    jmp_pin: u8,
-    // continuously assert the most recent OUT/SET to the pins.
-    out_sticky: bool,
-    // use a bit of OUT data as an auxilary write enable.
-    // when OUT_STICKY is enabled, setting the bit to 0 deasserts for that instr.
-    inline_out_en: bool,
-    // which bit to use
-    out_en_sel: u8,
-    // for `mov x, status`.
-    // false -> all ones if tx fifo level < N
-    // true -> all ones if rx fifo level < N
-    status_sel: bool,
-    // base = starting pin
-    // count = number of pins
-    in_base: u8,
-    out_base: u8,
-    out_count: u8,
-    set_base: u8,
-    set_count: u8,
-    sideset_base: u8,
-    sideset_count: u8,
-    // rx fifo steals tx fifo storage to be twice as deep
-    fjoin_rx: bool,
-    // tx fifo steals rx fifo storage to be twice as deep
-    fjoin_tx: bool,
-    // enable autopull
-    autopull: bool,
-    // enable autopush
-    autopush: bool,
-    // threhold for autopull
-    pull_thresh: u8,
-    // threshold for autopush
-    push_thresh: u8,
-    // true = shift out of OSR to right
-    in_shiftdir: bool,
-    // true = shift into ISR from right
-    out_shiftdir: bool,
+    /// Clock divisor.
     clock_divisor: f32,
+
+    /// Instructions of the program.
+    instructions: &'a [u16],
+    /// Origin where this program should be loaded.
+    instruction_origin: Option<u8>,
+    /// Wrapping behavior.
+    wrap: Wrap,
+    /// Side-set behavior.
+    side_set: SideSet,
+    /// GPIO pin used by `jmp pin` instruction.
+    jmp_pin: u8,
+
+    /// Continuously assert the most recent OUT/SET to the pins.
+    out_sticky: bool,
+    /// Use a bit of OUT data as an auxilary write enable.
+    ///
+    /// When [`out_sticky`](Self::out_sticky) is enabled, setting the bit to 0 deasserts for that instr.
+    inline_out: Option<u8>,
+    /// Config for `mov x, status` instruction.
+    mov_status: MovStatusConfig,
+
+    /// Config for FIFO joining.
+    fifo_join: Buffers,
+
+    /// Number of bits shifted out of `OSR` before autopull or conditional pull will take place.
+    pull_threshold: u8,
+    /// Number of bits shifted into `ISR` before autopush or conditional push will take place.
+    push_threshold: u8,
+    // Shift direction for `OUT` instruction.
+    out_shiftdir: ShiftDirection,
+    // Shift direction for `IN` instruction.
+    in_shiftdir: ShiftDirection,
+    // Enable autopull.
+    auto_pull: bool,
+    // Enable autopush.
+    auto_push: bool,
+
+    /// Number of pins asserted by a `SET`.
+    set_count: u8,
+    /// Number of pins asserted by an `OUT PINS`, `OUT PINDIRS` or `MOV PINS` instruction.
+    out_count: u8,
+    /// The first pin that is assigned in state machine's `IN` data bus.
+    in_base: u8,
+    /// The first pin that is affected by side-set operations.
+    side_set_base: u8,
+    /// The first pin that is affected by `SET PINS` or `SET PINDIRS` instructions.
+    set_base: u8,
+    /// The first pin that is affected by `OUT PINS`, `OUT PINDIRS` or `MOV PINS` instructions.
+    out_base: u8,
 }
 
 impl<'a> Default for PIOBuilder<'a> {
     fn default() -> Self {
         PIOBuilder {
+            clock_divisor: 1.0,
             instructions: &[],
-            instruction_offset: None,
-            wrap_top: 0,
-            wrap_bottom: 31,
-            side_en: false,
-            side_pindir: false,
+            instruction_origin: None,
+            wrap: Wrap {
+                source: 31,
+                target: 0,
+            },
+            side_set: SideSet::default(),
             jmp_pin: 0,
             out_sticky: false,
-            inline_out_en: false,
-            out_en_sel: 0,
-            status_sel: false,
+            inline_out: None,
+            mov_status: MovStatusConfig::Tx(0),
+            fifo_join: Buffers::RxTx,
+            pull_threshold: 0,
+            push_threshold: 0,
+            out_shiftdir: ShiftDirection::Left,
+            in_shiftdir: ShiftDirection::Left,
+            auto_pull: false,
+            auto_push: false,
+            set_count: 5,
+            out_count: 0,
             in_base: 0,
-            out_base: 0,
-            out_count: 32,
+            side_set_base: 0,
             set_base: 0,
-            set_count: 0,
-            sideset_base: 0,
-            sideset_count: 0,
-            fjoin_rx: false,
-            fjoin_tx: false,
-            autopull: false,
-            autopush: false,
-            pull_thresh: 32,
-            push_thresh: 32,
-            in_shiftdir: true,
-            out_shiftdir: true,
-            clock_divisor: 1.0,
+            out_base: 0,
         }
     }
 }
 
 /// Buffer sharing configuration.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Buffers {
     /// No sharing.
     RxTx,
@@ -283,7 +324,7 @@ pub enum Buffers {
     OnlyRx,
 }
 
-/// Errors that occured during `PIOBuilder::build`.
+/// Errors that occurred during `PIOBuilder::build`.
 #[derive(Debug)]
 pub enum BuildError {
     /// There was not enough space for the instructions on the selected PIO.
@@ -291,153 +332,166 @@ pub enum BuildError {
 }
 
 impl<'a> PIOBuilder<'a> {
-    /// Set config settings based on information from the given `pio::Program`.
+    /// Set config settings based on information from the given [`pio::Program`].
     /// Additional configuration may be needed in addition to this.
-    pub fn with_program<P>(&mut self, p: &'a pio::Program<P>) -> &mut Self {
-        self.instructions(p.code());
-
-        self.wrap(p.wrap().0, p.wrap().1);
-
-        self.side_en = p.side_set().optional();
-        self.side_pindir = p.side_set().pindirs();
-
-        self.sideset_count = p.side_set().bits();
-
-        self
+    pub fn with_program(mut self, p: &'a Program) -> Self {
+        self.instruction_origin = p.origin;
+        self.instructions(&p.instructions)
+            .wrap(p.wrap)
+            .side_set(p.side_set)
     }
 
     /// Set the instructions of the program.
-    pub fn instructions(&mut self, instructions: &'a [u16]) -> &mut Self {
+    pub fn instructions(mut self, instructions: &'a [u16]) -> Self {
         self.instructions = instructions;
         self
     }
 
-    /// Set the wrap top and bottom. The program will automatically jump from the wrap bottom to
-    /// the wrap top in 0 cycles.
-    pub fn wrap(&mut self, top: u8, bottom: u8) -> &mut Self {
-        self.wrap_top = top;
-        self.wrap_bottom = bottom;
+    /// Set the wrap source and target.
+    ///
+    /// The program will automatically jump from the wrap bottom to the wrap top in 0 cycles.
+    pub fn wrap(mut self, wrap: Wrap) -> Self {
+        self.wrap = wrap;
         self
     }
 
-    /// Set buffer sharing. See `Buffers` for more information.
-    pub fn buffers(&mut self, buffers: Buffers) -> &mut Self {
-        match buffers {
-            Buffers::RxTx => {
-                self.fjoin_tx = false;
-                self.fjoin_rx = false;
-            }
-            Buffers::OnlyTx => {
-                self.fjoin_rx = false;
-                self.fjoin_tx = true;
-            }
-            Buffers::OnlyRx => {
-                self.fjoin_rx = true;
-                self.fjoin_tx = false;
-            }
-        }
+    pub unsafe fn set(mut self, base: u8, count: u8) -> Self {
+        self.set_base = base;
+        self.set_count = count;
+        self.in_base = base;
+        self.out_base = base;
+        self.out_count = count;
         self
     }
 
-    /// 1 for full speed. A clock divisor of `n` will cause the state macine to run 1 cycle every
-    /// `n`. For a small `n`, a fractional divisor may introduce unacceptable jitter.
-    pub fn clock_divisor(&mut self, divisor: f32) -> &mut Self {
+    /// Set the side-set status.
+    pub fn side_set(mut self, side_set: SideSet) -> Self {
+        self.side_set = side_set;
+        self
+    }
+
+    /// Set buffer sharing.
+    ///
+    /// See [`Buffers`] for more information.
+    pub fn buffers(mut self, buffers: Buffers) -> Self {
+        self.fifo_join = buffers;
+        self
+    }
+
+    /// Set the clock divisor.
+    ///
+    /// The is based on the sys_clk. Set 1 for full speed. A clock divisor of `n` will cause the state machine to run 1
+    /// cycle every `n` clock cycles. For small values of `n`, a fractional divisor may introduce unacceptable jitter.
+    pub fn clock_divisor(mut self, divisor: f32) -> Self {
         self.clock_divisor = divisor;
         self
     }
 
     /// Build the config and deploy it to a StateMachine.
     pub fn build<P: Instance>(self, pio: &PIO<P>, sm: &StateMachine<P>) -> Result<(), BuildError> {
-        let offset = match pio.add_program(self.instructions, self.instruction_offset) {
+        let offset = match pio.add_program(self.instructions, self.instruction_origin) {
             Some(o) => o,
             None => return Err(BuildError::NoSpace),
         };
 
-        // ### STOP SM ####
+        // Stop the SM
+        // TODO: This should probably do before we write the program source code
         sm.set_enabled(false);
 
-        // ### CONFIGURE SM ###
-        sm.sm().sm_execctrl.write(|w| {
-            unsafe {
-                w.wrap_top().bits(offset as u8 + self.wrap_top);
-                w.wrap_bottom().bits(offset as u8 + self.wrap_bottom);
-            }
+        // Write all configuration bits
+        sm.set_clock_divisor(self.clock_divisor);
 
-            w.side_en().bit(self.side_en);
-            w.side_pindir().bit(self.side_pindir);
+        sm.sm().sm_execctrl.write(|w| {
+            w.side_en().bit(self.side_set.optional());
+            w.side_pindir().bit(self.side_set.pindirs());
 
             unsafe {
                 w.jmp_pin().bits(self.jmp_pin);
             }
 
+            if let Some(inline_out) = self.inline_out {
+                w.inline_out_en().bit(true);
+                unsafe {
+                    w.out_en_sel().bits(inline_out);
+                }
+            } else {
+                w.inline_out_en().bit(false);
+            }
+
             w.out_sticky().bit(self.out_sticky);
 
-            w.inline_out_en().bit(self.inline_out_en);
             unsafe {
-                w.out_en_sel().bits(self.out_en_sel);
+                w.wrap_top().bits(offset as u8 + self.wrap.source);
+                w.wrap_bottom().bits(offset as u8 + self.wrap.target);
             }
 
-            w.status_sel().bit(self.status_sel);
-
-            w
-        });
-
-        sm.sm().sm_pinctrl.write(|w| {
+            let n = match self.mov_status {
+                MovStatusConfig::Tx(n) => {
+                    w.status_sel().bit(false);
+                    n
+                }
+                MovStatusConfig::Rx(n) => {
+                    w.status_sel().bit(true);
+                    n
+                }
+            };
             unsafe {
-                w.in_base().bits(self.in_base);
-            }
-
-            unsafe {
-                w.out_base().bits(self.out_base);
-                w.out_count().bits(self.out_count);
-            }
-
-            unsafe {
-                w.set_base().bits(self.set_base);
-                w.set_count().bits(self.set_count);
-            }
-
-            unsafe {
-                w.sideset_base().bits(self.sideset_base);
-                w.sideset_count().bits(self.sideset_count);
+                w.status_n().bits(n);
             }
 
             w
         });
 
         sm.sm().sm_shiftctrl.write(|w| {
-            w.fjoin_rx().bit(self.fjoin_rx);
-            w.fjoin_tx().bit(self.fjoin_tx);
-
-            w.autopull().bit(self.autopull);
-            w.autopush().bit(self.autopush);
+            let (fjoin_rx, fjoin_tx) = match self.fifo_join {
+                Buffers::RxTx => (false, false),
+                Buffers::OnlyTx => (false, true),
+                Buffers::OnlyRx => (true, false),
+            };
+            w.fjoin_rx().bit(fjoin_rx);
+            w.fjoin_tx().bit(fjoin_tx);
 
             unsafe {
-                w.pull_thresh().bits(self.pull_thresh);
-                w.push_thresh().bits(self.push_thresh);
+                w.pull_thresh().bits(self.pull_threshold);
+                w.push_thresh().bits(self.push_threshold);
             }
 
-            w.out_shiftdir().bit(self.out_shiftdir);
-            w.in_shiftdir().bit(self.in_shiftdir);
+            w.out_shiftdir().bit(self.out_shiftdir.bit());
+            w.in_shiftdir().bit(self.in_shiftdir.bit());
+
+            w.autopull().bit(self.auto_pull);
+            w.autopush().bit(self.auto_push);
 
             w
         });
 
-        sm.set_clock_divisor(self.clock_divisor);
+        sm.sm().sm_pinctrl.write(|w| {
+            unsafe {
+                w.sideset_count().bits(self.side_set.bits());
+                w.set_count().bits(self.set_count);
+                w.out_count().bits(self.out_count);
 
-        // ### RESTART SM & RESET SM CLOCK ###
+                w.in_base().bits(self.in_base);
+                w.sideset_base().bits(self.side_set_base);
+                w.set_base().bits(self.set_base);
+                w.out_base().bits(self.out_base);
+            }
+
+            w
+        });
+
+        // Restart SM and its clock
         sm.restart();
         sm.reset_clock();
 
-        // ### SET SM PC ###
-        // set starting location by setting the state machine to execute a jmp
+        // Set starting location by setting the state machine to execute a jmp
         // to the beginning of the program we loaded in.
         #[allow(clippy::unusual_byte_groupings)]
         let mut instr = 0b000_00000_000_00000; // JMP 0
         instr |= offset as u16;
         sm.set_instruction(instr);
 
-        // ### ENABLE SM ###
+        // Enable SM
         sm.set_enabled(true);
 
         Ok(())
