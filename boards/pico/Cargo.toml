@@ -13,6 +13,12 @@ license = "MIT OR Apache-2.0"
 cortex-m = "0.7.2"
 rp2040-hal = { path = "../../rp2040-hal", version = "0.1.0" }
 cortex-m-rt = { version = "0.6.14", optional = true }
+embedded-time = "0.10.1"
+
+[dev-dependencies]
+panic-halt= "0.2.0"
+embedded-hal ="0.2.5"
+rp2040-boot2 = "0.1.2"
 
 [features]
 default = ["rt"]

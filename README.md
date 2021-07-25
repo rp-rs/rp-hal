@@ -71,6 +71,24 @@ Use this space to show useful examples of how a project can be used. Additional 
 For more examples, please refer to the [Documentation](https://github.com/rp-rs/rp-hal)
 
 
+### Run examples
+
+Install [`uf2conv`](https://github.com/sajattack/uf2conv-rs) and [`cargo-binutils`](https://github.com/rust-embedded/cargo-binutils)
+
+```sh
+cargo install uf2conv cargo-binutils
+```
+
+For boards with uf2 flashloaders you can use the following lines to run the examples:
+
+```sh
+export RPI_MOUNT_FOLDER=/media/RPI-RP2/
+export EXAMPLE=pico_blinky; # See `cargo check --example` for valid values
+cargo check --example $EXAMPLE && \
+cargo objcopy --release --example $EXAMPLE -- -O binary target/$EXAMPLE.bin && \
+uf2conv target/$EXAMPLE.bin --base 0x10000000 --family 0xe48bff56 --output target/$EXAMPLE.uf2 && \
+cp target/$EXAMPLE.uf2 $RPI_MOUNT_FOLDER
+```
 
 <!-- ROADMAP -->
 ## Roadmap
