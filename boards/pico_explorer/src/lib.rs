@@ -92,3 +92,5 @@ hal::bsp_pins!(
     Gpio27 { name: adc1 },
     Gpio28 { name: adc2 },
 );
+
+pub const XOSC_CRYSTAL_FREQ: u32 = 12_000_000;

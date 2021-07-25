@@ -296,11 +296,9 @@ where
     R: Into<Hertz<u64>>,
 {
     // Before we touch PLLs, switch sys and ref cleanly away from their aux sources.
-    let mut sys_clock = clocks.system_clock();
-    nb::block!(sys_clock.reset_source_await()).unwrap();
+    nb::block!(clocks.system_clock.reset_source_await()).unwrap();
 
-    let mut ref_clock = clocks.reference_clock();
-    nb::block!(ref_clock.reset_source_await()).unwrap();
+    nb::block!(clocks.reference_clock.reset_source_await()).unwrap();
 
     let initialized_pll = PhaseLockedLoop::new(dev, xosc_frequency, config)?.initialize(resets);
 

@@ -41,3 +41,5 @@ hal::bsp_pins!(
     Gpio28 { name: gpio28 },
     Gpio29 { name: batt_sense },
 );
+
+pub const XOSC_CRYSTAL_FREQ: u32 = 12_000_000;
