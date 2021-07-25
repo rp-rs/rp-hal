@@ -5,4 +5,5 @@ members = [
     "boards/pico",
     "boards/pico_explorer",
     "boards/pico_lipo_16mb",
+    "boards/adafruit_macropad",
 ]
