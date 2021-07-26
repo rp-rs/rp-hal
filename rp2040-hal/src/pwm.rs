@@ -93,7 +93,9 @@ impl $PXi {
 
         pad.gpio[self.pin].write(|w| w.ie().set_bit());
         pad.gpio[self.pin].write(|w| w.od().clear_bit());
-        io.gpio[self.pin].gpio_ctrl.write_with_zero(|w| w.funcsel().pwm_a_0());
+        unsafe {
+            io.gpio[self.pin].gpio_ctrl.write_with_zero(|w| w.funcsel().pwm_a_0());
+        }
     }
 
     fn cc(&self) -> &pac::$pwmx::ch::CC {
