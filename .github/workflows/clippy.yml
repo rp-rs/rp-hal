@@ -7,6 +7,8 @@ jobs:
       RUSTFLAGS: "-D warnings"
     steps:
       - uses: actions/checkout@v2
+      - run: sudo apt-get update
+      - run: sudo apt-get install gcc-arm-none-eabi
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -17,4 +19,4 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -Dwarnings
+          args: --workspace --examples -- -Dwarnings

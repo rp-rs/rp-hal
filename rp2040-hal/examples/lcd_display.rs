@@ -48,5 +48,6 @@ fn main() -> ! {
         .unwrap();
     lcd.write_str("HD44780!", &mut delay_provider).unwrap();
 
+    #[allow(clippy::empty_loop)]
     loop {}
 }
