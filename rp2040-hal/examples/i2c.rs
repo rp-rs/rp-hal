@@ -44,5 +44,6 @@ fn main() -> ! {
 
     i2c.write(0x2c, &[1, 2, 3]).unwrap();
 
+    #[allow(clippy::empty_loop)]
     loop {}
 }
