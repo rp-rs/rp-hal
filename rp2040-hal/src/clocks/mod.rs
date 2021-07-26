@@ -7,7 +7,7 @@
 //! let mut p = rp2040_pac::Peripherals::take().unwrap();
 //! let mut watchdog = Watchdog::new(p.WATCHDOG);
 //! const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates
-//! let mut clocks = init_clocks_and_plls(XOSC_CRYSTAL_FREQ, p.XOSC, p.CLOCKS, p.PLL_SYS, p.PLL_USB, &mut p.RESETS, &mut watchdog);
+//! let mut clocks = init_clocks_and_plls(XOSC_CRYSTAL_FREQ, p.XOSC, p.CLOCKS, p.PLL_SYS, p.PLL_USB, &mut p.RESETS, &mut watchdog).ok().unwrap();
 //! ```
 //!
 //! ## Usage extended
@@ -17,34 +17,34 @@
 //! let mut clocks = ClocksManager::new(p.CLOCKS, &mut watchdog);
 //! // Enable the xosc
 //! const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates
-//! let xosc = setup_xosc_blocking(p.XOSC, XOSC_CRYSTAL_FREQ.Hz()).ok().unwrap();
+//! let xosc = setup_xosc_blocking(p.XOSC, XOSC_CRYSTAL_FREQ.Hz()).map_err(InitError::XoscErr)?;
 //!
 //! // Configure PLLs
 //! //                   REF     FBDIV VCO            POSTDIV
 //! // PLL SYS: 12 / 1 = 12MHz * 125 = 1500MHZ / 6 / 2 = 125MHz
 //! // PLL USB: 12 / 1 = 12MHz * 40  = 480 MHz / 5 / 2 =  48MHz
-//! let pll_sys = setup_pll_blocking(p.PLL_SYS, xosc.into(), PLL_SYS_125MHZ, &mut clocks, &mut p.RESETS).ok().unwrap();
-//! let pll_usb = setup_pll_blocking(p.PLL_USB, xosc.into(), PLL_USB_48MHZ, &mut clocks, &mut p.RESETS).ok().unwrap();
+//! let pll_sys = setup_pll_blocking(p.PLL_SYS, xosc.into(), PLL_SYS_125MHZ, &mut clocks, &mut p.RESETS).map_err(InitError::PllError)?;
+//! let pll_usb = setup_pll_blocking(p.PLL_USB, xosc.into(), PLL_USB_48MHZ, &mut clocks, &mut p.RESETS).map_err(InitError::PllError)?;
 //!
 //! // Configure clocks
 //! // CLK_REF = XOSC (12MHz) / 1 = 12MHz
-//! self.reference_clock.configure_clock(xosc, xosc.get_freq());
+//! self.reference_clock.configure_clock(xosc, xosc.get_freq()).map_err(InitError::ClockError)?;
 //!
 //! // CLK SYS = PLL SYS (125MHz) / 1 = 125MHz
-//! self.system_clock.configure_clock(pll_sys, pll_sys.get_freq());
+//! self.system_clock.configure_clock(pll_sys, pll_sys.get_freq()).map_err(InitError::ClockError)?;
 //!
 //! // CLK USB = PLL USB (48MHz) / 1 = 48MHz
-//! self.usb_clock.configure_clock(pll_usb, pll_usb.get_freq());
+//! self.usb_clock.configure_clock(pll_usb, pll_usb.get_freq()).map_err(InitError::ClockError)?;
 //!
 //! // CLK ADC = PLL USB (48MHZ) / 1 = 48MHz
-//! self.adc_clock.configure_clock(pll_usb, pll_usb.get_freq());
+//! self.adc_clock.configure_clock(pll_usb, pll_usb.get_freq()).map_err(InitError::ClockError)?;
 //!
 //! // CLK RTC = PLL USB (48MHz) / 1024 = 46875Hz
-//! self.rtc_clock.configure_clock(pll_usb, 46875u32.Hz());
+//! self.rtc_clock.configure_clock(pll_usb, 46875u32.Hz()).map_err(InitError::ClockError)?;
 //!
 //! // CLK PERI = clk_sys. Used as reference clock for Peripherals. No dividers so just select and enable
 //! // Normally choose clk_sys or clk_usb
-//! self.peripheral_clock.configure_clock(&self.system_clock, self.system_clock.freq());
+//! self.peripheral_clock.configure_clock(&self.system_clock, self.system_clock.freq()).map_err(InitError::ClockError)?;
 //!
 //! ```
 //!
@@ -53,11 +53,11 @@
 use crate::{
     pll::{
         common_configs::{PLL_SYS_125MHZ, PLL_USB_48MHZ},
-        setup_pll_blocking, Locked, PhaseLockedLoop,
+        setup_pll_blocking, Error as PllError, Locked, PhaseLockedLoop,
     },
     typelevel::Sealed,
     watchdog::Watchdog,
-    xosc::{setup_xosc_blocking, CrystalOscillator, Stable},
+    xosc::{setup_xosc_blocking, CrystalOscillator, Error as XoscError, Stable},
 };
 use core::{
     convert::{Infallible, TryInto},
@@ -90,8 +90,11 @@ impl ShareableClocks {
     }
 }
 
+/// Something when wrong setting up the clock
 pub enum ClockError {
+    /// The frequency desired is higher than the source frequency
     CantIncreaseFreq,
+    /// The desired frequency is to high (would overflow an u32)
     FrequencyToHigh,
 }
 
@@ -258,34 +261,47 @@ impl ClocksManager {
         xosc: &CrystalOscillator<Stable>,
         pll_sys: &PhaseLockedLoop<Locked, PLL_SYS>,
         pll_usb: &PhaseLockedLoop<Locked, PLL_USB>,
-    ) {
+    ) -> Result<(), ClockError> {
         // Configure clocks
         // CLK_REF = XOSC (12MHz) / 1 = 12MHz
-        self.reference_clock.configure_clock(xosc, xosc.get_freq());
+        self.reference_clock
+            .configure_clock(xosc, xosc.get_freq())?;
 
         // CLK SYS = PLL SYS (125MHz) / 1 = 125MHz
         self.system_clock
-            .configure_clock(pll_sys, pll_sys.get_freq());
+            .configure_clock(pll_sys, pll_sys.get_freq())?;
 
         // CLK USB = PLL USB (48MHz) / 1 = 48MHz
-        self.usb_clock.configure_clock(pll_usb, pll_usb.get_freq());
+        self.usb_clock
+            .configure_clock(pll_usb, pll_usb.get_freq())?;
 
         // CLK ADC = PLL USB (48MHZ) / 1 = 48MHz
-        self.adc_clock.configure_clock(pll_usb, pll_usb.get_freq());
+        self.adc_clock
+            .configure_clock(pll_usb, pll_usb.get_freq())?;
 
         // CLK RTC = PLL USB (48MHz) / 1024 = 46875Hz
-        self.rtc_clock.configure_clock(pll_usb, 46875u32.Hz());
+        self.rtc_clock.configure_clock(pll_usb, 46875u32.Hz())?;
 
         // CLK PERI = clk_sys. Used as reference clock for Peripherals. No dividers so just select and enable
         // Normally choose clk_sys or clk_usb
         self.peripheral_clock
-            .configure_clock(&self.system_clock, self.system_clock.freq());
+            .configure_clock(&self.system_clock, self.system_clock.freq())
     }
 
     /// Releases the CLOCKS block
     pub fn free(self) -> CLOCKS {
         self.clocks
     }
+}
+
+/// Possible init errors
+pub enum InitError {
+    /// Something went wrong setting up the Xosc
+    XoscErr(XoscError),
+    /// Something went wrong setting up the Pll
+    PllError(PllError),
+    /// Something went wrong setting up the Clocks
+    ClockError(ClockError),
 }
 
 /// Initialize the clocks and plls according to the reference implementation
@@ -297,10 +313,8 @@ pub fn init_clocks_and_plls(
     pll_usb_dev: PLL_USB,
     resets: &mut RESETS,
     watchdog: &mut Watchdog,
-) -> ClocksManager {
-    let xosc = setup_xosc_blocking(xosc_dev, xosc_crystal_freq.Hz())
-        .ok()
-        .unwrap();
+) -> Result<ClocksManager, InitError> {
+    let xosc = setup_xosc_blocking(xosc_dev, xosc_crystal_freq.Hz()).map_err(InitError::XoscErr)?;
 
     // Start tick in watchdog
     watchdog.enable_tick_generation(xosc_crystal_freq as u8);
@@ -314,8 +328,7 @@ pub fn init_clocks_and_plls(
         &mut clocks,
         resets,
     )
-    .ok()
-    .unwrap();
+    .map_err(InitError::PllError)?;
     let pll_usb = setup_pll_blocking(
         pll_usb_dev,
         xosc.operating_frequency().into(),
@@ -323,9 +336,10 @@ pub fn init_clocks_and_plls(
         &mut clocks,
         resets,
     )
-    .ok()
-    .unwrap();
+    .map_err(InitError::PllError)?;
 
-    clocks.init_default(&xosc, &pll_sys, &pll_usb);
     clocks
+        .init_default(&xosc, &pll_sys, &pll_usb)
+        .map_err(InitError::ClockError)?;
+    Ok(clocks)
 }
