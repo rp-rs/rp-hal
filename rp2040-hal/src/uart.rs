@@ -371,7 +371,7 @@ fn calculate_baudrate_dividers(
     let baudrate_div = frequency
         .integer()
         .checked_mul(8)
-        .and_then(|r| r.checked_div(*wanted_baudrate.integer()))
+        .and_then(|r| r.checked_div(wanted_baudrate.integer()))
         .ok_or(Error::BadArgument)?;
 
     Ok(match (baudrate_div >> 7, ((baudrate_div & 0x7F) + 1) / 2) {
@@ -408,7 +408,7 @@ fn configure_baudrate(
     device.uartlcr_h.modify(|_, w| w);
 
     Ok(Baud(
-        (4 * *frequency.integer()) / (64 * baud_div_int + baud_div_frac) as u32,
+        (4 * frequency.integer()) / (64 * baud_div_int + baud_div_frac) as u32,
     ))
 }
 

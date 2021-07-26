@@ -191,7 +191,7 @@ macro_rules! clock {
                     let div = if freq.eq(&src_freq) {
                         1 << 8
                     } else {
-                        *(shifted_src_freq / *freq.integer() as u64).integer() as u32
+                        (shifted_src_freq / freq.integer() as u64).integer() as u32
                     };
 
                     // If increasing divisor, set divisor before source. Otherwise set source
@@ -348,7 +348,7 @@ macro_rules! stoppable_clock {
                     let div = if freq.eq(&src_freq) {
                         1 << 8
                     } else {
-                        *(shifted_src_freq / *freq.integer() as u64).integer() as u32
+                        (shifted_src_freq / freq.integer() as u64).integer() as u32
                     };
 
                     // If increasing divisor, set divisor before source. Otherwise set source
@@ -370,7 +370,7 @@ macro_rules! stoppable_clock {
                         // Note XOSC_COUNT is not helpful here because XOSC is not
                         // necessarily running, nor is timer... so, 3 cycles per loop:
                         let sys_freq = 125_000_000; // TODO get actual sys_clk frequency
-                        let delay_cyc = sys_freq / *self.frequency.integer() + 1u32;
+                        let delay_cyc = sys_freq / self.frequency.integer() + 1u32;
                         cortex_m::asm::delay(delay_cyc);
                     }
 

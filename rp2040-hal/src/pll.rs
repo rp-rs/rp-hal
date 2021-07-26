@@ -173,10 +173,10 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
         }
 
         let fbdiv = vco_freq
-            .checked_div(ref_freq_hz.integer())
+            .checked_div(&ref_freq_hz.integer())
             .ok_or(Error::BadArgument)?;
 
-        let fbdiv: u16 = (*fbdiv.integer())
+        let fbdiv: u16 = (fbdiv.integer())
             .try_into()
             .map_err(|_| Error::BadArgument)?;
 

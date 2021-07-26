@@ -85,8 +85,8 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
         peri_frequency: F,
         baudrate: B,
     ) -> Hertz {
-        let freq_in = *peri_frequency.into().integer();
-        let baudrate = *baudrate.into().integer();
+        let freq_in = peri_frequency.into().integer();
+        let baudrate = baudrate.into().integer();
         let mut prescale: u8 = u8::MAX;
         let mut postdiv: u8 = 1;
 

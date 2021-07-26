@@ -113,12 +113,12 @@ impl CrystalOscillator<Disabled> {
         //See Chapter 2, Section 16, §3)
         //We do the calculation first.
         let startup_delay = frequency
-            .checked_div(delay_to_hz.integer())
+            .checked_div(&delay_to_hz.integer())
             .and_then(|r| r.to_generic::<u32>(DIVIDER).ok())
             .ok_or(Error::BadArgument)?;
 
         //Then we check if it fits into an u16.
-        let startup_delay: u16 = (*startup_delay.integer())
+        let startup_delay: u16 = (startup_delay.integer())
             .try_into()
             .map_err(|_| Error::BadArgument)?;
 
