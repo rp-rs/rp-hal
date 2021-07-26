@@ -27,7 +27,9 @@ macro_rules! clocks {
                 /// Exchanges CLOCKS block against Self.
                 pub fn new(mut clocks_block: CLOCKS) -> Self {
                     // Disable resus that may be enabled from previous software
-                    clocks_block.clk_sys_resus_ctrl.write_with_zero(|w| w);
+                    unsafe {
+                        clocks_block.clk_sys_resus_ctrl.write_with_zero(|w| w);
+                    }
 
                     let shared_clocks = ShareableClocks::new(&mut clocks_block);
                     ClocksManager {
