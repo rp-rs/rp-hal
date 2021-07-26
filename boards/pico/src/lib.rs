@@ -1,6 +1,6 @@
 #![no_std]
 
-extern crate rp2040_hal as hal;
+pub extern crate rp2040_hal as hal;
 
 #[cfg(feature = "rt")]
 extern crate cortex_m_rt;
@@ -43,3 +43,5 @@ hal::bsp_pins!(
         name: voltage_monitor
     },
 );
+
+pub const XOSC_CRYSTAL_FREQ: u32 = 12_000_000;

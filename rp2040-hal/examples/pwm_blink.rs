@@ -14,7 +14,7 @@ pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
 fn main() -> ! {
     let mut pac = rp2040_pac::Peripherals::take().unwrap();
 
-    let mut pwm_pin = Pwm0::new(0);
+    let mut pwm_pin = Pwm4::new(25);
 
     //Instead of having it take references to all of these pac objects, eventually this should just
     //take ownership of a GPIO pin.

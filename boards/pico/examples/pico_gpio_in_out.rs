@@ -11,7 +11,7 @@ use embedded_hal::digital::v2::{InputPin, OutputPin};
 use hal::pac;
 use hal::sio::Sio;
 use panic_halt as _;
-use rp2040_hal as hal;
+use pico::{hal, Pins};
 
 #[link_section = ".boot2"]
 #[used]
@@ -22,14 +22,14 @@ fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
 
     let sio = Sio::new(pac.SIO);
-    let pins = hal::gpio::Pins::new(
+    let pins = Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,
         &mut pac.RESETS,
     );
-    let mut led_pin = pins.gpio25.into_push_pull_output();
-    let button_pin = pins.gpio23.into_pull_down_input();
+    let mut led_pin = pins.led.into_push_pull_output();
+    let button_pin = pins.bootsel.into_pull_down_input();
 
     loop {
         if button_pin.is_low().unwrap() {
