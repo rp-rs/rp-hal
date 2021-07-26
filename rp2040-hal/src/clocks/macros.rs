@@ -86,7 +86,7 @@ macro_rules! clock {
             impl GlitchlessClock for $name {
                 type Clock = Self;
 
-                fn await_select(&self, clock_token: &ChangingClockToken<Self>) -> nb::Result<(),()> {
+                fn await_select(&self, clock_token: &ChangingClockToken<Self>) -> nb::Result<(), Infallible> {
                     let shared_dev = unsafe { self.shared_dev.get() };
 
                     let selected = shared_dev.[<$reg _selected>].read().bits();
@@ -131,14 +131,14 @@ macro_rules! clock {
 
             impl $name {
                 /// Reset clock back to its reset source
-                pub fn reset_source_await(&mut self) -> nb::Result<(), ()> {
+                pub fn reset_source_await(&mut self) -> nb::Result<(), Infallible> {
                     let shared_dev = unsafe { self.shared_dev.get() };
 
-                    shared_dev.[<$reg _ctrl>].modify(|_,w| {
+                    shared_dev.[<$reg _ctrl>].modify(|_, w| {
                         w.src().variant(self.get_default_clock_source())
                     });
 
-                    self.frequency = 0.Hz(); //TODO
+                    self.frequency = 12_000_000.Hz(); //TODO Get actual clock source.. Most likely 12 MHz though
 
                     self.await_select(&ChangingClockToken{clock_nr:0, clock: PhantomData::<Self>})
                 }
@@ -177,11 +177,11 @@ macro_rules! clock {
                 }
 
                 #[doc = "Configure `"$name"`"]
-                fn configure_clock<S: ValidSrc<$name>>(&mut self, src: &S, freq: Hertz) -> bool{
+                fn configure_clock<S: ValidSrc<$name>>(&mut self, src: &S, freq: Hertz) -> Result<(), ClockError>{
                     let src_freq: Hertz<u64> = src.get_freq().into();
 
                     if freq.gt(&src_freq){
-                        return false;
+                        return Err(ClockError::CantIncreaseFreq);
                     }
 
                     // Div register is 24.8) int.frac divider so multiply by 2^8 (left shift by 8)
@@ -222,9 +222,9 @@ macro_rules! clock {
 
                     // Store the configured frequency
                     // div contains both the integer part and the fractional part so we need to shift the src_freq equally
-                    self.frequency = (shifted_src_freq / div as u64).try_into().unwrap();
+                    self.frequency = (shifted_src_freq / div as u64).try_into().map_err(|_| ClockError::FrequencyToHigh)?;
 
-                    true
+                    Ok(())
                 }
             }
         }
@@ -334,11 +334,11 @@ macro_rules! stoppable_clock {
                 }
 
                 #[doc = "Configure `"$name"`"]
-                fn configure_clock<S: ValidSrc<$name>>(&mut self, src: &S, freq: Hertz) -> bool{
+                fn configure_clock<S: ValidSrc<$name>>(&mut self, src: &S, freq: Hertz) -> Result<(), ClockError>{
                     let src_freq: Hertz<u64> = src.get_freq().into();
 
                     if freq.gt(&src_freq){
-                        return false;
+                        return Err(ClockError::CantIncreaseFreq);
                     }
 
                     // Div register is 24.8) int.frac divider so multiply by 2^8 (left shift by 8)
@@ -384,8 +384,9 @@ macro_rules! stoppable_clock {
                     self.set_div(div);
 
                     // Store the configured frequency
-                    self.frequency = (shifted_src_freq / div as u64).try_into().unwrap();
-                    true
+                    self.frequency = (shifted_src_freq / div as u64).try_into().map_err(|_| ClockError::FrequencyToHigh)?;
+
+                    Ok(())
                 }
             }
         }

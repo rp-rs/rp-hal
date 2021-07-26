@@ -50,8 +50,6 @@
 //!
 //! See [Chapter 2 Section 15](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 
-use core::{convert::TryInto, marker::PhantomData};
-
 use crate::{
     pll::{
         common_configs::{PLL_SYS_125MHZ, PLL_USB_48MHZ},
@@ -60,6 +58,10 @@ use crate::{
     typelevel::Sealed,
     watchdog::Watchdog,
     xosc::{setup_xosc_blocking, CrystalOscillator, Stable},
+};
+use core::{
+    convert::{Infallible, TryInto},
+    marker::PhantomData,
 };
 use embedded_time::rate::*;
 use pac::{CLOCKS, PLL_SYS, PLL_USB, RESETS, XOSC};
@@ -88,6 +90,11 @@ impl ShareableClocks {
     }
 }
 
+pub enum ClockError {
+    CantIncreaseFreq,
+    FrequencyToHigh,
+}
+
 /// For clocks
 pub trait Clock: Sealed + Sized {
     /// Enum with valid source clocks register values for `Clock`
@@ -97,7 +104,11 @@ pub trait Clock: Sealed + Sized {
     fn freq(&self) -> Hertz;
 
     /// Configure this clock based on a clock source and desired frequency
-    fn configure_clock<S: ValidSrc<Self>>(&mut self, src: &S, freq: Hertz) -> bool;
+    fn configure_clock<S: ValidSrc<Self>>(
+        &mut self,
+        src: &S,
+        freq: Hertz,
+    ) -> Result<(), ClockError>;
 }
 
 /// For clocks with a divider
@@ -114,7 +125,10 @@ trait GlitchlessClock {
     type Clock: Clock;
 
     /// Await switching clock sources without glitches. Needs a token that is returned when setting
-    fn await_select(&self, clock_token: &ChangingClockToken<Self::Clock>) -> nb::Result<(), ()>;
+    fn await_select(
+        &self,
+        clock_token: &ChangingClockToken<Self::Clock>,
+    ) -> nb::Result<(), Infallible>;
 }
 
 /// Token which can be used to await the glitchless switch

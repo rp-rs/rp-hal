@@ -55,11 +55,14 @@ To get a local copy up and running follow these simple steps.
 ### Installation
 
 1. Clone the repo or use the crate
-   ```
+
+   ```sh
    git clone https://github.com/rp-rs/rp-hal
    ```
-   or 
-   ```
+
+   or
+
+   ```sh
    cargo install rpXXXX-hal
    ```
 
@@ -70,13 +73,13 @@ Use this space to show useful examples of how a project can be used. Additional 
 
 For more examples, please refer to the [Documentation](https://github.com/rp-rs/rp-hal)
 
-
 ### Run examples
 
-Install [`uf2conv`](https://github.com/sajattack/uf2conv-rs) and [`cargo-binutils`](https://github.com/rust-embedded/cargo-binutils)
+Install [`uf2conv`](https://github.com/sajattack/uf2conv-rs) and [`cargo-binutils`](https://github.com/rust-embedded/cargo-binutils) as well as the `llvm-tools-preview` component:
 
 ```sh
 cargo install uf2conv cargo-binutils
+rustup component add llvm-tools-preview
 ```
 
 For boards with uf2 flashloaders you can use the following lines to run the examples:
@@ -96,7 +99,6 @@ cp target/$EXAMPLE.uf2 $RPI_MOUNT_FOLDER
 NOTE This HAL is under active development. As such, it is likely to remain volatile until a 1.0.0 release.
 
 See the [open issues](https://github.com/rp-rs/rp-hal/issues) for a list of proposed features (and known issues).
-
 
 
 <!-- CONTRIBUTING -->
