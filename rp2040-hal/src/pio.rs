@@ -100,7 +100,19 @@ impl<P: Instance> PIO<P> {
     fn add_program(&self, instructions: &[u16], origin: Option<u8>) -> Option<usize> {
         if let Some(offset) = self.find_offset_for_instructions(instructions, origin) {
             for (i, instr) in instructions.iter().enumerate() {
-                self.pio.instr_mem[i + offset].write(|w| unsafe { w.bits(*instr as u32) })
+                let instr = if instr & 0xe000 != 0 {
+                    *instr
+                } else {
+                    // JMP instruction. We need to apply offset here
+                    let address = instr & 0x001f;
+                    assert!(
+                        address + (offset as u16) <= 0x001f,
+                        "Invalid JMP out of the program after offset addition"
+                    );
+                    instr + offset as u16
+                };
+
+                self.pio.instr_mem[i + offset].write(|w| unsafe { w.bits(instr as u32) })
             }
             self.used_instruction_space
                 .set(self.used_instruction_space.get() | ((1 << instructions.len()) - 1));
@@ -118,6 +130,9 @@ pub struct StateMachine<P: Instance> {
     block: *const rp2040_pac::pio0::RegisterBlock,
     _phantom: core::marker::PhantomData<P>,
 }
+
+// TODO: Check is this sound.
+unsafe impl<P: Instance + Send> Send for StateMachine<P> {}
 
 impl<P: Instance> StateMachine<P> {
     /// Start and stop the state machine.
@@ -194,6 +209,58 @@ impl<P: Instance> StateMachine<P> {
 
     fn sm(&self) -> &rp2040_pac::pio0::SM {
         &self.block().sm[self.id as usize]
+    }
+
+    // TODO: Other interrupt control functions
+    pub fn enable_interrupt_0(&self, enabled: bool) {
+        self.block().sm_irq[0]
+            .irq_inte
+            .modify(|_, w| match self.id {
+                0 => w.sm0().bit(enabled),
+                1 => w.sm1().bit(enabled),
+                2 => w.sm2().bit(enabled),
+                3 => w.sm3().bit(enabled),
+                _ => unreachable!(),
+            });
+    }
+
+    pub fn enable_tx_not_full_interrupt_1(&self, enabled: bool) {
+        self.block().sm_irq[1]
+            .irq_inte
+            .modify(|_, w| match self.id {
+                0 => w.sm0_txnfull().bit(enabled),
+                1 => w.sm1_txnfull().bit(enabled),
+                2 => w.sm2_txnfull().bit(enabled),
+                3 => w.sm3_txnfull().bit(enabled),
+                _ => unreachable!(),
+            });
+    }
+
+    pub fn enable_rx_not_empty_interrupt_1(&self, enabled: bool) {
+        self.block().sm_irq[1]
+            .irq_inte
+            .modify(|_, w| match self.id {
+                0 => w.sm0_rxnempty().bit(enabled),
+                1 => w.sm1_rxnempty().bit(enabled),
+                2 => w.sm2_rxnempty().bit(enabled),
+                3 => w.sm3_rxnempty().bit(enabled),
+                _ => unreachable!(),
+            });
+    }
+
+    pub fn read_rx(&self) -> Option<u32> {
+        let level = match self.id {
+            0 => self.block().flevel.read().rx0().bits(),
+            1 => self.block().flevel.read().rx1().bits(),
+            2 => self.block().flevel.read().rx2().bits(),
+            3 => self.block().flevel.read().rx3().bits(),
+            _ => unreachable!(),
+        };
+        if level > 0 {
+            Some(self.block().rxf[0].read().bits())
+        } else {
+            None
+        }
     }
 }
 
@@ -355,12 +422,43 @@ impl<'a> PIOBuilder<'a> {
         self
     }
 
-    pub unsafe fn set(mut self, base: u8, count: u8) -> Self {
+    /// Sets the pins asserted by `SET` instruction.
+    ///
+    /// The least-significant bit of `SET` instruction asserts the state of the pin indicated by `base`, the next bit
+    /// asserts the state of the next pin, and so on up to `count` pins. The pin numbers are considered modulo 32.
+    pub fn set_pins(mut self, base: u8, count: u8) -> Self {
+        assert!(count <= 5);
         self.set_base = base;
         self.set_count = count;
-        self.in_base = base;
+        // self.in_base = base;
+        // self.out_base = base;
+        // self.out_count = count;
+        self
+    }
+
+    /// Sets the pins asserted by `OUT` instruction.
+    ///
+    /// The least-significant bit of `OUT` instruction asserts the state of the pin indicated by `base`, the next bit
+    /// asserts the state of the next pin, and so on up to `count` pins. The pin numbers are considered modulo 32.
+    pub fn out_pins(mut self, base: u8, count: u8) -> Self {
+        assert!(count <= 5);
         self.out_base = base;
         self.out_count = count;
+        self
+    }
+
+    pub fn in_pin_base(mut self, base: u8) -> Self {
+        self.in_base = base;
+        self
+    }
+
+    pub fn jmp_pin(mut self, pin: u8) -> Self {
+        self.jmp_pin = pin;
+        self
+    }
+
+    pub fn side_set_pin_base(mut self, base: u8) -> Self {
+        self.side_set_base = base;
         self
     }
 
@@ -452,6 +550,7 @@ impl<'a> PIOBuilder<'a> {
             w.fjoin_tx().bit(fjoin_tx);
 
             unsafe {
+                // TODO: Encode 32 as zero, and error on 0
                 w.pull_thresh().bits(self.pull_threshold);
                 w.push_thresh().bits(self.push_threshold);
             }
