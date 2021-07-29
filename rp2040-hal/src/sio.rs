@@ -68,9 +68,9 @@ impl HwDivider {
     /// Perform hardware unsigned divide/modulo operation
     pub fn unsigned(&self, dividend: u32, divisor: u32) -> DivResult<u32> {
         let sio = unsafe { &(*pac::SIO::ptr()) };
-        sio.div_sdividend.write(|w| unsafe { w.bits(dividend) });
+        sio.div_udividend.write(|w| unsafe { w.bits(dividend) });
 
-        sio.div_sdivisor.write(|w| unsafe { w.bits(divisor) });
+        sio.div_udivisor.write(|w| unsafe { w.bits(divisor) });
 
         cortex_m::asm::delay(8);
 
