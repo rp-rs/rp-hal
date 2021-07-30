@@ -9,3 +9,4 @@ rustflags = [
     "-C", "inline-threshold=5",
     "-C", "no-vectorize-loops",
 ]
+runner = "elf2uf2-rs -d"

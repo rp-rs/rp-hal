@@ -75,22 +75,22 @@ For more examples, please refer to the [Documentation](https://github.com/rp-rs/
 
 ### Run examples
 
-Install [`uf2conv`](https://github.com/sajattack/uf2conv-rs) and [`cargo-binutils`](https://github.com/rust-embedded/cargo-binutils) as well as the `llvm-tools-preview` component:
+#### UF2
+
+For boards with uf2 flashloaders like the raspberry pi pico. Install [`elf2uf2-rs`](https://github.com/JoNil/elf2uf2-rs):
 
 ```sh
-cargo install uf2conv cargo-binutils
-rustup component add llvm-tools-preview
+cargo install elf2uf2-rs
 ```
 
-For boards with uf2 flashloaders you can use the following lines to run the examples:
+Make sure .cargo/config contains the following (it should by default):
+
+```toml
+runner = "elf2uf2-rs -d"
+```
 
 ```sh
-export RPI_MOUNT_FOLDER=/media/RPI-RP2/
-export EXAMPLE=pico_blinky; # See `cargo check --example` for valid values
-cargo check --example $EXAMPLE && \
-cargo objcopy --release --example $EXAMPLE -- -O binary target/$EXAMPLE.bin && \
-uf2conv target/$EXAMPLE.bin --base 0x10000000 --family 0xe48bff56 --output target/$EXAMPLE.uf2 && \
-cp target/$EXAMPLE.uf2 $RPI_MOUNT_FOLDER
+cargo run --example pico_pwm_blink # Run `cargo run --example` for more examples
 ```
 
 <!-- ROADMAP -->
