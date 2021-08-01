@@ -6,14 +6,13 @@ use crate::{
         setup_pll_blocking, Locked, PhaseLockedLoop,
     },
     sio::Sio,
-    watchdog::Watchdog,
     xosc::{setup_xosc_blocking, CrystalOscillator, Stable},
 };
 use embedded_time::rate::Extensions;
 use pac::{
     ADC, BUSCTRL, DMA, I2C0, I2C1, IO_QSPI, PADS_QSPI, PIO0, PIO1, PLL_SYS, PLL_USB, PPB, PSM, PWM,
     RESETS, ROSC, RTC, SPI0, SPI1, SYSCFG, SYSINFO, TBMAN, TIMER, UART0, UART1, USBCTRL_DPRAM,
-    USBCTRL_REGS, VREG_AND_CHIP_RESET, XIP_CTRL, XIP_SSI,
+    USBCTRL_REGS, VREG_AND_CHIP_RESET, WATCHDOG, XIP_CTRL, XIP_SSI,
 };
 
 const XOSC_HZ: u32 = 12_000_000_u32;
@@ -72,6 +71,8 @@ pub struct Pac {
     pub USBCTRL_REGS: USBCTRL_REGS,
     #[doc = "VREG_AND_CHIP_RESET"]
     pub VREG_AND_CHIP_RESET: VREG_AND_CHIP_RESET,
+    #[doc = "WATCHDOG"]
+    pub WATCHDOG: WATCHDOG,
     #[doc = "XIP_CTRL"]
     pub XIP_CTRL: XIP_CTRL,
     #[doc = "XIP_SSI"]
@@ -81,7 +82,6 @@ pub struct Pac {
 /// Rp2040 Main interface
 pub struct Rp2040 {
     pub pac: Pac,
-    pub watchdog: Watchdog,
     pub clocks: ClocksManager,
     pub xosc: CrystalOscillator<Stable>,
     pub pll_sys: PhaseLockedLoop<Locked, PLL_SYS>,
@@ -94,9 +94,7 @@ impl Rp2040 {
     pub fn take() -> Option<Self> {
         let mut pac = pac::Peripherals::take()?;
 
-        let mut watchdog = Watchdog::new(pac.WATCHDOG);
-
-        let mut clocks = ClocksManager::new(pac.CLOCKS, &mut watchdog);
+        let mut clocks = ClocksManager::new(pac.CLOCKS);
 
         let xosc = setup_xosc_blocking(pac.XOSC, XOSC_HZ.Hz()).ok().unwrap();
 
@@ -156,10 +154,10 @@ impl Rp2040 {
                 USBCTRL_DPRAM: pac.USBCTRL_DPRAM,
                 USBCTRL_REGS: pac.USBCTRL_REGS,
                 VREG_AND_CHIP_RESET: pac.VREG_AND_CHIP_RESET,
+                WATCHDOG: pac.WATCHDOG,
                 XIP_CTRL: pac.XIP_CTRL,
                 XIP_SSI: pac.XIP_SSI,
             },
-            watchdog,
             clocks,
             xosc,
             pll_sys,
