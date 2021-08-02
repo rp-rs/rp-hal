@@ -1,260 +1,324 @@
 //! Pulse Width Modulation (PWM)
 //!
-//! To access the PWM pins you must call the 'split' method on the PWM. This will return a
-//! `_____` struct with access to each PWM pin:
+//! To access the PWM pins you must instantiate the `Pwm` type, by giving it ownership of the
+//! rp2040_pac::PWM intance retrieved via `rp2040_pac::Peripherals::take()`:
 //!
 //! ```rust
-//! use rp2040_hal::prelude::*;
-//! let mut pac = rp2040_pac::Peripherals::take().unwrap();
-//! let pin_num = 0;
-//! let mut pwm_pin = Pwm0::new(pin_num);
+//! use rp2040_hal:: {
+//!     gpio::{pin::*, Pins},
+//!     pac,
+//!     pwm::{Pwm, PwmChannel, PwmOutput, PwmSlice},
+//!     sio::Sio,
+//! };
+//! let pac = pac::Peripherals::take().unwrap();
+//! let pwm = Pwm::new(pac.PWM, &mut pac.RESETS);
 //! ```
 //!
-//! Once you have the PWM pins struct, you can take individual pins and configure them:
+//! Once you have the `Pwm` instance, you must access individual slices and configure them via
+//! `PwmSlice` instances:
 //!
 //! ```rust
-//! pwm_pin.default_config(&mut pac.PWM, &mut pac.PAD_BANK0, &mut pac.IO_BANK0, &mut pac.RESETS);
-//! pwm_pin.set_duty(32767);
-//! pwm_pin.enable();
+//! let pwm0 = pwm.slice(0); // the indices for slices are 0 based
+//! pwm0.default_config();
+//! pwm0.set_clkdiv_int(125);
+//! pwm0.set_wrap(20000);
 //! ```
 //!
-//! The following configuration options are also available:
+//! Lastly, for each channel of the slice, you can configure the wrap value for counters via
+//! `PwmChannel` intances:
 //!
 //! ```rust
-//! pwm_pin.min_config(&pac.PWM, &pac.PAD_BANK0, &pac.IO_BANK0, &mut pac.RESETS);
-//!
-//! pwm_pin.get_duty();
-//! pwm_pin.get_max_duty();
-//!
-//! pwm_pin.set_ph_correct().unwrap(); // Run in phase correct mode
-//! pwm_pin.clr_ph_correct().unwrap(); // Don't run in phase correct mode
-//!
-//! pwm_pin.set_div_int(value: u8).unwrap(); // To set integer part of clock divider
-//! pwm_pin.set_div_frac(value: u8).unwrap(); // To set fractional part of clock divider
-//!
-//! pwm_pin.set_inv().unwrap(); // Invert the output
-//! pwm_pin.clr_inv().unwrap(); // Don't invert the output
-//!
-//! pwm_pin.set_top(value: u16).unwrap(); // To set the TOP register
-//!
-//! pwm_pin.divmode_div().unwrap(); // Default divmode. Counts up at a rate dictated by div.
-//! pwm_pin.divmode_level().unwrap(); // These 3 divmodes can be used with a PWM B pin to read PWM inputs.
-//! pwm_pin.divmode_rise().unwrap();
-//! pwm_pin.divmode_fall().unwrap();
+//! let pwm0a = pwm0.channel(PwmOutput::A);
+//! pwm0a.set_level(500);
 //! ```
 //!
-//! default_config() sets ph_correct to false, the clock divider to 1, does not invert the output, sets top to 65535, and resets the counter.
-//! min_config() leaves those registers in the state they were before it was called (Careful, this can lead to unexpected behavior)
-//! It's recommended to only call min_config() after calling default_config() on a pin that shares a PWM block.
+//! In order to use GPIOs as outputs for PWM signals, you must also configure them for the specific
+//! function:
+//!
+//! ```rust
+//! let sio = Sio::new(pac.SIO);
+//! let pins = Pins::new(
+//!     pac.IO_BANK0,
+//!     pac.PADS_BANK0,
+//!     sio.gpio_bank0,
+//!     &mut pac.RESETS,
+//! );
+//! pins.gpio0.into_mode::<FunctionPwm>(); // GPIO 0 outputs PWM channel 0A
+//! ```
+//!
+//! Lastly, you can enable the PWM slice via either the `PwmSlice` or `PwmChannel` instances:
+//!
+//! ```rust
+//! pwm0.enable();
+//! // or
+//! pwm0a.enable();
+//! ```
 
 use super::*;
 use crate::resets::SubsystemReset;
-use embedded_hal::PwmPin;
 
-macro_rules! pwm {
-    ($PWMX:ident, $pwmx:ident, [
-    $($PXi:ident: ($pxi:ident, $pwms:expr, $pins:expr, $i:expr),)+]) => {
-        $(
-
-#[doc = "Struct for any of the "]
-#[doc = $pwms]
-#[doc = " pins"]
-pub struct $PXi {
-    pin: usize
+/// A PWM channel (i.e. slice output) is represented here.
+pub enum PwmOutput {
+    /// The A channel of the slice
+    A,
+    /// The B channel of the slice
+    B,
 }
 
-impl $PXi {
-    #[doc = "Constructor for a PWM pin struct"]
-    pub fn new (pin: usize) -> Self {
-        let mut pin_num : usize = 255;
-        for i in 0..$pins.len() {
-            if (pin == $pins[i]) {
-                pin_num = pin;
+/// PWM clock divider modes are represented here.
+pub enum PwmClkdivMode {
+    /// Free-running counting at rate dictated by fractional divider.
+    FreeRunning,
+    /// Fractional divider is gated by the PWM B pin.
+    BHigh,
+    /// Fractional divider advances with each rising edge of the PWM B pin.
+    BRising,
+    /// Fractional divider advances with each falling edge of the PWM B pin.
+    BFalling,
+}
+
+/// The `Pwm` type respresents an abstraction of the PWM hardware block.
+pub struct Pwm {
+    regs: pac::PWM,
+}
+
+impl Pwm {
+    /// Generate a new `Pwm` instance which takes ownersip of the provided `rp2040_pac::PWM`
+    /// object.
+    pub fn new(pac_pwm: pac::PWM, resets: &mut pac::RESETS) -> Self {
+        pac_pwm.reset_bring_up(resets);
+        Pwm { regs: pac_pwm }
+    }
+
+    /// Generate a `PwmSlice` instance if the provided slice index is valid. Note that the index is
+    /// 0 based.
+    pub fn slice(&self, idx: usize) -> Option<PwmSlice> {
+        if idx > 7 {
+            // The rp2040 PWM block has only 8 slices indexed from 0 to 7
+            return None;
+        }
+
+        Some(PwmSlice::new(self, idx))
+    }
+}
+
+/// The `PwmSlice` type represents an abstraction of a PWM slice of the rp2040 PWM block.
+pub struct PwmSlice<'a> {
+    pwm: &'a Pwm,
+    idx: usize,
+}
+
+impl<'a> PwmSlice<'a> {
+    fn new(pwm: &'a Pwm, idx: usize) -> Self {
+        PwmSlice { pwm: pwm, idx: idx }
+    }
+
+    /// Disable the phase correct mode of the PWM slice.
+    #[inline(always)]
+    pub fn disable_phase_correct(&self) {
+        self.pwm.regs.ch[self.idx]
+            .csr
+            .write(|w| w.ph_correct().clear_bit());
+    }
+
+    /// Enable the phase correct mode of the PWM slice.
+    #[inline(always)]
+    pub fn enable_phase_correct(&self) {
+        self.pwm.regs.ch[self.idx]
+            .csr
+            .write(|w| w.ph_correct().set_bit());
+    }
+
+    /// Set the integer part of the clock divider for the PWM slice.
+    #[inline(always)]
+    pub fn set_clkdiv_int(&self, value: u8) {
+        self.set_clkdiv_int_frac(value, 0);
+    }
+
+    /// Set the fractional part of the clock divider for the PWM slice.
+    #[inline(always)]
+    pub fn set_clkdiv_int_frac(&self, int: u8, frac: u8) {
+        self.pwm.regs.ch[self.idx].div.write(|w| unsafe {
+            w.int().bits(int);
+            w.frac().bits(frac)
+        });
+    }
+
+    /// Configure the clock divider mode for the PWM slice.
+    #[inline(always)]
+    pub fn set_clkdiv_mode(&self, mode: &PwmClkdivMode) {
+        match mode {
+            PwmClkdivMode::FreeRunning => {
+                self.pwm.regs.ch[self.idx].csr.write(|w| w.divmode().div())
             }
-        }
-
-        if (pin_num == 255) {
-            pin_num = $pins[0];
-        }
-
-        Self {
-            pin: pin_num,
-        }
+            PwmClkdivMode::BHigh => self.pwm.regs.ch[self.idx]
+                .csr
+                .write(|w| w.divmode().level()),
+            PwmClkdivMode::BRising => self.pwm.regs.ch[self.idx].csr.write(|w| w.divmode().rise()),
+            PwmClkdivMode::BFalling => self.pwm.regs.ch[self.idx].csr.write(|w| w.divmode().fall()),
+        };
     }
 
-    // TODO: This function contains all the methods that required the PWM to have an instance of PADS_BANK0, RESETS, or IO_BANK0.
-    // Since the GPIO pins take ownership of these, after the GPIO refactor, this method should be moved into gpio.rs, and the PWM
-    // will instead receive a single gpio pin.
-    fn init_io(&self, pwm: &mut pac::$PWMX, pad : &mut pac::PADS_BANK0, io : &mut pac::IO_BANK0, resets: &mut pac::RESETS) -> () {
-        //TODO: Merge these into gpio.rs split function after GPIO refactor. At the moment, this is here because these need to be reset for
-        // the PWM to work. However, because they're here, they'll be reset every time a new PWM pin is created (BAD).
-        pwm.reset_bring_up(resets);
-        io.reset_bring_up(resets);
-
-        pad.gpio[self.pin].write(|w| w.ie().set_bit());
-        pad.gpio[self.pin].write(|w| w.od().clear_bit());
-        unsafe {
-            io.gpio[self.pin].gpio_ctrl.write_with_zero(|w| w.funcsel().pwm_a_0());
-        }
+    /// Set the value at which the counter wraps back to 0 for the PWM slice.
+    #[inline(always)]
+    pub fn set_wrap(&self, value: u16) {
+        self.pwm.regs.ch[self.idx]
+            .top
+            .write(|w| unsafe { w.top().bits(value) });
     }
 
-    fn cc(&self) -> &pac::$pwmx::ch::CC {
-        unsafe {
-            &(*pac::$PWMX::ptr()).ch[$i].cc
-        }
+    /// Get the value at which the counter wraps back to 0 for the PWM slice.
+    #[inline(always)]
+    pub fn get_wrap(&self) -> u16 {
+        self.pwm.regs.ch[self.idx].top.read().top().bits()
     }
 
-    fn csr(&self) -> &pac::$pwmx::ch::CSR {
-        unsafe {
-            &(*pac::$PWMX::ptr()).ch[$i].csr
+    /// Enable inversion for the specified output channel of the PWM slice.
+    #[inline(always)]
+    pub fn enable_output_polarity(&self, output: &PwmOutput) {
+        match output {
+            PwmOutput::A => self.pwm.regs.ch[self.idx]
+                .csr
+                .write(|w| w.a_inv().set_bit()),
+            PwmOutput::B => self.pwm.regs.ch[self.idx]
+                .csr
+                .write(|w| w.b_inv().set_bit()),
         }
     }
 
-    fn ctr(&self) -> &pac::$pwmx::ch::CTR {
-        unsafe {
-            &(*pac::$PWMX::ptr()).ch[$i].ctr
+    /// Disable inversion for the specified output channel of the PWM slice.
+    #[inline(always)]
+    pub fn disable_output_polarity(&self, output: &PwmOutput) {
+        match output {
+            PwmOutput::A => self.pwm.regs.ch[self.idx]
+                .csr
+                .write(|w| w.a_inv().clear_bit()),
+            PwmOutput::B => self.pwm.regs.ch[self.idx]
+                .csr
+                .write(|w| w.b_inv().clear_bit()),
         }
     }
 
-    fn div(&self) -> &pac::$pwmx::ch::DIV {
-        unsafe {
-            &(*pac::$PWMX::ptr()).ch[$i].div
+    /// Set the counter compare value for the specified output channel of the slice.
+    #[inline(always)]
+    pub fn set_chan_level(&self, output: &PwmOutput, value: u16) {
+        match output {
+            PwmOutput::A => self.pwm.regs.ch[self.idx]
+                .cc
+                .write(|w| unsafe { w.a().bits(value) }),
+            PwmOutput::B => self.pwm.regs.ch[self.idx]
+                .cc
+                .write(|w| unsafe { w.b().bits(value) }),
         }
     }
 
-    fn top(&self) -> &pac::$pwmx::ch::TOP {
-        unsafe {
-            &(*pac::$PWMX::ptr()).ch[$i].top
+    /// Get the counter compare value for the specified output channel of the slice.
+    #[inline(always)]
+    pub fn get_chan_level(&self, output: &PwmOutput) -> u16 {
+        match output {
+            PwmOutput::A => self.pwm.regs.ch[self.idx].cc.read().a().bits(),
+            PwmOutput::B => self.pwm.regs.ch[self.idx].cc.read().b().bits(),
         }
     }
 
-    #[doc = "Sets up a pin with the default configurations"]
-    pub fn default_config(&mut self, pwm: &mut pac::$PWMX, pad: &mut pac::PADS_BANK0, io: &mut pac::IO_BANK0, resets: &mut pac::RESETS) -> () {
-        self.init_io(pwm, pad, io, resets);
-
-        self.clr_ph_correct();
-        self.set_div_int(1);
-        self.set_div_frac(0);
-        self.divmode_div();
-        self.set_top(0xffffu16);
-        self.ctr().write(|w| unsafe { w.ctr().bits(0x0000u16) }); //Reset the counter
-
-        self.set_duty(0); //Default duty cycle of 0%
-        self.clr_inv(); //Don't invert the channel
+    /// Enable the PWM slice. This enables both channels of the slice.
+    #[inline(always)]
+    pub fn enable(&self) -> () {
+        self.pwm.regs.ch[self.idx].csr.write(|w| w.en().set_bit());
     }
 
-    #[doc = "Sets up a pin with minimum configurations"]
-    pub fn min_config(&mut self, pwm: &mut pac::$PWMX, pad: &mut pac::PADS_BANK0, io: &mut pac::IO_BANK0, resets: &mut pac::RESETS) -> () {
-        self.init_io(pwm, pad, io, resets);
+    /// Disable the PWM slice. This disables both channels of the slice.
+    #[inline(always)]
+    pub fn disable(&self) -> () {
+        self.pwm.regs.ch[self.idx].csr.write(|w| w.en().clear_bit());
     }
 
-    #[doc = "Enables phase correct mode"]
-    pub fn set_ph_correct(&self) {
-        self.csr().write(|w| w.ph_correct().set_bit());
+    /// Applies a default configuration for the PWM slice.
+    pub fn default_config(&self) {
+        self.disable_phase_correct();
+        self.set_clkdiv_int(1);
+        self.set_clkdiv_mode(&PwmClkdivMode::FreeRunning);
+        self.disable_output_polarity(&PwmOutput::A);
+        self.disable_output_polarity(&PwmOutput::B);
+        self.set_wrap(0xffff);
     }
 
-    #[doc = "Disales phase correct mode"]
-    pub fn clr_ph_correct(&self) {
-        self.csr().write(|w| w.ph_correct().clear_bit());
-    }
-
-    #[doc = "Sets the integer part of the clock divider"]
-    pub fn set_div_int(&self, value: u8) {
-        self.div().write(|w| unsafe { w.int().bits(value) });
-    }
-
-    #[doc = "Sets the fractional part of the clock divider"]
-    pub fn set_div_frac(&self, value: u8) {
-        self.div().write(|w| unsafe { w.frac().bits(value) });
-    }
-
-    #[doc = "Enables output inversion"]
-    pub fn set_inv(&self) {
-        if (self.pin % 2 == 0) {
-            self.csr().write(|w| w.a_inv().set_bit());
-        } else {
-            self.csr().write(|w| w.b_inv().set_bit());
-        }
-    }
-
-    #[doc = "Disables output inversion"]
-    pub fn clr_inv(&self) {
-        if (self.pin % 2 == 0) {
-            self.csr().write(|w| w.a_inv().clear_bit());
-        } else {
-            self.csr().write(|w| w.b_inv().clear_bit());
-        }
-    }
-
-    #[doc = "Sets the top register value"]
-    pub fn set_top(&self, value: u16) {
-        self.top().write(|w| unsafe { w.top().bits(value) });
-    }
-
-    #[doc = "Sets the divmode to div. Use this if you aren't reading a PWM input."]
-    pub fn divmode_div(&self) {
-        self.csr().write(|w| w.divmode().div());
-    }
-
-    #[doc = "Sets the divmode to level."]
-    pub fn divmode_level(&self) {
-        self.csr().write(|w| w.divmode().level());
-    }
-
-    #[doc = "Sets the divmode to rise."]
-    pub fn divmode_rise(&self) {
-        self.csr().write(|w| w.divmode().rise());
-    }
-
-    #[doc = "Sets the divmode to fall."]
-    pub fn divmode_fall(&self) {
-        self.csr().write(|w| w.divmode().div());
+    /// Generate a `PwmChannel` instance for the specified output of the slice.
+    pub fn channel(&'a self, output: PwmOutput) -> PwmChannel {
+        PwmChannel::new(self, output)
     }
 }
 
-impl PwmPin for $PXi {
+/// The `PwmChannel` type respresents an abstraction for one of the PWM channels of each slice in
+/// the rp2040 hardware.
+pub struct PwmChannel<'a> {
+    slice: &'a PwmSlice<'a>,
+    output: PwmOutput,
+}
+
+impl<'a> PwmChannel<'a> {
+    fn new(slice: &'a PwmSlice<'a>, output: PwmOutput) -> Self {
+        PwmChannel {
+            slice: slice,
+            output: output,
+        }
+    }
+
+    /// Set the counter compare value for the channel.
+    #[inline(always)]
+    pub fn set_level(&self, level: u16) {
+        self.slice.set_chan_level(&self.output, level);
+    }
+
+    /// Get the counter compare value for the channel.
+    #[inline(always)]
+    pub fn get_level(&self) -> u16 {
+        self.slice.get_chan_level(&self.output)
+    }
+
+    /// Enable inversion for the channel.
+    #[inline(always)]
+    pub fn enable_polarity(&self) {
+        self.slice.enable_output_polarity(&self.output);
+    }
+
+    /// Disable inversion for the channel.
+    #[inline(always)]
+    pub fn disable_polarity(&self) {
+        self.slice.disable_output_polarity(&self.output);
+    }
+}
+
+impl<'a> embedded_hal::PwmPin for PwmChannel<'a> {
+    /// Type for the `duty` methods
+    ///
+    /// The representation is similar to the pico-sdk, namely a 16bit unsigned integer (i.e. `0 .. 65535`)
     type Duty = u16;
 
-    fn disable(&mut self) -> () {
-        self.csr().write(|w| w.en().clear_bit());
+    /// Disable the underlying slice associated with the PWM channel. Channels cannot be
+    /// individually disabled on the rp2040.
+    fn disable(&mut self) {
+        self.slice.disable();
     }
 
-    fn enable(&mut self) -> () {
-        self.csr().write(|w| w.en().set_bit());
+    /// Enable the underlying slice associated with the PWM channel. Channels cannot be
+    /// individually enabled on the rp2040.
+    fn enable(&mut self) {
+        self.slice.enable();
     }
 
+    /// Get the counter compare value for the channel.
     fn get_duty(&self) -> Self::Duty {
-        if (self.pin % 2 == 0) {
-            self.cc().read().a().bits()
-        } else {
-            self.cc().read().b().bits()
-        }
+        self.slice.get_chan_level(&self.output)
     }
 
+    /// Get the value at which the counter wraps back to 0 for the channel.
     fn get_max_duty(&self) -> Self::Duty {
-        self.top().read().top().bits()
+        self.slice.get_wrap()
     }
 
+    /// Set the counter compare value for the channel.
     fn set_duty(&mut self, duty: Self::Duty) {
-        if (self.pin % 2 == 0) {
-            self.cc().write(|w| unsafe { w.a().bits(duty) });
-        } else {
-            self.cc().write(|w| unsafe { w.b().bits(duty) });
-        }
+        self.set_level(duty);
     }
-}
-
-)+}}
-
-pwm! {
-    PWM, pwm, [
-        Pwm0: (pwm0, "pwm0", [0, 1, 16, 18], 0),
-        Pwm1: (pwm1, "pwm1", [2, 3, 18, 19], 1),
-        Pwm2: (pwm2, "pwm2", [4, 5, 20, 21], 2),
-        Pwm3: (pwm3, "pwm3", [6, 7, 22, 23], 3),
-        Pwm4: (pwm4, "pwm4", [8, 9, 24, 25], 4),
-        Pwm5: (pwm5, "pwm5", [10, 11, 26, 27], 5),
-        Pwm6: (pwm6, "pwm6", [12, 13, 28, 29], 6),
-        Pwm7: (pwm7, "pwm7", [14, 15], 7),
-    ]
 }
