@@ -89,6 +89,8 @@ Make sure .cargo/config contains the following (it should by default):
 runner = "elf2uf2-rs -d"
 ```
 
+**IMPORTANT: Make sure you've put your device into bootloader mode and the drive is showing as mounted before executing the next command.**
+
 ```sh
 cargo run --example pico_pwm_blink # Run `cargo run --example` for more examples
 ```
