@@ -30,6 +30,9 @@ impl<P: Instance> core::fmt::Debug for PIO<P> {
     }
 }
 
+// TODO: Check is this sound.
+unsafe impl<P: Instance + Send> Send for PIO<P> {}
+
 impl<P: Instance> PIO<P> {
     /// Create a new PIO wrapper.
     pub fn new(pio: P, resets: &mut pac::RESETS) -> Self {
@@ -130,9 +133,6 @@ pub struct StateMachine<P: Instance> {
     block: *const rp2040_pac::pio0::RegisterBlock,
     _phantom: core::marker::PhantomData<P>,
 }
-
-// TODO: Check is this sound.
-unsafe impl<P: Instance + Send> Send for StateMachine<P> {}
 
 impl<P: Instance> StateMachine<P> {
     /// Start and stop the state machine.
