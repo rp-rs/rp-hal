@@ -1,4 +1,4 @@
-//! Sends a message using i2c
+//! Print "Hello World" to UART0 in a loop
 #![no_std]
 #![no_main]
 
