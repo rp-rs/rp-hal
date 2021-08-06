@@ -627,7 +627,7 @@ impl<'a> PIOBuilder<'a> {
         self
     }
 
-    /// Sets the pins asserted by `SET` instruction.
+    /// Set the pins asserted by `SET` instruction.
     ///
     /// The least-significant bit of `SET` instruction asserts the state of the pin indicated by `base`, the next bit
     /// asserts the state of the next pin, and so on up to `count` pins. The pin numbers are considered modulo 32.
@@ -635,13 +635,10 @@ impl<'a> PIOBuilder<'a> {
         assert!(count <= 5);
         self.set_base = base;
         self.set_count = count;
-        // self.in_base = base;
-        // self.out_base = base;
-        // self.out_count = count;
         self
     }
 
-    /// Sets the pins asserted by `OUT` instruction.
+    /// Set the pins asserted by `OUT` instruction.
     ///
     /// The least-significant bit of `OUT` instruction asserts the state of the pin indicated by `base`, the next bit
     /// asserts the state of the next pin, and so on up to `count` pins. The pin numbers are considered modulo 32.
@@ -652,16 +649,27 @@ impl<'a> PIOBuilder<'a> {
         self
     }
 
+    /// Set the pins used by `IN` instruction.
+    ///
+    /// The `IN` instruction reads the least significant bit from the pin indicated by `base`, the next bit from the
+    /// next pin, and so on. The pin numbers are considered modulo 32.
     pub fn in_pin_base(mut self, base: u8) -> Self {
         self.in_base = base;
         self
     }
 
+    /// Set the pin used by `JMP PIN` instruction.
+    ///
+    /// When the pin set by this function is high, the jump is taken, otherwise not.
     pub fn jmp_pin(mut self, pin: u8) -> Self {
         self.jmp_pin = pin;
         self
     }
 
+    /// Set the pins used by side-set instructions.
+    ///
+    /// The least-significant side-set bit asserts the state of the pin indicated by `base`, the next bit asserts the
+    /// state of the next pin, and so on up to number of bits set using [`Self::side_set`] function.
     pub fn side_set_pin_base(mut self, base: u8) -> Self {
         self.side_set_base = base;
         self
