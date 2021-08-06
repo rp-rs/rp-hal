@@ -608,9 +608,7 @@ impl<'a> PIOBuilder<'a> {
     /// Additional configuration may be needed in addition to this.
     pub fn with_program<P>(mut self, p: &'a Program<P>) -> Self {
         self.instruction_origin = p.origin;
-        self.instructions(&p.code)
-            .wrap(p.wrap)
-            .side_set(p.side_set)
+        self.instructions(&p.code).wrap(p.wrap).side_set(p.side_set)
     }
 
     /// Set the instructions of the program.
