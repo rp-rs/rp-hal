@@ -11,6 +11,7 @@ use hal::uart::UartPeripheral;
 use hal::watchdog::Watchdog;
 use panic_halt as _;
 use rp2040_hal as hal;
+use core::fmt::Write;
 
 #[link_section = ".boot2"]
 #[used]
@@ -43,7 +44,7 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    let uart = UartPeripheral::<_, _>::enable(
+    let mut uart = UartPeripheral::<_, _>::enable(
         pac.UART0,
         &mut pac.RESETS,
         hal::uart::common_configs::_9600_8_N_1,
@@ -55,8 +56,15 @@ fn main() -> ! {
     let _tx_pin = pins.gpio0.into_mode::<gpio::FunctionUart>();
     let _rx_pin = pins.gpio1.into_mode::<gpio::FunctionUart>();
 
+    // We need a short delay here otherwise the first few characters are garbled.
+    // TODO: work out why
+    cortex_m::asm::delay(100_000);
+    uart.write_full_blocking(b"UART example\r\n");
+
+    let mut value = 0u32;
     loop {
-        uart.write_full_blocking(b"Hello World!\r\n");
+        writeln!(uart, "value: {:02}\r", value).unwrap();
         cortex_m::asm::delay(10_000_000);
+        value+=1
     }
 }
