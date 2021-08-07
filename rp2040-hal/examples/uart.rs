@@ -1,4 +1,4 @@
-//! Print "Hello World" to UART0 in a loop
+//! Print an incrementing number to UART0 in a loop
 #![no_std]
 #![no_main]
 
