@@ -2,6 +2,7 @@
 #![no_std]
 #![no_main]
 
+use core::fmt::Write;
 use cortex_m_rt::entry;
 use hal::clocks::init_clocks_and_plls;
 use hal::gpio::{self, Pins};
@@ -11,7 +12,6 @@ use hal::uart::UartPeripheral;
 use hal::watchdog::Watchdog;
 use panic_halt as _;
 use rp2040_hal as hal;
-use core::fmt::Write;
 
 #[link_section = ".boot2"]
 #[used]
@@ -65,6 +65,6 @@ fn main() -> ! {
     loop {
         writeln!(uart, "value: {:02}\r", value).unwrap();
         cortex_m::asm::delay(10_000_000);
-        value+=1
+        value += 1
     }
 }
