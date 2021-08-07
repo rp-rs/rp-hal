@@ -56,9 +56,6 @@ fn main() -> ! {
     let _tx_pin = pins.gpio0.into_mode::<gpio::FunctionUart>();
     let _rx_pin = pins.gpio1.into_mode::<gpio::FunctionUart>();
 
-    // We need a short delay here otherwise the first few characters are garbled.
-    // TODO: work out why
-    cortex_m::asm::delay(100_000);
     uart.write_full_blocking(b"UART example\r\n");
 
     let mut value = 0u32;
