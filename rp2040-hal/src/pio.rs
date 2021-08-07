@@ -535,9 +535,9 @@ pub struct PIOBuilder<'a> {
     // Shift direction for `IN` instruction.
     in_shiftdir: ShiftDirection,
     // Enable autopull.
-    auto_pull: bool,
+    autopull: bool,
     // Enable autopush.
-    auto_push: bool,
+    autopush: bool,
 
     /// Number of pins asserted by a `SET`.
     set_count: u8,
@@ -573,8 +573,8 @@ impl<'a> Default for PIOBuilder<'a> {
             push_threshold: 0,
             out_shiftdir: ShiftDirection::Left,
             in_shiftdir: ShiftDirection::Left,
-            auto_pull: false,
-            auto_push: false,
+            autopull: false,
+            autopush: false,
             set_count: 5,
             out_count: 0,
             in_base: 0,
@@ -696,6 +696,70 @@ impl<'a> PIOBuilder<'a> {
         self
     }
 
+    /// Set the output sticky state.
+    ///
+    /// When the output is set to be sticky, the PIO hardware continuously asserts the most recent `OUT`/`SET` to the
+    /// pins.
+    pub fn out_sticky(mut self, out_sticky: bool) -> Self {
+        self.out_sticky = out_sticky;
+        self
+    }
+
+    /// Set the inline `OUT` enable bit.
+    ///
+    /// When set to value, the given bit of `OUT` instruction's data is used as an auxiliary write enable. When used
+    /// with [`Self::out_sticky`], writes with enable 0 will deassert the latest pin write.
+    pub fn inline_out(mut self, inline_out: Option<u8>) -> Self {
+        self.inline_out = inline_out;
+        self
+    }
+
+    /// Set the autopush state.
+    ///
+    /// When autopush is enabled, the `IN` instruction automatically pushes the data once the number of bits reaches
+    /// threshold set by [`Self::push_threshold`].
+    pub fn autopush(mut self, autopush: bool) -> Self {
+        self.autopush = autopush;
+        self
+    }
+
+    /// Set the number of bits pushed into ISR before autopush or conditional push will take place.
+    pub fn push_threshold(mut self, threshold: u8) -> Self {
+        self.push_threshold = threshold;
+        self
+    }
+
+    /// Set the autopull state.
+    ///
+    /// When autopull is enabled, the `OUT` instruction automatically pulls the data once the number of bits reaches
+    /// threshold set by [`Self::pull_threshold`].
+    pub fn autopull(mut self, autopull: bool) -> Self {
+        self.autopull = autopull;
+        self
+    }
+
+    /// Set the number of bits pulled from out of OSR before autopull or conditional pull will take place.
+    pub fn pull_threshold(mut self, threshold: u8) -> Self {
+        self.pull_threshold = threshold;
+        self
+    }
+
+    /// Set the ISR shift direction for `IN` instruction.
+    ///
+    /// For example `ShiftDirection::Right` means that ISR is shifted to right, i.e. data enters from left.
+    pub fn in_shift_direction(mut self, direction: ShiftDirection) -> Self {
+        self.in_shiftdir = direction;
+        self
+    }
+
+    /// Set the OSR shift direction for `OUT` instruction.
+    ///
+    /// For example `ShiftDirection::Right` means that OSR is shifted to right, i.e. data is taken from the right side.
+    pub fn out_shift_direction(mut self, direction: ShiftDirection) -> Self {
+        self.out_shiftdir = direction;
+        self
+    }
+
     /// Build the config and deploy it to a StateMachine.
     pub fn build<P: Instance>(self, pio: &PIO<P>, sm: &StateMachine<P>) -> Result<(), BuildError> {
         let offset = match pio.add_program(self.instructions, self.instruction_origin) {
@@ -769,8 +833,8 @@ impl<'a> PIOBuilder<'a> {
             w.out_shiftdir().bit(self.out_shiftdir.bit());
             w.in_shiftdir().bit(self.in_shiftdir.bit());
 
-            w.autopull().bit(self.auto_pull);
-            w.autopush().bit(self.auto_push);
+            w.autopull().bit(self.autopull);
+            w.autopush().bit(self.autopush);
 
             w
         });
