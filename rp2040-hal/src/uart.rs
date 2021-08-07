@@ -22,6 +22,7 @@
 //! ```
 
 use core::convert::Infallible;
+use core::fmt;
 use core::ops::Deref;
 use embedded_time::fixed_point::FixedPoint;
 use embedded_time::rate::Baud;
@@ -498,5 +499,13 @@ impl<D: UartDevice> Write<u8> for UartPeripheral<Enabled, D> {
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
         self.transmit_flushed()
+    }
+}
+
+impl<D: UartDevice> fmt::Write for UartPeripheral<Enabled, D> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        s.bytes()
+            .try_for_each(|c| nb::block!(self.write(c)))
+            .map_err(|_| fmt::Error)
     }
 }
