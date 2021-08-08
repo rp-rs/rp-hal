@@ -36,21 +36,26 @@
 //! within the [`Pins`] struct can be moved out and used individually.
 //!
 //!
-//! ```
-//! let mut peripherals = Peripherals::take().unwrap();
+//! ```no_run
+//! # use rp2040_hal::{pac, gpio::Pins, sio::Sio};
+//! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
 //! let pins = Pins::new(peripherals.IO_BANK0,peripherals.PADS_BANK0,sio.gpio_bank0, &mut peripherals.RESETS);
 //! ```
 //!
 //! Pins can be converted between modes using several different methods.
 //!
-//! ```
+//! ```no_run
+//! # use rp2040_hal::{pac, gpio::{bank0::Gpio12, Pin, Pins, FloatingInput}, sio::Sio};
+//! # let mut peripherals = pac::Peripherals::take().unwrap();
+//! # let sio = Sio::new(peripherals.SIO);
+//! # let pins = Pins::new(peripherals.IO_BANK0,peripherals.PADS_BANK0,sio.gpio_bank0, &mut peripherals.RESETS);
 //! // Use one of the literal function names
 //! let gpio12 = pins.gpio12.into_floating_input();
 //! // Use a generic method and one of the `PinMode` variant types
-//! let gpio12 = pins.gpio12.into_mode::<FloatingInput>();
-//! // Specify the target type and use `From`/`Into`
-//! let gpio12: Pin<Gpio12, FloatingInput> = pins.gpio12.into();
+//! let gpio12 = gpio12.into_mode::<FloatingInput>();
+//! // Specify the target type and use `.into_mode()`
+//! let gpio12: Pin<Gpio12, FloatingInput> = gpio12.into_mode();
 //! ```
 //!
 //! # Embedded HAL traits
@@ -61,16 +66,16 @@
 //!
 //! For example, you can control the logic level of an `OutputPin` like so
 //!
-//! ```
-//! use rp2040_hal::pac::Peripherals;
-//! use rp2040_hak::gpio::v2::Pins;
+//! ```no_run
+//! use rp2040_hal::{pac, gpio::{bank0::Gpio12, Pin, Pins, PushPullOutput}, sio::Sio};
 //! use embedded_hal::digital::v2::OutputPin;
 //!
-//! let mut peripherals = Peripherals::take().unwrap();
+//! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
 //! let pins = Pins::new(peripherals.IO_BANK0,peripherals.PADS_BANK0,sio.gpio_bank0, &mut peripherals.RESETS);
 //!
-//! pins.gpio12.set_high();
+//! let mut pin12: Pin<Gpio12, PushPullOutput> = pins.gpio12.into_mode();
+//! pin12.set_high();
 //! ```
 //!
 //! # Type-level features

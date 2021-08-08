@@ -2,15 +2,20 @@
 //!
 //! To be able to partition parts of the SIO block to other modules:
 //!
-//! ```rust
+//! ```no_run
+//! use rp2040_hal::{gpio::Pins, pac, sio::Sio};
+//!
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
 //! ```
 //!
 //! And then for example
 //!
-//! ```rust
-//! let pins = gpio:Pins::new(pac.IO_BANK0, pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
+//! ```no_run
+//! # use rp2040_hal::{gpio::Pins, pac, sio::Sio};
+//! # let mut peripherals = pac::Peripherals::take().unwrap();
+//! # let sio = Sio::new(peripherals.SIO);
+//! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
 //! ```
 use super::*;
 

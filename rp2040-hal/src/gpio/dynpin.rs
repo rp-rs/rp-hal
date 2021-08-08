@@ -16,19 +16,30 @@
 //! Instances of [`DynPin`] cannot be created directly. Rather, they must be
 //! created from their type-level equivalents using [`From`]/[`Into`].
 //!
-//! ```
+//! ```no_run
 //! // Move a pin out of the Pins struct and convert to a DynPin
+//! # use rp2040_hal::{pac, gpio::{DynPin, bank0::Gpio12, Pins}, sio::Sio};
+//! # let mut peripherals = pac::Peripherals::take().unwrap();
+//! # let sio = Sio::new(peripherals.SIO);
+//! # let pins = Pins::new(peripherals.IO_BANK0,peripherals.PADS_BANK0,sio.gpio_bank0, &mut peripherals.RESETS);
+//! # use rp2040_hal::gpio::DYN_FLOATING_INPUT;
 //! let gpio12: DynPin = pins.gpio12.into();
 //! ```
 //!
 //! Conversions between pin modes use a value-level version of the type-level
 //! API.
 //!
-//! ```
+//! ```no_run
+//! # use rp2040_hal::{pac, gpio::{DynPin, Pins}, sio::Sio};
+//! # let mut peripherals = pac::Peripherals::take().unwrap();
+//! # let sio = Sio::new(peripherals.SIO);
+//! # let pins = Pins::new(peripherals.IO_BANK0,peripherals.PADS_BANK0,sio.gpio_bank0, &mut peripherals.RESETS);
+//! # use rp2040_hal::gpio::DYN_FLOATING_INPUT;
+//! # let mut gpio12: DynPin = pins.gpio12.into();
 //! // Use one of the literal function names
 //! gpio12.into_floating_input();
 //! // Use a method and a DynPinMode variant
-//! gpio12.into_mode(DYN_FLOATING_INPUT);
+//! gpio12.try_into_mode(DYN_FLOATING_INPUT).unwrap();
 //! ```
 //!
 //! Because the pin state cannot be tracked at compile-time, many [`DynPin`]
@@ -41,11 +52,16 @@
 //! compile-time. Use [`TryFrom`](core::convert::TryFrom)/
 //! [`TryInto`](core::convert::TryInto) for this conversion.
 //!
-//! ```
+//! ```no_run
+//! # use core::convert::TryInto;
+//! # use rp2040_hal::{pac, gpio::{DynPin, bank0::Gpio12, Pin, Pins, FloatingInput}, sio::Sio};
+//! # let mut peripherals = pac::Peripherals::take().unwrap();
+//! # let sio = Sio::new(peripherals.SIO);
+//! # let pins = Pins::new(peripherals.IO_BANK0,peripherals.PADS_BANK0,sio.gpio_bank0, &mut peripherals.RESETS);
 //! // Convert to a `DynPin`
-//! let gpio12: DynPin = pins.gpio12.into();
+//! let mut gpio12: DynPin = pins.gpio12.into();
 //! // Change pin mode
-//! pa27.into_floating_input();
+//! gpio12.into_floating_input();
 //! // Convert back to a `Pin`
 //! let gpio12: Pin<Gpio12, FloatingInput> = gpio12.try_into().unwrap();
 //! ```

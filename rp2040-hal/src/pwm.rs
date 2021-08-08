@@ -3,44 +3,55 @@
 //! To access the PWM pins you must call the 'split' method on the PWM. This will return a
 //! `_____` struct with access to each PWM pin:
 //!
-//! ```rust
-//! use rp2040_hal::prelude::*;
-//! let mut pac = rp2040_pac::Peripherals::take().unwrap();
+//! ```no_run
+//! use embedded_hal::PwmPin;
+//! use rp2040_hal::{pac, pwm::Pwm0};
+//! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let pin_num = 0;
 //! let mut pwm_pin = Pwm0::new(pin_num);
 //! ```
 //!
 //! Once you have the PWM pins struct, you can take individual pins and configure them:
 //!
-//! ```rust
-//! pwm_pin.default_config(&mut pac.PWM, &mut pac.PAD_BANK0, &mut pac.IO_BANK0, &mut pac.RESETS);
+//! ```no_run
+//! # use embedded_hal::PwmPin;
+//! # use rp2040_hal::{pac, pwm::Pwm0};
+//! # let mut peripherals = pac::Peripherals::take().unwrap();
+//! # let pin_num = 0;
+//! # let mut pwm_pin = Pwm0::new(pin_num);
+//! pwm_pin.default_config(&mut peripherals.PWM, &mut peripherals.PADS_BANK0, &mut peripherals.IO_BANK0, &mut peripherals.RESETS);
 //! pwm_pin.set_duty(32767);
 //! pwm_pin.enable();
 //! ```
 //!
 //! The following configuration options are also available:
 //!
-//! ```rust
-//! pwm_pin.min_config(&pac.PWM, &pac.PAD_BANK0, &pac.IO_BANK0, &mut pac.RESETS);
+//! ```no_run
+//! # use embedded_hal::PwmPin;
+//! # use rp2040_hal::{pac, pwm::Pwm0};
+//! # let mut peripherals = pac::Peripherals::take().unwrap();
+//! # let pin_num = 0;
+//! # let mut pwm_pin = Pwm0::new(pin_num);
+//! pwm_pin.min_config(&mut peripherals.PWM, &mut peripherals.PADS_BANK0, &mut peripherals.IO_BANK0, &mut peripherals.RESETS);
 //!
 //! pwm_pin.get_duty();
 //! pwm_pin.get_max_duty();
 //!
-//! pwm_pin.set_ph_correct().unwrap(); // Run in phase correct mode
-//! pwm_pin.clr_ph_correct().unwrap(); // Don't run in phase correct mode
+//! pwm_pin.set_ph_correct(); // Run in phase correct mode
+//! pwm_pin.clr_ph_correct(); // Don't run in phase correct mode
 //!
-//! pwm_pin.set_div_int(value: u8).unwrap(); // To set integer part of clock divider
-//! pwm_pin.set_div_frac(value: u8).unwrap(); // To set fractional part of clock divider
+//! pwm_pin.set_div_int(1u8); // To set integer part of clock divider
+//! pwm_pin.set_div_frac(0u8); // To set fractional part of clock divider
 //!
-//! pwm_pin.set_inv().unwrap(); // Invert the output
-//! pwm_pin.clr_inv().unwrap(); // Don't invert the output
+//! pwm_pin.set_inv(); // Invert the output
+//! pwm_pin.clr_inv(); // Don't invert the output
 //!
-//! pwm_pin.set_top(value: u16).unwrap(); // To set the TOP register
+//! pwm_pin.set_top(u16::MAX); // To set the TOP register
 //!
-//! pwm_pin.divmode_div().unwrap(); // Default divmode. Counts up at a rate dictated by div.
-//! pwm_pin.divmode_level().unwrap(); // These 3 divmodes can be used with a PWM B pin to read PWM inputs.
-//! pwm_pin.divmode_rise().unwrap();
-//! pwm_pin.divmode_fall().unwrap();
+//! pwm_pin.divmode_div(); // Default divmode. Counts up at a rate dictated by div.
+//! pwm_pin.divmode_level(); // These 3 divmodes can be used with a PWM B pin to read PWM inputs.
+//! pwm_pin.divmode_rise();
+//! pwm_pin.divmode_fall();
 //! ```
 //!
 //! default_config() sets ph_correct to false, the clock divider to 1, does not invert the output, sets top to 65535, and resets the counter.
