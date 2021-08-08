@@ -1,7 +1,28 @@
 //! Universal Asynchronous Receiver Transmitter (UART)
-// See [Chapter 4 Section 2](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
+//!
+//! See [Chapter 4 Section 2](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) of the datasheet for more details
+//!
+//! ## Usage
+//!
+//! See [examples/uart.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/uart.rs) for a more complete example
+//! ```rust
+//! // Need to perform clock init before using UART or it will freeze.
+//! // Skipping it here for brevity
+//! let uart = UartPeripheral::<_, _>::enable(
+//!         pac.UART0,
+//!         &mut pac.RESETS,
+//!         hal::uart::common_configs::_9600_8_N_1,
+//!         clocks.peripheral_clock.into(),
+//!     ).unwrap();
+//!
+//! // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
+//! let _tx_pin = pins.gpio0.into_mode::<gpio::FunctionUart>();
+//! let _rx_pin = pins.gpio1.into_mode::<gpio::FunctionUart>();
+//! uart.write_full_blocking(b"Hello World!\r\n");
+//! ```
 
 use core::convert::Infallible;
+use core::fmt;
 use core::ops::Deref;
 use embedded_time::fixed_point::FixedPoint;
 use embedded_time::rate::Baud;
@@ -478,5 +499,13 @@ impl<D: UartDevice> Write<u8> for UartPeripheral<Enabled, D> {
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
         self.transmit_flushed()
+    }
+}
+
+impl<D: UartDevice> fmt::Write for UartPeripheral<Enabled, D> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        s.bytes()
+            .try_for_each(|c| nb::block!(self.write(c)))
+            .map_err(|_| fmt::Error)
     }
 }
