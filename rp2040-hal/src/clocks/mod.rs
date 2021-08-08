@@ -316,8 +316,8 @@ pub fn init_clocks_and_plls(
 ) -> Result<ClocksManager, InitError> {
     let xosc = setup_xosc_blocking(xosc_dev, xosc_crystal_freq.Hz()).map_err(InitError::XoscErr)?;
 
-    // Start tick in watchdog
-    watchdog.enable_tick_generation(xosc_crystal_freq as u8);
+    // Configure watchdog tick generation to tick over every microsecond
+    watchdog.enable_tick_generation((xosc_crystal_freq / 1_000_000) as u8);
 
     let mut clocks = ClocksManager::new(clocks_dev);
 
