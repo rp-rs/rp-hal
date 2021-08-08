@@ -2,9 +2,12 @@
 #![no_main]
 
 use cortex_m_rt::entry;
-use embedded_hal::PwmPin;
 use panic_halt as _;
-use rp2040_hal::pwm::*;
+use rp2040_hal::{
+    gpio::{pin::*, Pins},
+    pwm::{Pwm, PwmOutput},
+    sio::Sio,
+};
 
 #[link_section = ".boot2"]
 #[used]
@@ -14,26 +17,28 @@ pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
 fn main() -> ! {
     let mut pac = rp2040_pac::Peripherals::take().unwrap();
 
-    let mut pwm_pin = Pwm4::new(25);
+    let sio = Sio::new(pac.SIO);
 
-    //Instead of having it take references to all of these pac objects, eventually this should just
-    //take ownership of a GPIO pin.
-    pwm_pin.default_config(
-        &mut pac.PWM,
-        &mut pac.PADS_BANK0,
-        &mut pac.IO_BANK0,
+    let pins = Pins::new(
+        pac.IO_BANK0,
+        pac.PADS_BANK0,
+        sio.gpio_bank0,
         &mut pac.RESETS,
     );
+    pins.gpio25.into_mode::<FunctionPwm>();
 
-    pwm_pin.set_ph_correct();
+    let pwm = Pwm::new(pac.PWM, &mut pac.RESETS);
 
-    pwm_pin.enable();
+    let pwm4 = pwm.slice(4).unwrap();
+    pwm4.default_config();
+    pwm4.enable();
 
+    let pwm4b = pwm4.channel(PwmOutput::B);
     loop {
-        pwm_pin.set_duty(15000);
+        pwm4b.set_level(0x8000);
         // TODO: Replace with proper delays once we have clocks working
-        cortex_m::asm::delay(5_000_000);
-        pwm_pin.set_duty(30000);
-        cortex_m::asm::delay(5_000_000);
+        cortex_m::asm::delay(30_000_000);
+        pwm4b.set_level(0xffff);
+        cortex_m::asm::delay(30_000_000);
     }
 }
