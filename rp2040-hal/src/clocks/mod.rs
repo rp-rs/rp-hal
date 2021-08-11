@@ -3,49 +3,60 @@
 //!
 //!
 //! ## Usage simple
-//! ```rust
-//! let mut p = rp2040_pac::Peripherals::take().unwrap();
-//! let mut watchdog = Watchdog::new(p.WATCHDOG);
+//! ```no_run
+//! use rp2040_hal::{clocks::init_clocks_and_plls, watchdog::Watchdog, pac};
+//!
+//! let mut peripherals = pac::Peripherals::take().unwrap();
+//! let mut watchdog = Watchdog::new(peripherals.WATCHDOG);
 //! const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates
-//! let mut clocks = init_clocks_and_plls(XOSC_CRYSTAL_FREQ, p.XOSC, p.CLOCKS, p.PLL_SYS, p.PLL_USB, &mut p.RESETS, &mut watchdog).ok().unwrap();
+//! let mut clocks = init_clocks_and_plls(XOSC_CRYSTAL_FREQ, peripherals.XOSC, peripherals.CLOCKS, peripherals.PLL_SYS, peripherals.PLL_USB, &mut peripherals.RESETS, &mut watchdog).ok().unwrap();
 //! ```
 //!
 //! ## Usage extended
-//! ```rust
-//! let mut p = rp2040_pac::Peripherals::take().unwrap();
-//! let mut watchdog = Watchdog::new(p.WATCHDOG);
-//! let mut clocks = ClocksManager::new(p.CLOCKS, &mut watchdog);
-//! // Enable the xosc
+//! ```no_run
+//! use embedded_time::rate::*;
+//! use rp2040_hal::{clocks::{Clock, ClocksManager, ClockSource, InitError}, gpio::Pins, pac, pll::{common_configs::{PLL_SYS_125MHZ, PLL_USB_48MHZ}, setup_pll_blocking}, sio::Sio, watchdog::Watchdog, xosc::setup_xosc_blocking};
+//!
+//! # fn func() -> Result<(), InitError> {
+//! let mut peripherals = pac::Peripherals::take().unwrap();
+//! let mut watchdog = Watchdog::new(peripherals.WATCHDOG);
 //! const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates
-//! let xosc = setup_xosc_blocking(p.XOSC, XOSC_CRYSTAL_FREQ.Hz()).map_err(InitError::XoscErr)?;
+//!
+//! // Start tick in watchdog
+//! watchdog.enable_tick_generation(XOSC_CRYSTAL_FREQ as u8);
+//!
+//! let mut clocks = ClocksManager::new(peripherals.CLOCKS);
+//! // Enable the xosc
+//! let xosc = setup_xosc_blocking(peripherals.XOSC, XOSC_CRYSTAL_FREQ.Hz()).map_err(InitError::XoscErr)?;
 //!
 //! // Configure PLLs
 //! //                   REF     FBDIV VCO            POSTDIV
 //! // PLL SYS: 12 / 1 = 12MHz * 125 = 1500MHZ / 6 / 2 = 125MHz
 //! // PLL USB: 12 / 1 = 12MHz * 40  = 480 MHz / 5 / 2 =  48MHz
-//! let pll_sys = setup_pll_blocking(p.PLL_SYS, xosc.into(), PLL_SYS_125MHZ, &mut clocks, &mut p.RESETS).map_err(InitError::PllError)?;
-//! let pll_usb = setup_pll_blocking(p.PLL_USB, xosc.into(), PLL_USB_48MHZ, &mut clocks, &mut p.RESETS).map_err(InitError::PllError)?;
+//! let pll_sys = setup_pll_blocking(peripherals.PLL_SYS, xosc.operating_frequency().into(), PLL_SYS_125MHZ, &mut clocks, &mut peripherals.RESETS).map_err(InitError::PllError)?;
+//! let pll_usb = setup_pll_blocking(peripherals.PLL_USB, xosc.operating_frequency().into(), PLL_USB_48MHZ, &mut clocks, &mut peripherals.RESETS).map_err(InitError::PllError)?;
 //!
 //! // Configure clocks
 //! // CLK_REF = XOSC (12MHz) / 1 = 12MHz
-//! self.reference_clock.configure_clock(xosc, xosc.get_freq()).map_err(InitError::ClockError)?;
+//! clocks.reference_clock.configure_clock(&xosc, xosc.get_freq()).map_err(InitError::ClockError)?;
 //!
 //! // CLK SYS = PLL SYS (125MHz) / 1 = 125MHz
-//! self.system_clock.configure_clock(pll_sys, pll_sys.get_freq()).map_err(InitError::ClockError)?;
+//! clocks.system_clock.configure_clock(&pll_sys, pll_sys.get_freq()).map_err(InitError::ClockError)?;
 //!
 //! // CLK USB = PLL USB (48MHz) / 1 = 48MHz
-//! self.usb_clock.configure_clock(pll_usb, pll_usb.get_freq()).map_err(InitError::ClockError)?;
+//! clocks.usb_clock.configure_clock(&pll_usb, pll_usb.get_freq()).map_err(InitError::ClockError)?;
 //!
 //! // CLK ADC = PLL USB (48MHZ) / 1 = 48MHz
-//! self.adc_clock.configure_clock(pll_usb, pll_usb.get_freq()).map_err(InitError::ClockError)?;
+//! clocks.adc_clock.configure_clock(&pll_usb, pll_usb.get_freq()).map_err(InitError::ClockError)?;
 //!
 //! // CLK RTC = PLL USB (48MHz) / 1024 = 46875Hz
-//! self.rtc_clock.configure_clock(pll_usb, 46875u32.Hz()).map_err(InitError::ClockError)?;
+//! clocks.rtc_clock.configure_clock(&pll_usb, 46875u32.Hz()).map_err(InitError::ClockError)?;
 //!
 //! // CLK PERI = clk_sys. Used as reference clock for Peripherals. No dividers so just select and enable
 //! // Normally choose clk_sys or clk_usb
-//! self.peripheral_clock.configure_clock(&self.system_clock, self.system_clock.freq()).map_err(InitError::ClockError)?;
-//!
+//! clocks.peripheral_clock.configure_clock(&clocks.system_clock, clocks.system_clock.freq()).map_err(InitError::ClockError)?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! See [Chapter 2 Section 15](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
