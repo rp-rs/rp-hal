@@ -231,16 +231,6 @@ impl<P: Instance> StateMachine<P> {
             .write(|w| unsafe { w.sm0_instr().bits(instruction) })
     }
 
-    /// Pull a word from the RX FIFO
-    pub fn pull(&self) -> u32 {
-        self.block().rxf[self.id as usize].read().bits()
-    }
-
-    /// Push a word into the TX FIFO
-    pub fn push(&self, word: u32) {
-        self.block().txf[self.id as usize].write(|w| unsafe { w.bits(word) })
-    }
-
     /// Check if the current instruction is stalled.
     pub fn stalled(&self) -> bool {
         self.sm().sm_execctrl.read().exec_stalled().bits()
