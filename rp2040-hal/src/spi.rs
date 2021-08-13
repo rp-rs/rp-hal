@@ -4,14 +4,19 @@
 //!
 //! ## Usage
 //!
-//! ```rust
-//! let sio = Sio::new(p.SIO);
-//! let gpio_pins = Pins::new(p.IO_BANK0, p.PADS_BANK0, sio.gpio_bank0, &mut p.RESETS);
+//! ```no_run
+//! use embedded_hal::spi::MODE_0;
+//! use embedded_time::rate::*;
+//! use rp2040_hal::{spi::Spi, gpio::{Pins, FunctionSpi}, pac, sio::Sio};
 //!
-//! let _ = gpio_pins.spi_sclk.into_mode::<FunctionSpi>();
-//! let _ = gpio_pins.spi_mosi.into_mode::<FunctionSpi>();
+//! let mut peripherals = pac::Peripherals::take().unwrap();
+//! let sio = Sio::new(peripherals.SIO);
+//! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
 //!
-//! let spi = Spi::<_, _, 8>::new(p.SPI0).init(&mut p.RESETS, 125_000_000.Hz(), 16_000_000.Hz(), &MODE_0);
+//! let _ = pins.gpio2.into_mode::<FunctionSpi>();
+//! let _ = pins.gpio3.into_mode::<FunctionSpi>();
+//!
+//! let spi = Spi::<_, _, 8>::new(peripherals.SPI0).init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), &MODE_0);
 //! ```
 
 use crate::resets::SubsystemReset;
