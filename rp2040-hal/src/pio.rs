@@ -301,10 +301,10 @@ impl<P: Instance> Interrupt<P> {
     /// don't correspond with the state machine index; any state machine can raise any one of the four interrupts.
     pub fn enable_sm_interrupt(&self, id: u8) {
         match id {
-            0 => self.irq().irq_inte.write(|w| w.sm0().set_bit()),
-            1 => self.irq().irq_inte.write(|w| w.sm1().set_bit()),
-            2 => self.irq().irq_inte.write(|w| w.sm2().set_bit()),
-            3 => self.irq().irq_inte.write(|w| w.sm3().set_bit()),
+            0 => self.irq().irq_inte.modify(|_, w| w.sm0().set_bit()),
+            1 => self.irq().irq_inte.modify(|_, w| w.sm1().set_bit()),
+            2 => self.irq().irq_inte.modify(|_, w| w.sm2().set_bit()),
+            3 => self.irq().irq_inte.modify(|_, w| w.sm3().set_bit()),
             _ => panic!("invalid state machine interrupt number"),
         }
     }
@@ -314,10 +314,10 @@ impl<P: Instance> Interrupt<P> {
     /// See [`Self::enable_sm_interrupt`] for info about the index.
     pub fn disable_sm_interrupt(&self, id: u8) {
         match id {
-            0 => self.irq().irq_inte.write(|w| w.sm0().clear_bit()),
-            1 => self.irq().irq_inte.write(|w| w.sm1().clear_bit()),
-            2 => self.irq().irq_inte.write(|w| w.sm2().clear_bit()),
-            3 => self.irq().irq_inte.write(|w| w.sm3().clear_bit()),
+            0 => self.irq().irq_inte.modify(|_, w| w.sm0().clear_bit()),
+            1 => self.irq().irq_inte.modify(|_, w| w.sm1().clear_bit()),
+            2 => self.irq().irq_inte.modify(|_, w| w.sm2().clear_bit()),
+            3 => self.irq().irq_inte.modify(|_, w| w.sm3().clear_bit()),
             _ => panic!("invalid state machine interrupt number"),
         }
     }
@@ -329,10 +329,10 @@ impl<P: Instance> Interrupt<P> {
     /// See [`Self::enable_sm_interrupt`] for info about the index.
     pub fn force_sm_interrupt(&self, id: u8) {
         match id {
-            0 => self.irq().irq_intf.write(|w| w.sm0().set_bit()),
-            1 => self.irq().irq_intf.write(|w| w.sm1().set_bit()),
-            2 => self.irq().irq_intf.write(|w| w.sm2().set_bit()),
-            3 => self.irq().irq_intf.write(|w| w.sm3().set_bit()),
+            0 => self.irq().irq_intf.modify(|_, w| w.sm0().set_bit()),
+            1 => self.irq().irq_intf.modify(|_, w| w.sm1().set_bit()),
+            2 => self.irq().irq_intf.modify(|_, w| w.sm2().set_bit()),
+            3 => self.irq().irq_intf.modify(|_, w| w.sm3().set_bit()),
             _ => panic!("invalid state machine interrupt number"),
         }
     }
@@ -343,10 +343,10 @@ impl<P: Instance> Interrupt<P> {
     /// one could push more data to it.
     pub fn enable_tx_not_full_interrupt(&self, id: u8) {
         match id {
-            0 => self.irq().irq_inte.write(|w| w.sm0_txnfull().set_bit()),
-            1 => self.irq().irq_inte.write(|w| w.sm1_txnfull().set_bit()),
-            2 => self.irq().irq_inte.write(|w| w.sm2_txnfull().set_bit()),
-            3 => self.irq().irq_inte.write(|w| w.sm3_txnfull().set_bit()),
+            0 => self.irq().irq_inte.modify(|_, w| w.sm0_txnfull().set_bit()),
+            1 => self.irq().irq_inte.modify(|_, w| w.sm1_txnfull().set_bit()),
+            2 => self.irq().irq_inte.modify(|_, w| w.sm2_txnfull().set_bit()),
+            3 => self.irq().irq_inte.modify(|_, w| w.sm3_txnfull().set_bit()),
             _ => panic!("invalid state machine interrupt number"),
         }
     }
@@ -356,10 +356,22 @@ impl<P: Instance> Interrupt<P> {
     /// See [`Self::enable_tx_not_full_interrupt`] for info about the index.
     pub fn disable_tx_not_full_interrupt(&self, id: u8) {
         match id {
-            0 => self.irq().irq_inte.write(|w| w.sm0_txnfull().clear_bit()),
-            1 => self.irq().irq_inte.write(|w| w.sm1_txnfull().clear_bit()),
-            2 => self.irq().irq_inte.write(|w| w.sm2_txnfull().clear_bit()),
-            3 => self.irq().irq_inte.write(|w| w.sm3_txnfull().clear_bit()),
+            0 => self
+                .irq()
+                .irq_inte
+                .modify(|_, w| w.sm0_txnfull().clear_bit()),
+            1 => self
+                .irq()
+                .irq_inte
+                .modify(|_, w| w.sm1_txnfull().clear_bit()),
+            2 => self
+                .irq()
+                .irq_inte
+                .modify(|_, w| w.sm2_txnfull().clear_bit()),
+            3 => self
+                .irq()
+                .irq_inte
+                .modify(|_, w| w.sm3_txnfull().clear_bit()),
             _ => panic!("invalid state machine interrupt number"),
         }
     }
@@ -369,10 +381,10 @@ impl<P: Instance> Interrupt<P> {
     /// See [`Self::enable_tx_not_full_interrupt`] for info about the index.
     pub fn force_tx_not_full_interrupt(&self, id: u8) {
         match id {
-            0 => self.irq().irq_intf.write(|w| w.sm0_txnfull().set_bit()),
-            1 => self.irq().irq_intf.write(|w| w.sm1_txnfull().set_bit()),
-            2 => self.irq().irq_intf.write(|w| w.sm2_txnfull().set_bit()),
-            3 => self.irq().irq_intf.write(|w| w.sm3_txnfull().set_bit()),
+            0 => self.irq().irq_intf.modify(|_, w| w.sm0_txnfull().set_bit()),
+            1 => self.irq().irq_intf.modify(|_, w| w.sm1_txnfull().set_bit()),
+            2 => self.irq().irq_intf.modify(|_, w| w.sm2_txnfull().set_bit()),
+            3 => self.irq().irq_intf.modify(|_, w| w.sm3_txnfull().set_bit()),
             _ => panic!("invalid state machine interrupt number"),
         }
     }
@@ -383,10 +395,22 @@ impl<P: Instance> Interrupt<P> {
     /// i.e. one could read more data from it.
     pub fn enable_rx_not_empty_interrupt(&self, id: u8) {
         match id {
-            0 => self.irq().irq_inte.write(|w| w.sm0_rxnempty().set_bit()),
-            1 => self.irq().irq_inte.write(|w| w.sm1_rxnempty().set_bit()),
-            2 => self.irq().irq_inte.write(|w| w.sm2_rxnempty().set_bit()),
-            3 => self.irq().irq_inte.write(|w| w.sm3_rxnempty().set_bit()),
+            0 => self
+                .irq()
+                .irq_inte
+                .modify(|_, w| w.sm0_rxnempty().set_bit()),
+            1 => self
+                .irq()
+                .irq_inte
+                .modify(|_, w| w.sm1_rxnempty().set_bit()),
+            2 => self
+                .irq()
+                .irq_inte
+                .modify(|_, w| w.sm2_rxnempty().set_bit()),
+            3 => self
+                .irq()
+                .irq_inte
+                .modify(|_, w| w.sm3_rxnempty().set_bit()),
             _ => panic!("invalid state machine interrupt number"),
         }
     }
@@ -396,10 +420,22 @@ impl<P: Instance> Interrupt<P> {
     /// See [`Self::enable_rx_not_empty_interrupt`] for info about the index.
     pub fn disable_rx_not_empty_interrupt(&self, id: u8) {
         match id {
-            0 => self.irq().irq_inte.write(|w| w.sm0_rxnempty().clear_bit()),
-            1 => self.irq().irq_inte.write(|w| w.sm1_rxnempty().clear_bit()),
-            2 => self.irq().irq_inte.write(|w| w.sm2_rxnempty().clear_bit()),
-            3 => self.irq().irq_inte.write(|w| w.sm3_rxnempty().clear_bit()),
+            0 => self
+                .irq()
+                .irq_inte
+                .modify(|_, w| w.sm0_rxnempty().clear_bit()),
+            1 => self
+                .irq()
+                .irq_inte
+                .modify(|_, w| w.sm1_rxnempty().clear_bit()),
+            2 => self
+                .irq()
+                .irq_inte
+                .modify(|_, w| w.sm2_rxnempty().clear_bit()),
+            3 => self
+                .irq()
+                .irq_inte
+                .modify(|_, w| w.sm3_rxnempty().clear_bit()),
             _ => panic!("invalid state machine interrupt number"),
         }
     }
@@ -409,10 +445,22 @@ impl<P: Instance> Interrupt<P> {
     /// See [`Self::enable_rx_not_empty_interrupt`] for info about the index.
     pub fn force_rx_not_empty_interrupt(&self, id: u8) {
         match id {
-            0 => self.irq().irq_intf.write(|w| w.sm0_rxnempty().set_bit()),
-            1 => self.irq().irq_intf.write(|w| w.sm1_rxnempty().set_bit()),
-            2 => self.irq().irq_intf.write(|w| w.sm2_rxnempty().set_bit()),
-            3 => self.irq().irq_intf.write(|w| w.sm3_rxnempty().set_bit()),
+            0 => self
+                .irq()
+                .irq_intf
+                .modify(|_, w| w.sm0_rxnempty().set_bit()),
+            1 => self
+                .irq()
+                .irq_intf
+                .modify(|_, w| w.sm1_rxnempty().set_bit()),
+            2 => self
+                .irq()
+                .irq_intf
+                .modify(|_, w| w.sm2_rxnempty().set_bit()),
+            3 => self
+                .irq()
+                .irq_intf
+                .modify(|_, w| w.sm3_rxnempty().set_bit()),
             _ => panic!("invalid state machine interrupt number"),
         }
     }
