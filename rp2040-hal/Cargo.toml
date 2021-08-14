@@ -1,6 +1,6 @@
 [package]
 name = "rp2040-hal"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["evan <evanmolder@gmail.com>"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal/boards/pico-bsc"
@@ -14,13 +14,13 @@ cortex-m = "0.7.2"
 embedded-hal = { version = "0.2.5", features=["unproven"] }
 embedded-time = "0.12.0"
 nb = "1.0"
-rp2040-pac = { git = "https://github.com/rp-rs/rp2040-pac", branch="main" }
+rp2040-pac = "0.1.4"
 paste = "1.0"
 
 [dev-dependencies]
 cortex-m-rt = "0.6.14"
 panic-halt = "0.2.0"
-rp2040-boot2 = { git = "https://github.com/rp-rs/rp2040-boot2-rs", branch="main" }
+rp2040-boot2 = { git = "https://github.com/rp-rs/rp2040-boot2-rs",  rev = "67400f600b192e950b58df79ddc9b57ff209ef08" }
 hd44780-driver = "0.4.0"
 
 [features]
