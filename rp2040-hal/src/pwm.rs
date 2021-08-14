@@ -102,8 +102,8 @@ impl $PXi {
         pwm.reset_bring_up(resets);
         io.reset_bring_up(resets);
 
-        pad.gpio[self.pin].write(|w| w.ie().set_bit());
-        pad.gpio[self.pin].write(|w| w.od().clear_bit());
+        pad.gpio[self.pin].modify(|_, w| w.ie().set_bit());
+        pad.gpio[self.pin].modify(|_, w| w.od().clear_bit());
         unsafe {
             io.gpio[self.pin].gpio_ctrl.write_with_zero(|w| w.funcsel().pwm_a_0());
         }
@@ -161,39 +161,39 @@ impl $PXi {
 
     #[doc = "Enables phase correct mode"]
     pub fn set_ph_correct(&self) {
-        self.csr().write(|w| w.ph_correct().set_bit());
+        self.csr().modify(|_, w| w.ph_correct().set_bit());
     }
 
     #[doc = "Disales phase correct mode"]
     pub fn clr_ph_correct(&self) {
-        self.csr().write(|w| w.ph_correct().clear_bit());
+        self.csr().modify(|_, w| w.ph_correct().clear_bit());
     }
 
     #[doc = "Sets the integer part of the clock divider"]
     pub fn set_div_int(&self, value: u8) {
-        self.div().write(|w| unsafe { w.int().bits(value) });
+        self.div().modify(|_, w| unsafe { w.int().bits(value) });
     }
 
     #[doc = "Sets the fractional part of the clock divider"]
     pub fn set_div_frac(&self, value: u8) {
-        self.div().write(|w| unsafe { w.frac().bits(value) });
+        self.div().modify(|_, w| unsafe { w.frac().bits(value) });
     }
 
     #[doc = "Enables output inversion"]
     pub fn set_inv(&self) {
         if (self.pin % 2 == 0) {
-            self.csr().write(|w| w.a_inv().set_bit());
+            self.csr().modify(|_, w| w.a_inv().set_bit());
         } else {
-            self.csr().write(|w| w.b_inv().set_bit());
+            self.csr().modify(|_, w| w.b_inv().set_bit());
         }
     }
 
     #[doc = "Disables output inversion"]
     pub fn clr_inv(&self) {
         if (self.pin % 2 == 0) {
-            self.csr().write(|w| w.a_inv().clear_bit());
+            self.csr().modify(|_, w| w.a_inv().clear_bit());
         } else {
-            self.csr().write(|w| w.b_inv().clear_bit());
+            self.csr().modify(|_, w| w.b_inv().clear_bit());
         }
     }
 
@@ -204,22 +204,22 @@ impl $PXi {
 
     #[doc = "Sets the divmode to div. Use this if you aren't reading a PWM input."]
     pub fn divmode_div(&self) {
-        self.csr().write(|w| w.divmode().div());
+        self.csr().modify(|_, w| w.divmode().div());
     }
 
     #[doc = "Sets the divmode to level."]
     pub fn divmode_level(&self) {
-        self.csr().write(|w| w.divmode().level());
+        self.csr().modify(|_, w| w.divmode().level());
     }
 
     #[doc = "Sets the divmode to rise."]
     pub fn divmode_rise(&self) {
-        self.csr().write(|w| w.divmode().rise());
+        self.csr().modify(|_, w| w.divmode().rise());
     }
 
     #[doc = "Sets the divmode to fall."]
     pub fn divmode_fall(&self) {
-        self.csr().write(|w| w.divmode().div());
+        self.csr().modify(|_, w| w.divmode().div());
     }
 }
 
@@ -227,11 +227,11 @@ impl PwmPin for $PXi {
     type Duty = u16;
 
     fn disable(&mut self) -> () {
-        self.csr().write(|w| w.en().clear_bit());
+        self.csr().modify(|_, w| w.en().clear_bit());
     }
 
     fn enable(&mut self) -> () {
-        self.csr().write(|w| w.en().set_bit());
+        self.csr().modify(|_, w| w.en().set_bit());
     }
 
     fn get_duty(&self) -> Self::Duty {
@@ -248,9 +248,9 @@ impl PwmPin for $PXi {
 
     fn set_duty(&mut self, duty: Self::Duty) {
         if (self.pin % 2 == 0) {
-            self.cc().write(|w| unsafe { w.a().bits(duty) });
+            self.cc().modify(|_, w| unsafe { w.a().bits(duty) });
         } else {
-            self.cc().write(|w| unsafe { w.b().bits(duty) });
+            self.cc().modify(|_, w| unsafe { w.b().bits(duty) });
         }
     }
 }
