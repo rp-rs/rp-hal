@@ -1,5 +1,51 @@
 //! Watchdog
-// See [Chapter 4 Section 7](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
+//!
+//! The watchdog is a countdown timer that can restart parts of the chip if it reaches zero. This can be used to restart the
+//! processor if software gets stuck in an infinite loop. The programmer must periodically write a value to the watchdog to
+//! stop it from reaching zero.
+//!
+//! See [Chapter 4 Section 7](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) of the datasheet for more details
+//!
+//! ## Usage
+//! ```no_run
+//! #![no_std]
+//! #![no_main]
+//! #[link_section = ".boot2"]
+//! #[used]
+//! pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
+//!
+//! use cortex_m_rt::entry;
+//! use cortex_m::prelude::{_embedded_hal_watchdog_Watchdog, _embedded_hal_watchdog_WatchdogEnable};
+//! use embedded_time::duration::units::*;
+//! use rp2040_hal::{clocks::init_clocks_and_plls, pac, watchdog::Watchdog};
+//! use panic_halt as _;
+//!
+//! #[entry]
+//! fn main() -> ! {
+//!     let mut pac = pac::Peripherals::take().unwrap();
+//!     let mut watchdog = Watchdog::new(pac.WATCHDOG);
+//!     let _clocks = init_clocks_and_plls(
+//!         12_000_000,
+//!         pac.XOSC,
+//!         pac.CLOCKS,
+//!         pac.PLL_SYS,
+//!         pac.PLL_USB,
+//!         &mut pac.RESETS,
+//!         &mut watchdog,
+//!     ).ok().unwrap();
+//!     // Set to watchdog to reset if it's not reloaded within 1.05 seconds, and start it
+//!     watchdog.start(1_050_000.microseconds());
+//!     // Feed the watchdog once per cycle to avoid reset
+//!     for _ in 1..=10000 {
+//!         cortex_m::asm::delay(100_000);
+//!         watchdog.feed();
+//!     }
+//!     // Stop feeding, now we'll reset
+//!     loop {}
+//! }
+//! ```
+//! See [examples/watchdog.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/watchdog.rs) for a more complete example
+
 use crate::pac::WATCHDOG;
 use embedded_hal::watchdog;
 use embedded_time::{duration, fixed_point::FixedPoint};
