@@ -105,7 +105,7 @@ macro_rules! hal {
 
                     i2c.ic_enable.write(|w| w.enable().disabled());
 
-                    i2c.ic_con.write(|w| {
+                    i2c.ic_con.modify(|_,w| {
                         w.speed().fast();
                         w.master_mode().enabled();
                         w.ic_slave_disable().slave_disabled();
@@ -162,7 +162,7 @@ macro_rules! hal {
                                 .bits(if lcnt < 16 { 1 } else { (lcnt / 16) as u8 })
                         });
                         i2c.ic_sda_hold
-                            .write(|w| w.ic_sda_tx_hold().bits(sda_tx_hold_count as u16));
+                            .modify(|_r,w| w.ic_sda_tx_hold().bits(sda_tx_hold_count as u16));
                     }
 
                     i2c.ic_enable.write(|w| w.enable().enabled());
