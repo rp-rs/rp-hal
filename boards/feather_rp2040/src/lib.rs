@@ -1,6 +1,6 @@
 #![no_std]
 
-extern crate rp2040_hal as hal;
+pub extern crate rp2040_hal as hal;
 
 #[cfg(feature = "rt")]
 extern crate cortex_m_rt;
@@ -54,3 +54,6 @@ hal::bsp_pins!(
     Gpio28 { name: a2 },
     Gpio29 { name: a3 },
 );
+
+
+pub const XOSC_CRYSTAL_FREQ: u32 = 12_000_000;

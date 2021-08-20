@@ -7,3 +7,6 @@ members = [
     "boards/pico_lipo_16mb",
     "boards/adafruit_macropad",
 ]
+
+[patch."https://github.com/rp-rs/rp2040-boot2-rs"]
+rp2040-boot2 = { path = "../rp2040-boot2-rs"}
