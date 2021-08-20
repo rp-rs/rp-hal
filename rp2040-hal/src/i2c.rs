@@ -126,8 +126,8 @@ macro_rules! hal {
                     // There are some subtleties to I2C timing which we are completely ignoring here
                     // See: https://github.com/raspberrypi/pico-sdk/blob/bfcbefafc5d2a210551a4d9d80b4303d4ae0adf7/src/rp2_common/hardware_i2c/i2c.c#L69
                     let period = (freq_in + freq / 2) / freq;
-                    let hcnt = period * 3 / 5; // oof this one hurts
-                    let lcnt = period - hcnt;
+                    let lcnt = period * 3 / 5; // oof this one hurts
+                    let hcnt = period - lcnt;
 
                     // Check for out-of-range divisors:
                     assert!(hcnt < 0xffff);
