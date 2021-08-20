@@ -21,6 +21,7 @@ pub mod clocks;
 pub mod dma;
 pub mod gpio;
 pub mod i2c;
+pub mod multicore;
 pub mod pio;
 pub mod pll;
 pub mod prelude;

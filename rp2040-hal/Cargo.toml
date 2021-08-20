@@ -41,7 +41,10 @@ rp2040-boot2 = "0.2"
 hd44780-driver = "0.4.0"
 pio-proc = { git = "https://github.com/rp-rs/pio-rs.git", branch = "main" }
 
+[build-dependencies]
+cc = "1.0"
+
 [features]
 rt = ["rp2040-pac/rt"]
 embassy-traits = ["embassy_traits", "futures"]
-
+alloc = []
