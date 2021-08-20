@@ -88,6 +88,10 @@ impl From<DynPinMode> for ModeFields {
                     UsbAux => 9,
                 };
                 fields.inen = true;
+                if func == I2C {
+                    fields.pue = true;
+                    fields.pde = false;
+                }
             }
         };
 
