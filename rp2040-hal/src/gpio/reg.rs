@@ -38,9 +38,11 @@ impl From<DynPinMode> for ModeFields {
                     Floating => (),
                     PullDown => {
                         fields.pde = true;
+                        fields.pue = false;
                     }
                     PullUp => {
                         fields.pue = true;
+                        fields.pde = false;
                     }
                 }
             }
@@ -54,9 +56,11 @@ impl From<DynPinMode> for ModeFields {
                     Floating => (),
                     PullDown => {
                         fields.pde = true;
+                        fields.pue = false;
                     }
                     PullUp => {
                         fields.pue = true;
+                        fields.pde = false;
                     }
                 }
             }
