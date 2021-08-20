@@ -130,10 +130,10 @@ macro_rules! hal {
                     let hcnt = period - lcnt;
 
                     // Check for out-of-range divisors:
-                    assert!(hcnt < 0xffff);
-                    assert!(lcnt < 0xffff);
-                    assert!(hcnt > 8);
-                    assert!(lcnt > 8);
+                    assert!(hcnt <= 0xffff);
+                    assert!(lcnt <= 0xffff);
+                    assert!(hcnt >= 8);
+                    assert!(lcnt >= 8);
 
                     // Per I2C-bus specification a device in standard or fast mode must
                     // internally provide a hold time of at least 300ns for the SDA signal to
