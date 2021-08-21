@@ -1,6 +1,6 @@
-//! Blinks the LED on a Pico board
+//! Blinks the LED on a Adafruit Feather RP2040 board
 //!
-//! This will blink an LED attached to GP25, which is the pin the Pico uses for the on-board LED.
+//! This will blink on-board LED.
 #![no_std]
 #![no_main]
 
@@ -19,7 +19,7 @@ use feather_rp2040::{
 };
 #[link_section = ".boot2"]
 #[used]
-pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_25Q64CS;
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GD25Q64CS;
 
 #[entry]
 fn main() -> ! {
@@ -53,8 +53,8 @@ fn main() -> ! {
 
     loop {
         led_pin.set_high().unwrap();
-        delay.delay_ms(1000);
+        delay.delay_ms(1500);
         led_pin.set_low().unwrap();
-        delay.delay_ms(1000);
+        delay.delay_ms(1500);
     }
 }
