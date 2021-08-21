@@ -7,7 +7,6 @@
 use cortex_m_rt::entry;
 use embedded_hal::digital::v2::OutputPin;
 use embedded_time::rate::*;
-use panic_halt as _;
 use feather_rp2040::{
     hal::{
         clocks::{init_clocks_and_plls, Clock},
@@ -17,6 +16,7 @@ use feather_rp2040::{
     },
     Pins, XOSC_CRYSTAL_FREQ,
 };
+use panic_halt as _;
 #[link_section = ".boot2"]
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GD25Q64CS;

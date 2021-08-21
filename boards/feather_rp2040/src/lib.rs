@@ -55,5 +55,4 @@ hal::bsp_pins!(
     Gpio29 { name: a3 },
 );
 
-
 pub const XOSC_CRYSTAL_FREQ: u32 = 12_000_000;
