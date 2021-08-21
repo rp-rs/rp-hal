@@ -38,11 +38,9 @@ impl From<DynPinMode> for ModeFields {
                     Floating => (),
                     PullDown => {
                         fields.pde = true;
-                        fields.pue = false;
                     }
                     PullUp => {
                         fields.pue = true;
-                        fields.pde = false;
                     }
                 }
             }
@@ -56,11 +54,9 @@ impl From<DynPinMode> for ModeFields {
                     Floating => (),
                     PullDown => {
                         fields.pde = true;
-                        fields.pue = false;
                     }
                     PullUp => {
                         fields.pue = true;
-                        fields.pde = false;
                     }
                 }
             }
@@ -94,7 +90,6 @@ impl From<DynPinMode> for ModeFields {
                 fields.inen = true;
                 if func == I2C {
                     fields.pue = true;
-                    fields.pde = false;
                 }
             }
         };
