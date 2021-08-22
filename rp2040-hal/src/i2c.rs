@@ -181,7 +181,7 @@ macro_rules! hal {
 
                 fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Error> {
                     // TODO support transfers of more than 255 bytes
-                    assert!(bytes.len() < 256 && bytes.len() > 0);
+                    assert!(bytes.len() < 256);
 
                     assert!(addr < 0x80);
                     assert!(!i2c_reserved_addr(addr));
@@ -252,8 +252,8 @@ macro_rules! hal {
 
                 fn write_read(&mut self, addr: u8, bytes: &[u8], buffer: &mut [u8]) -> Result<(), Error> {
                     // TODO support transfers of more than 255 bytes
-                    assert!(bytes.len() < 256 && bytes.len() > 0);
-                    assert!(buffer.len() < 256 && buffer.len() > 0);
+                    assert!(bytes.len() < 256);
+                    assert!(buffer.len() < 256);
 
                     assert!(addr < 0x80);
                     assert!(!i2c_reserved_addr(addr));
