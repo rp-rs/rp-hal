@@ -4,12 +4,13 @@
 //!
 //! Capture ADC reading from a pin
 //! ```no_run
+//! use embedded_hal::adc::OneShot;
 //! use rp2040_hal::{adc::Adc, gpio::Pins, pac, sio::Sio};
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
 //! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
 //! // Enable adc
-//! let mut adc = Adc::new(pac.ADC, &mut pac.RESETS);
+//! let mut adc = Adc::new(peripherals.ADC, &mut peripherals.RESETS);
 //! // Configure one of the pins as an ADC input
 //! let mut adc_pin_1 = pins.gpio26.into_floating_input();
 //! // Read the ADC counts from the ADC channel
@@ -18,16 +19,17 @@
 //!
 //! Capture ADC reading from temperature sensor. Note that this needs conversion to be a real-world temperature.
 //! ```no_run
+//! use embedded_hal::adc::OneShot;
 //! use rp2040_hal::{adc::Adc, gpio::Pins, pac, sio::Sio};
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
 //! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
 //! // Enable adc
-//! let mut adc = Adc::new(pac.ADC, &mut pac.RESETS);
+//! let mut adc = Adc::new(peripherals.ADC, &mut peripherals.RESETS);
 //! // Enable the temperature sensor
 //! let mut temperature_sensor = adc.enable_temp_sensor();
 //! // Read the ADC counts from the ADC channel
-//! let temperature_adc_counts: u16 = adc.read(&temperature_sensor).unwrap();
+//! let temperature_adc_counts: u16 = adc.read(&mut temperature_sensor).unwrap();
 //! ```
 //!
 //! See [examples/adc.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/adc.rs) and
