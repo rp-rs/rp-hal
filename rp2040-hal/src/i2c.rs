@@ -309,7 +309,7 @@ macro_rules! hal {
                         let first = i == 0;
                         let last = i == bytes.len() - 1;
 
-                        while 16 - self.i2c.ic_txflr.read().txflr().bits() > 0 {}
+                        while self.i2c.ic_txflr.read().txflr().bits() > 0 {}
 
                         self.i2c.ic_data_cmd.write(|w| {
                             if first {
