@@ -1,6 +1,8 @@
 //! Analog-Digital Converter (ADC)
 //!
-//! See [Chapter 4 Section 9](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
+//! See [Chapter 4 Section 9](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) of the datasheet for more details
+//!
+//! ## Usage
 //!
 //! Capture ADC reading from a pin
 //! ```no_run
@@ -12,9 +14,9 @@
 //! // Enable adc
 //! let mut adc = Adc::new(peripherals.ADC, &mut peripherals.RESETS);
 //! // Configure one of the pins as an ADC input
-//! let mut adc_pin_1 = pins.gpio26.into_floating_input();
+//! let mut adc_pin_0 = pins.gpio26.into_floating_input();
 //! // Read the ADC counts from the ADC channel
-//! let pin_adc_counts: u16 = adc.read(&mut adc_pin_1).unwrap();
+//! let pin_adc_counts: u16 = adc.read(&mut adc_pin_0).unwrap();
 //! ```
 //!
 //! Capture ADC reading from temperature sensor. Note that this needs conversion to be a real-world temperature.
