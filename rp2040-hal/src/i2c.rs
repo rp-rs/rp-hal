@@ -73,6 +73,8 @@ pub struct I2C<I2C, Pins> {
     pins: Pins,
 }
 
+const TX_FIFO_SIZE: u8 = 16;
+
 fn i2c_reserved_addr(addr: u8) -> bool {
     (addr & 0x78) == 0 || (addr & 0x78) == 0x78
 }
@@ -173,6 +175,26 @@ macro_rules! hal {
                 /// Releases the I2C peripheral and associated pins
                 pub fn free(self) -> ($I2CX, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)) {
                     (self.i2c, self.pins)
+                }
+            }
+
+            impl<PINS> I2C<$I2CX, PINS> {
+                // Number of bytes currently in the TX FIFO
+                #[inline]
+                fn tx_fifo_used(&self) -> u8 {
+                    self.i2c.ic_txflr.read().txflr().bits()
+                }
+
+                // Remaining capacity in the TX FIFO
+                #[inline]
+                fn tx_fifo_free(&self) -> u8 {
+                    TX_FIFO_SIZE - self.tx_fifo_used()
+                }
+
+                // TX FIFO is at capacity
+                #[inline]
+                fn tx_fifo_full(&self) -> bool {
+                    self.tx_fifo_free() == 0
                 }
             }
 
@@ -309,7 +331,8 @@ macro_rules! hal {
                         let first = i == 0;
                         let last = i == bytes.len() - 1;
 
-                        while self.i2c.ic_txflr.read().txflr().bits() > 0 {}
+                        // wait until there is space in the FIFO to write the next byte
+                        while self.tx_fifo_full()  {}
 
                         self.i2c.ic_data_cmd.write(|w| {
                             if first {
