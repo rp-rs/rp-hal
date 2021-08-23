@@ -179,19 +179,19 @@ macro_rules! hal {
             }
 
             impl<PINS> I2C<$I2CX, PINS> {
-                // Number of bytes currently in the TX FIFO
+                /// Number of bytes currently in the TX FIFO
                 #[inline]
                 fn tx_fifo_used(&self) -> u8 {
                     self.i2c.ic_txflr.read().txflr().bits()
                 }
 
-                // Remaining capacity in the TX FIFO
+                /// Remaining capacity in the TX FIFO
                 #[inline]
                 fn tx_fifo_free(&self) -> u8 {
                     TX_FIFO_SIZE - self.tx_fifo_used()
                 }
 
-                // TX FIFO is at capacity
+                /// TX FIFO is at capacity
                 #[inline]
                 fn tx_fifo_full(&self) -> bool {
                     self.tx_fifo_free() == 0
