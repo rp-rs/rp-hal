@@ -8,7 +8,7 @@
    <h3 align="center">rp-hal</h3>
 
   <p align="center">
-    A Rust HAL and board support packages for the RP family of microcontrollers from the Raspberry Pi Foundation
+    A Rust HAL impl for the RP family of microcontrollers from the Raspberry Pi Foundation
     <br />
     <a href="https://github.com/rp-rs/rp-hal"><strong>Explore the docs »</strong></a>
     <br />
@@ -27,7 +27,14 @@
 <details open="open">
   <summary><h2 style="display: inline-block">Table of Contents</h2></summary>
   <ol>
-    <li><a href="#packages">Packages</a></li>
+   <li>
+      <a href="#getting-started">Getting Started</a>
+      <ul>
+        <li><a href="#prerequisites">Prerequisites</a></li>
+        <li><a href="#installation">Installation</a></li>
+      </ul>
+    </li>
+    <li><a href="#usage">Usage</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
@@ -37,21 +44,61 @@
 </details>
 
 <!-- GETTING STARTED -->
-## Packages
+## Getting Started
 
-- [rp2040-hal](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal)
-- Board Support Packages:
-  - [Adafruit Macropad](https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit_macropad)
-  - [Adafruit Feather RP2040](https://github.com/rp-rs/rp-hal/tree/main/boards/feather_rp2040)
-  - [Raspberry Pi Pico](https://github.com/rp-rs/rp-hal/tree/main/boards/pico)
-  - [Pimoroni Pico Explorer](https://github.com/rp-rs/rp-hal/tree/main/boards/pico_explorer)
-  - [Pimoroni Pico Lipo 16mb](https://github.com/rp-rs/rp-hal/tree/main/boards/pico_lipo_16mb)
+To get a local copy up and running follow these simple steps.
 
+### Prerequisites
+
+* A [Rust](https://www.rust-lang.org/tools/install) toolchain
+
+### Installation
+
+1. Clone the repo or use the crate
+
+   ```sh
+   git clone https://github.com/rp-rs/rp-hal
+   ```
+
+   or
+
+   ```sh
+   cargo install rp2040-hal
+   ```
+
+<!-- USAGE EXAMPLES -->
+## Usage
+
+Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+
+For more examples, please refer to the [Documentation](https://github.com/rp-rs/rp-hal)
+
+### Run examples
+
+#### UF2
+
+For boards with uf2 flashloaders like the raspberry pi pico. Install [`elf2uf2-rs`](https://github.com/JoNil/elf2uf2-rs):
+
+```sh
+cargo install elf2uf2-rs
+```
+
+Make sure .cargo/config contains the following (it should by default):
+
+```toml
+runner = "elf2uf2-rs -d"
+```
+
+**IMPORTANT: Make sure you've put your device into bootloader mode and the drive is showing as mounted before executing the next command.**
+
+```sh
+cargo run --example pico_pwm_blink # Run `cargo run --example` for more examples
+```
 
 <!-- ROADMAP -->
 ## Roadmap
 
-NOTE These packages are under active development. As such, it is likely to remain volatile until a 1.0.0 release.
+NOTE This HAL is under active development. As such, it is likely to remain volatile until a 1.0.0 release.
 
 See the [open issues](https://github.com/rp-rs/rp-hal/issues) for a list of proposed features (and known issues).
 

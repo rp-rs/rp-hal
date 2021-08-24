@@ -3,6 +3,7 @@ name = "adafruit_macropad"
 version = "0.1.0"
 authors = ["Andrea Nall <anall@andreanal.com>"]
 edition = "2018"
+homepage = "https://github.com/rp-rs/rp-hal/boards/adafruit_macropad"
 description = "Board Support Package for the Adafruit Macropad"
 license = "MIT OR Apache-2.0"
 
