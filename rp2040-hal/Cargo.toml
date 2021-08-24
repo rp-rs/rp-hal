@@ -3,7 +3,7 @@ name = "rp2040-hal"
 version = "0.2.0"
 authors = ["evan <evanmolder@gmail.com>"]
 edition = "2018"
-homepage = "https://github.com/rp-rs/rp-hal/boards/pico-bsc"
+homepage = "https://github.com/rp-rs/rp-hal"
 description = "A Rust Embeded-HAL impl for the rp2040 microcontroller"
 license = "MIT OR Apache-2.0"
 
