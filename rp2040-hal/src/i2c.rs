@@ -24,13 +24,13 @@ pub enum Error {
     /// I2C abort with error
     Abort(u32),
     /// User passed in a read buffer that was 0 or >255 length
-    InvalidReadBufferLength(u32),
+    InvalidReadBufferLength(usize),
     /// User passed in a write buffer that was 0 or >255 length
-    InvalidWriteBufferLength(u32),
+    InvalidWriteBufferLength(usize),
     /// Target i2c address is out of range
-    AddressOutOfRange(u32),
+    AddressOutOfRange(u8),
     /// Target i2c address is reserved
-    AddressReserved(u32),
+    AddressReserved(u8),
 }
 
 /// SCL pin
@@ -212,11 +212,11 @@ macro_rules! hal {
                 fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Error> {
                     // TODO support transfers of more than 255 bytes
                     if (bytes.len() > 255 || bytes.len() == 0) {
-                        return Err(Error::InvalidWriteBufferLength(bytes.len() as u32));
+                        return Err(Error::InvalidWriteBufferLength(bytes.len()));
                     } else if addr >= 0x80 {
-                        return Err(Error::AddressOutOfRange(addr as u32));
+                        return Err(Error::AddressOutOfRange(addr));
                     } else if i2c_reserved_addr(addr) {
-                        return Err(Error::AddressReserved(addr as u32));
+                        return Err(Error::AddressReserved(addr));
                     }
 
                     self.i2c.ic_enable.write(|w| w.enable().disabled());
@@ -286,13 +286,13 @@ macro_rules! hal {
                 fn write_read(&mut self, addr: u8, bytes: &[u8], buffer: &mut [u8]) -> Result<(), Error> {
                     // TODO support transfers of more than 255 bytes
                     if (bytes.len() > 255 || bytes.len() == 0) {
-                        return Err(Error::InvalidWriteBufferLength(bytes.len() as u32));
+                        return Err(Error::InvalidWriteBufferLength(bytes.len()));
                     } else if (buffer.len() > 255 || buffer.len() == 0) {
-                        return Err(Error::InvalidReadBufferLength(buffer.len() as u32));
+                        return Err(Error::InvalidReadBufferLength(buffer.len()));
                     } else if addr >= 0x80 {
-                        return Err(Error::AddressOutOfRange(addr as u32));
+                        return Err(Error::AddressOutOfRange(addr));
                     } else if i2c_reserved_addr(addr) {
-                        return Err(Error::AddressReserved(addr as u32));
+                        return Err(Error::AddressReserved(addr));
                     }
 
                     self.i2c.ic_enable.write(|w| w.enable().disabled());
@@ -391,11 +391,11 @@ macro_rules! hal {
                 fn read(&mut self, addr: u8, buffer: &mut [u8]) -> Result<(), Error> {
                     // TODO support transfers of more than 255 bytes
                     if (buffer.len() > 255 || buffer.len() == 0) {
-                        return Err(Error::InvalidReadBufferLength(buffer.len() as u32));
+                        return Err(Error::InvalidReadBufferLength(buffer.len()));
                     } else if addr >= 0x80 {
-                        return Err(Error::AddressOutOfRange(addr as u32));
+                        return Err(Error::AddressOutOfRange(addr));
                     } else if i2c_reserved_addr(addr) {
-                        return Err(Error::AddressReserved(addr as u32));
+                        return Err(Error::AddressReserved(addr));
                     }
 
                     self.i2c.ic_enable.write(|w| w.enable().disabled());
