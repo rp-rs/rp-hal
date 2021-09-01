@@ -105,7 +105,7 @@ macro_rules! hal {
 
                     i2c.ic_enable.write(|w| w.enable().disabled());
 
-                    i2c.ic_con.write(|w| {
+                    i2c.ic_con.modify(|_,w| {
                         w.speed().fast();
                         w.master_mode().enabled();
                         w.ic_slave_disable().slave_disabled();
@@ -126,14 +126,14 @@ macro_rules! hal {
                     // There are some subtleties to I2C timing which we are completely ignoring here
                     // See: https://github.com/raspberrypi/pico-sdk/blob/bfcbefafc5d2a210551a4d9d80b4303d4ae0adf7/src/rp2_common/hardware_i2c/i2c.c#L69
                     let period = (freq_in + freq / 2) / freq;
-                    let hcnt = period * 3 / 5; // oof this one hurts
-                    let lcnt = period - hcnt;
+                    let lcnt = period * 3 / 5; // oof this one hurts
+                    let hcnt = period - lcnt;
 
                     // Check for out-of-range divisors:
-                    assert!(hcnt < 0xffff);
-                    assert!(lcnt < 0xffff);
-                    assert!(hcnt > 8);
-                    assert!(lcnt > 8);
+                    assert!(hcnt <= 0xffff);
+                    assert!(lcnt <= 0xffff);
+                    assert!(hcnt >= 8);
+                    assert!(lcnt >= 8);
 
                     // Per I2C-bus specification a device in standard or fast mode must
                     // internally provide a hold time of at least 300ns for the SDA signal to
@@ -162,7 +162,7 @@ macro_rules! hal {
                                 .bits(if lcnt < 16 { 1 } else { (lcnt / 16) as u8 })
                         });
                         i2c.ic_sda_hold
-                            .write(|w| w.ic_sda_tx_hold().bits(sda_tx_hold_count as u16));
+                            .modify(|_r,w| w.ic_sda_tx_hold().bits(sda_tx_hold_count as u16));
                     }
 
                     i2c.ic_enable.write(|w| w.enable().enabled());

@@ -11,7 +11,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 cortex-m = "0.7.2"
-rp2040-hal = { path="../../rp2040-hal", version="0.1.0" }
+rp2040-hal = { path = "../../rp2040-hal", version = "0.2.0"}
 cortex-m-rt = { version="0.6.14", optional=true }
 embedded-hal = { version="0.2.4", features=["unproven"] }
 st7789 = "0.6.1"
@@ -27,5 +27,5 @@ rt = ["cortex-m-rt","rp2040-hal/rt"]
 display-interface = "0.4.1"
 panic-halt = "0.2.0"
 arrayvec = { version="0.7.1", default-features=false }
-rp2040-boot2 = { git="https://github.com/rp-rs/rp2040-boot2-rs", branch="main" }
+rp2040-boot2 = { git = "https://github.com/rp-rs/rp2040-boot2-rs",  rev = "67400f600b192e950b58df79ddc9b57ff209ef08" }
 nb = "1.0.0"
