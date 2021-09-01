@@ -1,10 +1,9 @@
 //! Pulse Width Modulation (PWM)
 //!
-//! To access the PWM pins you must call the 'split' method on the PWM. This will return a
-//! `_____` struct with access to each PWM pin:
+//! First you must create a Slices struct which contains all the pwm slices.
 //!
 //! ```no_run
-//! use rp2040_hal::{prelude::*, pwm::Slices};
+//! use rp2040_hal::{prelude::*, pwm::{InputHighRunning, Slices}};
 //!
 //!
 //! let mut pac = rp2040_pac::Peripherals::take().unwrap();
@@ -16,15 +15,18 @@
 //! let mut pwm = pwm_slices.pwm4;
 //! pwm.set_ph_correct();
 //! pwm.enable();
+//!
+//! // Set to run when b channel is high
+//! let pwm  = pwm.into_mode::<InputHighRunning>();
 //! ```
 //!
 //! Once you have the PWM slice struct, you can add individual pins:
 //!
 //! ```no_run
-//! # use rp2040_hal::{prelude::*, gpio::Pins, sio::Sio, pwm::Slices};
+//! # use rp2040_hal::{prelude::*, gpio::Pins, sio::Sio, pwm::{InputHighRunning, Slices}};
 //! # let mut pac = rp2040_pac::Peripherals::take().unwrap();
 //! # let pwm_slices = Slices::new(pac.PWM, &mut pac.RESETS);
-//! # let mut pwm = pwm_slices.pwm4;
+//! # let mut pwm = pwm_slices.pwm4.into_mode::<InputHighRunning>();
 //! # let mut pac = rp2040_pac::Peripherals::take().unwrap();
 //! #
 //! # let sio = Sio::new(pac.SIO);
@@ -37,15 +39,19 @@
 //! #
 //! use embedded_hal::PwmPin;
 //!
-//! // Use B channel (which outputs to GPIO 25)
-//! let mut channel = pwm.channel_b;
-//! let channel_pin = channel.output_to(pins.gpio25);
+//! // Use B channel (which inputs from GPIO 25)
+//! let mut channel_b = pwm.channel_b;
+//! let channel_pin_b = channel_b.input_from(pins.gpio25);
+//!
+//! // Use A channel (which outputs to GPIO 24)
+//! let mut channel_a = pwm.channel_a;
+//! let channel_pin_a = channel_a.output_to(pins.gpio24);
 //!
 //! // Set duty cycle
-//! channel.set_duty(0x00ff);
-//! channel.get_duty();
-//! channel.set_inverted(); // Invert the output
-//! channel.clr_inverted(); // Don't invert the output
+//! channel_a.set_duty(0x00ff);
+//! channel_a.get_duty();
+//! channel_a.set_inverted(); // Invert the output
+//! channel_a.clr_inverted(); // Don't invert the output
 //! ```
 //!
 //! The following configuration options are also available:
@@ -93,7 +99,7 @@ use reg::RegisterInterface;
 
 /// Used to pin traits to a specific channel (A or B)
 pub trait ChannelId: Sealed {
-    /// Corresponding [`DynChannelId`](super::DynChannelId)
+    /// Corresponding [`DynChannelId`](dyn_slice::DynChannelId)
     const DYN: DynChannelId;
 }
 
@@ -133,7 +139,7 @@ pub trait ValidSliceInputMode<I: SliceId>: Sealed + ValidSliceMode<I> {}
 
 /// Mode for slice
 pub trait SliceMode: Sealed + Sized {
-    /// Corresponding [`DynSliceMode`](super::DynSliceMode)
+    /// Corresponding [`DynSliceMode`](dyn_slice::DynSliceMode)
     const DYN: DynSliceMode;
 }
 
@@ -168,9 +174,9 @@ impl<I: SliceId> ValidSliceInputMode<I> for CountFallingEdge {}
 
 /// Type-level `enum` for slice IDs
 pub trait SliceId: Sealed {
-    /// Corresponding [`DynSliceId`](super::DynSliceId)
+    /// Corresponding [`DynSliceId`](dyn_slice::DynSliceId)
     const DYN: DynSliceId;
-    /// [`Div_Mode`] at reset
+    /// [`SliceMode`] at reset
     type Reset;
 }
 
