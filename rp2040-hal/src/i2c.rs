@@ -14,7 +14,7 @@ use crate::{
     typelevel::Sealed,
 };
 use embedded_time::rate::Hertz;
-use hal::blocking::i2c::{Write, WriteRead};
+use hal::blocking::i2c::{Read, Write, WriteRead};
 use rp2040_pac::{I2C0, I2C1, RESETS};
 
 /// I2C error
@@ -23,6 +23,14 @@ use rp2040_pac::{I2C0, I2C1, RESETS};
 pub enum Error {
     /// I2C abort with error
     Abort(u32),
+    /// User passed in a read buffer that was 0 or >255 length
+    InvalidReadBufferLength(usize),
+    /// User passed in a write buffer that was 0 or >255 length
+    InvalidWriteBufferLength(usize),
+    /// Target i2c address is out of range
+    AddressOutOfRange(u8),
+    /// Target i2c address is reserved
+    AddressReserved(u8),
 }
 
 /// SCL pin
@@ -72,6 +80,8 @@ pub struct I2C<I2C, Pins> {
     i2c: I2C,
     pins: Pins,
 }
+
+const TX_FIFO_SIZE: u8 = 16;
 
 fn i2c_reserved_addr(addr: u8) -> bool {
     (addr & 0x78) == 0 || (addr & 0x78) == 0x78
@@ -176,15 +186,38 @@ macro_rules! hal {
                 }
             }
 
+            impl<PINS> I2C<$I2CX, PINS> {
+                /// Number of bytes currently in the TX FIFO
+                #[inline]
+                fn tx_fifo_used(&self) -> u8 {
+                    self.i2c.ic_txflr.read().txflr().bits()
+                }
+
+                /// Remaining capacity in the TX FIFO
+                #[inline]
+                fn tx_fifo_free(&self) -> u8 {
+                    TX_FIFO_SIZE - self.tx_fifo_used()
+                }
+
+                /// TX FIFO is at capacity
+                #[inline]
+                fn tx_fifo_full(&self) -> bool {
+                    self.tx_fifo_free() == 0
+                }
+            }
+
             impl<PINS> Write for I2C<$I2CX, PINS> {
                 type Error = Error;
 
                 fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Error> {
                     // TODO support transfers of more than 255 bytes
-                    assert!(bytes.len() < 256 && bytes.len() > 0);
-
-                    assert!(addr < 0x80);
-                    assert!(!i2c_reserved_addr(addr));
+                    if (bytes.len() > 255 || bytes.len() == 0) {
+                        return Err(Error::InvalidWriteBufferLength(bytes.len()));
+                    } else if addr >= 0x80 {
+                        return Err(Error::AddressOutOfRange(addr));
+                    } else if i2c_reserved_addr(addr) {
+                        return Err(Error::AddressReserved(addr));
+                    }
 
                     self.i2c.ic_enable.write(|w| w.enable().disabled());
                     self.i2c
@@ -252,11 +285,15 @@ macro_rules! hal {
 
                 fn write_read(&mut self, addr: u8, bytes: &[u8], buffer: &mut [u8]) -> Result<(), Error> {
                     // TODO support transfers of more than 255 bytes
-                    assert!(bytes.len() < 256 && bytes.len() > 0);
-                    assert!(buffer.len() < 256 && buffer.len() > 0);
-
-                    assert!(addr < 0x80);
-                    assert!(!i2c_reserved_addr(addr));
+                    if (bytes.len() > 255 || bytes.len() == 0) {
+                        return Err(Error::InvalidWriteBufferLength(bytes.len()));
+                    } else if (buffer.len() > 255 || buffer.len() == 0) {
+                        return Err(Error::InvalidReadBufferLength(buffer.len()));
+                    } else if addr >= 0x80 {
+                        return Err(Error::AddressOutOfRange(addr));
+                    } else if i2c_reserved_addr(addr) {
+                        return Err(Error::AddressReserved(addr));
+                    }
 
                     self.i2c.ic_enable.write(|w| w.enable().disabled());
                     self.i2c
@@ -309,7 +346,8 @@ macro_rules! hal {
                         let first = i == 0;
                         let last = i == bytes.len() - 1;
 
-                        while 16 - self.i2c.ic_txflr.read().txflr().bits() > 0 {}
+                        // wait until there is space in the FIFO to write the next byte
+                        while self.tx_fifo_full()  {}
 
                         self.i2c.ic_data_cmd.write(|w| {
                             if first {
@@ -346,6 +384,73 @@ macro_rules! hal {
                     }
                 }
             }
+
+            impl<PINS> Read for I2C<$I2CX, PINS> {
+                type Error = Error;
+
+                fn read(&mut self, addr: u8, buffer: &mut [u8]) -> Result<(), Error> {
+                    // TODO support transfers of more than 255 bytes
+                    if (buffer.len() > 255 || buffer.len() == 0) {
+                        return Err(Error::InvalidReadBufferLength(buffer.len()));
+                    } else if addr >= 0x80 {
+                        return Err(Error::AddressOutOfRange(addr));
+                    } else if i2c_reserved_addr(addr) {
+                        return Err(Error::AddressReserved(addr));
+                    }
+
+                    self.i2c.ic_enable.write(|w| w.enable().disabled());
+                    self.i2c
+                        .ic_tar
+                        .write(|w| unsafe { w.ic_tar().bits(addr as u16) });
+                    self.i2c.ic_enable.write(|w| w.enable().enabled());
+
+                    let mut abort = false;
+                    let mut abort_reason = 0;
+
+                    let lastindex = buffer.len() -1;
+                    for (i, byte) in buffer.iter_mut().enumerate() {
+                        let first = i == 0;
+                        let last = i == lastindex;
+
+                        // wait until there is space in the FIFO to write the next byte
+                        while self.tx_fifo_full()  {}
+
+                        self.i2c.ic_data_cmd.write(|w| {
+                            if first {
+                                w.restart().enable();
+                            } else {
+                                w.restart().disable();
+                            }
+
+                            if last {
+                                w.stop().enable();
+                            } else {
+                                w.stop().disable();
+                            }
+
+                            w.cmd().read()
+                        });
+
+                        while !abort && self.i2c.ic_rxflr.read().bits() == 0 {
+                            abort_reason = self.i2c.ic_tx_abrt_source.read().bits();
+                            abort = self.i2c.ic_clr_tx_abrt.read().bits() > 0;
+                        }
+
+                        if abort {
+                            break;
+                        }
+
+                        *byte = self.i2c.ic_data_cmd.read().dat().bits();
+                    }
+
+                    if abort {
+                        Err(Error::Abort(abort_reason))
+                    } else {
+                        Ok(())
+                    }
+                }
+            }
+
          )+
     }
 }
