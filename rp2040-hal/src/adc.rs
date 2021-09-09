@@ -138,15 +138,17 @@ where
             self.device.cs.modify(|_, w| w.ts_en().set_bit())
         }
 
-        if self.device.cs.read().ready().bit_is_set() {
-            self.device
-                .cs
-                .modify(|_, w| unsafe { w.ainsel().bits(chan).start_once().set_bit() });
-        };
-        if !self.device.cs.read().ready().bit_is_set() {
-            // Can't return WouldBlock here since that would take to long and next call conversion would be over
+        while !self.device.cs.read().ready().bit_is_set() {
             cortex_m::asm::nop();
-        };
+        }
+
+        self.device
+            .cs
+            .modify(|_, w| unsafe { w.ainsel().bits(chan).start_once().set_bit() });
+
+        while !self.device.cs.read().ready().bit_is_set() {
+            cortex_m::asm::nop();
+        }
 
         Ok(self.device.result.read().result().bits().into())
     }
