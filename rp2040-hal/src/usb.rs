@@ -4,9 +4,24 @@
 //!
 //! Initialize the Usb Bus forcing the VBUS detection.
 //! ```no_run
-//! use usb_device::{class_prelude::*, prelude::*};
-//! use rp2040_hal::usb::UsbBus;
-//! let mut peripherals = pac::Peripherals::take().unwrap();
+//! use rp2040_hal::{clocks::init_clocks_and_plls, pac, sio::Sio, usb::UsbBus, watchdog::Watchdog};
+//! use usb_device::class_prelude::UsbBusAllocator;
+//!
+//! const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates
+//!
+//! let mut pac = pac::Peripherals::take().unwrap();
+//! let sio = Sio::new(pac.SIO);
+//! let mut watchdog = Watchdog::new(pac.WATCHDOG);
+//! let mut clocks = init_clocks_and_plls(
+//!     XOSC_CRYSTAL_FREQ,
+//!     pac.XOSC,
+//!     pac.CLOCKS,
+//!     pac.PLL_SYS,
+//!     pac.PLL_USB,
+//!     &mut pac.RESETS,
+//!     &mut watchdog
+//! ).ok().unwrap();
+//!
 //! let usb_bus = UsbBusAllocator::new(UsbBus::new(
 //!         pac.USBCTRL_REGS,
 //!         pac.USBCTRL_DPRAM,
@@ -57,13 +72,13 @@ impl Endpoint {
         }
     }
 
-    fn get_buf(&self) -> &[u8] {
+    fn get_buf(&self) -> &'static [u8] {
         unsafe {
             let (base, len) = self.get_buf_parts();
             core::slice::from_raw_parts(base as *const _, len)
         }
     }
-    fn get_buf_mut(&self) -> &mut [u8] {
+    fn get_buf_mut(&self) -> &'static mut [u8] {
         unsafe {
             let (base, len) = self.get_buf_parts();
             core::slice::from_raw_parts_mut(base, len)
@@ -114,7 +129,7 @@ impl Inner {
                 iter.find(|(_, ep)| ep.is_none())
                     .map(|(index, _)| EndpointAddress::from_parts(index, ep_dir))
             })
-            .ok_or_else(|| UsbError::EndpointOverflow)?;
+            .ok_or(UsbError::EndpointOverflow)?;
 
         let is_ep0 = ep_addr.index() == 0;
         let is_ctrl_ep = ep_type == EndpointType::Control;
@@ -230,7 +245,7 @@ impl Inner {
             return Err(UsbError::WouldBlock);
         }
 
-        let ep_buf: &mut [u8] = ep.get_buf_mut();
+        let ep_buf = ep.get_buf_mut();
         if ep_buf.len() < buf.len() {
             return Err(UsbError::BufferOverflow);
         }
