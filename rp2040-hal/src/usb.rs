@@ -149,10 +149,12 @@ impl Inner {
             return Err(UsbError::InvalidEndpoint);
         }
 
-        // validate buffer size
-        if let (EndpointType::Isochronous, true) = (ep_type, max_packet_size > 1023) {
-            return Err(UsbError::Unsupported);
-        } else if max_packet_size > 64 {
+        // Validate buffer size. From datasheet (4.1.2.5):
+        // Data Buffers are typically 64 bytes long as this is the max normal packet size for most FS packets.
+        // For Isochronous endpoints a maximum buffer size of 1023 bytes is supported.
+        // For other packet types the maximum size is 64 bytes per buffer.
+        if (ep_type != EndpointType::Isochronous && max_packet_size > 64) || max_packet_size > 1023
+        {
             return Err(UsbError::Unsupported);
         }
 
