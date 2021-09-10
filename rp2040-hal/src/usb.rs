@@ -133,7 +133,7 @@ impl Inner {
 
         let is_ep0 = ep_addr.index() == 0;
         let is_ctrl_ep = ep_type == EndpointType::Control;
-        if !(is_ep0 ^ !is_ctrl_ep) || (is_ep0 && (max_packet_size != 64)) {
+        if !(is_ep0 ^ !is_ctrl_ep) {
             return Err(UsbError::Unsupported);
         }
 
