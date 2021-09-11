@@ -78,19 +78,6 @@ fn main() -> ! {
     }
 
     unsafe {
-        let p = pac::Peripherals::steal();
-        // Enable interrupts for when a buffer is done, when the bus is reset,
-        // and when a setup packet is received
-        p.USBCTRL_REGS.inte.modify(|_, w| {
-            w.buff_status()
-                .set_bit()
-                .bus_reset()
-                .set_bit()
-                .setup_req()
-                .set_bit()
-        });
-    }
-    unsafe {
         pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
     };
     let core = pac::CorePeripherals::take().unwrap();
@@ -133,20 +120,4 @@ unsafe fn USBCTRL_IRQ() {
     let usb_dev = USB_DEVICE.as_mut().unwrap();
     let usb_hid = USB_HID.as_mut().unwrap();
     usb_dev.poll(&mut [usb_hid]);
-
-    // Clear pending interrupt flags
-    let p = pac::Peripherals::steal();
-    let status = &p.USBCTRL_REGS.sie_status;
-    if status.read().ack_rec().bit_is_set() {
-        status.modify(|_r, w| w.ack_rec().set_bit());
-    }
-    if status.read().setup_rec().bit_is_set() {
-        status.modify(|_r, w| w.setup_rec().set_bit());
-    }
-    if status.read().trans_complete().bit_is_set() {
-        status.modify(|_r, w| w.trans_complete().set_bit());
-    }
-    if status.read().bus_reset().bit_is_set() {
-        status.modify(|_r, w| w.bus_reset().set_bit());
-    }
 }
