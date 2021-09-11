@@ -644,7 +644,7 @@ pub enum BuildError {
 impl<'a> PIOBuilder<'a> {
     /// Set config settings based on information from the given [`pio::Program`].
     /// Additional configuration may be needed in addition to this.
-    pub fn with_program<P>(mut self, p: &'a Program<P>) -> Self {
+    pub fn with_program(mut self, p: &'a Program<{ pio::RP2040_MAX_PROGRAM_SIZE }>) -> Self {
         self.instruction_origin = p.origin;
         self.instructions(&p.code).wrap(p.wrap).side_set(p.side_set)
     }
