@@ -407,6 +407,17 @@ impl UsbBusTrait for UsbBus {
             // at this stage ep's are expected to be in their reset state
             // TODO: is it worth having a debug_assert for that here?
 
+            // Enable interrupt generation when a buffer is done, when the bus is reset,
+            // and when a setup packet is received
+            // this should be sufficient for device mode, will need more for host.
+            inner.ctrl_reg.inte.modify(|_, w| {
+                w.buff_status()
+                    .set_bit()
+                    .bus_reset()
+                    .set_bit()
+                    .setup_req()
+                    .set_bit()
+            });
             // enable pull up to let the host know we exist.
             inner
                 .ctrl_reg
@@ -498,14 +509,22 @@ impl UsbBusTrait for UsbBus {
             // TODO: check for suspend request
             // TODO: check for resume request
 
-            // check for bus reset
-            let sie_status = inner.ctrl_reg.sie_status.read();
-            if sie_status.bus_reset().bit_is_set() {
-                return PollResult::Reset;
-            }
-
+            let sie_status_flags = inner.ctrl_reg.sie_status.read();
             let (mut ep_out, mut ep_in_complete, mut ep_setup): (u16, u16, u16) = (0, 0, 0);
 
+            // check for setup request
+            // Only report setup if OUT has been cleared.
+            if sie_status_flags.setup_rec().bit_is_set() {
+                // Clear the setup_rec interrupt flag
+                inner
+                    .ctrl_reg
+                    .sie_status
+                    .modify(|_, w| w.setup_rec().set_bit());
+                ep_setup |= 1;
+                inner.read_setup = true;
+            }
+
+            // check for bus reset
             let buff_status = inner.ctrl_reg.buff_status.read().bits();
             if buff_status != 0 {
                 // IN Complete shall only be reported once.
@@ -525,11 +544,13 @@ impl UsbBusTrait for UsbBus {
                     }
                 }
             }
-            // check for setup request
-            // Only report setup if OUT has been cleared.
-            if sie_status.setup_rec().bit_is_set() {
-                ep_setup |= 1;
-                inner.read_setup = true;
+            if sie_status_flags.bus_reset().bit_is_set() {
+                // Clear interrupt flag for reset
+                inner
+                    .ctrl_reg
+                    .sie_status
+                    .modify(|_, w| w.bus_reset().set_bit());
+                return PollResult::Reset;
             }
 
             if let (0, 0, 0) = (ep_out, ep_in_complete, ep_setup) {
