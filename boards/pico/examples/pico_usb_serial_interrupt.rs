@@ -77,7 +77,6 @@ fn main() -> ! {
     .manufacturer("Fake company")
     .product("Serial port")
     .serial_number("TEST")
-    .max_packet_size_0(64)
     .device_class(2) // from: https://www.usb.org/defined-class-codes
     .build();
     unsafe {

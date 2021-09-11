@@ -33,6 +33,27 @@
 //! ```
 //!
 //! See [pico_usb_serial.rs](https://github.com/rp-rs/rp-hal/tree/main/boards/pico/examples/pico_usb_serial.rs) for more complete examples
+//!
+//!
+//! ## Enumeration issue with small EP0 max packet size
+//!
+//! During enumeration Windows hosts send a `StatusOut` after the `DataIn` packet of the first
+//! `Get Descriptor` resquest even if the `DataIn` isn't completed (typically when the `max_packet_size_ep0`
+//! is less than 18bytes). The next request request is a `Set Address` that expect a `StatusIn`.
+//!
+//! The issue is that by the time the previous `DataIn` packet is acknoledged and the `StatusOut`
+//! followed by `Setup` are received, the usb stack may have already prepared the next `DataIn` payload
+//! in the EP0 IN mailbox resulting in the payload being transmitted to the host instead of the
+//! `StatusIn` for the `Set Address` request as expected by the host.
+//!
+//! To avoid that issue, the EP0 In mailbox should be invalidated between the `Setup` packet and the
+//! next `StatusIn` initiated by the host. The workaround implemented clears the available bit of the
+//! EP0 In endpoint's buffer to stop the device from sending the data instead of the status packet.
+//! This workaround has the caveat that the poll function must be called between those two which
+//! are only separated by a few microseconds.
+//!
+//! If the required timing cannot be met, using an maximum packet size of the endpoint 0 above 18bytes
+//! (e.g. `.max_packet_size_ep0(64)`) should avoid that issue.
 
 use core::cell::RefCell;
 
@@ -63,7 +84,7 @@ impl Endpoint {
     unsafe fn get_buf_parts(&self) -> (*mut u8, usize) {
         const DPRAM_BASE: *mut u8 = USBCTRL_DPRAM::ptr() as *mut u8;
         if self.ep_type == EndpointType::Control {
-            (DPRAM_BASE.offset(0x100), 64usize)
+            (DPRAM_BASE.offset(0x100), self.max_packet_size as usize)
         } else {
             (
                 DPRAM_BASE.offset(0x180 + (self.buffer_offset * 64) as isize),
@@ -540,6 +561,9 @@ impl UsbBusTrait for UsbBus {
             // check for setup request
             // Only report setup if OUT has been cleared.
             if sie_status.setup_rec().bit_is_set() {
+                // Small max_packet_size_ep0 Work-Around
+                inner.ctrl_dpram.ep_buffer_control[0].modify(|_, w| w.available_0().clear_bit());
+
                 ep_setup |= 1;
                 inner.read_setup = true;
             }
