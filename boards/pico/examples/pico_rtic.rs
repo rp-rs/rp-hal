@@ -12,11 +12,10 @@ pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
 mod app {
 
     use embedded_hal::digital::v2::OutputPin;
-    use hal::clocks::init_clocks_and_plls;
-    use hal::pac;
-    use hal::sio::Sio;
-    use hal::watchdog::Watchdog;
-    use rp2040_hal as hal;
+    use pico::{
+        hal::{self, clocks::init_clocks_and_plls, pac, sio::Sio, watchdog::Watchdog},
+        XOSC_CRYSTAL_FREQ,
+    };
 
     const SCAN_TIME_US: u32 = 1000000;
 
@@ -34,7 +33,7 @@ mod app {
         let mut resets = c.device.RESETS;
         let mut watchdog = Watchdog::new(c.device.WATCHDOG);
         let _clocks = init_clocks_and_plls(
-            12_000_000u32,
+            XOSC_CRYSTAL_FREQ,
             c.device.XOSC,
             c.device.CLOCKS,
             c.device.PLL_SYS,
