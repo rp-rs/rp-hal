@@ -14,7 +14,7 @@ cortex-m = "0.7.2"
 embedded-hal = { version = "0.2.5", features = ["unproven"] }
 embedded-time = "0.12.0"
 nb = "1.0"
-rp2040-pac = { git = "https://github.com/rp-rs/rp2040-pac", rev = "80a8b9fed02db630c39c4492590a0808957ffe47" }
+rp2040-pac = "0.1.5"
 paste = "1.0"
 void = { version = "1.0.2", default-features = false }
 usb-device = "0.2.8"
