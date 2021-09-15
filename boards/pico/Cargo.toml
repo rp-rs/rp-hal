@@ -12,7 +12,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 cortex-m = "0.7.2"
 rp2040-hal = { path = "../../rp2040-hal", version = "0.2.0"}
-cortex-m-rt = { version = "0.6.14", optional = true }
+cortex-m-rt = { version = "0.7", optional = true }
 embedded-time = "0.12.0"
 usb-device= "0.2.8"
 usbd-serial = "0.1.1"
@@ -21,6 +21,7 @@ usbd-hid = "0.5.0"
 [dev-dependencies]
 panic-halt= "0.2.0"
 embedded-hal ="0.2.5"
+cortex-m-rtic = "0.6.0-alpha.5"
 rp2040-boot2 = "0.1.2"
 
 [features]
