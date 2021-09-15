@@ -112,9 +112,9 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
 
         // Find largest post-divide which makes output <= baudrate. Post-divide is
         // an integer in the range 1 to 256 inclusive.
-        for postdiv_option in (1..=256u32).rev() {
-            if freq_in / (prescale as u32 * (postdiv_option - 1)) > baudrate {
-                postdiv = postdiv_option as u8;
+        for postdiv_option in (0..=255u8).rev() {
+            if freq_in / (prescale as u32 * postdiv_option as u32) > baudrate {
+                postdiv = postdiv_option;
                 break;
             }
         }
@@ -124,10 +124,10 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
             .write(|w| unsafe { w.cpsdvsr().bits(prescale) });
         self.device
             .sspcr0
-            .modify(|_, w| unsafe { w.scr().bits(postdiv - 1) });
+            .modify(|_, w| unsafe { w.scr().bits(postdiv) });
 
         // Return the frequency we were able to achieve
-        (freq_in / (prescale as u32 * postdiv as u32)).Hz()
+        (freq_in / (prescale as u32 * (1 + postdiv as u32))).Hz()
     }
 
     /// Set format and datasize
