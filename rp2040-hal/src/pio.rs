@@ -140,21 +140,35 @@ impl<P: Instance> PIO<P> {
         }
     }
 
-    fn add_program(&self, instructions: &[u16], origin: Option<u8>) -> Option<usize> {
+    fn add_program(
+        &self,
+        instructions: &[u16],
+        origin: Option<u8>,
+        side_set: pio::SideSet,
+    ) -> Option<usize> {
         if let Some(offset) = self.find_offset_for_instructions(instructions, origin) {
-            for (i, instr) in instructions.iter().enumerate() {
-                let instr = if instr & 0xe000 != 0 {
-                    *instr
-                } else {
-                    // JMP instruction. We need to apply offset here
-                    let address = instr & 0x001f;
-                    assert!(
-                        address + (offset as u16) <= 0x001f,
-                        "Invalid JMP out of the program after offset addition"
-                    );
-                    instr + offset as u16
-                };
+            for (i, instr) in instructions
+                .iter()
+                .map(|instr| {
+                    let mut instr = pio::Instruction::decode(*instr, side_set).unwrap();
 
+                    instr.operands = match instr.operands {
+                        pio::InstructionOperands::JMP { condition, address } => {
+                            // JMP instruction. We need to apply offset here
+                            let address = address + offset as u8;
+                            assert!(
+                                address < pio::RP2040_MAX_PROGRAM_SIZE as u8,
+                                "Invalid JMP out of the program after offset addition"
+                            );
+                            pio::InstructionOperands::JMP { condition, address }
+                        }
+                        _ => instr.operands,
+                    };
+
+                    instr.encode(side_set)
+                })
+                .enumerate()
+            {
                 self.pio.instr_mem[i + offset].write(|w| unsafe { w.bits(instr as u32) })
             }
             self.used_instruction_space
@@ -800,10 +814,11 @@ impl<'a> PIOBuilder<'a> {
 
     /// Build the config and deploy it to a StateMachine.
     pub fn build<P: Instance>(self, pio: &PIO<P>, sm: &StateMachine<P>) -> Result<(), BuildError> {
-        let offset = match pio.add_program(self.instructions, self.instruction_origin) {
-            Some(o) => o,
-            None => return Err(BuildError::NoSpace),
-        };
+        let offset =
+            match pio.add_program(self.instructions, self.instruction_origin, self.side_set) {
+                Some(o) => o,
+                None => return Err(BuildError::NoSpace),
+            };
 
         // Stop the SM
         // TODO: This should probably do before we write the program source code
@@ -898,10 +913,13 @@ impl<'a> PIOBuilder<'a> {
 
         // Set starting location by setting the state machine to execute a jmp
         // to the beginning of the program we loaded in.
-        #[allow(clippy::unusual_byte_groupings)]
-        let mut instr = 0b000_00000_000_00000; // JMP 0
-        instr |= offset as u16;
-        sm.set_instruction(instr);
+        sm.set_instruction(
+            pio::InstructionOperands::JMP {
+                condition: pio::JmpCondition::Always,
+                address: offset as u8,
+            }
+            .encode(),
+        );
 
         // Enable SM
         sm.set_enabled(true);
