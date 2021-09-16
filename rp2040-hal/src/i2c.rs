@@ -5,17 +5,15 @@
 //! ## Usage
 //! ```no_run
 //! use embedded_time::rate::Extensions;
-//! use rp2040_hal::{i2c::I2C, gpio::{Pins, FunctionI2C}, pac, sio::Sio};
+//! use rp2040_hal::{i2c::I2C, gpio::Pins, pac, sio::Sio};
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
 //! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
-//! let sda_pin = pins.gpio18.into_mode::<FunctionI2C>();
-//! let scl_pin = pins.gpio19.into_mode::<FunctionI2C>();
 //!
 //! let mut i2c = I2C::i2c1(
 //!     peripherals.I2C1,
-//!     sda_pin,
-//!     scl_pin,
+//!     pins.gpio18.into_mode(), // sda
+//!     pins.gpio19.into_mode(), // scl
 //!     400.kHz(),
 //!     &mut peripherals.RESETS,
 //!     125_000_000.Hz(),
