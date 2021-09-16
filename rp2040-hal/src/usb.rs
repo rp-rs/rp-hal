@@ -407,6 +407,18 @@ impl UsbBusTrait for UsbBus {
             // at this stage ep's are expected to be in their reset state
             // TODO: is it worth having a debug_assert for that here?
 
+            // Enable interrupt generation when a buffer is done, when the bus is reset,
+            // and when a setup packet is received
+            // this should be sufficient for device mode, will need more for host.
+            inner.ctrl_reg.inte.modify(|_, w| {
+                w.buff_status()
+                    .set_bit()
+                    .bus_reset()
+                    .set_bit()
+                    .setup_req()
+                    .set_bit()
+            });
+
             // enable pull up to let the host know we exist.
             inner
                 .ctrl_reg
