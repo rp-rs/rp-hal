@@ -18,10 +18,15 @@ impl Timer {
 
     /// Get the current counter value.
     pub fn get_counter(&self) -> u64 {
-        // latched read, low before high
-        let lo = self.timer.timelr.read().bits();
-        let hi = self.timer.timehr.read().bits();
-        (hi as u64) << 32 | lo as u64
+        let mut hi0 = self.timer.timerawh.read().bits();
+        loop {
+            let low = self.timer.timerawl.read().bits();
+            let hi1 = self.timer.timerawh.read().bits();
+            if hi0 == hi1 {
+                break (u64::from(hi0) << 32) | u64::from(low);
+            }
+            hi0 = hi1;
+        }
     }
 
     /// Get the value of the least significant word of the counter.
