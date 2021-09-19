@@ -62,3 +62,55 @@ pub enum OutputSlewRate {
     /// Slew fast
     Fast,
 }
+
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+/// Interrupt override state.
+pub enum InterruptOverride {
+    /// Don't invert the interrupt.
+    DontInvert = 0,
+    /// Invert the interrupt.
+    Invert = 1,
+    /// Drive interrupt low.
+    AlwaysLow = 2,
+    /// Drive interrupt high.
+    AlwaysHigh = 3,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+/// Input override state.
+pub enum InputOverride {
+    /// Don't invert the peripheral input.
+    DontInvert = 0,
+    /// Invert the peripheral input.
+    Invert = 1,
+    /// Drive peripheral output low.
+    AlwaysLow = 2,
+    /// Drive peripheral output high.
+    AlwaysHigh = 3,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+/// Output enable override state.
+pub enum OutputEnableOverride {
+    /// Use the original output enable signal from selected peripheral.
+    DontInvert = 0,
+    /// Invert the output enable signal from selected peripheral.
+    Invert = 1,
+    /// Disable output.
+    Disable = 2,
+    /// Enable output.
+    Enable = 3,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+/// Output  override state.
+pub enum OutputOverride {
+    /// Use the original output  signal from selected peripheral.
+    DontInvert = 0,
+    /// Invert the output  signal from selected peripheral.
+    Invert = 1,
+    /// Drive output low.
+    Disable = 2,
+    /// Drive output high.
+    Enable = 3,
+}
