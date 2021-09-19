@@ -520,18 +520,6 @@ impl<S: SliceId, M: SliceMode, C: ChannelId> Channel<S, M, C> {
             duty_cycle,
         }
     }
-
-    /// Invert channel output
-    #[inline]
-    pub fn set_inverted(&mut self) {
-        self.regs.write_inv_b(true)
-    }
-
-    /// Invert channel output or not
-    #[inline]
-    pub fn clr_inverted(&mut self) {
-        self.regs.write_inv_b(false)
-    }
 }
 
 impl<S: SliceId, M: SliceMode, C: ChannelId> Sealed for Channel<S, M, C> {}
@@ -603,6 +591,18 @@ impl<S: SliceId, M: SliceMode + ValidSliceMode<S>> Channel<S, M, A> {
             pin: pin.into_mode(),
         }
     }
+
+    /// Invert channel output
+    #[inline]
+    pub fn set_inverted(&mut self) {
+        self.regs.write_inv_a(true)
+    }
+
+    /// Stop inverting channel output
+    #[inline]
+    pub fn clr_inverted(&mut self) {
+        self.regs.write_inv_a(false)
+    }
 }
 
 impl<S: SliceId, M: SliceMode + ValidSliceMode<S>> Channel<S, M, B> {
@@ -617,6 +617,18 @@ impl<S: SliceId, M: SliceMode + ValidSliceMode<S>> Channel<S, M, B> {
         PwmPinToken {
             pin: pin.into_mode(),
         }
+    }
+
+    /// Invert channel output
+    #[inline]
+    pub fn set_inverted(&mut self) {
+        self.regs.write_inv_b(true)
+    }
+
+    /// Stop inverting channel output
+    #[inline]
+    pub fn clr_inverted(&mut self) {
+        self.regs.write_inv_b(false)
     }
 }
 
