@@ -11,7 +11,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 cortex-m = "0.7.2"
-rp2040-hal = { path = "../../rp2040-hal", version = "0.2.0"}
+rp2040-hal = { path = "../../rp2040-hal", version = "0.3.0"}
 cortex-m-rt = { version = "0.7", optional = true }
 embedded-time = "0.12.0"
 
