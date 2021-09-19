@@ -1,8 +1,47 @@
 //! Inter-Integrated Circuit (I2C) bus
-// Based on: https://github.com/raspberrypi/pico-sdk/blob/master/src/rp2_common/hardware_i2c/i2c.c
-// Structure from: https://github.com/japaric/stm32f30x-hal/blob/master/src/i2c.rs
-// See [Chapter 4 Section 3](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
-
+//!
+//! See [Chapter 4 Section 3](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
+//!
+//! ## Usage
+//! ```no_run
+//! use embedded_time::rate::Extensions;
+//! use rp2040_hal::{i2c::I2C, gpio::Pins, pac, sio::Sio};
+//! let mut peripherals = pac::Peripherals::take().unwrap();
+//! let sio = Sio::new(peripherals.SIO);
+//! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
+//!
+//! let mut i2c = I2C::i2c1(
+//!     peripherals.I2C1,
+//!     pins.gpio18.into_mode(), // sda
+//!     pins.gpio19.into_mode(), // scl
+//!     400.kHz(),
+//!     &mut peripherals.RESETS,
+//!     125_000_000.Hz(),
+//! );
+//!
+//! // Scan for devices on the bus by attempting to read from them
+//! use embedded_hal::prelude::_embedded_hal_blocking_i2c_Read;
+//! for i in 0..=127 {
+//!     let mut readbuf: [u8; 1] = [0; 1];
+//!     let result = i2c.read(i, &mut readbuf);
+//!     if let Ok(d) = result {
+//!         // Do whatever work you want to do with found devices
+//!         // writeln!(uart, "Device found at address{:?}", i).unwrap();
+//!     }
+//! }
+//!
+//! // Write some data to a device at 0x2c
+//! use embedded_hal::prelude::_embedded_hal_blocking_i2c_Write;
+//! i2c.write(0x2c, &[1, 2, 3]).unwrap();
+//!
+//! // Write and then read from a device at 0x3a
+//! use embedded_hal::prelude::_embedded_hal_blocking_i2c_WriteRead;
+//! let mut readbuf: [u8; 1] = [0; 1];
+//! i2c.write_read(0x2c, &[1, 2, 3], &mut readbuf).unwrap();
+//! ```
+//!
+//! See [examples/i2c.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/i2c.rs)
+//! for a complete example
 use crate::{
     gpio::pin::bank0::{
         BankPinId, Gpio0, Gpio1, Gpio10, Gpio11, Gpio12, Gpio13, Gpio14, Gpio15, Gpio16, Gpio17,
