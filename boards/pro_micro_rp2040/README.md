@@ -53,7 +53,7 @@ If you get an error about not being able to find `elf2uf2-rs`, try:
 $ cargo install elf2uf2-rs, then repeating the `cargo run` command above.
 ```
 
-### [rainbow](./examples/rainbow.rs)
+### [Rainbow](./examples/pro_micro_rainbow.rs)
 
 This example will display a colour-wheel rainbow effect on the on-board LED.
 
