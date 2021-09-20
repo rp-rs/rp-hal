@@ -53,9 +53,45 @@ If you get an error about not being able to find `elf2uf2-rs`, try:
 $ cargo install elf2uf2-rs, then repeating the `cargo run` command above.
 ```
 
-### [rainbow](./examples/rainbow.rs)
+### [pico_blinky](./examples/pico_blinky.rs)
 
-This example will display a colour-wheel rainbow effect on the on-board LED.
+Flashes the Pico's on-board LED on and off.
+
+### [pico_gpio_in_out](./examples/pico_gpio_in_out.rs)
+
+Reads the 'Boot Select' pin and drives the on-board LED to match it (i.e. on when pressed, off when not pressed).
+
+### [pico_rtic](./examples/pico_rtic.rs)
+
+Demonstrates the use of the [Real-Time Interrupt-driven Concurrency Framework] on the Raspberry Pi Pico.
+
+[Real-Time Interrupt-driven Concurrency Framework]: https://rtic.rs
+
+### [pico_countdown_blinky](./examples/pico_countdown_blinky.rs)
+
+Another LED blinking example, but using a Timer in count-down mode.
+
+### [pico_pwm_blink](./examples/pico_pwm_blink.rs)
+
+Puts out an analog 'triangle wave' on GPIO 25, using the PWM hardware.
+
+### [pico_usb_serial](./examples/pico_usb_serial.rs)
+
+Creates a USB Serial device on a Pico board.
+
+The USB Serial device will print `HelloWorld` on start-up, and then echo any
+incoming characters - except that any lower-case ASCII characters are
+converted to the upper-case equivalent.
+
+### [pico_usb_serial_interrupt](./examples/pico_usb_serial_interrupt.rs)
+
+Creates a USB Serial device on a Pico board, but demonstrating handling
+interrupts when USB data arrives.
+
+### [pico_usb_twitchy_mouse](./examples/pico_usb_twitchy_mouse.rs)
+
+Demonstrates emulating a USB Human Input Device (HID) Mouse. The mouse
+cursor will jiggle left and right.
 
 ## Contributing
 
