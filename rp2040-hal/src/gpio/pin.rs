@@ -528,26 +528,26 @@ where
 
     /// Set the interrupt override.
     #[inline]
-    pub fn set_interrupt_override(&mut self, r#override: InterruptOverride) {
-        self.regs.set_interrupt_override(r#override);
+    pub fn set_interrupt_override(&mut self, override_value: InterruptOverride) {
+        self.regs.set_interrupt_override(override_value);
     }
 
     /// Set the input override.
     #[inline]
-    pub fn set_input_override(&mut self, r#override: InputOverride) {
-        self.regs.set_input_override(r#override);
+    pub fn set_input_override(&mut self, override_value: InputOverride) {
+        self.regs.set_input_override(override_value);
     }
 
     /// Set the output enable override.
     #[inline]
-    pub fn set_output_enable_override(&mut self, r#override: OutputEnableOverride) {
-        self.regs.set_output_enable_override(r#override);
+    pub fn set_output_enable_override(&mut self, override_value: OutputEnableOverride) {
+        self.regs.set_output_enable_override(override_value);
     }
 
     /// Set the output override.
     #[inline]
-    pub fn set_output_override(&mut self, r#override: OutputOverride) {
-        self.regs.set_output_override(r#override);
+    pub fn set_output_override(&mut self, override_value: OutputOverride) {
+        self.regs.set_output_override(override_value);
     }
 
     #[inline]
