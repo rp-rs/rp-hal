@@ -128,13 +128,24 @@ a [Pimoroni Pico Lipo 16MB] - a board with USB-C, STEMMA QT/Qwiic connectors,
 plus a Li-Po battery charging circuit.
 
 This crate includes the [rp2040-hal], but also configures each pin of the
-RP2040 chip according to how it is connected up on the Pico Liop.
+RP2040 chip according to how it is connected up on the Pico Lipo.
 
 Note that if you use this crate the compiler will expect the full 16MB flash
 space, and so it may not work if you only have the 4MB variant. 
 
 [Pimoroni Pico Lipo 16MB]: https://shop.pimoroni.com/products/pimoroni-pico-lipo?variant=39335427080275
 [pico_lipo_16mb]: https://github.com/rp-rs/rp-hal/tree/main/boards/pico_lipo_16mb
+
+### [pro_micro_rp2040] - Board Support for the [Sparkfun Pro Micro RP2040]
+
+You should include this crate if you are writing code that you want to run on
+a [Sparkfun Pro Micro RP2040] - a smaller RP2040 board with USB-C and a WS2812B addressable LED.
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the Pro Micro RP2040.
+
+[Sparkfun Pro Micro RP2040]: https://www.sparkfun.com/products/18288
+[pro_micro_rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/pro_micro_rp2040
 
 <!-- ROADMAP -->
 ## Roadmap
