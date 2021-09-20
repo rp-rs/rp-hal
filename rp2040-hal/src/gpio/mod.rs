@@ -83,9 +83,9 @@ pub enum InputOverride {
     DontInvert = 0,
     /// Invert the peripheral input.
     Invert = 1,
-    /// Drive peripheral output low.
+    /// Drive peripheral input low.
     AlwaysLow = 2,
-    /// Drive peripheral output high.
+    /// Drive peripheral input high.
     AlwaysHigh = 3,
 }
 
@@ -103,14 +103,14 @@ pub enum OutputEnableOverride {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
-/// Output  override state.
+/// Output override state.
 pub enum OutputOverride {
-    /// Use the original output  signal from selected peripheral.
+    /// Use the original output signal from selected peripheral.
     DontInvert = 0,
-    /// Invert the output  signal from selected peripheral.
+    /// Invert the output signal from selected peripheral.
     Invert = 1,
     /// Drive output low.
-    Disable = 2,
+    AlwaysLow = 2,
     /// Drive output high.
-    Enable = 3,
+    AlwaysHigh = 3,
 }
