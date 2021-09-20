@@ -1,6 +1,9 @@
 // Based heavily on and in some places copied from `atsamd-hal` gpio::v2
 use super::dynpin::{DynGroup, DynPinId};
-use super::{OutputDriveStrength, OutputSlewRate};
+use super::{
+    InputOverride, InterruptOverride, OutputDriveStrength, OutputEnableOverride, OutputOverride,
+    OutputSlewRate,
+};
 use crate::gpio::dynpin::{DynDisabled, DynFunction, DynInput, DynOutput, DynPinMode};
 use crate::pac;
 
@@ -242,6 +245,42 @@ pub(super) unsafe trait RegisterInterface {
             DynGroup::Bank0 => gpio_change_mode(num, mode),
             DynGroup::Qspi => qspi_change_mode(num, mode),
         }
+    }
+
+    /// Set the interrupt override.
+    #[inline]
+    fn set_interrupt_override(&self, override_value: InterruptOverride) {
+        let num = self.id().num as usize;
+        unsafe { &(*pac::IO_BANK0::ptr()) }.gpio[num]
+            .gpio_ctrl
+            .modify(|_, w| w.irqover().bits(override_value as u8));
+    }
+
+    /// Set the input override.
+    #[inline]
+    fn set_input_override(&self, override_value: InputOverride) {
+        let num = self.id().num as usize;
+        unsafe { &(*pac::IO_BANK0::ptr()) }.gpio[num]
+            .gpio_ctrl
+            .modify(|_, w| w.inover().bits(override_value as u8));
+    }
+
+    /// Set the output enable override.
+    #[inline]
+    fn set_output_enable_override(&self, override_value: OutputEnableOverride) {
+        let num = self.id().num as usize;
+        unsafe { &(*pac::IO_BANK0::ptr()) }.gpio[num]
+            .gpio_ctrl
+            .modify(|_, w| w.oeover().bits(override_value as u8));
+    }
+
+    /// Set the output override.
+    #[inline]
+    fn set_output_override(&self, override_value: OutputOverride) {
+        let num = self.id().num as usize;
+        unsafe { &(*pac::IO_BANK0::ptr()) }.gpio[num]
+            .gpio_ctrl
+            .modify(|_, w| w.outover().bits(override_value as u8));
     }
 }
 

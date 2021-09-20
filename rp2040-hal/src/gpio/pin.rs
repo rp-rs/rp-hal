@@ -93,7 +93,10 @@
 //! [`OptionalKind`]: crate::typelevel#optionalkind-trait-pattern
 //! [`AnyKind`]: crate::typelevel#anykind-trait-pattern
 use super::dynpin::{DynDisabled, DynInput, DynOutput, DynPinId, DynPinMode};
-use super::{OutputDriveStrength, OutputSlewRate};
+use super::{
+    InputOverride, InterruptOverride, OutputDriveStrength, OutputEnableOverride, OutputOverride,
+    OutputSlewRate,
+};
 use crate::gpio::reg::RegisterInterface;
 use crate::typelevel::{Is, NoneT, Sealed};
 use core::convert::Infallible;
@@ -517,10 +520,34 @@ where
         self.regs.read_slew_rate()
     }
 
-    /// Set the slew rate for the pin
+    /// Set the slew rate for the pin.
     #[inline]
     pub fn set_slew_rate(&mut self, rate: OutputSlewRate) {
         self.regs.write_slew_rate(rate)
+    }
+
+    /// Set the interrupt override.
+    #[inline]
+    pub fn set_interrupt_override(&mut self, override_value: InterruptOverride) {
+        self.regs.set_interrupt_override(override_value);
+    }
+
+    /// Set the input override.
+    #[inline]
+    pub fn set_input_override(&mut self, override_value: InputOverride) {
+        self.regs.set_input_override(override_value);
+    }
+
+    /// Set the output enable override.
+    #[inline]
+    pub fn set_output_enable_override(&mut self, override_value: OutputEnableOverride) {
+        self.regs.set_output_enable_override(override_value);
+    }
+
+    /// Set the output override.
+    #[inline]
+    pub fn set_output_override(&mut self, override_value: OutputOverride) {
+        self.regs.set_output_override(override_value);
     }
 
     #[inline]
