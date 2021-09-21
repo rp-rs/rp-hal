@@ -4,7 +4,7 @@ You should include this crate if you are writing code that you want to run on
 a [Raspberry Pi Pico] - the original launch PCB for the RP2040 chip.
 
 This crate includes the [rp2040-hal], but also configures each pin of the
-RP2040 chip according to how it is connected up on the Pro Micro RP2040.
+RP2040 chip according to how it is connected up on the Pico.
 
 [Raspberry Pi Pico]: https://www.raspberrypi.org/products/raspberry-pi-pico/
 [pico]: https://github.com/rp-rs/rp-hal/tree/main/boards/pico
@@ -123,7 +123,7 @@ to intervene to uphold that code of conduct.
 
 The contents of this repository are dual-licensed under the _MIT OR Apache
 2.0_ License. That means you can chose either the MIT licence or the
-Apache-2.0 when you re-use this code. See `MIT` or `APACHE2.0` for more
+Apache-2.0 licence when you re-use this code. See `MIT` or `APACHE2.0` for more
 information on each specific licence.
 
 Any submissions to this project (e.g. as Pull Requests) must be made available
