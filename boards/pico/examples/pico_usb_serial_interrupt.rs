@@ -104,8 +104,9 @@ fn main() -> ! {
         USB_BUS = Some(usb_bus);
     }
 
-    // Grab a reference to the USB Bus allocator. We must promise not to take
-    // mutable access to this global variable whilst the reference exists!
+    // Grab a reference to the USB Bus allocator. We are promising to the
+    // compiler not to take mutable access to this global variable whilst this
+    // reference exists!
     let bus_ref = unsafe { USB_BUS.as_ref().unwrap() };
 
     // Set up the USB Communications Class Device driver
