@@ -1,4 +1,4 @@
-//! # Pico Blinky
+//! # Pico Blinky Example
 //!
 //! Blinks the LED on a Pico board.
 //!

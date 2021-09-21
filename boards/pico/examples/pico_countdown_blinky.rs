@@ -1,4 +1,4 @@
-//! # Pico Countdown Blinky
+//! # Pico Countdown Blinky Example
 //!
 //! Blinks the LED on a Pico board, using an RP2040 Timer in Count-down mode.
 //!

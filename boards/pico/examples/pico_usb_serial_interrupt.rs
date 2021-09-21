@@ -1,49 +1,86 @@
-//! Creates a USB Serial device on a Pico board, with the USB driver running in the USB interrupt
+//! # Pico USB Serial (with Interrupts) Example
 //!
-//! This will create a USB Serial device echoing anything it receives converting to caps the ASCII
-//! alphabetical caracters.
+//! Creates a USB Serial device on a Pico board, with the USB driver running in
+//! the USB interrupt.
+//!
+//! This will create a USB Serial device echoing anything it receives. Incoming
+//! ASCII characters are converted to upercase, so you can tell it is working
+//! and not just local-echo!
+//!
+//! See the `Cargo.toml` file for Copyright and licence details.
+
 #![no_std]
 #![no_main]
 
-use crate::pac::interrupt;
+// The macro for our start-up function
 use cortex_m_rt::entry;
+
+// The macro for marking our interrupt functions
+use pico::hal::pac::interrupt;
+
+// GPIO traits
+use embedded_hal::digital::v2::OutputPin;
+
+// Time handling traits
+use embedded_time::rate::*;
+
+// Ensure we halt the program on panic (if we don't mention this crate it won't
+// be linked)
 use panic_halt as _;
-use pico::{
-    hal::{
-        self,
-        clocks::{init_clocks_and_plls, Clock},
-        pac,
-        sio::Sio,
-        usb::UsbBus,
-        watchdog::Watchdog,
-    },
-    XOSC_CRYSTAL_FREQ,
-};
+
+// Pull in any important traits
+use pico::hal::prelude::*;
+
+// A shorter alias for the Peripheral Access Crate, which provides low-level
+// register access
+use pico::hal::pac;
+
+// A shorter alias for the Hardware Abstraction Layer, which provides
+// higher-level drivers.
+use pico::hal;
+
+// USB Device support
 use usb_device::{class_prelude::*, prelude::*};
+
+// USB Communications Class Device support
 use usbd_serial::SerialPort;
 
+/// The linker will place this boot block at the start of our program image. We
+/// need this to help the ROM bootloader get our code up and running.
 #[link_section = ".boot2"]
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
 
-// Static data so that it can be accessed in both main and interrupt context
-static mut USB_DEVICE: Option<UsbDevice<UsbBus>> = None;
-static mut USB_BUS: Option<UsbBusAllocator<UsbBus>> = None;
-static mut USB_SERIAL: Option<SerialPort<UsbBus>> = None;
-static mut SAID_HELLO: bool = false;
+/// The USB Device Driver (shared with the interrupt).
+static mut USB_DEVICE: Option<UsbDevice<hal::usb::UsbBus>> = None;
 
-// Blinky-related imports, not needed for USB
-use embedded_hal::digital::v2::OutputPin;
-use embedded_time::rate::*;
-use pico::Pins;
+/// The USB Bus Driver (shared with the interrupt).
+static mut USB_BUS: Option<UsbBusAllocator<hal::usb::UsbBus>> = None;
 
+/// The USB Serial Device Driver (shared with the interrupt).
+static mut USB_SERIAL: Option<SerialPort<hal::usb::UsbBus>> = None;
+
+/// Entry point to our bare-metal application.
+///
+/// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables are initialised.
+///
+/// The function configures the RP2040 peripherals, then blinks the LED in an
+/// infinite loop.
 #[entry]
 fn main() -> ! {
+    // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
-    let mut watchdog = Watchdog::new(pac.WATCHDOG);
+    let core = pac::CorePeripherals::take().unwrap();
 
-    let clocks = init_clocks_and_plls(
-        XOSC_CRYSTAL_FREQ,
+    // Set up the watchdog driver - needed by the clock setup code
+    let mut watchdog = hal::watchdog::Watchdog::new(pac.WATCHDOG);
+
+    // Configure the clocks
+    //
+    // Our default is 12 MHz crystal input, 125 MHz system clock
+    let clocks = hal::clocks::init_clocks_and_plls(
+        pico::XOSC_CRYSTAL_FREQ,
         pac.XOSC,
         pac.CLOCKS,
         pac.PLL_SYS,
@@ -54,7 +91,7 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let usb_bus = UsbBusAllocator::new(UsbBus::new(
+    let usb_bus = UsbBusAllocator::new(hal::usb::UsbBus::new(
         pac.USBCTRL_REGS,
         pac.USBCTRL_DPRAM,
         clocks.usb_clock,
@@ -62,6 +99,7 @@ fn main() -> ! {
         &mut pac.RESETS,
     ));
     unsafe {
+        // Note (safety): This is safe as interrupts haven't been started yet
         USB_BUS = Some(usb_bus);
     }
 
@@ -71,6 +109,7 @@ fn main() -> ! {
     }
 
     let usb_dev = UsbDeviceBuilder::new(
+        // Note (safety): This is safe as interrupts haven't been started yet
         unsafe { USB_BUS.as_ref().unwrap() },
         UsbVidPid(0x16c0, 0x27dd),
     )
@@ -80,6 +119,7 @@ fn main() -> ! {
     .device_class(2) // from: https://www.usb.org/defined-class-codes
     .build();
     unsafe {
+        // Note (safety): This is safe as interrupts haven't been started yet
         USB_DEVICE = Some(usb_dev);
     }
 
@@ -88,20 +128,28 @@ fn main() -> ! {
         pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
     };
 
-    // No more USB code after this point in main!
-    // We can do anything we want in here since USB is handled
-    // in the interrupt - let's blink an LED.
-    let core = pac::CorePeripherals::take().unwrap();
+    // No more USB code after this point in main! We can do anything we want in
+    // here since USB is handled in the interrupt - let's blink an LED!
+
+    // The delay object lets us wait for specified amounts of time (in
+    // milliseconds)
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
 
-    let sio = Sio::new(pac.SIO);
-    let pins = Pins::new(
+    // The single-cycle I/O block controls our GPIO pins
+    let sio = hal::sio::Sio::new(pac.SIO);
+
+    // Set the pins up according to their function on this particular board
+    let pins = pico::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,
         &mut pac.RESETS,
     );
+
+    // Set the LED to be an output
     let mut led_pin = pins.led.into_push_pull_output();
+
+    // Blink the LED at 1 Hz
     loop {
         led_pin.set_high().unwrap();
         delay.delay_ms(500);
@@ -110,37 +158,55 @@ fn main() -> ! {
     }
 }
 
+/// This function is called whenever the USB Hardware generates an Interrupt
+/// Request.
+///
+/// We do all our USB work under interrupt, so the main thread can continue on
+/// knowing nothing about USB.
 #[allow(non_snake_case)]
 #[interrupt]
 unsafe fn USBCTRL_IRQ() {
-    let mut buf = [0u8; 64];
+    use core::sync::atomic::{AtomicBool, Ordering};
+
+    /// Note whether we've already printed the "hello" message.
+    static SAID_HELLO: AtomicBool = AtomicBool::new(false);
+
+    // Grab the global objects. This is OK as we only access them under interrupt.
     let usb_dev = USB_DEVICE.as_mut().unwrap();
     let serial = USB_SERIAL.as_mut().unwrap();
 
-    if !SAID_HELLO {
-        SAID_HELLO = true;
-        let _ = serial.write(b"HelloWorld!\r\n");
+    // Say hello exactly once on start-up
+    if SAID_HELLO.load(Ordering::Relaxed) == false {
+        SAID_HELLO.store(true, Ordering::Relaxed);
+        let _ = serial.write(b"Hello, World!\r\n");
     }
 
+    // Poll the USB driver with all of our supported USB Classes
     if usb_dev.poll(&mut [serial]) {
-        let _ = serial.read(&mut buf).map(|count| {
-            if count == 0 {
-                return;
+        let mut buf = [0u8; 64];
+        match serial.read(&mut buf) {
+            Err(_e) => {
+                // Do nothing
             }
-
-            // Echo back in upper case
-            buf.iter_mut().take(count).for_each(|c| {
-                if let 0x61..=0x7a = *c {
-                    *c &= !0x20;
-                }
-            });
-
-            let mut wr_ptr = &buf[..count];
-            while !wr_ptr.is_empty() {
-                let _ = serial.write(wr_ptr).map(|len| {
-                    wr_ptr = &wr_ptr[len..];
+            Ok(0) => {
+                // Do nothing
+            }
+            Ok(count) => {
+                // Convert to upper case
+                buf.iter_mut().take(count).for_each(|b| {
+                    b.make_ascii_uppercase();
                 });
+
+                // Send back to the host
+                let mut wr_ptr = &buf[..count];
+                while !wr_ptr.is_empty() {
+                    let _ = serial.write(wr_ptr).map(|len| {
+                        wr_ptr = &wr_ptr[len..];
+                    });
+                }
             }
-        });
+        }
     }
 }
+
+// End of file
