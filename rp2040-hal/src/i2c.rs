@@ -54,7 +54,7 @@ use crate::{
 };
 use embedded_time::rate::Hertz;
 use hal::blocking::i2c::{Read, Write, WriteRead};
-use rp2040_pac::{I2C0, I2C1, RESETS};
+use pac::{I2C0, I2C1, RESETS};
 
 /// I2C error
 #[non_exhaustive]

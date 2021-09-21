@@ -19,12 +19,21 @@
 //! let spi = Spi::<_, _, 8>::new(peripherals.SPI0).init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), &MODE_0);
 //! ```
 
-use crate::resets::SubsystemReset;
+use crate::{
+    gpio::pin::bank0::{
+        BankPinId, Gpio0, Gpio1, Gpio10, Gpio11, Gpio12, Gpio13, Gpio14, Gpio15, Gpio16, Gpio17,
+        Gpio18, Gpio19, Gpio2, Gpio3, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8, Gpio9,
+    },
+    resets::SubsystemReset,
+    typelevel::Sealed,
+};
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
-use embedded_hal::blocking::spi;
-use embedded_hal::spi::{FullDuplex, Mode, Phase, Polarity};
+use embedded_hal::{
+    blocking::spi,
+    spi::{FullDuplex, Mode, Phase, Polarity},
+};
 use embedded_time::rate::*;
-use pac::RESETS;
+use pac::{RESETS, SPI0, SPI1};
 
 /// State of the SPI
 pub trait State {}
@@ -53,6 +62,45 @@ pub trait DataSize {}
 
 impl DataSize for u8 {}
 impl DataSize for u16 {}
+
+/// CS pin
+pub trait CsPin<Spi>: Sealed {}
+
+/// Sck pin
+pub trait SckPin<Spi>: Sealed {}
+
+/// Tx pin
+pub trait TxPin<Spi>: Sealed {}
+
+/// Rx pin
+pub trait RxPin<Spi>: Sealed {}
+
+impl RxPin<SPI0> for Gpio0 {}
+impl CsPin<SPI0> for Gpio1 {}
+
+impl SckPin<SPI0> for Gpio2 {}
+impl TxPin<SPI0> for Gpio3 {}
+impl RxPin<SPI0> for Gpio4 {}
+impl CsPin<SPI0> for Gpio5 {}
+
+impl SckPin<SPI0> for Gpio6 {}
+impl TxPin<SPI0> for Gpio7 {}
+impl RxPin<SPI1> for Gpio8 {}
+impl CsPin<SPI1> for Gpio9 {}
+
+impl SckPin<SPI1> for Gpio10 {}
+impl TxPin<SPI1> for Gpio11 {}
+impl RxPin<SPI1> for Gpio12 {}
+impl CsPin<SPI1> for Gpio13 {}
+
+impl SckPin<SPI1> for Gpio14 {}
+impl TxPin<SPI1> for Gpio15 {}
+
+impl RxPin<SPI0> for Gpio16 {}
+impl CsPin<SPI0> for Gpio17 {}
+
+impl SckPin<SPI0> for Gpio18 {}
+impl TxPin<SPI0> for Gpio19 {}
 
 /// Spi
 pub struct Spi<S: State, D: SpiDevice, const DS: u8> {
