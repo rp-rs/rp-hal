@@ -24,15 +24,15 @@ use embedded_time::rate::*;
 use panic_halt as _;
 
 // Pull in any important traits
-use pico::hal::prelude::*;
+use pico_lipo_16_mb::hal::prelude::*;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
-use pico::hal::pac;
+use pico_lipo_16_mb::hal::pac;
 
 // A shorter alias for the Hardware Abstraction Layer, which provides
 // higher-level drivers.
-use pico::hal;
+use pico_lipo_16_mb::hal;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -60,7 +60,7 @@ fn main() -> ! {
     //
     // Our default is 12 MHz crystal input, 125 MHz system clock
     let clocks = hal::clocks::init_clocks_and_plls(
-        pico::XOSC_CRYSTAL_FREQ,
+        pico_lipo_16_mb::XOSC_CRYSTAL_FREQ,
         pac.XOSC,
         pac.CLOCKS,
         pac.PLL_SYS,
@@ -79,7 +79,7 @@ fn main() -> ! {
     let sio = hal::sio::Sio::new(pac.SIO);
 
     // Set the pins up according to their function on this particular board
-    let pins = pico::Pins::new(
+    let pins = pico_lipo_16_mb::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,
