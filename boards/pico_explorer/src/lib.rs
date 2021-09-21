@@ -112,8 +112,6 @@ pub struct Pins {
     pub gpio5: Pin<Gpio5, <Gpio5 as PinId>::Reset>,
     pub gpio6: Pin<Gpio6, <Gpio6 as PinId>::Reset>,
     pub gpio7: Pin<Gpio7, <Gpio7 as PinId>::Reset>,
-    pub spi_sclk: Pin<Gpio18, FunctionSpi>,
-    pub spi_mosi: Pin<Gpio19, FunctionSpi>,
     pub i2c_sda: Pin<Gpio20, FunctionI2C>,
     pub i2c_scl: Pin<Gpio21, FunctionI2C>,
     pub i2c_int: Pin<Gpio22, FunctionI2C>,
@@ -146,7 +144,19 @@ pub enum MotorAction {
 }
 
 pub type Screen = ST7789<
-    SPIInterface<Spi<Enabled, SPI0, 8>, Pin<Gpio16, PushPullOutput>, Pin<Gpio17, PushPullOutput>>,
+    SPIInterface<
+        Spi<
+            Enabled,
+            SPI0,
+            (
+                hal::gpio::Pin<Gpio18, hal::gpio::Function<hal::gpio::Spi>>,
+                hal::gpio::Pin<Gpio19, hal::gpio::Function<hal::gpio::Spi>>,
+            ),
+            8,
+        >,
+        Pin<Gpio16, PushPullOutput>,
+        Pin<Gpio17, PushPullOutput>,
+    >,
     DummyPin,
 >;
 
@@ -198,7 +208,7 @@ impl PicoExplorer {
         let spi_sclk = internal_pins.spi_sclk.into_mode::<FunctionSpi>();
         let spi_mosi = internal_pins.spi_mosi.into_mode::<FunctionSpi>();
 
-        let spi_screen = Spi::<_, _, 8>::new(spi0).init(
+        let spi_screen = Spi::<_, _, _, 8>::new_sck_tx(spi0, spi_sclk, spi_mosi).init(
             resets,
             125_000_000u32.Hz(),
             16_000_000u32.Hz(),
@@ -233,8 +243,6 @@ impl PicoExplorer {
                 gpio5: internal_pins.gpio5,
                 gpio6: internal_pins.gpio6,
                 gpio7: internal_pins.gpio7,
-                spi_sclk,
-                spi_mosi,
                 i2c_sda: internal_pins.i2c_sda.into_mode(),
                 i2c_scl: internal_pins.i2c_scl.into_mode(),
                 i2c_int: internal_pins.i2c_int.into_mode(),

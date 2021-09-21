@@ -24,6 +24,7 @@ use crate::{
         BankPinId, Gpio0, Gpio1, Gpio10, Gpio11, Gpio12, Gpio13, Gpio14, Gpio15, Gpio16, Gpio17,
         Gpio18, Gpio19, Gpio2, Gpio3, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8, Gpio9,
     },
+    gpio::{FunctionSpi, Pin, PinId},
     resets::SubsystemReset,
     typelevel::Sealed,
 };
@@ -103,15 +104,103 @@ impl SckPin<SPI0> for Gpio18 {}
 impl TxPin<SPI0> for Gpio19 {}
 
 /// Spi
-pub struct Spi<S: State, D: SpiDevice, const DS: u8> {
+pub struct Spi<S: State, D: SpiDevice, Pins, const DS: u8> {
     device: D,
+    pins: Pins,
     state: PhantomData<S>,
 }
 
-impl<S: State, D: SpiDevice, const DS: u8> Spi<S, D, DS> {
-    fn transition<To: State>(self, _: To) -> Spi<To, D, DS> {
+impl<
+        D: SpiDevice,
+        Cs: PinId + BankPinId,
+        Sck: PinId + BankPinId,
+        Tx: PinId + BankPinId,
+        Rx: PinId + BankPinId,
+        const DS: u8,
+    >
+    Spi<
+        Disabled,
+        D,
+        (
+            Pin<Cs, FunctionSpi>,
+            Pin<Sck, FunctionSpi>,
+            Pin<Tx, FunctionSpi>,
+            Pin<Rx, FunctionSpi>,
+        ),
+        DS,
+    >
+{
+    /// Create new spi device
+    pub fn new(
+        device: D,
+        cs_pin: Pin<Cs, FunctionSpi>,
+        sck_pin: Pin<Sck, FunctionSpi>,
+        tx_pin: Pin<Tx, FunctionSpi>,
+        rx_pin: Pin<Rx, FunctionSpi>,
+    ) -> Self {
+        Spi {
+            device,
+            pins: (cs_pin, sck_pin, tx_pin, rx_pin),
+            state: PhantomData,
+        }
+    }
+}
+
+impl<D: SpiDevice, Sck: PinId + BankPinId, Tx: PinId + BankPinId, const DS: u8>
+    Spi<Disabled, D, (Pin<Sck, FunctionSpi>, Pin<Tx, FunctionSpi>), DS>
+{
+    /// Create new spi device
+    pub fn new_sck_tx(
+        device: D,
+        sck_pin: Pin<Sck, FunctionSpi>,
+        tx_pin: Pin<Tx, FunctionSpi>,
+    ) -> Self {
+        Spi {
+            device,
+            pins: (sck_pin, tx_pin),
+            state: PhantomData,
+        }
+    }
+}
+
+impl<
+        D: SpiDevice,
+        Sck: PinId + BankPinId,
+        Tx: PinId + BankPinId,
+        Rx: PinId + BankPinId,
+        const DS: u8,
+    >
+    Spi<
+        Disabled,
+        D,
+        (
+            Pin<Sck, FunctionSpi>,
+            Pin<Tx, FunctionSpi>,
+            Pin<Rx, FunctionSpi>,
+        ),
+        DS,
+    >
+{
+    /// Create new spi device
+    pub fn new_sck_tx_rx(
+        device: D,
+        sck_pin: Pin<Sck, FunctionSpi>,
+        tx_pin: Pin<Tx, FunctionSpi>,
+        rx_pin: Pin<Rx, FunctionSpi>,
+    ) -> Self {
+        Spi {
+            device,
+            pins: (sck_pin, tx_pin, rx_pin),
+            state: PhantomData,
+        }
+    }
+}
+
+impl<S: State, D: SpiDevice, Pins, const DS: u8> Spi<S, D, Pins, DS> {
+    fn transition<To: State>(self, _: To) -> Spi<To, D, Pins, DS> {
         Spi {
             device: self.device,
+            pins: self.pins,
             state: PhantomData,
         }
     }
@@ -170,15 +259,7 @@ impl<S: State, D: SpiDevice, const DS: u8> Spi<S, D, DS> {
     }
 }
 
-impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
-    /// Create new spi device
-    pub fn new(device: D) -> Spi<Disabled, D, DS> {
-        Spi {
-            device,
-            state: PhantomData,
-        }
-    }
-
+impl<D: SpiDevice, Pins, const DS: u8> Spi<Disabled, D, Pins, DS> {
     /// Set format and datasize
     fn set_format(&mut self, data_bits: u8, mode: &Mode) {
         self.device.sspcr0.modify(|_, w| unsafe {
@@ -198,7 +279,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
         peri_frequency: F,
         baudrate: B,
         mode: &Mode,
-    ) -> Spi<Enabled, D, DS> {
+    ) -> Spi<Enabled, D, Pins, DS> {
         self.device.reset_bring_down(resets);
         self.device.reset_bring_up(resets);
 
@@ -216,7 +297,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
     }
 }
 
-impl<D: SpiDevice, const DS: u8> Spi<Enabled, D, DS> {
+impl<D: SpiDevice, Pins, const DS: u8> Spi<Enabled, D, Pins, DS> {
     fn is_writable(&self) -> bool {
         self.device.sspsr.read().tnf().bit_is_set()
     }
@@ -225,7 +306,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Enabled, D, DS> {
     }
 
     /// Disable the spi to reset its configuration
-    pub fn disable(self) -> Spi<Disabled, D, DS> {
+    pub fn disable(self) -> Spi<Disabled, D, Pins, DS> {
         self.device.sspcr1.modify(|_, w| w.sse().clear_bit());
 
         self.transition(Disabled { __private: () })
@@ -236,7 +317,7 @@ macro_rules! impl_write {
     ($type:ident, [$($nr:expr),+]) => {
 
         $(
-        impl<D: SpiDevice> FullDuplex<$type> for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice, Pins> FullDuplex<$type> for Spi<Enabled, D, Pins, $nr> {
             type Error = Infallible;
 
             fn read(&mut self) -> Result<$type, nb::Error<Infallible>> {
@@ -261,9 +342,9 @@ macro_rules! impl_write {
             }
         }
 
-        impl<D: SpiDevice> spi::write::Default<$type> for Spi<Enabled, D, $nr> {}
-        impl<D: SpiDevice> spi::transfer::Default<$type> for Spi<Enabled, D, $nr> {}
-        impl<D: SpiDevice> spi::write_iter::Default<$type> for Spi<Enabled, D, $nr> {}
+        impl<D: SpiDevice, Pins> spi::write::Default<$type> for Spi<Enabled, D, Pins, $nr> {}
+        impl<D: SpiDevice, Pins> spi::transfer::Default<$type> for Spi<Enabled, D, Pins, $nr> {}
+        impl<D: SpiDevice, Pins> spi::write_iter::Default<$type> for Spi<Enabled, D, Pins, $nr> {}
 
     )+
 
