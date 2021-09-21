@@ -104,23 +104,23 @@ fn main() -> ! {
         USB_BUS = Some(usb_bus);
     }
 
+    // Grab a reference to the USB Bus allocator. We must promise not to take
+    // mutable access to this global variable whilst the reference exists!
+    let bus_ref = unsafe { USB_BUS.as_ref().unwrap() };
+
     // Set up the USB Communications Class Device driver
-    let serial = SerialPort::new(unsafe { USB_BUS.as_ref().unwrap() });
+    let serial = SerialPort::new(bus_ref);
     unsafe {
         USB_SERIAL = Some(serial);
     }
 
     // Create a USB device with a fake VID and PID
-    let usb_dev = UsbDeviceBuilder::new(
-        // Note (safety): This is safe as interrupts haven't been started yet
-        unsafe { USB_BUS.as_ref().unwrap() },
-        UsbVidPid(0x16c0, 0x27dd),
-    )
-    .manufacturer("Fake company")
-    .product("Serial port")
-    .serial_number("TEST")
-    .device_class(2) // from: https://www.usb.org/defined-class-codes
-    .build();
+    let usb_dev = UsbDeviceBuilder::new(bus_ref, UsbVidPid(0x16c0, 0x27dd))
+        .manufacturer("Fake company")
+        .product("Serial port")
+        .serial_number("TEST")
+        .device_class(2) // from: https://www.usb.org/defined-class-codes
+        .build();
     unsafe {
         // Note (safety): This is safe as interrupts haven't been started yet
         USB_DEVICE = Some(usb_dev);
