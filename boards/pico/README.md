@@ -91,7 +91,7 @@ interrupts when USB data arrives.
 ### [pico_usb_twitchy_mouse](./examples/pico_usb_twitchy_mouse.rs)
 
 Demonstrates emulating a USB Human Input Device (HID) Mouse. The mouse
-cursor will jiggle left and right.
+cursor will jiggle up and down.
 
 ## Contributing
 
