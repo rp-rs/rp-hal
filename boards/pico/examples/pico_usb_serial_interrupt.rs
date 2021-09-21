@@ -179,7 +179,7 @@ unsafe fn USBCTRL_IRQ() {
     let serial = USB_SERIAL.as_mut().unwrap();
 
     // Say hello exactly once on start-up
-    if SAID_HELLO.load(Ordering::Relaxed) == false {
+    if !SAID_HELLO.load(Ordering::Relaxed) {
         SAID_HELLO.store(true, Ordering::Relaxed);
         let _ = serial.write(b"Hello, World!\r\n");
     }
