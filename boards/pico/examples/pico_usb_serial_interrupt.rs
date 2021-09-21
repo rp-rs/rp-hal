@@ -91,6 +91,7 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
+    // Set up the USB driver
     let usb_bus = UsbBusAllocator::new(hal::usb::UsbBus::new(
         pac.USBCTRL_REGS,
         pac.USBCTRL_DPRAM,
@@ -103,11 +104,13 @@ fn main() -> ! {
         USB_BUS = Some(usb_bus);
     }
 
+    // Set up the USB Communications Class Device driver
     let serial = SerialPort::new(unsafe { USB_BUS.as_ref().unwrap() });
     unsafe {
         USB_SERIAL = Some(serial);
     }
 
+    // Create a USB device with a fake VID and PID
     let usb_dev = UsbDeviceBuilder::new(
         // Note (safety): This is safe as interrupts haven't been started yet
         unsafe { USB_BUS.as_ref().unwrap() },
