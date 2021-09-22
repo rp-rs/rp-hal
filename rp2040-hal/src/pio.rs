@@ -1,5 +1,5 @@
 //! Programmable IO (PIO)
-/// See [Chapter 3](https://rptl.io/pico-datasheet) for more details.
+//! See [Chapter 3 of the datasheet](https://rptl.io/rp2040-datasheet#section_pio) for more details.
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
     resets::SubsystemReset,
@@ -1200,7 +1200,8 @@ impl<P: PIOExt> PIOBuilder<P> {
     /// Set the pins used by side-set instructions.
     ///
     /// The least-significant side-set bit asserts the state of the pin indicated by `base`, the next bit asserts the
-    /// state of the next pin, and so on up to number of bits set using [`SideSet::new`] function.
+    /// state of the next pin, and so on up to [`pio::SideSet::bits()`] bits as configured in
+    /// [`pio::Program`].
     pub fn side_set_pin_base(mut self, base: u8) -> Self {
         self.side_set_base = base;
         self
