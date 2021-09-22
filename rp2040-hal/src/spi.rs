@@ -72,20 +72,11 @@ impl<S: State, D: SpiDevice, const DS: u8> Spi<S, D, DS> {
     pub fn free(self) -> D {
         self.device
     }
-}
 
-impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
-    /// Create new spi device
-    pub fn new(device: D) -> Spi<Disabled, D, DS> {
-        Spi {
-            device,
-            state: PhantomData,
-        }
-    }
     /// Set baudrate based on peripheral clock
     ///
     /// Typically the peripheral clock is set to 125_000_000
-    fn set_baudrate<F: Into<Hertz<u32>>, B: Into<Hertz<u32>>>(
+    pub fn set_baudrate<F: Into<Hertz<u32>>, B: Into<Hertz<u32>>>(
         &mut self,
         peri_frequency: F,
         baudrate: B,
@@ -128,6 +119,16 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
 
         // Return the frequency we were able to achieve
         (freq_in / (prescale as u32 * (1 + postdiv as u32))).Hz()
+    }
+}
+
+impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
+    /// Create new spi device
+    pub fn new(device: D) -> Spi<Disabled, D, DS> {
+        Spi {
+            device,
+            state: PhantomData,
+        }
     }
 
     /// Set format and datasize
