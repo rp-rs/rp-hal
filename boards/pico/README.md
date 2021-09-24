@@ -50,8 +50,9 @@ rp-hal/boards/pico $ cargo run --release --example <name>
 If you get an error about not being able to find `elf2uf2-rs`, try:
 
 ```console
-$ cargo install elf2uf2-rs, then repeating the `cargo run` command above.
+$ cargo install elf2uf2-rs
 ```
+then try repeating the `cargo run` command above.
 
 ### [pico_blinky](./examples/pico_blinky.rs)
 
