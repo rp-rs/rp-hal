@@ -91,6 +91,7 @@ pub enum DynDisabled {
     Floating,
     PullDown,
     PullUp,
+    BusKeep,
 }
 
 /// Value-level `enum` for input configurations
@@ -100,6 +101,7 @@ pub enum DynInput {
     Floating,
     PullDown,
     PullUp,
+    BusKeep,
 }
 
 /// Value-level `enum` for output configurations
