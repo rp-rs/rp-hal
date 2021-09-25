@@ -16,7 +16,7 @@ cortex-m-rt = { version = "0.7", optional = true }
 embedded-time = "0.12.0"
 usb-device= "0.2.8"
 usbd-serial = "0.1.1"
-usbd-hid = "0.5.0"
+usbd-hid = "0.5.1"
 
 [dev-dependencies]
 panic-halt= "0.2.0"

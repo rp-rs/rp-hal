@@ -142,6 +142,7 @@ fn main() -> ! {
             y: 4,
             buttons: 0,
             wheel: 0,
+            pan: 0,
         };
         push_mouse_movement(rep_up).ok().unwrap_or(0);
 
@@ -152,6 +153,7 @@ fn main() -> ! {
             y: -4,
             buttons: 0,
             wheel: 0,
+            pan: 0,
         };
         push_mouse_movement(rep_down).ok().unwrap_or(0);
     }
