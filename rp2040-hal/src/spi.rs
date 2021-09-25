@@ -21,6 +21,8 @@
 
 use crate::resets::SubsystemReset;
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
+#[cfg(feature = "eh1_0_alpha")]
+use eh1_0_alpha::spi as eh1;
 use embedded_hal::blocking::spi;
 use embedded_hal::spi::{FullDuplex, Mode, Phase, Polarity};
 use embedded_time::rate::*;
@@ -216,6 +218,32 @@ macro_rules! impl_write {
         impl<D: SpiDevice> spi::write::Default<$type> for Spi<Enabled, D, $nr> {}
         impl<D: SpiDevice> spi::transfer::Default<$type> for Spi<Enabled, D, $nr> {}
         impl<D: SpiDevice> spi::write_iter::Default<$type> for Spi<Enabled, D, $nr> {}
+
+        #[cfg(feature = "eh1_0_alpha")]
+        impl<D: SpiDevice> eh1::nb::FullDuplex<$type> for Spi<Enabled, D, $nr> {
+            type Error = Infallible;
+
+            fn read(&mut self) -> Result<$type, nb::Error<Infallible>> {
+                if !self.is_readable() {
+                    return Err(nb::Error::WouldBlock);
+                }
+
+                Ok(self.device.sspdr.read().data().bits() as $type)
+            }
+            fn write(&mut self, word: $type) -> Result<(), nb::Error<Infallible>> {
+                // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
+                // is full, PL022 inhibits RX pushes, and sets a sticky flag on
+                // push-on-full, but continues shifting. Safe if SSPIMSC_RORIM is not set.
+                if !self.is_writable() {
+                    return Err(nb::Error::WouldBlock);
+                }
+
+                self.device
+                    .sspdr
+                    .write(|w| unsafe { w.data().bits(word as u16) });
+                Ok(())
+            }
+        }
 
     )+
 

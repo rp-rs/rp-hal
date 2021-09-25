@@ -52,6 +52,8 @@ use crate::{
     resets::SubsystemReset,
     typelevel::Sealed,
 };
+#[cfg(feature = "eh1_0_alpha")]
+use eh1_0_alpha::i2c::blocking as eh1;
 use embedded_time::rate::Hertz;
 use hal::blocking::i2c::{Read, Write, WriteRead};
 use rp2040_pac::{I2C0, I2C1, RESETS};
@@ -487,6 +489,30 @@ macro_rules! hal {
                     } else {
                         Ok(())
                     }
+                }
+            }
+
+            #[cfg(feature = "eh1_0_alpha")]
+            impl<PINS> eh1::Write for I2C<$I2CX, PINS> {
+                type Error = Error;
+
+                fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Error> {
+                    Write::write(self, addr, bytes)
+                }
+            }
+            #[cfg(feature = "eh1_0_alpha")]
+            impl<PINS> eh1::WriteRead for I2C<$I2CX, PINS> {
+                type Error = Error;
+                fn write_read(&mut self, addr: u8, bytes: &[u8], buffer: &mut [u8]) -> Result<(), Error> {
+                        WriteRead::write_read(self, addr, bytes, buffer)
+                }
+            }
+            #[cfg(feature = "eh1_0_alpha")]
+            impl<PINS> eh1::Read for I2C<$I2CX, PINS> {
+                type Error = Error;
+
+                fn read(&mut self, addr: u8, buffer: &mut [u8]) -> Result<(), Error> {
+                    Read::read(self, addr, buffer)
                 }
             }
 

@@ -87,6 +87,8 @@ use crate::{
     resets::SubsystemReset,
     typelevel::Sealed,
 };
+#[cfg(feature = "eh1_0_alpha")]
+use eh1_0_alpha::pwm::blocking as eh1;
 use embedded_hal::PwmPin;
 use pac::PWM;
 
@@ -551,6 +553,38 @@ impl<S: SliceId, M: SliceMode> PwmPin for Channel<S, M, A> {
     }
 }
 
+#[cfg(feature = "eh1_0_alpha")]
+impl<S: SliceId, M: SliceMode> eh1::PwmPin for Channel<S, M, A> {
+    type Duty = u16;
+    type Error = core::convert::Infallible;
+
+    /// We cant disable the channel without disturbing the other channel.
+    /// So this just sets the duty cycle to zero
+    fn disable(&mut self) -> Result<(), Self::Error> {
+        self.duty_cycle = self.regs.read_cc_a();
+        self.regs.write_cc_a(0);
+        Ok(())
+    }
+
+    fn enable(&mut self) -> Result<(), Self::Error> {
+        self.regs.write_cc_a(self.duty_cycle);
+        Ok(())
+    }
+
+    fn get_duty(&self) -> Result<Self::Duty, Self::Error> {
+        Ok(self.regs.read_cc_a())
+    }
+
+    fn get_max_duty(&self) -> Result<Self::Duty, Self::Error> {
+        Ok(self.regs.read_top())
+    }
+
+    fn set_duty(&mut self, duty: Self::Duty) -> Result<(), Self::Error> {
+        self.regs.write_cc_a(duty);
+        Ok(())
+    }
+}
+
 impl<S: SliceId, M: SliceMode> PwmPin for Channel<S, M, B> {
     type Duty = u16;
 
@@ -575,6 +609,37 @@ impl<S: SliceId, M: SliceMode> PwmPin for Channel<S, M, B> {
 
     fn set_duty(&mut self, duty: Self::Duty) {
         self.regs.write_cc_b(duty)
+    }
+}
+#[cfg(feature = "eh1_0_alpha")]
+impl<S: SliceId, M: SliceMode> eh1::PwmPin for Channel<S, M, B> {
+    type Duty = u16;
+    type Error = core::convert::Infallible;
+
+    /// We cant disable the channel without disturbing the other channel.
+    /// So this just sets the duty cycle to zero
+    fn disable(&mut self) -> Result<(), Self::Error> {
+        self.duty_cycle = self.regs.read_cc_b();
+        self.regs.write_cc_b(0);
+        Ok(())
+    }
+
+    fn enable(&mut self) -> Result<(), Self::Error> {
+        self.regs.write_cc_b(self.duty_cycle);
+        Ok(())
+    }
+
+    fn get_duty(&self) -> Result<Self::Duty, Self::Error> {
+        Ok(self.regs.read_cc_b())
+    }
+
+    fn get_max_duty(&self) -> Result<Self::Duty, Self::Error> {
+        Ok(self.regs.read_top())
+    }
+
+    fn set_duty(&mut self, duty: Self::Duty) -> Result<(), Self::Error> {
+        self.regs.write_cc_b(duty);
+        Ok(())
     }
 }
 

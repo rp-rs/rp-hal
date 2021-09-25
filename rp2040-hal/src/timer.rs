@@ -77,10 +77,53 @@ impl embedded_hal::timer::CountDown for CountDown<'_> {
     }
 }
 
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1_0_alpha::timer::nb::CountDown for CountDown<'_> {
+    type Time = embedded_time::duration::Microseconds<u64>;
+    type Error = &'static str;
+
+    fn start<T>(&mut self, count: T) -> Result<(), Self::Error>
+    where
+        T: Into<Self::Time>,
+    {
+        self.period = count.into();
+        self.next_end = Some(self.timer.get_counter().wrapping_add(self.period.0));
+        Ok(())
+    }
+
+    fn wait(&mut self) -> nb::Result<(), Self::Error> {
+        if let Some(end) = self.next_end {
+            let ts = self.timer.get_counter();
+            if ts >= end {
+                self.next_end = Some(end.wrapping_add(self.period.0));
+                Ok(())
+            } else {
+                Err(nb::Error::WouldBlock)
+            }
+        } else {
+            panic!("CountDown is not running!");
+        }
+    }
+}
+
 impl embedded_hal::timer::Periodic for CountDown<'_> {}
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1_0_alpha::timer::Periodic for CountDown<'_> {}
+
 impl embedded_hal::timer::Cancel for CountDown<'_> {
     type Error = &'static str;
 
+    fn cancel(&mut self) -> Result<(), Self::Error> {
+        if self.next_end.is_none() {
+            Err("CountDown is not running.")
+        } else {
+            self.next_end = None;
+            Ok(())
+        }
+    }
+}
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1_0_alpha::timer::nb::Cancel for CountDown<'_> {
     fn cancel(&mut self) -> Result<(), Self::Error> {
         if self.next_end.is_none() {
             Err("CountDown is not running.")
