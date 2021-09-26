@@ -39,13 +39,17 @@ fn main() -> ! {
     let mut wrap_source = a.label();
     // Set pin as Out
     a.set(pio::SetDestination::PINDIRS, 1);
+    // Define begin of program loop
     a.bind(&mut wrap_target);
     // Set pin low
     a.set_with_delay(pio::SetDestination::PINS, 0, MAX_DELAY);
     // Set pin high
     a.set_with_delay(pio::SetDestination::PINS, 1, MAX_DELAY);
-    // NOP
+    // Define end of program loop
     a.bind(&mut wrap_source);
+    // The labels wrap_target and wrap_source, as set above,
+    // define a loop which is executed repeatedly by the PIO
+    // state machine.
     let program = a.assemble_with_wrap(wrap_source, wrap_target);
 
     // Initialize and start PIO
