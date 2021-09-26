@@ -45,6 +45,10 @@ impl From<DynPinMode> for ModeFields {
                     PullUp => {
                         fields.pue = true;
                     }
+                    BusKeep => {
+                        fields.pde = true;
+                        fields.pue = true;
+                    }
                 }
             }
             Input(config) => {
@@ -59,6 +63,10 @@ impl From<DynPinMode> for ModeFields {
                         fields.pde = true;
                     }
                     PullUp => {
+                        fields.pue = true;
+                    }
+                    BusKeep => {
+                        fields.pde = true;
                         fields.pue = true;
                     }
                 }

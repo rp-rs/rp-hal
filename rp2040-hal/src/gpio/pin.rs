@@ -6,8 +6,8 @@
 //! to track the state of pins at compile-time. To do so, it uses traits to
 //! represent [type classes] and types as instances of those type classes. For
 //! example, the trait [`InputConfig`] acts as a [type-level enum] of the
-//! available input configurations, and the types [`Floating`], [`PullDown`] and
-//! [`PullUp`] are its type-level variants.
+//! available input configurations, and the types [`Floating`], [`PullDown`],
+//! [`PullUp`] and [`BusKeep`] are its type-level variants.
 //!
 //! When applied as a trait bound, a type-level enum restricts type parameters
 //! to the corresponding variants. All of the traits in this module are closed,
@@ -126,10 +126,13 @@ pub enum Floating {}
 pub enum PullDown {}
 /// Type-level variant of both [`DisabledConfig`] and [`InputConfig`]
 pub enum PullUp {}
+/// Type-level variant of both [`DisabledConfig`] and [`InputConfig`]
+pub enum BusKeep {}
 
 impl Sealed for Floating {}
 impl Sealed for PullDown {}
 impl Sealed for PullUp {}
+impl Sealed for BusKeep {}
 
 impl DisabledConfig for Floating {
     const DYN: DynDisabled = DynDisabled::Floating;
@@ -140,11 +143,14 @@ impl DisabledConfig for PullDown {
 impl DisabledConfig for PullUp {
     const DYN: DynDisabled = DynDisabled::PullUp;
 }
+impl DisabledConfig for BusKeep {
+    const DYN: DynDisabled = DynDisabled::BusKeep;
+}
 
 /// Type-level variant of [`PinMode`] for disabled modes
 ///
-/// Type `C` is one of three configurations: [`Floating`], [`PullDown`] or
-/// [`PullUp`]
+/// Type `C` is one of four configurations: [`Floating`], [`PullDown`],
+/// [`PullUp`] or [`BusKeep`]
 pub struct Disabled<C: DisabledConfig> {
     cfg: PhantomData<C>,
 }
@@ -159,6 +165,9 @@ pub type PullDownDisabled = Disabled<PullDown>;
 
 /// Type-level variant of [`PinMode`] for pull-up disabled mode
 pub type PullUpDisabled = Disabled<PullUp>;
+
+/// Type-level variant of [`PinMode`] for bus keep disabled mode
+pub type BusKeepDisabled = Disabled<BusKeep>;
 
 impl<I: PinId, C: DisabledConfig> ValidPinMode<I> for Disabled<C> {}
 
@@ -181,11 +190,14 @@ impl InputConfig for PullDown {
 impl InputConfig for PullUp {
     const DYN: DynInput = DynInput::PullUp;
 }
+impl InputConfig for BusKeep {
+    const DYN: DynInput = DynInput::BusKeep;
+}
 
 /// Type-level variant of [`PinMode`] for input modes
 ///
-/// Type `C` is one of three input configurations: [`Floating`], [`PullDown`] or
-/// [`PullUp`]
+/// Type `C` is one of four input configurations: [`Floating`], [`PullDown`],
+/// [`PullUp`] or [`BusKeep`]
 pub struct Input<C: InputConfig> {
     cfg: PhantomData<C>,
 }
@@ -200,6 +212,9 @@ pub type PullDownInput = Input<PullDown>;
 
 /// Type-level variant of [`PinMode`] for pull-up input mode
 pub type PullUpInput = Input<PullUp>;
+
+/// Type-level variant of [`PinMode`] for bus keep input mode
+pub type BusKeepInput = Input<BusKeep>;
 
 impl<I: PinId, C: InputConfig> ValidPinMode<I> for Input<C> {}
 
@@ -487,6 +502,12 @@ where
     /// Configure the pin to operate as a pulled up input
     #[inline]
     pub fn into_pull_up_input(self) -> Pin<I, PullUpInput> {
+        self.into_mode()
+    }
+
+    /// Configure the pin to operate as a bus keep input
+    #[inline]
+    pub fn into_bus_keep_input(self) -> Pin<I, BusKeepInput> {
         self.into_mode()
     }
 
@@ -792,7 +813,7 @@ macro_rules! gpio {
 
                 // FIXME: Somehow just import what we need
                 #[allow(unused_imports)]
-                use super::{PullDownDisabled,PullUpDisabled,FloatingDisabled};
+                use super::{PullDownDisabled,PullUpDisabled,FloatingDisabled,BusKeepDisabled};
 
                 use super::{Pin,PinId};
                 use crate::resets::SubsystemReset;
