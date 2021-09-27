@@ -8,26 +8,26 @@
    <h3 align="center">rp-hal</h3>
 
   <p align="center">
-    A Rust HAL and board support packages for the RP family of microcontrollers from the Raspberry Pi Foundation
+    Rust support for Raspberry Pi Silicon
     <br />
-    <a href="https://github.com/rp-rs/rp-hal"><strong>Explore the docs »</strong></a>
+    <a href="https://docs.rs/rp2040-hal"><strong>Explore the API docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/rp-rs/rp-hal">View Demo</a>
+    <a href="https://github.com/rp-rs/rp-hal/tree/main/boards/pico/examples">View Demos</a>
     ·
-    <a href="https://github.com/rp-rs/rp-hal/issues">Report Bug</a>
+    <a href="https://github.com/rp-rs/rp-hal/issues">Report a Bug</a>
     ·
-    <a href="https://github.com/rp-rs/rp-hal/issues">Request Feature</a>
+    <a href="https://matrix.to/#/#rp-rs:matrix.org">Chat on Matrix</a>
   </p>
 </p>
-
 
 
 <!-- TABLE OF CONTENTS -->
 <details open="open">
   <summary><h2 style="display: inline-block">Table of Contents</h2></summary>
   <ol>
-    <li><a href="#packages">Packages</a></li>
+    <li><a href="#gettting_started">Getting Started</a></li>
+    <li><a href="#programming">Programming</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
@@ -37,6 +37,40 @@
 </details>
 
 <!-- GETTING STARTED -->
+
+## Getting Started
+
+So, you want to program your Raspberry Pi Silicon, using the Rust programming
+language. You've come to the right place!
+
+This repository is `rp-hal` - a collection of high-level drivers for the RP2040
+and various associated boards, like the Raspberry Pi Pico and the Adafruit
+Feather RP2040.
+
+If you want to try out some examples on one of our supported boards, check out
+the list of *Board Support Packages* below, and click through to see the various
+examples for each board.
+
+If you want to write an application for Raspberry Pi Silicon, check out our
+[RP2040 Project Template](https://github.com/rp-rs/rp2040-project-template).
+
+Before trying any of the examples, please ensure you have the latest stable version of Rust installed, along with the right target support:
+
+```console
+$ rustup self update
+$ rustup update stable
+$ rustup target add thumbv6m-none-eabi
+```
+
+You may also want to install these helpful tools:
+
+```sh
+# Useful to creating UF2 images for the RP2040 USB Bootloader
+cargo install elf2uf2-rs
+# Useful for flashing over the SWD pins using a supported JTAG probe
+cargo install --git https://github.com/rp-rs/probe-run.git --branch rp2040-support 
+```
+
 ## Packages
 
 This git repository is organised as a [Cargo Workspace].
@@ -146,6 +180,106 @@ RP2040 chip according to how it is connected up on the Pro Micro RP2040.
 
 [Sparkfun Pro Micro RP2040]: https://www.sparkfun.com/products/18288
 [pro_micro_rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/pro_micro_rp2040
+
+<!-- PROGRAMMING -->
+## Programming
+
+Rust generates standard Arm ELF files, which you can load onto your Raspberry Pi
+Silicon device with your favourite Arm flashing/debugging tool. In addition, the
+RP2040 contains a ROM bootloader which appears as a Mass Storage Device over USB
+that accepts UF2 format images. You can use the `elf2uf2-rs` package to convert
+the Arm ELF file to a UF2 format image.
+
+For boards with USB Device support like the Raspberry Pi Pico, we recommend you
+use the UF2 process.
+
+The RP2040 contains a Cortex-M0+ processor, which implements the Thumb-2 format
+of the ARMv6-M instruction set. For compatibilty with other Arm code (e.g. as
+produced by GCC), Rust uses the *Arm Embedded-Application Binary Interface*
+standard or EABI. Therefore, any Rust code for the RP2040 should be compiled
+with the target `thumbv6m-none-eabi`.
+
+More details can be found in the [Project Template](https://github.com/rp-rs/rp2040-project-template).
+
+### Loading a UF2 over USB
+
+*Step 1* - Install [`elf2uf2-rs`](https://github.com/JoNil/elf2uf2-rs):
+
+```console
+$ cargo install elf2uf2-rs
+```
+
+*Step 2* - Make sure your .cargo/config contains the following (it should by
+default if you are working in this repository):
+
+```toml
+[target.thumbv6m-none-eabi]
+runner = "elf2uf2-rs -d"
+```
+
+The `thumbv6m-none-eabi` target may be replaced by the all-Arm wildcard
+`'cfg(all(target_arch = "arm", target_os = "none"))'`.
+
+*Step 3* - Boot your RP2040 into "USB Bootloder mode", typically by rebooting
+whilst holding some kind of "Boot Select" button. On Linux, you will also need
+to 'mount' the device, like you would a USB Thumb Drive.
+
+*Step 4* - Use `cargo run`, which will compile the code and started the
+specified 'runner'. As the 'runner' is the elf2uf2-rs tool, it will build a UF2
+file and copy it to your RP2040.
+
+```console
+$ cargo run --release --example pico_pwm_blink
+```
+
+### Loading with probe-run
+
+The Knurling project has a tool called
+[probe-run](https://github.com/knurling-rs/probe-run). This is a command-line
+tool which can flash a wide variety of microcontrollers using a wide variety of
+debug/JTAG probes. It is based on a library called
+[probe-rs](https://github.com/probe-rs/probe-rs).
+
+Currently, probe-rs supports the slightly unusual debug hardware in the RP2040,
+but the last released probe-run tool (v0.2.6, as of September 2021), does not.
+However, there is a special version of probe-run for the RP2040 called
+[probe-run-rs].
+
+*Step 1* - Install `probe-run-rp`:
+
+```console
+$ cargo install --git https://github.com/rp-rs/probe-run.git --branch rp2040-support 
+```
+
+*Step 2* - Make sure your .cargo/config contains the following:
+
+```toml
+[target.thumbv6m-none-eabi]
+runner = "probe-run-rp --chip RP2040"
+```
+
+*Step 3* - Connect your USB JTAG/debug probe (such as a Raspberry Pi Pico
+running [this firmware](https://github.com/majbthrd/DapperMime)) to the SWD
+programming pins on your RP2040 board. Check the probe has been found by
+running:
+
+```console
+$ probe-run-rp --chip RP2040 --list-probes
+The following devices were found:
+[0]: J-Link (J-Link) (VID: 1366, PID: 0101, Serial: 000099999999, JLink)
+```
+
+There is a SEGGER J-Link connected in the example above - the mesage you see
+will reflect the probe you have connected.
+
+*Step 4* - Use `cargo run`, which will compile the code and start the specified
+'runner'. As the 'runner' is the `probe-run-rp` tool, it will connect to the
+RP2040 via the first probe it finds, and install your firmware into the Flash
+connected to the RP2040.
+
+```console
+$ cargo run --release --example pico_pwm_blink
+```
 
 <!-- ROADMAP -->
 ## Roadmap
