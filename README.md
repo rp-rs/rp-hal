@@ -196,10 +196,11 @@ For boards with USB Device support like the Raspberry Pi Pico, we recommend you
 use the UF2 process.
 
 The RP2040 contains a Cortex-M0+ processor, which implements the Thumb-2 format
-of the ARMv6-M instruction set. For compatibilty with other Arm code (e.g. as
-produced by GCC), Rust uses the *Arm Embedded-Application Binary Interface*
-standard or EABI. Therefore, any Rust code for the RP2040 should be compiled
-with the target `thumbv6m-none-eabi`.
+of the ARMv6-M instruction set. There are no operating-specific features in the
+binaries produced - they are for 'bare-metal' systems. For compatibilty with
+other Arm code (e.g. as produced by GCC), Rust uses the *Arm
+Embedded-Application Binary Interface* standard or EABI. Therefore, any Rust
+code for the RP2040 should be compiled with the target `thumbv6m-none-eabi`.
 
 More details can be found in the [Project Template](https://github.com/rp-rs/rp2040-project-template).
 
@@ -240,7 +241,8 @@ The Knurling project has a tool called
 [probe-run](https://github.com/knurling-rs/probe-run). This is a command-line
 tool which can flash a wide variety of microcontrollers using a wide variety of
 debug/JTAG probes. It is based on a library called
-[probe-rs](https://github.com/probe-rs/probe-rs).
+[probe-rs](https://github.com/probe-rs/probe-rs). Unlike using, say, OpenOCD,
+probe-rs can autodetect your debug probe, which can make it easier to use.
 
 Currently, probe-rs supports the slightly unusual debug hardware in the RP2040,
 but the last released probe-run tool (v0.2.6, as of September 2021), does not.
@@ -283,12 +285,28 @@ connected to the RP2040.
 $ cargo run --release --example pico_pwm_blink
 ```
 
+### Loading with picotool
+
+As ELF files produced by compiling Rust code are completely compatible with ELF
+files produced by compiling C or C++ code, you can also use the Raspberry Pi
+tool [picoprobe](https://github.com/raspberrypi/picotool). The only thing to be
+aware of is that picotool expects your ELF files to have a `.elf` extension, and
+by default Rust does not give the ELF files any extension. You can fix this by
+simply renaming the file.
+
+Also of note is that the special
+[pico-sdk](https://github.com/raspberrypi/pico-sdk) macros which hide
+information in the ELF file in a way that `picotool info` can read it out, are
+not supported in Rust. An alternative is TBC.
+
 <!-- ROADMAP -->
 ## Roadmap
 
-NOTE These packages are under active development. As such, it is likely to remain volatile until a 1.0.0 release.
+NOTE These packages are under active development. As such, it is likely to
+remain volatile until a 1.0.0 release.
 
-See the [open issues](https://github.com/rp-rs/rp-hal/issues) for a list of proposed features (and known issues).
+See the [open issues](https://github.com/rp-rs/rp-hal/issues) for a list of
+proposed features (and known issues).
 
 
 <!-- CONTRIBUTING -->
@@ -331,9 +349,8 @@ under these terms.
 <!-- CONTACT -->
 ## Contact
 
-Project Link: [https://github.com/rp-rs/rp-hal/issues](https://github.com/rp-rs/rp-hal/issues)
-Matrix: [#rp-rs:matrix.org](https://matrix.to/#/#rp-rs:matrix.org)
-
+Raise an issue: [https://github.com/rp-rs/rp-hal/issues](https://github.com/rp-rs/rp-hal/issues)
+Chat to us on Matrix: [#rp-rs:matrix.org](https://matrix.to/#/#rp-rs:matrix.org)
 
 <!-- ACKNOWLEDGEMENTS -->
 ## Acknowledgements
