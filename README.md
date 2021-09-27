@@ -47,19 +47,21 @@ This repository is `rp-hal` - a collection of high-level drivers for the RP2040
 and various associated boards, like the Raspberry Pi Pico and the Adafruit
 Feather RP2040.
 
+If you want to write an application for Raspberry Pi Silicon, check out our
+[RP2040 Project Template](https://github.com/rp-rs/rp2040-project-template).
+
+If you want to write code that uses the Raspberry Pi Silicon PIO State Machines, check out [pio-rs](https://github.com/rp-rs/pio-rs). You can even compile PIO programs at run-time, on the RP2040 itself!
+
 If you want to try out some examples on one of our supported boards, check out
 the list of *Board Support Packages* below, and click through to see the various
 examples for each board.
 
-If you want to write an application for Raspberry Pi Silicon, check out our
-[RP2040 Project Template](https://github.com/rp-rs/rp2040-project-template).
-
 Before trying any of the examples, please ensure you have the latest stable version of Rust installed, along with the right target support:
 
-```console
-$ rustup self update
-$ rustup update stable
-$ rustup target add thumbv6m-none-eabi
+```sh
+rustup self update
+rustup update stable
+rustup target add thumbv6m-none-eabi
 ```
 
 You may also want to install these helpful tools:
@@ -86,7 +88,7 @@ crate (which will include the _HAL_ crate for you). Please note, you cannot
 depend on multiple _BSP_ crates; you have to pick one, or use [Cargo Features]
 to select one at build time.
 
-Each BSP will include some examples to show off the features of that particular board.
+Each BSP includes some examples to show off the features of that particular board.
 
 [Cargo Workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html]
 [Embedded HAL]: https://github.com/rust-embedded/embedded-hal
