@@ -8,7 +8,7 @@
    <h3 align="center">rp-hal</h3>
 
   <p align="center">
-    Rust support for Raspberry Pi Silicon
+    Rust support for the "Raspberry Pi Silicon" family of microcontrollers
     <br />
     <a href="https://docs.rs/rp2040-hal"><strong>Explore the API docs »</strong></a>
     <br />
