@@ -25,10 +25,10 @@ use rp2040_hal as hal;
 // register access
 use hal::pac;
 
-// A GPIO trait we need
-use embedded_hal::digital::v2::OutputPin;
+// Some traits we need
 use embedded_time::fixed_point::FixedPoint;
 use rp2040_hal::clocks::Clock;
+use core::fmt::Write;
 
 /// The linker will place this boot block at the start of our program image. We
 // need this to help the ROM bootloader get our code up and running.
@@ -91,16 +91,16 @@ fn main() -> ! {
     .unwrap();
 
     // UART TX (characters sent from RP2040) on pin 1 (GPIO0)
-    let _tx_pin = pins.gpio0.into_mode::<gpio::FunctionUart>();
+    let _tx_pin = pins.gpio0.into_mode::<hal::gpio::FunctionUart>();
     // UART RX (characters reveived by RP2040) on pin 2 (GPIO1)
-    let _rx_pin = pins.gpio1.into_mode::<gpio::FunctionUart>();
+    let _rx_pin = pins.gpio1.into_mode::<hal::gpio::FunctionUart>();
 
     uart.write_full_blocking(b"UART example\r\n");
 
     let mut value = 0u32;
     loop {
         writeln!(uart, "value: {:02}\r", value).unwrap();
-        cortex_m::asm::delay(10_000_000);
+        delay.delay_ms(1000);
         value += 1
     }
 }
