@@ -1,6 +1,6 @@
-//! Blinks the LED on a Pico board, using a PIO program
+//! This example toggles the GPIO25 pin, using a PIO program.
 //!
-//! This will blink an LED attached to GP25, which is the pin the Pico uses for the on-board LED.
+//! If a LED is connected to that pin, like on a Pico board, the LED should blink.
 #![no_std]
 #![no_main]
 
