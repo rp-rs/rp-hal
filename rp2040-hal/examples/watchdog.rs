@@ -26,8 +26,8 @@ use hal::pac;
 // Traits we need
 use embedded_hal::digital::v2::OutputPin;
 use embedded_hal::watchdog::{Watchdog, WatchdogEnable};
-use embedded_time::fixed_point::FixedPoint;
 use embedded_time::duration::Extensions;
+use embedded_time::fixed_point::FixedPoint;
 use rp2040_hal::clocks::Clock;
 
 /// The linker will place this boot block at the start of our program image. We

@@ -26,9 +26,9 @@ use rp2040_hal as hal;
 use hal::pac;
 
 // Some traits we need
+use core::fmt::Write;
 use embedded_time::fixed_point::FixedPoint;
 use rp2040_hal::clocks::Clock;
-use core::fmt::Write;
 
 /// The linker will place this boot block at the start of our program image. We
 // need this to help the ROM bootloader get our code up and running.
