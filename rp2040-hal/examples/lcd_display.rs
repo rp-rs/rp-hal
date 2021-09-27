@@ -96,7 +96,8 @@ fn main() -> ! {
         pins.gpio20.into_push_pull_output(), // d6
         pins.gpio21.into_push_pull_output(), // d7
         &mut delay,
-    ).unwrap();
+    )
+    .unwrap();
 
     // Clear the screen
     lcd.reset(&mut delay).unwrap();

@@ -85,7 +85,7 @@ fn main() -> ! {
     let _spi_mosi = pins.gpio7.into_mode::<hal::gpio::FunctionSpi>();
     let _spi_miso = pins.gpio4.into_mode::<hal::gpio::FunctionSpi>();
     let spi = hal::spi::Spi::<_, _, 8>::new(pac.SPI0);
-    
+
     // Exchange the uninitialised SPI driver for an initialised one
     let mut spi = spi.init(
         &mut pac.RESETS,
@@ -95,7 +95,7 @@ fn main() -> ! {
     );
 
     // Write out 0, ignore return value
-    if let Ok(_) = spi.write(&[0]) {
+    if spi.write(&[0]).is_ok() {
         // SPI write was succesful
     };
 
