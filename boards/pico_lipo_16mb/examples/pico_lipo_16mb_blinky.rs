@@ -58,7 +58,7 @@ fn main() -> ! {
 
     // Configure the clocks
     //
-    // Our default is 12 MHz crystal input, 125 MHz system clock
+    // The default is to generate a 125 MHz system clock
     let clocks = hal::clocks::init_clocks_and_plls(
         pico_lipo_16_mb::XOSC_CRYSTAL_FREQ,
         pac.XOSC,
