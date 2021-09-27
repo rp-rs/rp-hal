@@ -80,7 +80,7 @@ fn main() -> ! {
         25,
         pac.PIO0,
         &mut pac.RESETS,
-        clocks.system_clock.freq(),
+        clocks.peripheral_clock.freq(),
         timer.count_down(),
     );
 

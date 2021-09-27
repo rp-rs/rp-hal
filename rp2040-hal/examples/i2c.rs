@@ -91,7 +91,7 @@ fn main() -> ! {
         scl_pin, // Try `not_an_scl_pin` here
         400.kHz(),
         &mut pac.RESETS,
-        clocks.system_clock,
+        clocks.peripheral_clock,
     );
 
     // Write three bytes to the I²C device with 7-bit address 0x2C
