@@ -23,7 +23,7 @@ use rp2040_hal as hal;
 // register access
 use hal::pac;
 
-// A GPIO trait we need
+// Some traits we need
 use embedded_hal::digital::v2::OutputPin;
 use embedded_time::fixed_point::FixedPoint;
 use rp2040_hal::clocks::Clock;

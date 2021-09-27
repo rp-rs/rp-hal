@@ -20,7 +20,7 @@ use panic_halt as _;
 // Alias for our HAL crate
 use rp2040_hal as hal;
 
-// The traits we need
+// Some traits we need
 use core::fmt::Write;
 use embedded_hal::adc::OneShot;
 use embedded_time::fixed_point::FixedPoint;

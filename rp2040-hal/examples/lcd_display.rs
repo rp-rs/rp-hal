@@ -25,7 +25,7 @@ use rp2040_hal as hal;
 // Our LCD driver
 use hd44780_driver as hd44780;
 
-// Traits we need
+// Some traits we need
 use embedded_time::fixed_point::FixedPoint;
 use rp2040_hal::clocks::Clock;
 
@@ -118,3 +118,5 @@ fn main() -> ! {
         // Empty loop
     }
 }
+
+// End of file

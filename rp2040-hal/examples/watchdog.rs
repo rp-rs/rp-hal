@@ -23,7 +23,7 @@ use rp2040_hal as hal;
 // register access
 use hal::pac;
 
-// Traits we need
+// Some traits we need
 use embedded_hal::digital::v2::OutputPin;
 use embedded_hal::watchdog::{Watchdog, WatchdogEnable};
 use embedded_time::duration::Extensions;
@@ -46,7 +46,8 @@ const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 /// as soon as all global variables are initialised.
 ///
 /// The function configures the RP2040 peripherals, then toggles a GPIO pin in
-/// an infinite loop. If there is an LED connected to that pin, it will blink.
+/// an infinite loop. After a period of time, the watchdog will kick in to reset
+/// the CPU.
 #[entry]
 fn main() -> ! {
     // Grab our singleton objects
@@ -110,3 +111,5 @@ fn main() -> ! {
         delay.delay_ms(100);
     }
 }
+
+// End of file

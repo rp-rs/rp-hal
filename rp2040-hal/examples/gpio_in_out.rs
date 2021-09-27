@@ -23,7 +23,7 @@ use rp2040_hal as hal;
 // register access
 use hal::pac;
 
-// The traits we need
+// Some traits we need
 use embedded_hal::digital::v2::InputPin;
 use embedded_hal::digital::v2::OutputPin;
 

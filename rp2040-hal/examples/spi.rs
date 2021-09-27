@@ -22,7 +22,7 @@ use panic_halt as _;
 // Alias for our HAL crate
 use rp2040_hal as hal;
 
-// Traits we need
+// Some traits we need
 use cortex_m::prelude::*;
 use embedded_time::rate::Extensions;
 use rp2040_hal::clocks::Clock;
@@ -122,5 +122,9 @@ fn main() -> ! {
     };
 
     #[allow(clippy::empty_loop)]
-    loop {}
+    loop {
+        // Empty loop
+    }
 }
+
+// End of file

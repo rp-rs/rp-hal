@@ -16,10 +16,8 @@ use cortex_m_rt::entry;
 // be linked)
 use panic_halt as _;
 
-// The I²C trait from Embedded HAL we need
+// Some traits we need
 use embedded_hal::blocking::i2c::Write;
-
-// A frequency/time related trait we need
 use embedded_time::rate::Extensions;
 
 // Alias for our HAL crate
