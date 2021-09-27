@@ -1,29 +1,78 @@
-//! Perform ]
+//! # SPI Example
+//!
+//! This application demonstrates how to use the SPI Driver to talk to a remote
+//! SPI device.
+//!
+//!
+//! It may need to be adapted to your particular board layout and/or pin
+//! assignment.
+//!
+//! See the `Cargo.toml` file for Copyright and licence details.
+
 #![no_std]
 #![no_main]
 
-use cortex_m::prelude::{
-    _embedded_hal_blocking_spi_Transfer, _embedded_hal_blocking_spi_Write,
-    _embedded_hal_spi_FullDuplex,
-};
+// The macro for our start-up function
 use cortex_m_rt::entry;
-use embedded_hal::spi::MODE_0;
-use embedded_time::rate::Extensions;
-use hal::{gpio::FunctionSpi, pac, sio::Sio, spi::Spi};
+
+// Ensure we halt the program on panic (if we don't mention this crate it won't
+// be linked)
 use panic_halt as _;
+
+// Alias for our HAL crate
 use rp2040_hal as hal;
 
+// Traits we need
+use cortex_m::prelude::*;
+use embedded_time::rate::Extensions;
+use rp2040_hal::clocks::Clock;
+
+// A shorter alias for the Peripheral Access Crate, which provides low-level
+// register access
+use hal::pac;
+
+/// The linker will place this boot block at the start of our program image. We
+/// need this to help the ROM bootloader get our code up and running.
 #[link_section = ".boot2"]
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
 
-const SYS_HZ: u32 = 125_000_000_u32;
+/// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz. Adjust
+/// if your board has a different frequency
+const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
+/// Entry point to our bare-metal application.
+///
+/// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables are initialised.
+///
+/// The function configures the RP2040 peripherals, then performs some example
+/// SPI transactions, then goes to sleep.
 #[entry]
 fn main() -> ! {
+    // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
 
-    let sio = Sio::new(pac.SIO);
+    // Set up the watchdog driver - needed by the clock setup code
+    let mut watchdog = hal::watchdog::Watchdog::new(pac.WATCHDOG);
+
+    // Configure the clocks
+    let clocks = hal::clocks::init_clocks_and_plls(
+        XTAL_FREQ_HZ,
+        pac.XOSC,
+        pac.CLOCKS,
+        pac.PLL_SYS,
+        pac.PLL_USB,
+        &mut pac.RESETS,
+        &mut watchdog,
+    )
+    .ok()
+    .unwrap();
+
+    // The single-cycle I/O block controls our GPIO pins
+    let sio = hal::sio::Sio::new(pac.SIO);
+
+    // Set the pins to their default state
     let pins = hal::gpio::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
@@ -32,19 +81,22 @@ fn main() -> ! {
     );
 
     // These are implicitly used by the spi driver if they are in the correct mode
-    let _spi_sclk = pins.gpio6.into_mode::<FunctionSpi>();
-    let _spi_mosi = pins.gpio7.into_mode::<FunctionSpi>();
-    let _spi_miso = pins.gpio4.into_mode::<FunctionSpi>();
-    let mut spi = Spi::<_, _, 8>::new(pac.SPI0).init(
+    let _spi_sclk = pins.gpio6.into_mode::<hal::gpio::FunctionSpi>();
+    let _spi_mosi = pins.gpio7.into_mode::<hal::gpio::FunctionSpi>();
+    let _spi_miso = pins.gpio4.into_mode::<hal::gpio::FunctionSpi>();
+    let spi = hal::spi::Spi::<_, _, 8>::new(pac.SPI0);
+    
+    // Exchange the uninitialised SPI driver for an initialised one
+    let mut spi = spi.init(
         &mut pac.RESETS,
-        SYS_HZ.Hz(),
+        clocks.peripheral_clock.freq(),
         16_000_000u32.Hz(),
-        &MODE_0,
+        &embedded_hal::spi::MODE_0,
     );
 
     // Write out 0, ignore return value
-    if let Ok(..) = spi.write(&[0]) {
-        // Handle success
+    if let Ok(_) = spi.write(&[0]) {
+        // SPI write was succesful
     };
 
     // write 50, then check the return
@@ -52,17 +104,17 @@ fn main() -> ! {
     match send_success {
         Ok(_) => {
             // We succeeded, check the read value
-            if spi.read().is_ok() {
-                // Output our read value
+            if let Ok(_x) = spi.read() {
+                // We got back `x` in exchange for the 0x50 we sent.
             };
         }
         Err(_) => todo!(),
     }
 
-    // Do a read+write at the same time.
-    // Data in read_write_cache will be replaced with the read data
-    let mut read_write_cache: [u8; 4] = [1, 2, 3, 4];
-    let transfer_success = spi.transfer(&mut read_write_cache);
+    // Do a read+write at the same time. Data in `buffer` will be replaced with
+    // the data read from the SPI device.
+    let mut buffer: [u8; 4] = [1, 2, 3, 4];
+    let transfer_success = spi.transfer(&mut buffer);
     #[allow(clippy::single_match)]
     match transfer_success {
         Ok(_) => {}  // Handle success
