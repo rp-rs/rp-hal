@@ -9,7 +9,7 @@ RP2040 chip according to how it is connected up on the Feather.
 [Adafruit Feather RP2040]: https://www.adafruit.com/product/4884
 [feather_rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/feather_rp2040
 [rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
-[Raspberry Pi Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
+[Raspberry Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
 
 ## Using
 

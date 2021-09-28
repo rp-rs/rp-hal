@@ -10,3 +10,4 @@ rustflags = [
     "-C", "no-vectorize-loops",
 ]
 runner = "elf2uf2-rs -d"
+# runner = "probe-run-rp --chip RP2040"

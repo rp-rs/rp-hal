@@ -8,16 +8,16 @@
    <h3 align="center">rp-hal</h3>
 
   <p align="center">
-    A Rust HAL impl for the RP family of microcontrollers from the Raspberry Pi Foundation
+    High-level Rust drivers for the Raspberry Silicon RP2040 Microcontroller
     <br />
-    <a href="https://github.com/rp-rs/rp-hal"><strong>Explore the docs »</strong></a>
+    <a href="https://docs.rs/rp2040-hal"><strong>Explore the API docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/rp-rs/rp-hal">View Demo</a>
+    <a href="https://github.com/rp-rs/rp-hal/tree/main/boards/pico/examples">View Demos</a>
     ·
-    <a href="https://github.com/rp-rs/rp-hal/issues">Report Bug</a>
+    <a href="https://github.com/rp-rs/rp-hal/issues">Report a Bug</a>
     ·
-    <a href="https://github.com/rp-rs/rp-hal/issues">Request Feature</a>
+    <a href="https://matrix.to/#/#rp-rs:matrix.org">Chat on Matrix</a>
   </p>
 </p>
 
@@ -27,6 +27,7 @@
 <details open="open">
   <summary><h2 style="display: inline-block">Table of Contents</h2></summary>
   <ol>
+    <li><a href="#introduction">Introduction</a></li>
    <li>
       <a href="#getting-started">Getting Started</a>
       <ul>
@@ -34,7 +35,6 @@
         <li><a href="#installation">Installation</a></li>
       </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
@@ -43,70 +43,60 @@
   </ol>
 </details>
 
+<!-- INTRODUCTION -->
+## Introduction
+
+This is the `rp2040-hal` package - a library crate of high-level Rust drivers
+for the Raspberry Silicon RP2040 microcontroller, along with a collection of
+non-board specific example programs for you to study. You should use this crate
+in your application if you want to write code for the RP2040 microcontroller.
+The *HAL* in the name standards for *Hardware Abstraction Layer*, and comes from
+the fact that many of the drivers included implement the generic
+hardware-abstraction interfaces defined in the Rust Embedded Working Group's
+[embedded-hal](https://github.com/rust-embedded/embedded-hal) crate.
+
+We also provide a series of *Board Support Package* (BSP) crates, which take
+this HAL crate and pre-configure the pins according to a specific PCB design. If
+you are using on of the supported boards, you should use one of those crates in
+preference, and return here to see documentation about specific peripherals on
+the RP2040 and how to use them. See the `boards` folder in
+https://github.com/rp-rs/rp-hal/ for more details.
+
 <!-- GETTING STARTED -->
 ## Getting Started
 
-To get a local copy up and running follow these simple steps.
-
-### Prerequisites
-
-* A [Rust](https://www.rust-lang.org/tools/install) toolchain
-
-### Installation
-
-1. Clone the repo or use the crate
-
-   ```sh
-   git clone https://github.com/rp-rs/rp-hal
-   ```
-
-   or
-
-   ```sh
-   cargo install rp2040-hal
-   ```
-
-<!-- USAGE EXAMPLES -->
-## Usage
-
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
-
-For more examples, please refer to the [Documentation](https://github.com/rp-rs/rp-hal)
-
-### Run examples
-
-#### UF2
-
-For boards with uf2 flashloaders like the raspberry pi pico. Install [`elf2uf2-rs`](https://github.com/JoNil/elf2uf2-rs):
-
-```sh
-cargo install elf2uf2-rs
-```
-
-Make sure .cargo/config contains the following (it should by default):
+To include this crate in your project, amend your `Cargo.toml` file to include
 
 ```toml
-runner = "elf2uf2-rs -d"
+rp2040-hal = "0.3"
 ```
 
-**IMPORTANT: Make sure you've put your device into bootloader mode and the drive is showing as mounted before executing the next command.**
+To obtain a copy of the source code (e.g. if you want to propose a bug-fix or
+new feature, or simply to study the code), run:
 
-```sh
-cargo run --example pico_pwm_blink # Run `cargo run --example` for more examples
+```console
+$ git clone https://github.com/rp-rs/rp-hal.git
 ```
+
+For details on how to program an RP2040 microcontroller, see the [top-level
+rp-hal README](https://github.com/rp-rs/rp-hal/).
 
 <!-- ROADMAP -->
 ## Roadmap
 
-NOTE This HAL is under active development. As such, it is likely to remain volatile until a 1.0.0 release.
+NOTE This HAL is under active development. As such, it is likely to remain
+volatile until a 1.0.0 release.
 
-See the [open issues](https://github.com/rp-rs/rp-hal/issues) for a list of proposed features (and known issues).
+See the [open issues](https://github.com/rp-rs/rp-hal/issues) for a list of
+proposed features (and known issues).
 
 
 <!-- CONTRIBUTING -->
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+Contributions are what make the open source community such an amazing place to
+be learn, inspire, and create. Any contributions you make are **greatly
+appreciated**.
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)

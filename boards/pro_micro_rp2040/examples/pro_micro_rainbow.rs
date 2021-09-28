@@ -28,7 +28,7 @@ use pro_micro_rp2040::{
 use smart_leds::{brightness, SmartLedsWrite, RGB8};
 use ws2812_pio::Ws2812;
 
-/// The linker will place this boot block at the start of our program image.
+//// The linker will place this boot block at the start of our program image.
 /// We need this to help the ROM bootloader get our code up and running.
 #[link_section = ".boot2"]
 #[used]
@@ -80,7 +80,7 @@ fn main() -> ! {
         25,
         pac.PIO0,
         &mut pac.RESETS,
-        clocks.system_clock.freq(),
+        clocks.peripheral_clock.freq(),
         timer.count_down(),
     );
 

@@ -10,7 +10,7 @@ RP2040 chip according to how it is connected up on the Pico Explorer.
 [Pimoroni Pico Explorer]: https://shop.pimoroni.com/products/pico-explorer-base
 [pico_explorer]: https://github.com/rp-rs/rp-hal/tree/main/boards/pico_explorer
 [rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
-[Raspberry Pi Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
+[Raspberry Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
 
 ## Using
 

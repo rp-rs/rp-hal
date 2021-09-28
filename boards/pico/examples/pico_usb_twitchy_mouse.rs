@@ -44,8 +44,8 @@ use usbd_hid::descriptor::generator_prelude::*;
 use usbd_hid::descriptor::MouseReport;
 use usbd_hid::hid_class::HIDClass;
 
-/// The linker will place this boot block at the start of our program image. We
-/// need this to help the ROM bootloader get our code up and running.
+//// The linker will place this boot block at the start of our program image. We
+//// need this to help the ROM bootloader get our code up and running.
 #[link_section = ".boot2"]
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
@@ -76,7 +76,7 @@ fn main() -> ! {
 
     // Configure the clocks
     //
-    // Our default is 12 MHz crystal input, 125 MHz system clock
+    // The default is to generate a 125 MHz system clock
     let clocks = hal::clocks::init_clocks_and_plls(
         pico::XOSC_CRYSTAL_FREQ,
         pac.XOSC,
