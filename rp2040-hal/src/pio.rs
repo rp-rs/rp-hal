@@ -229,7 +229,7 @@ impl<P: PIOExt> PIO<P> {
                 self.pio.instr_mem[i + offset].write(|w| unsafe { w.bits(instr as u32) })
             }
             self.used_instruction_space =
-                self.used_instruction_space | ((1 << instructions.len()) - 1);
+                self.used_instruction_space | (((1 << p.code.len()) - 1) << offset);
             Some(offset)
         } else {
             None
