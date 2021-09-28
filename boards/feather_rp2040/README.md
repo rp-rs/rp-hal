@@ -55,12 +55,16 @@ $ cargo install elf2uf2-rs, then repeating the `cargo run` command above.
 
 ### [feather_blinky](./examples/feather_blinky.rs)
 
-Flashes the Feather's on-board LED on and off.
+Flashes the Feather's onboard LED on and off.
+
+### [feather_neopixel_rainbow](./examples/feather_neopixel_rainbow.rs)
+
+Flows smoothly through various colors on the Feather's onboard NeoPixel LED.
 
 ## Contributing
 
 Contributions are what make the open source community such an amazing place to
-be learn, inspire, and create. Any contributions you make are **greatly
+be, learn, inspire, and create. Any contributions you make are **greatly
 appreciated**.
 
 The steps are:
