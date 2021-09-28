@@ -44,8 +44,8 @@ So, you want to program your new Raspberry Silicon microcontroller, using the
 Rust programming language. You've come to the right place!
 
 This repository is `rp-hal` - a collection of high-level drivers for the
-Raspberry Silicon RP2040 micontroller and various associated boards, like the
-Raspberry Pi Pico and the Adafruit Feather RP2040.
+Raspberry Silicon RP2040 microcontroller and various associated boards, like
+the Raspberry Pi Pico and the Adafruit Feather RP2040.
 
 If you want to write an application for Raspberry Silicon, check out our
 [RP2040 Project Template](https://github.com/rp-rs/rp2040-project-template).
