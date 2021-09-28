@@ -9,7 +9,7 @@ RP2040 chip according to how it is connected up on the Pico.
 [Raspberry Pi Pico]: https://www.raspberrypi.org/products/raspberry-pi-pico/
 [pico]: https://github.com/rp-rs/rp-hal/tree/main/boards/pico
 [rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
-[Raspberry Pi Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
+[Raspberry Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
 
 ## Using
 

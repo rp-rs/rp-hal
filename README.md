@@ -8,7 +8,7 @@
    <h3 align="center">rp-hal</h3>
 
   <p align="center">
-    Rust support for the "Raspberry Pi Silicon" family of microcontrollers
+    Rust support for the "Raspberry Silicon" family of microcontrollers
     <br />
     <a href="https://docs.rs/rp2040-hal"><strong>Explore the API docs »</strong></a>
     <br />
@@ -40,23 +40,26 @@
 
 ## Getting Started
 
-So, you want to program your Raspberry Pi Silicon, using the Rust programming
-language. You've come to the right place!
+So, you want to program your new Raspberry Silicon microcontroller, using the
+Rust programming language. You've come to the right place!
 
-This repository is `rp-hal` - a collection of high-level drivers for the RP2040
-and various associated boards, like the Raspberry Pi Pico and the Adafruit
-Feather RP2040.
+This repository is `rp-hal` - a collection of high-level drivers for the
+Raspberry Silicon RP2040 micontroller and various associated boards, like the
+Raspberry Pi Pico and the Adafruit Feather RP2040.
 
-If you want to write an application for Raspberry Pi Silicon, check out our
+If you want to write an application for Raspberry Silicon, check out our
 [RP2040 Project Template](https://github.com/rp-rs/rp2040-project-template).
 
-If you want to write code that uses the Raspberry Pi Silicon PIO State Machines, check out [pio-rs](https://github.com/rp-rs/pio-rs). You can even compile PIO programs at run-time, on the RP2040 itself!
+If you want to write code that uses the Raspberry Silicon PIO State Machines,
+check out [pio-rs](https://github.com/rp-rs/pio-rs). You can even compile PIO
+programs at run-time, on the RP2040 itself!
 
 If you want to try out some examples on one of our supported boards, check out
 the list of *Board Support Packages* below, and click through to see the various
 examples for each board.
 
-Before trying any of the examples, please ensure you have the latest stable version of Rust installed, along with the right target support:
+Before trying any of the examples, please ensure you have the latest stable
+version of Rust installed, along with the right target support:
 
 ```sh
 rustup self update
@@ -94,10 +97,10 @@ Each BSP includes some examples to show off the features of that particular boar
 [Embedded HAL]: https://github.com/rust-embedded/embedded-hal
 [Cargo Features]: https://doc.rust-lang.org/cargo/reference/features.html
 
-### [rp2040-hal] - The HAL for the [Raspberry Pi Silicon RP2040]
+### [rp2040-hal] - The HAL for the [Raspberry Silicon RP2040]
 
 You should include this crate in your project if you want to write a driver or
-library that runs on the [Raspberry Pi Silicon RP2040], or if you are writing a Board
+library that runs on the [Raspberry Silicon RP2040], or if you are writing a Board
 Support Package (see later on).
 
 The crate provides high-level drivers for the RP2040's internal peripherals,
@@ -110,7 +113,7 @@ There are examples in this crate to show how to use various peripherals
 particular board.
 
 [rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
-[Raspberry Pi Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
+[Raspberry Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
 
 ### [pico] - Board Support for the [Raspberry Pi Pico]
 
@@ -195,12 +198,12 @@ the Arm ELF file to a UF2 format image.
 For boards with USB Device support like the Raspberry Pi Pico, we recommend you
 use the UF2 process.
 
-The RP2040 contains a Cortex-M0+ processor, which implements the Thumb-2 format
-of the ARMv6-M instruction set. There are no operating-specific features in the
-binaries produced - they are for 'bare-metal' systems. For compatibilty with
-other Arm code (e.g. as produced by GCC), Rust uses the *Arm
-Embedded-Application Binary Interface* standard or EABI. Therefore, any Rust
-code for the RP2040 should be compiled with the target `thumbv6m-none-eabi`.
+The RP2040 contains two Cortex-M0+ processors, which execute Thumb-2 encoded
+ARMv6-M instructions. There are no operating-specific features in the binaries
+produced - they are for 'bare-metal' systems. For compatibilty with other Arm
+code (e.g. as produced by GCC), Rust uses the *Arm Embedded-Application Binary
+Interface* standard or EABI. Therefore, any Rust code for the RP2040 should be
+compiled with the target *`thumbv6m-none-eabi`*.
 
 More details can be found in the [Project Template](https://github.com/rp-rs/rp2040-project-template).
 
@@ -223,7 +226,7 @@ runner = "elf2uf2-rs -d"
 The `thumbv6m-none-eabi` target may be replaced by the all-Arm wildcard
 `'cfg(all(target_arch = "arm", target_os = "none"))'`.
 
-*Step 3* - Boot your RP2040 into "USB Bootloder mode", typically by rebooting
+*Step 3* - Boot your RP2040 into "USB Bootloader mode", typically by rebooting
 whilst holding some kind of "Boot Select" button. On Linux, you will also need
 to 'mount' the device, like you would a USB Thumb Drive.
 
@@ -247,7 +250,7 @@ probe-rs can autodetect your debug probe, which can make it easier to use.
 Currently, probe-rs supports the slightly unusual debug hardware in the RP2040,
 but the last released probe-run tool (v0.2.6, as of September 2021), does not.
 However, there is a special version of probe-run for the RP2040 called
-[probe-run-rs].
+[probe-run-rp](https://github.com/rp-rs/probe-run/tree/rp2040-support).
 
 *Step 1* - Install `probe-run-rp`:
 

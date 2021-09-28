@@ -1,7 +1,7 @@
 # [pro_micro_rp2040] - Board Support for the [Sparkfun Pro Micro RP2040]
 
 You should include this crate if you are writing code that you want to run on
-a [Sparkfun Pro Micro RP2040] - a smaller [RP2040][Raspberry Pi Silicon RP2040] board with USB-C and a WS2812B addressable LED.
+a [Sparkfun Pro Micro RP2040] - a smaller [RP2040][Raspberry Silicon RP2040] board with USB-C and a WS2812B addressable LED.
 
 This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the Pro Micro RP2040.
@@ -9,7 +9,7 @@ RP2040 chip according to how it is connected up on the Pro Micro RP2040.
 [Sparkfun Pro Micro RP2040]: https://www.sparkfun.com/products/18288
 [pro_micro_rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/pro_micro_rp2040
 [rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
-[Raspberry Pi Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
+[Raspberry Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
 
 ## Using
 

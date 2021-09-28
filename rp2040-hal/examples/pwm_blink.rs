@@ -20,7 +20,7 @@ use panic_halt as _;
 // Alias for our HAL crate
 use rp2040_hal as hal;
 
-// Traits we need
+// Some traits we need
 use embedded_hal::PwmPin;
 use embedded_time::rate::*;
 use rp2040_hal::clocks::Clock;
