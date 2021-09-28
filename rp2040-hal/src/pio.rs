@@ -96,6 +96,8 @@ unsafe impl<P: PIOExt + Send> Send for PIO<P> {}
 
 impl<P: PIOExt> PIO<P> {
     /// Free this instance.
+    ///
+    /// All output pins are left in their current state.
     pub fn free(
         self,
         _sm0: UninitStateMachine<P>,
@@ -103,7 +105,7 @@ impl<P: PIOExt> PIO<P> {
         _sm2: UninitStateMachine<P>,
         _sm3: UninitStateMachine<P>,
     ) -> P {
-        // TODO: Disable the PIO block.
+        // All state machines have already been stopped.
         self.pio
     }
 
@@ -242,7 +244,19 @@ impl<P: PIOExt> PIO<P> {
 /// `PIO::uninstall(program)` can be used to free the space occupied by the program once it is no
 /// longer used.
 ///
-/// TODO: Write an example?
+/// # Examples
+///
+/// ```
+/// let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
+/// // Install a program in instruction memory.
+/// let installed = pio.install(&program).unwrap();
+/// // Configure a state machine to use the program.
+/// let sm = rp2040_hal::pio::PIOBuilder::from_program(installed).build(sm0);
+/// // Uninitialize the state machine again, freeing the program.
+/// let (sm, installed) = sm.uninit();
+/// // Uninstall the program to free instruction memory.
+/// pio.uninstall(installed);
+/// ```
 ///
 /// # Safety
 ///
@@ -251,7 +265,16 @@ impl<P: PIOExt> PIO<P> {
 /// the program anymore. The user must therefore make sure that `uninstall()` is only called on the
 /// PIO object which was used to install the program.
 ///
-/// TODO: Write an example?
+/// ```
+/// let (mut pio, sm0, sm1, sm2, sm3) = pac.PIO0.split(&mut pac.RESETS);
+/// // Install a program in instruction memory.
+/// let installed = pio.install(&program).unwrap();
+/// // Reinitialize PIO.
+/// let pio0 = pio.free(sm0, sm1, sm2, sm3);
+/// let (mut pio, _, _, _, _) = pio0.split(&mut pac.RESETS);
+/// // Do not do the following, the program is not in instruction memory anymore!
+/// pio.uninstall(installed);
+/// ```
 #[derive(Debug)]
 pub struct InstalledProgram<P> {
     offset: u8,
@@ -350,7 +373,6 @@ impl<P: PIOExt> UninitStateMachine<P> {
 
     /// Set the current instruction.
     fn set_instruction(&mut self, instruction: u16) {
-        // TODO: Check if this function is safe to call while the state machine is running.
         self.sm()
             .sm_instr
             .write(|w| unsafe { w.sm0_instr().bits(instruction) })
@@ -361,6 +383,7 @@ impl<P: PIOExt> UninitStateMachine<P> {
     }
 }
 
+/// PIO State Machine with an associated program.
 pub struct StateMachine<P: PIOExt, State> {
     sm: UninitStateMachine<P>,
     program: InstalledProgram<P>,
@@ -373,6 +396,10 @@ pub struct Stopped;
 pub struct Running;
 
 impl<P: PIOExt, State> StateMachine<P, State> {
+    /// Stops the state machine if it is still running and returns its program.
+    ///
+    /// The program can be uninstalled to free space once it is no longer used by any state
+    /// machine.
     pub fn uninit(mut self) -> (UninitStateMachine<P>, InstalledProgram<P>) {
         self.sm.set_enabled(false);
         (self.sm, self.program)
@@ -385,6 +412,7 @@ impl<P: PIOExt, State> StateMachine<P, State> {
 
     /// Set the current instruction.
     pub fn set_instruction(&mut self, instruction: u16) {
+        // TODO: Check if this function is safe to call while the state machine is running.
         self.sm.set_instruction(instruction);
     }
 
@@ -445,6 +473,15 @@ impl<P: PIOExt> StateMachine<P, Stopped> {
         }
     }
 
+    /// Sets the pin directions for the specified pins.
+    ///
+    /// The `pins` parameter specifies a set of pins as a mask, and `pindir` contains the
+    /// directions that are configured for these pins. The bits in both masks correspond to the pin
+    /// number. The user has to make sure that they do not select any pins that are in use by any
+    /// other state machines of the same PIO block.
+    ///
+    /// This function needs to be called for sideset pins if they are supposed to be used as
+    /// output pins.
     pub fn set_pindirs_with_mask(&mut self, mut pins: u32, pindir: u32) {
         let mut pin = 0;
         let prev_pinctrl = self.sm.sm().sm_pinctrl.read().bits();
@@ -984,7 +1021,6 @@ impl<P: PIOExt> PIOBuilder<P> {
 
     /// Build the config and deploy it to a StateMachine.
     pub fn build(self, mut sm: UninitStateMachine<P>) -> StateMachine<P, Stopped> {
-        // TODO: Currently, the program is just lost and can never be uninstalled again.
         let offset = self.program.offset;
 
         // Stop the SM

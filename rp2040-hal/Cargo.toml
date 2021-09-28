@@ -18,6 +18,7 @@ nb = "1.0"
 rp2040-pac = "0.1.5"
 paste = "1.0"
 pio = { git = "https://github.com/rp-rs/pio-rs.git", branch = "main" }
+pio-proc = { git = "https://github.com/rp-rs/pio-rs.git", branch = "main" }
 usb-device = "0.2.8"
 vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
