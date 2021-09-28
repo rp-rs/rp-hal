@@ -197,17 +197,21 @@ impl<P: PIOExt> PIO<P> {
         }
     }
 
-    fn add_program(
+    /// Allocates space in instruction memory and installs the program.
+    ///
+    /// The function returns a handle to the installed program that can be used to configure a
+    /// `StateMachine` via `PIOBuilder`. The program can be uninstalled to free instruction memory
+    /// via `uninstall()` once the state machine using the program has been uninitialized.
+    pub fn install(
         &mut self,
-        instructions: &[u16],
-        origin: Option<u8>,
-        side_set: pio::SideSet,
-    ) -> Option<usize> {
-        if let Some(offset) = self.find_offset_for_instructions(instructions, origin) {
-            for (i, instr) in instructions
+        p: &Program<{ pio::RP2040_MAX_PROGRAM_SIZE }>,
+    ) -> Result<InstalledProgram, InstallError> {
+        if let Some(offset) = self.find_offset_for_instructions(&p.code, p.origin) {
+            for (i, instr) in p
+                .code
                 .iter()
                 .map(|instr| {
-                    let mut instr = pio::Instruction::decode(*instr, side_set).unwrap();
+                    let mut instr = pio::Instruction::decode(*instr, p.side_set).unwrap();
 
                     instr.operands = match instr.operands {
                         pio::InstructionOperands::JMP { condition, address } => {
@@ -222,7 +226,7 @@ impl<P: PIOExt> PIO<P> {
                         _ => instr.operands,
                     };
 
-                    instr.encode(side_set)
+                    instr.encode(p.side_set)
                 })
                 .enumerate()
             {
@@ -230,9 +234,68 @@ impl<P: PIOExt> PIO<P> {
             }
             self.used_instruction_space =
                 self.used_instruction_space | (((1 << p.code.len()) - 1) << offset);
-            Some(offset)
+            Ok(InstalledProgram {
+                offset: offset as u8,
+                length: p.code.len() as u8,
+                side_set: p.side_set,
+                wrap: p.wrap,
+            })
         } else {
-            None
+            Err(InstallError::NoSpace)
+        }
+    }
+
+    /// Removes the specified program from instruction memory, freeing the allocated space.
+    pub fn uninstall(&mut self, p: InstalledProgram) {
+        let instr_mask = (1 << p.length as u32) << p.offset as u32;
+        self.used_instruction_space = self.used_instruction_space & !instr_mask;
+    }
+}
+
+/// Handle to a program that was placed in the PIO's instruction memory.
+///
+/// Objects of this type can be reused for multiple state machines of the same PIO block to save
+/// memory if multiple state machines are supposed to perform the same function (for example, if
+/// one PIO block is used to implement multiple I2C busses).
+///
+/// `PIO::uninstall(program)` can be used to free the space occupied by the program once it is no
+/// longer used.
+///
+/// TODO: Write an example?
+///
+/// # Safety
+///
+/// Objects of this type can outlive their `PIO` object. If the PIO block is reinitialized, the API
+/// does not prevent the user from calling `uninstall()` when the PIO block does not actually hold
+/// the program anymore. The user must therefore make sure that `uninstall()` is only called on the
+/// PIO object which was used to install the program.
+///
+/// TODO: Write an example?
+#[derive(Debug)]
+pub struct InstalledProgram {
+    offset: u8,
+    length: u8,
+    side_set: SideSet,
+    wrap: Wrap,
+}
+
+impl InstalledProgram {
+    /// Clones this program handle so that it can be executed by two state machines at the same
+    /// time.
+    ///
+    /// # Safety
+    ///
+    /// This function is marked as unsafe because, once this function has been called, the
+    /// resulting handle can be used to call `PIO::uninstall()` while the program is still running.
+    ///
+    /// The user has to make sure to call `PIO::uninstall()` only once and only after all state
+    /// machines using the program have been uninitialized.
+    pub unsafe fn share(&self) -> InstalledProgram {
+        InstalledProgram {
+            offset: self.offset,
+            length: self.length,
+            side_set: self.side_set,
+            wrap: self.wrap,
         }
     }
 }
@@ -643,18 +706,12 @@ impl ShiftDirection {
 /// Builder to deploy a fully configured PIO program on one of the state
 /// machines.
 #[derive(Debug)]
-pub struct PIOBuilder<'a> {
+pub struct PIOBuilder {
     /// Clock divisor.
     clock_divisor: f32,
 
-    /// Instructions of the program.
-    instructions: &'a [u16],
-    /// Origin where this program should be loaded.
-    instruction_origin: Option<u8>,
-    /// Wrapping behavior.
-    wrap: Wrap,
-    /// Side-set behavior.
-    side_set: SideSet,
+    /// Program location and configuration.
+    program: InstalledProgram,
     /// GPIO pin used by `jmp pin` instruction.
     jmp_pin: u8,
 
@@ -697,17 +754,31 @@ pub struct PIOBuilder<'a> {
     out_base: u8,
 }
 
-impl<'a> Default for PIOBuilder<'a> {
-    fn default() -> Self {
+/// Buffer sharing configuration.
+#[derive(Debug, Clone, Copy)]
+pub enum Buffers {
+    /// No sharing.
+    RxTx,
+    /// The memory of the RX FIFO is given to the TX FIFO to double its depth.
+    OnlyTx,
+    /// The memory of the TX FIFO is given to the RX FIFO to double its depth.
+    OnlyRx,
+}
+
+/// Errors that occurred during `PIO::install`.
+#[derive(Debug)]
+pub enum InstallError {
+    /// There was not enough space for the instructions on the selected PIO.
+    NoSpace,
+}
+
+impl PIOBuilder {
+    /// Set config settings based on information from the given [`pio::Program`].
+    /// Additional configuration may be needed in addition to this.
+    pub fn from_program(p: InstalledProgram) -> Self {
         PIOBuilder {
             clock_divisor: 1.0,
-            instructions: &[],
-            instruction_origin: None,
-            wrap: Wrap {
-                source: 31,
-                target: 0,
-            },
-            side_set: SideSet::default(),
+            program: p,
             jmp_pin: 0,
             out_sticky: false,
             inline_out: None,
@@ -726,47 +797,6 @@ impl<'a> Default for PIOBuilder<'a> {
             set_base: 0,
             out_base: 0,
         }
-    }
-}
-
-/// Buffer sharing configuration.
-#[derive(Debug, Clone, Copy)]
-pub enum Buffers {
-    /// No sharing.
-    RxTx,
-    /// The memory of the RX FIFO is given to the TX FIFO to double its depth.
-    OnlyTx,
-    /// The memory of the TX FIFO is given to the RX FIFO to double its depth.
-    OnlyRx,
-}
-
-/// Errors that occurred during `PIOBuilder::build`.
-#[derive(Debug)]
-pub enum BuildError {
-    /// There was not enough space for the instructions on the selected PIO.
-    NoSpace,
-}
-
-impl<'a> PIOBuilder<'a> {
-    /// Set config settings based on information from the given [`pio::Program`].
-    /// Additional configuration may be needed in addition to this.
-    pub fn with_program(mut self, p: &'a Program<{ pio::RP2040_MAX_PROGRAM_SIZE }>) -> Self {
-        self.instruction_origin = p.origin;
-        self.instructions(&p.code).wrap(p.wrap).side_set(p.side_set)
-    }
-
-    /// Set the instructions of the program.
-    pub fn instructions(mut self, instructions: &'a [u16]) -> Self {
-        self.instructions = instructions;
-        self
-    }
-
-    /// Set the wrap source and target.
-    ///
-    /// The program will automatically jump from the wrap bottom to the wrap top in 0 cycles.
-    pub fn wrap(mut self, wrap: Wrap) -> Self {
-        self.wrap = wrap;
-        self
     }
 
     /// Set the pins asserted by `SET` instruction.
@@ -814,12 +844,6 @@ impl<'a> PIOBuilder<'a> {
     /// state of the next pin, and so on up to number of bits set using [`Self::side_set`] function.
     pub fn side_set_pin_base(mut self, base: u8) -> Self {
         self.side_set_base = base;
-        self
-    }
-
-    /// Set the side-set status.
-    pub fn side_set(mut self, side_set: SideSet) -> Self {
-        self.side_set = side_set;
         self
     }
 
@@ -905,27 +929,19 @@ impl<'a> PIOBuilder<'a> {
     }
 
     /// Build the config and deploy it to a StateMachine.
-    pub fn build<P: PIOExt>(
-        self,
-        pio: &mut PIO<P>,
-        sm: &mut StateMachine<P>,
-    ) -> Result<(), BuildError> {
-        let offset =
-            match pio.add_program(self.instructions, self.instruction_origin, self.side_set) {
-                Some(o) => o,
-                None => return Err(BuildError::NoSpace),
-            };
+    pub fn build<P: PIOExt>(self, sm: &mut StateMachine<P>) {
+        // TODO: Currently, the program is just lost and can never be uninstalled again.
+        let offset = self.program.offset;
 
         // Stop the SM
-        // TODO: This should probably do before we write the program source code
         sm.set_enabled(false);
 
         // Write all configuration bits
         sm.set_clock_divisor(self.clock_divisor);
 
         sm.sm().sm_execctrl.write(|w| {
-            w.side_en().bit(self.side_set.optional());
-            w.side_pindir().bit(self.side_set.pindirs());
+            w.side_en().bit(self.program.side_set.optional());
+            w.side_pindir().bit(self.program.side_set.pindirs());
 
             unsafe {
                 w.jmp_pin().bits(self.jmp_pin);
@@ -943,8 +959,9 @@ impl<'a> PIOBuilder<'a> {
             w.out_sticky().bit(self.out_sticky);
 
             unsafe {
-                w.wrap_top().bits(offset as u8 + self.wrap.source);
-                w.wrap_bottom().bits(offset as u8 + self.wrap.target);
+                w.wrap_top().bits(offset as u8 + self.program.wrap.source);
+                w.wrap_bottom()
+                    .bits(offset as u8 + self.program.wrap.target);
             }
 
             let n = match self.mov_status {
@@ -990,7 +1007,7 @@ impl<'a> PIOBuilder<'a> {
 
         sm.sm().sm_pinctrl.write(|w| {
             unsafe {
-                w.sideset_count().bits(self.side_set.bits());
+                w.sideset_count().bits(self.program.side_set.bits());
                 w.set_count().bits(self.set_count);
                 w.out_count().bits(self.out_count);
 
@@ -1019,7 +1036,5 @@ impl<'a> PIOBuilder<'a> {
 
         // Enable SM
         sm.set_enabled(true);
-
-        Ok(())
     }
 }
