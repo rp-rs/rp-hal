@@ -674,13 +674,13 @@ pub struct PIOBuilder<'a> {
     pull_threshold: u8,
     /// Number of bits shifted into `ISR` before autopush or conditional push will take place.
     push_threshold: u8,
-    // Shift direction for `OUT` instruction.
+    /// Shift direction for `OUT` instruction.
     out_shiftdir: ShiftDirection,
-    // Shift direction for `IN` instruction.
+    /// Shift direction for `IN` instruction.
     in_shiftdir: ShiftDirection,
-    // Enable autopull.
+    /// Enable autopull.
     autopull: bool,
-    // Enable autopush.
+    /// Enable autopush.
     autopush: bool,
 
     /// Number of pins asserted by a `SET`.
