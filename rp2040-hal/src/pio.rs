@@ -29,21 +29,21 @@ pub trait PIOExt:
             _phantom: core::marker::PhantomData,
         };
         let sm1 = UninitStateMachine {
-            id: 0,
+            id: 1,
             block: self.deref(),
-            sm: &self.deref().sm[0],
+            sm: &self.deref().sm[1],
             _phantom: core::marker::PhantomData,
         };
         let sm2 = UninitStateMachine {
-            id: 0,
+            id: 2,
             block: self.deref(),
-            sm: &self.deref().sm[0],
+            sm: &self.deref().sm[2],
             _phantom: core::marker::PhantomData,
         };
         let sm3 = UninitStateMachine {
-            id: 0,
+            id: 3,
             block: self.deref(),
-            sm: &self.deref().sm[0],
+            sm: &self.deref().sm[3],
             _phantom: core::marker::PhantomData,
         };
         (
@@ -207,7 +207,7 @@ impl<P: PIOExt> PIO<P> {
 
     /// Removes the specified program from instruction memory, freeing the allocated space.
     pub fn uninstall(&mut self, p: InstalledProgram<P>) {
-        let instr_mask = (1 << p.length as u32) << p.offset as u32;
+        let instr_mask = ((1 << p.length as u32) - 1) << p.offset as u32;
         self.used_instruction_space = self.used_instruction_space & !instr_mask;
     }
 
@@ -227,10 +227,11 @@ impl<P: PIOExt> PIO<P> {
         const ATOMIC_SET_OFFSET: usize = 0x2000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            *(*sm_set[0].sm.block)
+            (*sm_set[0].sm.block)
                 .ctrl
                 .as_ptr()
-                .add(ATOMIC_SET_OFFSET / 4) = sm_mask;
+                .add(ATOMIC_SET_OFFSET / 4)
+                .write_volatile(sm_mask);
         }
     }
 }
@@ -344,7 +345,11 @@ impl<P: PIOExt> UninitStateMachine<P> {
         const ATOMIC_SET_OFFSET: usize = 0x2000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            *(*self.block).ctrl.as_ptr().add(ATOMIC_SET_OFFSET / 4) = bits;
+            (*self.block)
+                .ctrl
+                .as_ptr()
+                .add(ATOMIC_SET_OFFSET / 4)
+                .write_volatile(bits);
         }
     }
 
@@ -352,7 +357,11 @@ impl<P: PIOExt> UninitStateMachine<P> {
         const ATOMIC_CLEAR_OFFSET: usize = 0x3000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            *(*self.block).ctrl.as_ptr().add(ATOMIC_CLEAR_OFFSET / 4) = bits;
+            (*self.block)
+                .ctrl
+                .as_ptr()
+                .add(ATOMIC_CLEAR_OFFSET / 4)
+                .write_volatile(bits);
         }
     }
 
@@ -496,11 +505,18 @@ impl<P: PIOExt> StateMachine<P, Stopped> {
                     }
                     w
                 });
+                let set_pindirs = pio::Instruction {
+                    operands: pio::InstructionOperands::SET {
+                        destination: pio::SetDestination::PINDIRS,
+                        data: ((pindir >> pin) & 0x1) as u8,
+                    },
+                    delay: 0,
+                    side_set: None,
+                }
+                .encode(SideSet::new(false, 0, false));
                 self.sm.sm().sm_instr.write(|w| {
                     unsafe {
-                        const SET_PINDIRS: u16 = 0xe080;
-                        w.sm0_instr()
-                            .bits(SET_PINDIRS | ((pindir >> pin) & 0x1) as u16);
+                        w.sm0_instr().bits(set_pindirs);
                     }
                     w
                 });
