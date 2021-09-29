@@ -2,6 +2,7 @@
 /// See [Chapter 3](https://rptl.io/pico-datasheet) for more details.
 use crate::resets::SubsystemReset;
 use pio::{Program, SideSet, Wrap};
+use rp2040_pac::{PIO0, PIO1};
 
 const PIO_INSTRUCTION_COUNT: usize = 32;
 
@@ -15,33 +16,29 @@ pub trait PIOExt:
         resets: &mut pac::RESETS,
     ) -> (
         PIO<Self>,
-        UninitStateMachine<Self>,
-        UninitStateMachine<Self>,
-        UninitStateMachine<Self>,
-        UninitStateMachine<Self>,
+        UninitStateMachine<(Self, SM0)>,
+        UninitStateMachine<(Self, SM1)>,
+        UninitStateMachine<(Self, SM2)>,
+        UninitStateMachine<(Self, SM3)>,
     ) {
         self.reset_bring_up(resets);
 
         let sm0 = UninitStateMachine {
-            id: 0,
             block: self.deref(),
             sm: &self.deref().sm[0],
             _phantom: core::marker::PhantomData,
         };
         let sm1 = UninitStateMachine {
-            id: 1,
             block: self.deref(),
             sm: &self.deref().sm[1],
             _phantom: core::marker::PhantomData,
         };
         let sm2 = UninitStateMachine {
-            id: 2,
             block: self.deref(),
             sm: &self.deref().sm[2],
             _phantom: core::marker::PhantomData,
         };
         let sm3 = UninitStateMachine {
-            id: 3,
             block: self.deref(),
             sm: &self.deref().sm[3],
             _phantom: core::marker::PhantomData,
@@ -71,8 +68,8 @@ pub trait PIOExt:
     }
 }
 
-impl PIOExt for rp2040_pac::PIO0 {}
-impl PIOExt for rp2040_pac::PIO1 {}
+impl PIOExt for PIO0 {}
+impl PIOExt for PIO1 {}
 
 /// Programmable IO Block
 pub struct PIO<P: PIOExt> {
@@ -100,10 +97,10 @@ impl<P: PIOExt> PIO<P> {
     /// All output pins are left in their current state.
     pub fn free(
         self,
-        _sm0: UninitStateMachine<P>,
-        _sm1: UninitStateMachine<P>,
-        _sm2: UninitStateMachine<P>,
-        _sm3: UninitStateMachine<P>,
+        _sm0: UninitStateMachine<(P, SM0)>,
+        _sm1: UninitStateMachine<(P, SM1)>,
+        _sm2: UninitStateMachine<(P, SM2)>,
+        _sm3: UninitStateMachine<(P, SM3)>,
     ) -> P {
         // All state machines have already been stopped.
         self.pio
@@ -210,30 +207,6 @@ impl<P: PIOExt> PIO<P> {
         let instr_mask = ((1 << p.length as u32) - 1) << p.offset as u32;
         self.used_instruction_space = self.used_instruction_space & !instr_mask;
     }
-
-    /// Restarts the clock dividers for the specified state machines.
-    ///
-    /// As a result, the clock will be synchronous for the state machines, which is a precondition
-    /// for synchronous operation.
-    pub fn synchronize(sm_set: &[&mut StateMachine<P, Stopped>]) {
-        if sm_set.len() == 0 {
-            return;
-        }
-        let mut sm_mask = 0;
-        for sm in sm_set {
-            // Bits 11:8 of CTRL contain CLKDIV_RESTART.
-            sm_mask |= ((1 << sm.sm.id) as u32) << 8;
-        }
-        const ATOMIC_SET_OFFSET: usize = 0x2000;
-        // Safety: We only use the atomic alias of the register.
-        unsafe {
-            (*sm_set[0].sm.block)
-                .ctrl
-                .as_ptr()
-                .add(ATOMIC_SET_OFFSET / 4)
-                .write_volatile(sm_mask);
-        }
-    }
 }
 
 /// Handle to a program that was placed in the PIO's instruction memory.
@@ -307,23 +280,92 @@ impl<P: PIOExt> InstalledProgram<P> {
     }
 }
 
+/// State machine identifier (without a specified PIO block).
+pub trait StateMachineIndex {
+    /// Numerical index of the state machine (0 to 3).
+    fn id() -> usize;
+}
+
+/// First state machine.
+pub struct SM0;
+/// Second state machine.
+pub struct SM1;
+/// Third state machine.
+pub struct SM2;
+/// Fourth state machine.
+pub struct SM3;
+
+impl StateMachineIndex for SM0 {
+    fn id() -> usize {
+        0
+    }
+}
+impl StateMachineIndex for SM1 {
+    fn id() -> usize {
+        1
+    }
+}
+impl StateMachineIndex for SM2 {
+    fn id() -> usize {
+        2
+    }
+}
+impl StateMachineIndex for SM3 {
+    fn id() -> usize {
+        3
+    }
+}
+
+/// Trait to identify a single state machine, as a generic type parameter to `UninitStateMachine`,
+/// `InitStateMachine`, etc.
+pub trait ValidStateMachine {
+    /// The PIO block to which this state machine belongs.
+    type PIO: PIOExt;
+
+    /// The index of this state machine (between 0 and 3).
+    fn id() -> usize;
+}
+
+/// First state machine of the first PIO block.
+pub type PIO0SM0 = (PIO0, SM0);
+/// Second state machine of the first PIO block.
+pub type PIO0SM1 = (PIO0, SM1);
+/// Third state machine of the first PIO block.
+pub type PIO0SM2 = (PIO0, SM2);
+/// Fourth state machine of the first PIO block.
+pub type PIO0SM3 = (PIO0, SM3);
+/// First state machine of the second PIO block.
+pub type PIO1SM0 = (PIO1, SM0);
+/// Second state machine of the second PIO block.
+pub type PIO1SM1 = (PIO1, SM1);
+/// Third state machine of the second PIO block.
+pub type PIO1SM2 = (PIO1, SM2);
+/// Fourth state machine of the second PIO block.
+pub type PIO1SM3 = (PIO1, SM3);
+
+impl<P: PIOExt, SM: StateMachineIndex> ValidStateMachine for (P, SM) {
+    type PIO = P;
+    fn id() -> usize {
+        SM::id()
+    }
+}
+
 /// PIO State Machine (uninitialized, without a program).
 #[derive(Debug)]
-pub struct UninitStateMachine<P: PIOExt> {
-    id: u8,
+pub struct UninitStateMachine<SM: ValidStateMachine> {
     block: *const rp2040_pac::pio0::RegisterBlock,
     sm: *const rp2040_pac::pio0::SM,
-    _phantom: core::marker::PhantomData<P>,
+    _phantom: core::marker::PhantomData<SM>,
 }
 
 // Safety: `UninitStateMachine` only uses atomic accesses to shared registers.
-unsafe impl<P: PIOExt + Send> Send for UninitStateMachine<P> {}
+unsafe impl<SM: ValidStateMachine + Send> Send for UninitStateMachine<SM> {}
 
-impl<P: PIOExt> UninitStateMachine<P> {
+impl<SM: ValidStateMachine> UninitStateMachine<SM> {
     /// Start and stop the state machine.
     fn set_enabled(&mut self, enabled: bool) {
         // Bits 3:0 are SM_ENABLE.
-        let mask = 1 << self.id;
+        let mask = 1 << SM::id();
         if enabled {
             self.set_ctrl_bits(mask);
         } else {
@@ -333,12 +375,12 @@ impl<P: PIOExt> UninitStateMachine<P> {
 
     fn restart(&mut self) {
         // Bits 7:4 are SM_RESTART.
-        self.set_ctrl_bits(1 << (self.id + 4));
+        self.set_ctrl_bits(1 << (SM::id() + 4));
     }
 
     fn reset_clock(&mut self) {
         // Bits 11:8 are CLKDIV_RESTART.
-        self.set_ctrl_bits(1 << (self.id + 8));
+        self.set_ctrl_bits(1 << (SM::id() + 8));
     }
 
     fn set_ctrl_bits(&mut self, bits: u32) {
@@ -393,9 +435,9 @@ impl<P: PIOExt> UninitStateMachine<P> {
 }
 
 /// PIO State Machine with an associated program.
-pub struct StateMachine<P: PIOExt, State> {
-    sm: UninitStateMachine<P>,
-    program: InstalledProgram<P>,
+pub struct StateMachine<SM: ValidStateMachine, State> {
+    sm: UninitStateMachine<SM>,
+    program: InstalledProgram<SM::PIO>,
     _phantom: core::marker::PhantomData<State>,
 }
 
@@ -404,12 +446,12 @@ pub struct Stopped;
 /// Marker for an initialized and running state machine.
 pub struct Running;
 
-impl<P: PIOExt, State> StateMachine<P, State> {
+impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     /// Stops the state machine if it is still running and returns its program.
     ///
     /// The program can be uninstalled to free space once it is no longer used by any state
     /// machine.
-    pub fn uninit(mut self) -> (UninitStateMachine<P>, InstalledProgram<P>) {
+    pub fn uninit(mut self) -> (UninitStateMachine<SM>, InstalledProgram<SM::PIO>) {
         self.sm.set_enabled(false);
         (self.sm, self.program)
     }
@@ -436,7 +478,7 @@ impl<P: PIOExt, State> StateMachine<P, State> {
     pub fn read_rx(&mut self) -> Option<u32> {
         // Safety: The register is never written by software.
         let is_empty =
-            unsafe { &*self.sm.block }.fstat.read().rxempty().bits() & (1 << self.sm.id) != 0;
+            unsafe { &*self.sm.block }.fstat.read().rxempty().bits() & (1 << SM::id()) != 0;
 
         if is_empty {
             return None;
@@ -444,7 +486,7 @@ impl<P: PIOExt, State> StateMachine<P, State> {
 
         // Safety: The register is unique to this state machine.
         Some(
-            unsafe { &*self.sm.block }.rxf[self.sm.id as usize]
+            unsafe { &*self.sm.block }.rxf[SM::id() as usize]
                 .read()
                 .bits(),
         )
@@ -456,22 +498,22 @@ impl<P: PIOExt, State> StateMachine<P, State> {
     pub fn write_tx(&mut self, value: u32) -> bool {
         // Safety: The register is never written by software.
         let is_full =
-            unsafe { &*self.sm.block }.fstat.read().txfull().bits() & (1 << self.sm.id) != 0;
+            unsafe { &*self.sm.block }.fstat.read().txfull().bits() & (1 << SM::id()) != 0;
 
         if is_full {
             return false;
         }
 
         // Safety: The register is unique to this state machine.
-        unsafe { &*self.sm.block }.txf[self.sm.id as usize].write(|w| unsafe { w.bits(value) });
+        unsafe { &*self.sm.block }.txf[SM::id()].write(|w| unsafe { w.bits(value) });
 
         true
     }
 }
 
-impl<P: PIOExt> StateMachine<P, Stopped> {
+impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
     /// Starts execution of the selected program.
-    pub fn start(mut self) -> StateMachine<P, Running> {
+    pub fn start(mut self) -> StateMachine<SM, Running> {
         // Enable SM
         self.sm.set_enabled(true);
 
@@ -535,9 +577,68 @@ impl<P: PIOExt> StateMachine<P, Stopped> {
     }
 }
 
-impl<P: PIOExt> StateMachine<P, Running> {
+impl<P: PIOExt, SM: StateMachineIndex> StateMachine<(P, SM), Stopped> {
+    /// Restarts the clock dividers for the specified state machines.
+    ///
+    /// As a result, the clock will be synchronous for the state machines, which is a precondition
+    /// for synchronous operation.
+    ///
+    /// The function returns an object that, once destructed, restarts the clock dividers. This
+    /// object allows further state machines to be added if more than two shall be synchronized.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// sm0.synchronize_with(sm1).and_with(sm2);
+    /// ```
+    pub fn synchronize_with<'sm, SM2: StateMachineIndex>(
+        &'sm mut self,
+        _other_sm: &'sm mut StateMachine<(P, SM2), Stopped>,
+    ) -> Synchronize<'sm, (P, SM)> {
+        let sm_mask = (1 << SM::id()) | (1 << SM2::id());
+        Synchronize { sm: self, sm_mask }
+    }
+}
+
+/// Type which, once destructed, restarts the clock dividers for all selected state machines,
+/// effectively synchronizing them.
+pub struct Synchronize<'sm, SM: ValidStateMachine> {
+    sm: &'sm mut StateMachine<SM, Stopped>,
+    sm_mask: u32,
+}
+
+impl<'sm, P: PIOExt, SM: StateMachineIndex> Synchronize<'sm, (P, SM)> {
+    /// Adds another state machine to be synchronized.
+    pub fn and_with<SM2: StateMachineIndex>(
+        mut self,
+        _other_sm: &'sm mut StateMachine<(P, SM2), Stopped>,
+    ) -> Self {
+        // Add another state machine index to the mask.
+        self.sm_mask |= 1 << SM2::id();
+        self
+    }
+}
+
+impl<'sm, SM: ValidStateMachine> Drop for Synchronize<'sm, SM> {
+    fn drop(&mut self) {
+        // Restart the clocks of all state machines specified by the mask.
+        // Bits 11:8 of CTRL contain CLKDIV_RESTART.
+        let sm_mask = self.sm_mask << 8;
+        const ATOMIC_SET_OFFSET: usize = 0x2000;
+        // Safety: We only use the atomic alias of the register.
+        unsafe {
+            (*self.sm.sm.block)
+                .ctrl
+                .as_ptr()
+                .add(ATOMIC_SET_OFFSET / 4)
+                .write_volatile(sm_mask as u32);
+        }
+    }
+}
+
+impl<SM: ValidStateMachine> StateMachine<SM, Running> {
     /// Stops execution of the selected program.
-    pub fn stop(mut self) -> StateMachine<P, Stopped> {
+    pub fn stop(mut self) -> StateMachine<SM, Stopped> {
         // Enable SM
         self.sm.set_enabled(false);
 
@@ -1036,7 +1137,10 @@ impl<P: PIOExt> PIOBuilder<P> {
     }
 
     /// Build the config and deploy it to a StateMachine.
-    pub fn build(self, mut sm: UninitStateMachine<P>) -> StateMachine<P, Stopped> {
+    pub fn build<SM: StateMachineIndex>(
+        self,
+        mut sm: UninitStateMachine<(P, SM)>,
+    ) -> StateMachine<(P, SM), Stopped> {
         let offset = self.program.offset;
 
         // Stop the SM
