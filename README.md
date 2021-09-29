@@ -186,6 +186,17 @@ RP2040 chip according to how it is connected up on the Pro Micro RP2040.
 [Sparkfun Pro Micro RP2040]: https://www.sparkfun.com/products/18288
 [pro_micro_rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/pro_micro_rp2040
 
+### [qt_py_rp2040] - Board Support for the [Adafruit QT Py RP2040]
+
+You should include this crate if you are writing code that you want to run on
+an [Adafruit QT Py RP2040] - an extremely small form-factor RP2040 board from Adafruit.
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the Feather RP2040.
+
+[Adafruit QT Py RP2040]: https://www.adafruit.com/product/4900
+[qt_py_rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/qt_py_rp2040
+
 <!-- PROGRAMMING -->
 ## Programming
 
