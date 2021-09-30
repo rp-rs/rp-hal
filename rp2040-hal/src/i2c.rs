@@ -381,6 +381,10 @@ macro_rules! hal {
                         }
                     }
 
+                    if abort {
+                        return Err(Error::Abort(abort_reason));
+                    }
+
                     for (i, byte) in buffer.iter_mut().enumerate() {
                         let first = i == 0;
                         let last = i == bytes.len() - 1;
