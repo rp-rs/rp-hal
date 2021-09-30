@@ -225,9 +225,9 @@ impl<P: PIOExt> PIO<P> {
 /// // Install a program in instruction memory.
 /// let installed = pio.install(&program).unwrap();
 /// // Configure a state machine to use the program.
-/// let sm = rp2040_hal::pio::PIOBuilder::from_program(installed).build(sm0);
+/// let (sm, rx, tx) = rp2040_hal::pio::PIOBuilder::from_program(installed).build(sm0);
 /// // Uninitialize the state machine again, freeing the program.
-/// let (sm, installed) = sm.uninit();
+/// let (sm, installed) = sm.uninit(rx, tx);
 /// // Uninstall the program to free instruction memory.
 /// pio.uninstall(installed);
 /// ```
@@ -451,7 +451,11 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     ///
     /// The program can be uninstalled to free space once it is no longer used by any state
     /// machine.
-    pub fn uninit(mut self) -> (UninitStateMachine<SM>, InstalledProgram<SM::PIO>) {
+    pub fn uninit(
+        mut self,
+        _rx: Rx<SM>,
+        _tx: Tx<SM>,
+    ) -> (UninitStateMachine<SM>, InstalledProgram<SM::PIO>) {
         self.sm.set_enabled(false);
         (self.sm, self.program)
     }
@@ -470,44 +474,6 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     /// Check if the current instruction is stalled.
     pub fn stalled(&self) -> bool {
         self.sm.sm().sm_execctrl.read().exec_stalled().bits()
-    }
-
-    /// Get the next element from RX FIFO.
-    ///
-    /// Returns `None` if the FIFO is empty.
-    pub fn read_rx(&mut self) -> Option<u32> {
-        // Safety: The register is never written by software.
-        let is_empty =
-            unsafe { &*self.sm.block }.fstat.read().rxempty().bits() & (1 << SM::id()) != 0;
-
-        if is_empty {
-            return None;
-        }
-
-        // Safety: The register is unique to this state machine.
-        Some(
-            unsafe { &*self.sm.block }.rxf[SM::id() as usize]
-                .read()
-                .bits(),
-        )
-    }
-
-    /// Write an element to TX FIFO.
-    ///
-    /// Returns `true` if the value was written to FIFO, `false` otherwise.
-    pub fn write_tx(&mut self, value: u32) -> bool {
-        // Safety: The register is never written by software.
-        let is_full =
-            unsafe { &*self.sm.block }.fstat.read().txfull().bits() & (1 << SM::id()) != 0;
-
-        if is_full {
-            return false;
-        }
-
-        // Safety: The register is unique to this state machine.
-        unsafe { &*self.sm.block }.txf[SM::id()].write(|w| unsafe { w.bits(value) });
-
-        true
     }
 }
 
@@ -647,6 +613,54 @@ impl<SM: ValidStateMachine> StateMachine<SM, Running> {
             program: self.program,
             _phantom: core::marker::PhantomData,
         }
+    }
+}
+
+/// PIO RX FIFO handle.
+pub struct Rx<SM: ValidStateMachine> {
+    block: *const rp2040_pac::pio0::RegisterBlock,
+    _phantom: core::marker::PhantomData<SM>,
+}
+
+impl<SM: ValidStateMachine> Rx<SM> {
+    /// Get the next element from RX FIFO.
+    ///
+    /// Returns `None` if the FIFO is empty.
+    pub fn read_rx(&mut self) -> Option<u32> {
+        // Safety: The register is never written by software.
+        let is_empty = unsafe { &*self.block }.fstat.read().rxempty().bits() & (1 << SM::id()) != 0;
+
+        if is_empty {
+            return None;
+        }
+
+        // Safety: The register is unique to this Rx instance.
+        Some(unsafe { &*self.block }.rxf[SM::id() as usize].read().bits())
+    }
+}
+
+/// PIO TX FIFO handle.
+pub struct Tx<SM: ValidStateMachine> {
+    block: *const rp2040_pac::pio0::RegisterBlock,
+    _phantom: core::marker::PhantomData<SM>,
+}
+
+impl<SM: ValidStateMachine> Tx<SM> {
+    /// Write an element to TX FIFO.
+    ///
+    /// Returns `true` if the value was written to FIFO, `false` otherwise.
+    pub fn write_tx(&mut self, value: u32) -> bool {
+        // Safety: The register is never written by software.
+        let is_full = unsafe { &*self.block }.fstat.read().txfull().bits() & (1 << SM::id()) != 0;
+
+        if is_full {
+            return false;
+        }
+
+        // Safety: The register is unique to this Tx instance.
+        unsafe { &*self.block }.txf[SM::id()].write(|w| unsafe { w.bits(value) });
+
+        true
     }
 }
 
@@ -1140,7 +1154,7 @@ impl<P: PIOExt> PIOBuilder<P> {
     pub fn build<SM: StateMachineIndex>(
         self,
         mut sm: UninitStateMachine<(P, SM)>,
-    ) -> StateMachine<(P, SM), Stopped> {
+    ) -> (StateMachine<(P, SM), Stopped>, Rx<(P, SM)>, Tx<(P, SM)>) {
         let offset = self.program.offset;
 
         // Stop the SM
@@ -1244,10 +1258,22 @@ impl<P: PIOExt> PIOBuilder<P> {
             .encode(),
         );
 
-        StateMachine {
-            sm: sm,
-            program: self.program,
+        let rx = Rx {
+            block: sm.block,
             _phantom: core::marker::PhantomData,
-        }
+        };
+        let tx = Tx {
+            block: sm.block,
+            _phantom: core::marker::PhantomData,
+        };
+        (
+            StateMachine {
+                sm: sm,
+                program: self.program,
+                _phantom: core::marker::PhantomData,
+            },
+            rx,
+            tx,
+        )
     }
 }
