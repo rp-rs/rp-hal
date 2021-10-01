@@ -11,6 +11,7 @@ pub trait PIOExt:
     core::ops::Deref<Target = rp2040_pac::pio0::RegisterBlock> + SubsystemReset + Sized
 {
     /// Create a new PIO wrapper and split the state machines into individual objects.
+    #[allow(clippy::type_complexity)] // Required for symmetry with PIO::free().
     fn split(
         self,
         resets: &mut pac::RESETS,
@@ -188,8 +189,7 @@ impl<P: PIOExt> PIO<P> {
             {
                 self.pio.instr_mem[i + offset].write(|w| unsafe { w.bits(instr as u32) })
             }
-            self.used_instruction_space =
-                self.used_instruction_space | (((1 << p.code.len()) - 1) << offset);
+            self.used_instruction_space |= ((1 << p.code.len()) - 1) << offset;
             Ok(InstalledProgram {
                 offset: offset as u8,
                 length: p.code.len() as u8,
@@ -205,7 +205,7 @@ impl<P: PIOExt> PIO<P> {
     /// Removes the specified program from instruction memory, freeing the allocated space.
     pub fn uninstall(&mut self, p: InstalledProgram<P>) {
         let instr_mask = ((1 << p.length as u32) - 1) << p.offset as u32;
-        self.used_instruction_space = self.used_instruction_space & !instr_mask;
+        self.used_instruction_space &= !instr_mask;
     }
 }
 
@@ -220,12 +220,22 @@ impl<P: PIOExt> PIO<P> {
 ///
 /// # Examples
 ///
-/// ```
-/// let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
+/// ```no_run
+/// use rp2040_hal::{pac, pio::PIOBuilder, pio::PIOExt};
+/// let mut peripherals = pac::Peripherals::take().unwrap();
+/// let (mut pio, sm0, _, _, _) = peripherals.PIO0.split(&mut peripherals.RESETS);
 /// // Install a program in instruction memory.
+/// let program = pio_proc::pio!(
+///     32,
+///     ".wrap_target
+///     set pins, 1 [31]
+///     set pins, 0 [31]
+/// .wrap
+///     "
+/// ).program;
 /// let installed = pio.install(&program).unwrap();
 /// // Configure a state machine to use the program.
-/// let (sm, rx, tx) = rp2040_hal::pio::PIOBuilder::from_program(installed).build(sm0);
+/// let (sm, rx, tx) = PIOBuilder::from_program(installed).build(sm0);
 /// // Uninitialize the state machine again, freeing the program.
 /// let (sm, installed) = sm.uninit(rx, tx);
 /// // Uninstall the program to free instruction memory.
@@ -239,7 +249,7 @@ impl<P: PIOExt> PIO<P> {
 /// the program anymore. The user must therefore make sure that `uninstall()` is only called on the
 /// PIO object which was used to install the program.
 ///
-/// ```
+/// ```ignore
 /// let (mut pio, sm0, sm1, sm2, sm3) = pac.PIO0.split(&mut pac.RESETS);
 /// // Install a program in instruction memory.
 /// let installed = pio.install(&program).unwrap();
@@ -530,7 +540,7 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
                 });
             }
             pin += 1;
-            pins = pins >> 1;
+            pins >>= 1;
         }
         // We modified PINCTRL, yet the program assumes a certain configuration, so restore the
         // previous value.
@@ -554,7 +564,7 @@ impl<P: PIOExt, SM: StateMachineIndex> StateMachine<(P, SM), Stopped> {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```ignore
     /// sm0.synchronize_with(sm1).and_with(sm2);
     /// ```
     pub fn synchronize_with<'sm, SM2: StateMachineIndex>(
@@ -1151,6 +1161,7 @@ impl<P: PIOExt> PIOBuilder<P> {
     }
 
     /// Build the config and deploy it to a StateMachine.
+    #[allow(clippy::type_complexity)] // The return type cannot really be simplified.
     pub fn build<SM: StateMachineIndex>(
         self,
         mut sm: UninitStateMachine<(P, SM)>,
@@ -1268,7 +1279,7 @@ impl<P: PIOExt> PIOBuilder<P> {
         };
         (
             StateMachine {
-                sm: sm,
+                sm,
                 program: self.program,
                 _phantom: core::marker::PhantomData,
             },
