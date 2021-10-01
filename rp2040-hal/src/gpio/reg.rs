@@ -1,8 +1,8 @@
 // Based heavily on and in some places copied from `atsamd-hal` gpio::v2
 use super::dynpin::{DynGroup, DynPinId};
 use super::{
-    InputOverride, InterruptOverride, OutputDriveStrength, OutputEnableOverride, OutputOverride,
-    OutputSlewRate,
+    InputOverride, Interrupt, InterruptOverride, OutputDriveStrength, OutputEnableOverride,
+    OutputOverride, OutputSlewRate,
 };
 use crate::gpio::dynpin::{DynDisabled, DynFunction, DynInput, DynOutput, DynPinMode};
 use crate::pac;
@@ -252,6 +252,101 @@ pub(super) unsafe trait RegisterInterface {
         match self.id().group {
             DynGroup::Bank0 => gpio_change_mode(num, mode),
             DynGroup::Qspi => qspi_change_mode(num, mode),
+        }
+    }
+
+    /// Clear interrupt.
+    #[inline]
+    fn clear_interrupt(&self, interrupt: Interrupt) {
+        let num = self.id().num as usize;
+        unsafe {
+            let io = &(*pac::IO_BANK0::ptr());
+            let reg = (&io.intr0).as_ptr().add(num / 8);
+            let bit_in_reg = num % 8 * 4 + interrupt as usize;
+            *reg |= 1 << bit_in_reg;
+        }
+    }
+
+    /// Interrupt status.
+    #[inline]
+    fn interrupt_status(&self, interrupt: Interrupt) -> bool {
+        let num = self.id().num as usize;
+        unsafe {
+            let cpuid = *(pac::SIO::ptr() as *const u32);
+            let io = &(*pac::IO_BANK0::ptr());
+            let reg = (&io.proc0_ints0)
+                .as_ptr()
+                .add(num / 8 + cpuid as usize * 12);
+            let bit_in_reg = num % 8 * 4 + interrupt as usize;
+            (*reg & (1 << bit_in_reg)) != 0
+        }
+    }
+
+    /// Is interrupt enabled.
+    #[inline]
+    fn is_interrupt_enabled(&self, interrupt: Interrupt) -> bool {
+        let num = self.id().num as usize;
+        unsafe {
+            let cpuid = *(pac::SIO::ptr() as *const u32);
+            let io = &(*pac::IO_BANK0::ptr());
+            let reg = (&io.proc0_inte0)
+                .as_ptr()
+                .add(num / 8 + cpuid as usize * 12);
+            let bit_in_reg = num % 8 * 4 + interrupt as usize;
+            (*reg & (1 << bit_in_reg)) != 0
+        }
+    }
+
+    /// Enable or disable interrupt.
+    #[inline]
+    fn set_interrupt_enabled(&self, interrupt: Interrupt, enabled: bool) {
+        let num = self.id().num as usize;
+        unsafe {
+            let cpuid = *(pac::SIO::ptr() as *const u32);
+            let io = &(*pac::IO_BANK0::ptr());
+            let reg = (&io.proc0_inte0)
+                .as_ptr()
+                .add(num / 8 + cpuid as usize * 12);
+            let bit_in_reg = num % 8 * 4 + interrupt as usize;
+            if enabled {
+                *reg |= 1 << bit_in_reg;
+            } else {
+                *reg &= !(1 << bit_in_reg);
+            }
+        }
+    }
+
+    /// Is interrupt forced.
+    #[inline]
+    fn is_interrupt_forced(&self, interrupt: Interrupt) -> bool {
+        let num = self.id().num as usize;
+        unsafe {
+            let cpuid = *(pac::SIO::ptr() as *const u32);
+            let io = &(*pac::IO_BANK0::ptr());
+            let reg = (&io.proc0_intf0)
+                .as_ptr()
+                .add(num / 8 + cpuid as usize * 12);
+            let bit_in_reg = num % 8 * 4 + interrupt as usize;
+            (*reg & (1 << bit_in_reg)) != 0
+        }
+    }
+
+    /// Force or release interrupt.
+    #[inline]
+    fn set_interrupt_forced(&self, interrupt: Interrupt, forced: bool) {
+        let num = self.id().num as usize;
+        unsafe {
+            let cpuid = *(pac::SIO::ptr() as *const u32);
+            let io = &(*pac::IO_BANK0::ptr());
+            let reg = (&io.proc0_intf0)
+                .as_ptr()
+                .add(num / 8 + cpuid as usize * 12);
+            let bit_in_reg = num % 8 * 4 + interrupt as usize;
+            if forced {
+                *reg |= 1 << bit_in_reg;
+            } else {
+                *reg &= !(1 << bit_in_reg);
+            }
         }
     }
 
