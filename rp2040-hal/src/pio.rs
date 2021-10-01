@@ -626,7 +626,7 @@ impl<SM: ValidStateMachine> Rx<SM> {
     /// Get the next element from RX FIFO.
     ///
     /// Returns `None` if the FIFO is empty.
-    pub fn read_rx(&mut self) -> Option<u32> {
+    pub fn read(&mut self) -> Option<u32> {
         // Safety: The register is never written by software.
         let is_empty = unsafe { &*self.block }.fstat.read().rxempty().bits() & (1 << SM::id()) != 0;
 
@@ -649,7 +649,7 @@ impl<SM: ValidStateMachine> Tx<SM> {
     /// Write an element to TX FIFO.
     ///
     /// Returns `true` if the value was written to FIFO, `false` otherwise.
-    pub fn write_tx(&mut self, value: u32) -> bool {
+    pub fn write(&mut self, value: u32) -> bool {
         // Safety: The register is never written by software.
         let is_full = unsafe { &*self.block }.fstat.read().txfull().bits() & (1 << SM::id()) != 0;
 
