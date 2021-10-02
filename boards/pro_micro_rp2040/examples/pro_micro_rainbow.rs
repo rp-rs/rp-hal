@@ -25,6 +25,7 @@ use pro_micro_rp2040::{
     },
     XOSC_CRYSTAL_FREQ,
 };
+use rp2040_hal::pio::PIOExt;
 use smart_leds::{brightness, SmartLedsWrite, RGB8};
 use ws2812_pio::Ws2812;
 
@@ -75,11 +76,11 @@ fn main() -> ! {
     let mut delay = timer.count_down();
 
     // Configure the addressable LED
-
+    let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
     let mut ws = Ws2812::new(
         25,
-        pac.PIO0,
-        &mut pac.RESETS,
+        &mut pio,
+        sm0,
         clocks.peripheral_clock.freq(),
         timer.count_down(),
     );
