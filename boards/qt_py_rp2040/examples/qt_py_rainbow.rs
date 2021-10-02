@@ -59,7 +59,7 @@ fn main() -> ! {
         .set_high()
         .unwrap();
 
-    let timer = rp2040_hal::timer::Timer::new(pac.TIMER);
+    let timer = rp2040_hal::timer::Timer::new(pac.TIMER, &mut pac.RESETS);
     let mut delay = timer.count_down();
 
     let mut ws = Ws2812::new(
