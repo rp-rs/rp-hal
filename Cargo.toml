@@ -10,3 +10,9 @@ members = [
     "boards/adafruit_macropad",
     "boards/pro_micro_rp2040",
 ]
+
+[patch.'https://github.com/rp-rs/rp-hal.git']
+rp2040-hal = { path ="./rp2040-hal" }
+
+[patch.crates-io]
+rp2040-hal = { path ="./rp2040-hal" }
