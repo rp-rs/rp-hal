@@ -2,27 +2,84 @@
 /// See [Chapter 3](https://rptl.io/pico-datasheet) for more details.
 use crate::resets::SubsystemReset;
 use pio::{Program, SideSet, Wrap};
+use rp2040_pac::{PIO0, PIO1};
 
 const PIO_INSTRUCTION_COUNT: usize = 32;
 
 /// PIO Instance
-pub trait Instance:
-    core::ops::Deref<Target = rp2040_pac::pio0::RegisterBlock> + SubsystemReset
+pub trait PIOExt:
+    core::ops::Deref<Target = rp2040_pac::pio0::RegisterBlock> + SubsystemReset + Sized
 {
+    /// Create a new PIO wrapper and split the state machines into individual objects.
+    #[allow(clippy::type_complexity)] // Required for symmetry with PIO::free().
+    fn split(
+        self,
+        resets: &mut pac::RESETS,
+    ) -> (
+        PIO<Self>,
+        UninitStateMachine<(Self, SM0)>,
+        UninitStateMachine<(Self, SM1)>,
+        UninitStateMachine<(Self, SM2)>,
+        UninitStateMachine<(Self, SM3)>,
+    ) {
+        self.reset_bring_up(resets);
+
+        let sm0 = UninitStateMachine {
+            block: self.deref(),
+            sm: &self.deref().sm[0],
+            _phantom: core::marker::PhantomData,
+        };
+        let sm1 = UninitStateMachine {
+            block: self.deref(),
+            sm: &self.deref().sm[1],
+            _phantom: core::marker::PhantomData,
+        };
+        let sm2 = UninitStateMachine {
+            block: self.deref(),
+            sm: &self.deref().sm[2],
+            _phantom: core::marker::PhantomData,
+        };
+        let sm3 = UninitStateMachine {
+            block: self.deref(),
+            sm: &self.deref().sm[3],
+            _phantom: core::marker::PhantomData,
+        };
+        (
+            PIO {
+                used_instruction_space: 0,
+                interrupts: [
+                    Interrupt {
+                        id: 0,
+                        block: self.deref(),
+                        _phantom: core::marker::PhantomData,
+                    },
+                    Interrupt {
+                        id: 1,
+                        block: self.deref(),
+                        _phantom: core::marker::PhantomData,
+                    },
+                ],
+                pio: self,
+            },
+            sm0,
+            sm1,
+            sm2,
+            sm3,
+        )
+    }
 }
 
-impl Instance for rp2040_pac::PIO0 {}
-impl Instance for rp2040_pac::PIO1 {}
+impl PIOExt for PIO0 {}
+impl PIOExt for PIO1 {}
 
 /// Programmable IO Block
-pub struct PIO<P: Instance> {
-    used_instruction_space: core::cell::Cell<u32>, // bit for each PIO_INSTRUCTION_COUNT
+pub struct PIO<P: PIOExt> {
+    used_instruction_space: u32, // bit for each PIO_INSTRUCTION_COUNT
     pio: P,
-    state_machines: [StateMachine<P>; 4],
     interrupts: [Interrupt<P>; 2],
 }
 
-impl<P: Instance> core::fmt::Debug for PIO<P> {
+impl<P: PIOExt> core::fmt::Debug for PIO<P> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.debug_struct("PIO")
             .field("used_instruction_space", &self.used_instruction_space)
@@ -31,62 +88,23 @@ impl<P: Instance> core::fmt::Debug for PIO<P> {
     }
 }
 
-// Safety: `PIO` provides exclusive access to PIO registers.
-unsafe impl<P: Instance + Send> Send for PIO<P> {}
+// Safety: `PIO` only provides access to those registers which are not directly used by
+// `StateMachine`.
+unsafe impl<P: PIOExt + Send> Send for PIO<P> {}
 
-impl<P: Instance> PIO<P> {
-    /// Create a new PIO wrapper.
-    pub fn new(pio: P, resets: &mut pac::RESETS) -> Self {
-        pio.reset_bring_up(resets);
-
-        PIO {
-            used_instruction_space: core::cell::Cell::new(0),
-            state_machines: [
-                StateMachine {
-                    id: 0,
-                    block: pio.deref(),
-                    _phantom: core::marker::PhantomData,
-                },
-                StateMachine {
-                    id: 1,
-                    block: pio.deref(),
-                    _phantom: core::marker::PhantomData,
-                },
-                StateMachine {
-                    id: 2,
-                    block: pio.deref(),
-                    _phantom: core::marker::PhantomData,
-                },
-                StateMachine {
-                    id: 3,
-                    block: pio.deref(),
-                    _phantom: core::marker::PhantomData,
-                },
-            ],
-            interrupts: [
-                Interrupt {
-                    id: 0,
-                    block: pio.deref(),
-                    _phantom: core::marker::PhantomData,
-                },
-                Interrupt {
-                    id: 1,
-                    block: pio.deref(),
-                    _phantom: core::marker::PhantomData,
-                },
-            ],
-            pio,
-        }
-    }
-
+impl<P: PIOExt> PIO<P> {
     /// Free this instance.
-    pub fn free(self) -> P {
+    ///
+    /// All output pins are left in their current state.
+    pub fn free(
+        self,
+        _sm0: UninitStateMachine<(P, SM0)>,
+        _sm1: UninitStateMachine<(P, SM1)>,
+        _sm2: UninitStateMachine<(P, SM2)>,
+        _sm3: UninitStateMachine<(P, SM3)>,
+    ) -> P {
+        // All state machines have already been stopped.
         self.pio
-    }
-
-    /// This PIO's state machines.
-    pub fn state_machines(&self) -> &[StateMachine<P>; 4] {
-        &self.state_machines
     }
 
     /// This PIO's interrupts.
@@ -99,10 +117,7 @@ impl<P: Instance> PIO<P> {
     /// The PIO has 8 IRQ flags, of which 4 are visible to the host processor. Each bit of `flags` corresponds to one of
     /// the IRQ flags.
     pub fn clear_irq(&self, flags: u8) {
-        self.pio
-            .deref()
-            .irq
-            .write(|w| unsafe { w.irq().bits(flags) });
+        self.pio.irq.write(|w| unsafe { w.irq().bits(flags) });
     }
 
     /// Force PIO's IRQ flags indicated by the bits.
@@ -111,7 +126,6 @@ impl<P: Instance> PIO<P> {
     /// the IRQ flags.
     pub fn force_irq(&self, flags: u8) {
         self.pio
-            .deref()
             .irq_force
             .write(|w| unsafe { w.irq_force().bits(flags) });
     }
@@ -123,7 +137,7 @@ impl<P: Instance> PIO<P> {
             let mask = (1 << i.len()) - 1;
             if let Some(origin) = origin {
                 if origin as usize > PIO_INSTRUCTION_COUNT - i.len()
-                    || self.used_instruction_space.get() & (mask << origin) != 0
+                    || self.used_instruction_space & (mask << origin) != 0
                 {
                     None
                 } else {
@@ -131,7 +145,7 @@ impl<P: Instance> PIO<P> {
                 }
             } else {
                 for i in (0..=32 - i.len()).rev() {
-                    if self.used_instruction_space.get() & (mask << i) == 0 {
+                    if self.used_instruction_space & (mask << i) == 0 {
                         return Some(i);
                     }
                 }
@@ -140,17 +154,21 @@ impl<P: Instance> PIO<P> {
         }
     }
 
-    fn add_program(
-        &self,
-        instructions: &[u16],
-        origin: Option<u8>,
-        side_set: pio::SideSet,
-    ) -> Option<usize> {
-        if let Some(offset) = self.find_offset_for_instructions(instructions, origin) {
-            for (i, instr) in instructions
+    /// Allocates space in instruction memory and installs the program.
+    ///
+    /// The function returns a handle to the installed program that can be used to configure a
+    /// `StateMachine` via `PIOBuilder`. The program can be uninstalled to free instruction memory
+    /// via `uninstall()` once the state machine using the program has been uninitialized.
+    pub fn install(
+        &mut self,
+        p: &Program<{ pio::RP2040_MAX_PROGRAM_SIZE }>,
+    ) -> Result<InstalledProgram<P>, InstallError> {
+        if let Some(offset) = self.find_offset_for_instructions(&p.code, p.origin) {
+            for (i, instr) in p
+                .code
                 .iter()
                 .map(|instr| {
-                    let mut instr = pio::Instruction::decode(*instr, side_set).unwrap();
+                    let mut instr = pio::Instruction::decode(*instr, p.side_set).unwrap();
 
                     instr.operands = match instr.operands {
                         pio::InstructionOperands::JMP { condition, address } => {
@@ -165,57 +183,238 @@ impl<P: Instance> PIO<P> {
                         _ => instr.operands,
                     };
 
-                    instr.encode(side_set)
+                    instr.encode(p.side_set)
                 })
                 .enumerate()
             {
                 self.pio.instr_mem[i + offset].write(|w| unsafe { w.bits(instr as u32) })
             }
-            self.used_instruction_space
-                .set(self.used_instruction_space.get() | ((1 << instructions.len()) - 1));
-            Some(offset)
+            self.used_instruction_space |= ((1 << p.code.len()) - 1) << offset;
+            Ok(InstalledProgram {
+                offset: offset as u8,
+                length: p.code.len() as u8,
+                side_set: p.side_set,
+                wrap: p.wrap,
+                _phantom: core::marker::PhantomData,
+            })
         } else {
-            None
+            Err(InstallError::NoSpace)
         }
+    }
+
+    /// Removes the specified program from instruction memory, freeing the allocated space.
+    pub fn uninstall(&mut self, p: InstalledProgram<P>) {
+        let instr_mask = ((1 << p.length as u32) - 1) << p.offset as u32;
+        self.used_instruction_space &= !instr_mask;
     }
 }
 
-/// PIO State Machine.
+/// Handle to a program that was placed in the PIO's instruction memory.
+///
+/// Objects of this type can be reused for multiple state machines of the same PIO block to save
+/// memory if multiple state machines are supposed to perform the same function (for example, if
+/// one PIO block is used to implement multiple I2C busses).
+///
+/// `PIO::uninstall(program)` can be used to free the space occupied by the program once it is no
+/// longer used.
+///
+/// # Examples
+///
+/// ```no_run
+/// use rp2040_hal::{pac, pio::PIOBuilder, pio::PIOExt};
+/// let mut peripherals = pac::Peripherals::take().unwrap();
+/// let (mut pio, sm0, _, _, _) = peripherals.PIO0.split(&mut peripherals.RESETS);
+/// // Install a program in instruction memory.
+/// let program = pio_proc::pio!(
+///     32,
+///     ".wrap_target
+///     set pins, 1 [31]
+///     set pins, 0 [31]
+/// .wrap
+///     "
+/// ).program;
+/// let installed = pio.install(&program).unwrap();
+/// // Configure a state machine to use the program.
+/// let (sm, rx, tx) = PIOBuilder::from_program(installed).build(sm0);
+/// // Uninitialize the state machine again, freeing the program.
+/// let (sm, installed) = sm.uninit(rx, tx);
+/// // Uninstall the program to free instruction memory.
+/// pio.uninstall(installed);
+/// ```
+///
+/// # Safety
+///
+/// Objects of this type can outlive their `PIO` object. If the PIO block is reinitialized, the API
+/// does not prevent the user from calling `uninstall()` when the PIO block does not actually hold
+/// the program anymore. The user must therefore make sure that `uninstall()` is only called on the
+/// PIO object which was used to install the program.
+///
+/// ```ignore
+/// let (mut pio, sm0, sm1, sm2, sm3) = pac.PIO0.split(&mut pac.RESETS);
+/// // Install a program in instruction memory.
+/// let installed = pio.install(&program).unwrap();
+/// // Reinitialize PIO.
+/// let pio0 = pio.free(sm0, sm1, sm2, sm3);
+/// let (mut pio, _, _, _, _) = pio0.split(&mut pac.RESETS);
+/// // Do not do the following, the program is not in instruction memory anymore!
+/// pio.uninstall(installed);
+/// ```
 #[derive(Debug)]
-pub struct StateMachine<P: Instance> {
-    id: u8,
-    block: *const rp2040_pac::pio0::RegisterBlock,
+pub struct InstalledProgram<P> {
+    offset: u8,
+    length: u8,
+    side_set: SideSet,
+    wrap: Wrap,
     _phantom: core::marker::PhantomData<P>,
 }
 
-// `StateMachine` doesn't implement `Send` because it sometimes accesses shared registers, e.g. `sm_enable`.
-// unsafe impl<P: Instance + Send> Send for StateMachine<P> {}
+impl<P: PIOExt> InstalledProgram<P> {
+    /// Clones this program handle so that it can be executed by two state machines at the same
+    /// time.
+    ///
+    /// # Safety
+    ///
+    /// This function is marked as unsafe because, once this function has been called, the
+    /// resulting handle can be used to call `PIO::uninstall()` while the program is still running.
+    ///
+    /// The user has to make sure to call `PIO::uninstall()` only once and only after all state
+    /// machines using the program have been uninitialized.
+    pub unsafe fn share(&self) -> InstalledProgram<P> {
+        InstalledProgram {
+            offset: self.offset,
+            length: self.length,
+            side_set: self.side_set,
+            wrap: self.wrap,
+            _phantom: core::marker::PhantomData,
+        }
+    }
+}
 
-impl<P: Instance> StateMachine<P> {
+/// State machine identifier (without a specified PIO block).
+pub trait StateMachineIndex {
+    /// Numerical index of the state machine (0 to 3).
+    fn id() -> usize;
+}
+
+/// First state machine.
+pub struct SM0;
+/// Second state machine.
+pub struct SM1;
+/// Third state machine.
+pub struct SM2;
+/// Fourth state machine.
+pub struct SM3;
+
+impl StateMachineIndex for SM0 {
+    fn id() -> usize {
+        0
+    }
+}
+impl StateMachineIndex for SM1 {
+    fn id() -> usize {
+        1
+    }
+}
+impl StateMachineIndex for SM2 {
+    fn id() -> usize {
+        2
+    }
+}
+impl StateMachineIndex for SM3 {
+    fn id() -> usize {
+        3
+    }
+}
+
+/// Trait to identify a single state machine, as a generic type parameter to `UninitStateMachine`,
+/// `InitStateMachine`, etc.
+pub trait ValidStateMachine {
+    /// The PIO block to which this state machine belongs.
+    type PIO: PIOExt;
+
+    /// The index of this state machine (between 0 and 3).
+    fn id() -> usize;
+}
+
+/// First state machine of the first PIO block.
+pub type PIO0SM0 = (PIO0, SM0);
+/// Second state machine of the first PIO block.
+pub type PIO0SM1 = (PIO0, SM1);
+/// Third state machine of the first PIO block.
+pub type PIO0SM2 = (PIO0, SM2);
+/// Fourth state machine of the first PIO block.
+pub type PIO0SM3 = (PIO0, SM3);
+/// First state machine of the second PIO block.
+pub type PIO1SM0 = (PIO1, SM0);
+/// Second state machine of the second PIO block.
+pub type PIO1SM1 = (PIO1, SM1);
+/// Third state machine of the second PIO block.
+pub type PIO1SM2 = (PIO1, SM2);
+/// Fourth state machine of the second PIO block.
+pub type PIO1SM3 = (PIO1, SM3);
+
+impl<P: PIOExt, SM: StateMachineIndex> ValidStateMachine for (P, SM) {
+    type PIO = P;
+    fn id() -> usize {
+        SM::id()
+    }
+}
+
+/// PIO State Machine (uninitialized, without a program).
+#[derive(Debug)]
+pub struct UninitStateMachine<SM: ValidStateMachine> {
+    block: *const rp2040_pac::pio0::RegisterBlock,
+    sm: *const rp2040_pac::pio0::SM,
+    _phantom: core::marker::PhantomData<SM>,
+}
+
+// Safety: `UninitStateMachine` only uses atomic accesses to shared registers.
+unsafe impl<SM: ValidStateMachine + Send> Send for UninitStateMachine<SM> {}
+
+impl<SM: ValidStateMachine> UninitStateMachine<SM> {
     /// Start and stop the state machine.
-    pub fn set_enabled(&self, enabled: bool) {
-        let mask = 1 << self.id;
+    fn set_enabled(&mut self, enabled: bool) {
+        // Bits 3:0 are SM_ENABLE.
+        let mask = 1 << SM::id();
         if enabled {
-            self.block()
-                .ctrl
-                .modify(|r, w| unsafe { w.sm_enable().bits(r.sm_enable().bits() | mask) })
+            self.set_ctrl_bits(mask);
         } else {
-            self.block()
-                .ctrl
-                .modify(|r, w| unsafe { w.sm_enable().bits(r.sm_enable().bits() & !mask) })
+            self.clear_ctrl_bits(mask);
         }
     }
 
-    fn restart(&self) {
-        self.block()
-            .ctrl
-            .write(|w| unsafe { w.sm_restart().bits(1 << self.id) });
+    fn restart(&mut self) {
+        // Bits 7:4 are SM_RESTART.
+        self.set_ctrl_bits(1 << (SM::id() + 4));
     }
 
-    fn reset_clock(&self) {
-        self.block()
-            .ctrl
-            .write(|w| unsafe { w.clkdiv_restart().bits(1 << self.id) });
+    fn reset_clock(&mut self) {
+        // Bits 11:8 are CLKDIV_RESTART.
+        self.set_ctrl_bits(1 << (SM::id() + 8));
+    }
+
+    fn set_ctrl_bits(&mut self, bits: u32) {
+        const ATOMIC_SET_OFFSET: usize = 0x2000;
+        // Safety: We only use the atomic alias of the register.
+        unsafe {
+            (*self.block)
+                .ctrl
+                .as_ptr()
+                .add(ATOMIC_SET_OFFSET / 4)
+                .write_volatile(bits);
+        }
+    }
+
+    fn clear_ctrl_bits(&mut self, bits: u32) {
+        const ATOMIC_CLEAR_OFFSET: usize = 0x3000;
+        // Safety: We only use the atomic alias of the register.
+        unsafe {
+            (*self.block)
+                .ctrl
+                .as_ptr()
+                .add(ATOMIC_CLEAR_OFFSET / 4)
+                .write_volatile(bits);
+        }
     }
 
     fn set_clock_divisor(&self, divisor: f32) {
@@ -233,55 +432,243 @@ impl<P: Instance> StateMachine<P> {
         });
     }
 
-    /// The address of the instruction currently being executed.
-    pub fn instruction_address(&self) -> u32 {
-        self.sm().sm_addr.read().bits()
-    }
-
     /// Set the current instruction.
-    pub fn set_instruction(&self, instruction: u16) {
+    fn set_instruction(&mut self, instruction: u16) {
         self.sm()
             .sm_instr
             .write(|w| unsafe { w.sm0_instr().bits(instruction) })
     }
 
+    fn sm(&self) -> &rp2040_pac::pio0::SM {
+        unsafe { &*self.sm }
+    }
+}
+
+/// PIO State Machine with an associated program.
+pub struct StateMachine<SM: ValidStateMachine, State> {
+    sm: UninitStateMachine<SM>,
+    program: InstalledProgram<SM::PIO>,
+    _phantom: core::marker::PhantomData<State>,
+}
+
+/// Marker for an initialized, but stopped state machine.
+pub struct Stopped;
+/// Marker for an initialized and running state machine.
+pub struct Running;
+
+impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
+    /// Stops the state machine if it is still running and returns its program.
+    ///
+    /// The program can be uninstalled to free space once it is no longer used by any state
+    /// machine.
+    pub fn uninit(
+        mut self,
+        _rx: Rx<SM>,
+        _tx: Tx<SM>,
+    ) -> (UninitStateMachine<SM>, InstalledProgram<SM::PIO>) {
+        self.sm.set_enabled(false);
+        (self.sm, self.program)
+    }
+
+    /// The address of the instruction currently being executed.
+    pub fn instruction_address(&self) -> u32 {
+        self.sm.sm().sm_addr.read().bits()
+    }
+
+    /// Set the current instruction.
+    pub fn set_instruction(&mut self, instruction: u16) {
+        // TODO: Check if this function is safe to call while the state machine is running.
+        self.sm.set_instruction(instruction);
+    }
+
     /// Check if the current instruction is stalled.
     pub fn stalled(&self) -> bool {
-        self.sm().sm_execctrl.read().exec_stalled().bits()
+        self.sm.sm().sm_execctrl.read().exec_stalled().bits()
+    }
+}
+
+impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
+    /// Starts execution of the selected program.
+    pub fn start(mut self) -> StateMachine<SM, Running> {
+        // Enable SM
+        self.sm.set_enabled(true);
+
+        StateMachine {
+            sm: self.sm,
+            program: self.program,
+            _phantom: core::marker::PhantomData,
+        }
     }
 
-    fn block(&self) -> &rp2040_pac::pio0::RegisterBlock {
-        unsafe { &*self.block }
+    /// Sets the pin directions for the specified pins.
+    ///
+    /// The `pins` parameter specifies a set of pins as a mask, and `pindir` contains the
+    /// directions that are configured for these pins. The bits in both masks correspond to the pin
+    /// number. The user has to make sure that they do not select any pins that are in use by any
+    /// other state machines of the same PIO block.
+    ///
+    /// This function needs to be called for sideset pins if they are supposed to be used as
+    /// output pins.
+    pub fn set_pindirs_with_mask(&mut self, mut pins: u32, pindir: u32) {
+        let mut pin = 0;
+        let prev_pinctrl = self.sm.sm().sm_pinctrl.read().bits();
+        // For each pin in the mask, we select the pin as a SET pin and then execute "set PINDIRS,
+        // <direction>".
+        while pins != 0 {
+            if (pins & 1) != 0 {
+                self.sm.sm().sm_pinctrl.write(|w| {
+                    unsafe {
+                        w.set_count().bits(1);
+                        w.set_base().bits(pin as u8);
+                    }
+                    w
+                });
+                let set_pindirs = pio::Instruction {
+                    operands: pio::InstructionOperands::SET {
+                        destination: pio::SetDestination::PINDIRS,
+                        data: ((pindir >> pin) & 0x1) as u8,
+                    },
+                    delay: 0,
+                    side_set: None,
+                }
+                .encode(SideSet::new(false, 0, false));
+                self.sm.sm().sm_instr.write(|w| {
+                    unsafe {
+                        w.sm0_instr().bits(set_pindirs);
+                    }
+                    w
+                });
+            }
+            pin += 1;
+            pins >>= 1;
+        }
+        // We modified PINCTRL, yet the program assumes a certain configuration, so restore the
+        // previous value.
+        self.sm.sm().sm_pinctrl.write(|w| {
+            unsafe {
+                w.bits(prev_pinctrl);
+            }
+            w
+        });
     }
+}
 
-    fn sm(&self) -> &rp2040_pac::pio0::SM {
-        &self.block().sm[self.id as usize]
+impl<P: PIOExt, SM: StateMachineIndex> StateMachine<(P, SM), Stopped> {
+    /// Restarts the clock dividers for the specified state machines.
+    ///
+    /// As a result, the clock will be synchronous for the state machines, which is a precondition
+    /// for synchronous operation.
+    ///
+    /// The function returns an object that, once destructed, restarts the clock dividers. This
+    /// object allows further state machines to be added if more than two shall be synchronized.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// sm0.synchronize_with(sm1).and_with(sm2);
+    /// ```
+    pub fn synchronize_with<'sm, SM2: StateMachineIndex>(
+        &'sm mut self,
+        _other_sm: &'sm mut StateMachine<(P, SM2), Stopped>,
+    ) -> Synchronize<'sm, (P, SM)> {
+        let sm_mask = (1 << SM::id()) | (1 << SM2::id());
+        Synchronize { sm: self, sm_mask }
     }
+}
 
+/// Type which, once destructed, restarts the clock dividers for all selected state machines,
+/// effectively synchronizing them.
+pub struct Synchronize<'sm, SM: ValidStateMachine> {
+    sm: &'sm mut StateMachine<SM, Stopped>,
+    sm_mask: u32,
+}
+
+impl<'sm, P: PIOExt, SM: StateMachineIndex> Synchronize<'sm, (P, SM)> {
+    /// Adds another state machine to be synchronized.
+    pub fn and_with<SM2: StateMachineIndex>(
+        mut self,
+        _other_sm: &'sm mut StateMachine<(P, SM2), Stopped>,
+    ) -> Self {
+        // Add another state machine index to the mask.
+        self.sm_mask |= 1 << SM2::id();
+        self
+    }
+}
+
+impl<'sm, SM: ValidStateMachine> Drop for Synchronize<'sm, SM> {
+    fn drop(&mut self) {
+        // Restart the clocks of all state machines specified by the mask.
+        // Bits 11:8 of CTRL contain CLKDIV_RESTART.
+        let sm_mask = self.sm_mask << 8;
+        const ATOMIC_SET_OFFSET: usize = 0x2000;
+        // Safety: We only use the atomic alias of the register.
+        unsafe {
+            (*self.sm.sm.block)
+                .ctrl
+                .as_ptr()
+                .add(ATOMIC_SET_OFFSET / 4)
+                .write_volatile(sm_mask as u32);
+        }
+    }
+}
+
+impl<SM: ValidStateMachine> StateMachine<SM, Running> {
+    /// Stops execution of the selected program.
+    pub fn stop(mut self) -> StateMachine<SM, Stopped> {
+        // Enable SM
+        self.sm.set_enabled(false);
+
+        StateMachine {
+            sm: self.sm,
+            program: self.program,
+            _phantom: core::marker::PhantomData,
+        }
+    }
+}
+
+/// PIO RX FIFO handle.
+pub struct Rx<SM: ValidStateMachine> {
+    block: *const rp2040_pac::pio0::RegisterBlock,
+    _phantom: core::marker::PhantomData<SM>,
+}
+
+impl<SM: ValidStateMachine> Rx<SM> {
     /// Get the next element from RX FIFO.
     ///
     /// Returns `None` if the FIFO is empty.
-    pub fn read_rx(&self) -> Option<u32> {
-        let is_empty = self.block().fstat.read().rxempty().bits() & (1 << self.id) != 0;
+    pub fn read(&mut self) -> Option<u32> {
+        // Safety: The register is never written by software.
+        let is_empty = unsafe { &*self.block }.fstat.read().rxempty().bits() & (1 << SM::id()) != 0;
 
         if is_empty {
             return None;
         }
 
-        Some(self.block().rxf[self.id as usize].read().bits())
+        // Safety: The register is unique to this Rx instance.
+        Some(unsafe { &*self.block }.rxf[SM::id() as usize].read().bits())
     }
+}
 
+/// PIO TX FIFO handle.
+pub struct Tx<SM: ValidStateMachine> {
+    block: *const rp2040_pac::pio0::RegisterBlock,
+    _phantom: core::marker::PhantomData<SM>,
+}
+
+impl<SM: ValidStateMachine> Tx<SM> {
     /// Write an element to TX FIFO.
     ///
     /// Returns `true` if the value was written to FIFO, `false` otherwise.
-    pub fn write_tx(&self, value: u32) -> bool {
-        let is_full = self.block().fstat.read().txfull().bits() & (1 << self.id) != 0;
+    pub fn write(&mut self, value: u32) -> bool {
+        // Safety: The register is never written by software.
+        let is_full = unsafe { &*self.block }.fstat.read().txfull().bits() & (1 << SM::id()) != 0;
 
         if is_full {
             return false;
         }
 
-        self.block().txf[self.id as usize].write(|w| unsafe { w.bits(value) });
+        // Safety: The register is unique to this Tx instance.
+        unsafe { &*self.block }.txf[SM::id()].write(|w| unsafe { w.bits(value) });
 
         true
     }
@@ -289,16 +676,16 @@ impl<P: Instance> StateMachine<P> {
 
 /// PIO Interrupt controller.
 #[derive(Debug)]
-pub struct Interrupt<P: Instance> {
+pub struct Interrupt<P: PIOExt> {
     id: u8,
     block: *const rp2040_pac::pio0::RegisterBlock,
     _phantom: core::marker::PhantomData<P>,
 }
 
 // Safety: `Interrupt` provides exclusive access to interrupt registers.
-unsafe impl<P: Instance + Send> Send for Interrupt<P> {}
+unsafe impl<P: PIOExt + Send> Send for Interrupt<P> {}
 
-impl<P: Instance> Interrupt<P> {
+impl<P: PIOExt> Interrupt<P> {
     /// Enable interrupts raised by state machines.
     ///
     /// The PIO peripheral has 4 outside visible interrupts that can be raised by the state machines. Note that this
@@ -551,18 +938,12 @@ impl ShiftDirection {
 /// Builder to deploy a fully configured PIO program on one of the state
 /// machines.
 #[derive(Debug)]
-pub struct PIOBuilder<'a> {
+pub struct PIOBuilder<P> {
     /// Clock divisor.
     clock_divisor: f32,
 
-    /// Instructions of the program.
-    instructions: &'a [u16],
-    /// Origin where this program should be loaded.
-    instruction_origin: Option<u8>,
-    /// Wrapping behavior.
-    wrap: Wrap,
-    /// Side-set behavior.
-    side_set: SideSet,
+    /// Program location and configuration.
+    program: InstalledProgram<P>,
     /// GPIO pin used by `jmp pin` instruction.
     jmp_pin: u8,
 
@@ -582,13 +963,13 @@ pub struct PIOBuilder<'a> {
     pull_threshold: u8,
     /// Number of bits shifted into `ISR` before autopush or conditional push will take place.
     push_threshold: u8,
-    // Shift direction for `OUT` instruction.
+    /// Shift direction for `OUT` instruction.
     out_shiftdir: ShiftDirection,
-    // Shift direction for `IN` instruction.
+    /// Shift direction for `IN` instruction.
     in_shiftdir: ShiftDirection,
-    // Enable autopull.
+    /// Enable autopull.
     autopull: bool,
-    // Enable autopush.
+    /// Enable autopush.
     autopush: bool,
 
     /// Number of pins asserted by a `SET`.
@@ -605,17 +986,31 @@ pub struct PIOBuilder<'a> {
     out_base: u8,
 }
 
-impl<'a> Default for PIOBuilder<'a> {
-    fn default() -> Self {
+/// Buffer sharing configuration.
+#[derive(Debug, Clone, Copy)]
+pub enum Buffers {
+    /// No sharing.
+    RxTx,
+    /// The memory of the RX FIFO is given to the TX FIFO to double its depth.
+    OnlyTx,
+    /// The memory of the TX FIFO is given to the RX FIFO to double its depth.
+    OnlyRx,
+}
+
+/// Errors that occurred during `PIO::install`.
+#[derive(Debug)]
+pub enum InstallError {
+    /// There was not enough space for the instructions on the selected PIO.
+    NoSpace,
+}
+
+impl<P: PIOExt> PIOBuilder<P> {
+    /// Set config settings based on information from the given [`pio::Program`].
+    /// Additional configuration may be needed in addition to this.
+    pub fn from_program(p: InstalledProgram<P>) -> Self {
         PIOBuilder {
             clock_divisor: 1.0,
-            instructions: &[],
-            instruction_origin: None,
-            wrap: Wrap {
-                source: 31,
-                target: 0,
-            },
-            side_set: SideSet::default(),
+            program: p,
             jmp_pin: 0,
             out_sticky: false,
             inline_out: None,
@@ -634,47 +1029,6 @@ impl<'a> Default for PIOBuilder<'a> {
             set_base: 0,
             out_base: 0,
         }
-    }
-}
-
-/// Buffer sharing configuration.
-#[derive(Debug, Clone, Copy)]
-pub enum Buffers {
-    /// No sharing.
-    RxTx,
-    /// The memory of the RX FIFO is given to the TX FIFO to double its depth.
-    OnlyTx,
-    /// The memory of the TX FIFO is given to the RX FIFO to double its depth.
-    OnlyRx,
-}
-
-/// Errors that occurred during `PIOBuilder::build`.
-#[derive(Debug)]
-pub enum BuildError {
-    /// There was not enough space for the instructions on the selected PIO.
-    NoSpace,
-}
-
-impl<'a> PIOBuilder<'a> {
-    /// Set config settings based on information from the given [`pio::Program`].
-    /// Additional configuration may be needed in addition to this.
-    pub fn with_program(mut self, p: &'a Program<{ pio::RP2040_MAX_PROGRAM_SIZE }>) -> Self {
-        self.instruction_origin = p.origin;
-        self.instructions(&p.code).wrap(p.wrap).side_set(p.side_set)
-    }
-
-    /// Set the instructions of the program.
-    pub fn instructions(mut self, instructions: &'a [u16]) -> Self {
-        self.instructions = instructions;
-        self
-    }
-
-    /// Set the wrap source and target.
-    ///
-    /// The program will automatically jump from the wrap bottom to the wrap top in 0 cycles.
-    pub fn wrap(mut self, wrap: Wrap) -> Self {
-        self.wrap = wrap;
-        self
     }
 
     /// Set the pins asserted by `SET` instruction.
@@ -722,12 +1076,6 @@ impl<'a> PIOBuilder<'a> {
     /// state of the next pin, and so on up to number of bits set using [`Self::side_set`] function.
     pub fn side_set_pin_base(mut self, base: u8) -> Self {
         self.side_set_base = base;
-        self
-    }
-
-    /// Set the side-set status.
-    pub fn side_set(mut self, side_set: SideSet) -> Self {
-        self.side_set = side_set;
         self
     }
 
@@ -813,23 +1161,22 @@ impl<'a> PIOBuilder<'a> {
     }
 
     /// Build the config and deploy it to a StateMachine.
-    pub fn build<P: Instance>(self, pio: &PIO<P>, sm: &StateMachine<P>) -> Result<(), BuildError> {
-        let offset =
-            match pio.add_program(self.instructions, self.instruction_origin, self.side_set) {
-                Some(o) => o,
-                None => return Err(BuildError::NoSpace),
-            };
+    #[allow(clippy::type_complexity)] // The return type cannot really be simplified.
+    pub fn build<SM: StateMachineIndex>(
+        self,
+        mut sm: UninitStateMachine<(P, SM)>,
+    ) -> (StateMachine<(P, SM), Stopped>, Rx<(P, SM)>, Tx<(P, SM)>) {
+        let offset = self.program.offset;
 
         // Stop the SM
-        // TODO: This should probably do before we write the program source code
         sm.set_enabled(false);
 
         // Write all configuration bits
         sm.set_clock_divisor(self.clock_divisor);
 
         sm.sm().sm_execctrl.write(|w| {
-            w.side_en().bit(self.side_set.optional());
-            w.side_pindir().bit(self.side_set.pindirs());
+            w.side_en().bit(self.program.side_set.optional());
+            w.side_pindir().bit(self.program.side_set.pindirs());
 
             unsafe {
                 w.jmp_pin().bits(self.jmp_pin);
@@ -847,8 +1194,9 @@ impl<'a> PIOBuilder<'a> {
             w.out_sticky().bit(self.out_sticky);
 
             unsafe {
-                w.wrap_top().bits(offset as u8 + self.wrap.source);
-                w.wrap_bottom().bits(offset as u8 + self.wrap.target);
+                w.wrap_top().bits(offset as u8 + self.program.wrap.source);
+                w.wrap_bottom()
+                    .bits(offset as u8 + self.program.wrap.target);
             }
 
             let n = match self.mov_status {
@@ -894,7 +1242,7 @@ impl<'a> PIOBuilder<'a> {
 
         sm.sm().sm_pinctrl.write(|w| {
             unsafe {
-                w.sideset_count().bits(self.side_set.bits());
+                w.sideset_count().bits(self.program.side_set.bits());
                 w.set_count().bits(self.set_count);
                 w.out_count().bits(self.out_count);
 
@@ -921,9 +1269,22 @@ impl<'a> PIOBuilder<'a> {
             .encode(),
         );
 
-        // Enable SM
-        sm.set_enabled(true);
-
-        Ok(())
+        let rx = Rx {
+            block: sm.block,
+            _phantom: core::marker::PhantomData,
+        };
+        let tx = Tx {
+            block: sm.block,
+            _phantom: core::marker::PhantomData,
+        };
+        (
+            StateMachine {
+                sm,
+                program: self.program,
+                _phantom: core::marker::PhantomData,
+            },
+            rx,
+            tx,
+        )
     }
 }

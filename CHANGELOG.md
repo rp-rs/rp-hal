@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - implement `rng_core::RngCore` for `RingOscillator`
 
+### Changed
+- Modified PIO API for better ergonomics
+
 ## [0.3.0] - 2021-09-20
 
 ### Added
