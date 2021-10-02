@@ -90,6 +90,18 @@ volatile until a 1.0.0 release.
 See the [open issues](https://github.com/rp-rs/rp-hal/issues) for a list of
 proposed features (and known issues).
 
+### Support for embedded-hal 1.0
+
+We plan to support embedded-hal 1.0 soon after it is released.
+
+For now, there is preliminary support for alpha versions of embedded-hal, which can
+be enabled with the feature `eh1_0_alpha`. Please note that this support does not
+provide any semver compatibility guarantees: With that feature activated, there
+will be breaking changes even in minor versions of rp2040-hal.
+
+Support for embedded-hal 1.0(-alpha) exists in parallel to support for
+embedded-hal 0.2: Traits of both versions are implemented and can be used
+at the same time.
 
 <!-- CONTRIBUTING -->
 ## Contributing

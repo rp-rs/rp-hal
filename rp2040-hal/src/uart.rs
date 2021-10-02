@@ -37,6 +37,8 @@ use embedded_time::fixed_point::FixedPoint;
 use embedded_time::rate::Baud;
 use embedded_time::rate::Hertz;
 
+#[cfg(feature = "eh1_0_alpha")]
+use eh1_0_alpha::serial::nb as eh1;
 use embedded_hal::serial::{Read, Write};
 
 use nb::Error::{Other, WouldBlock};
@@ -65,6 +67,7 @@ pub struct ReadError<'err> {
 }
 
 /// Possible types of read errors. See Chapter 4, Section 2 §8 - Table 436: "UARTDR Register"
+#[cfg_attr(feature = "eh1_0_alpha", derive(Debug))]
 pub enum ReadErrorType {
     /// Triggered when the FIFO (or shift-register) is overflowed.
     Overrun,
@@ -495,7 +498,41 @@ impl<D: UartDevice> Read<u8> for UartPeripheral<Enabled, D> {
     }
 }
 
+#[cfg(feature = "eh1_0_alpha")]
+impl<D: UartDevice> eh1::Read<u8> for UartPeripheral<Enabled, D> {
+    type Error = ReadErrorType;
+
+    fn read(&mut self) -> nb::Result<u8, Self::Error> {
+        let byte: &mut [u8] = &mut [0; 1];
+
+        match self.read_raw(byte) {
+            Ok(_) => Ok(byte[0]),
+            Err(e) => match e {
+                Other(inner) => Err(Other(inner.err_type)),
+                WouldBlock => Err(WouldBlock),
+            },
+        }
+    }
+}
+
 impl<D: UartDevice> Write<u8> for UartPeripheral<Enabled, D> {
+    type Error = Infallible;
+
+    fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
+        if self.write_raw(&[word]).is_err() {
+            Err(WouldBlock)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn flush(&mut self) -> nb::Result<(), Self::Error> {
+        self.transmit_flushed()
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl<D: UartDevice> eh1::Write<u8> for UartPeripheral<Enabled, D> {
     type Error = Infallible;
 
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {

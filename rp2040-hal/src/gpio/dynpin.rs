@@ -78,6 +78,8 @@ use super::pin::{Pin, PinId, PinMode, ValidPinMode};
 use super::reg::RegisterInterface;
 use core::convert::TryFrom;
 
+#[cfg(feature = "eh1_0_alpha")]
+use eh1_0_alpha::digital::blocking as eh1;
 use hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin};
 
 //==============================================================================
@@ -532,6 +534,53 @@ impl ToggleableOutputPin for DynPin {
 }
 
 impl StatefulOutputPin for DynPin {
+    #[inline]
+    fn is_set_high(&self) -> Result<bool, Self::Error> {
+        self._is_set_high()
+    }
+    #[inline]
+    fn is_set_low(&self) -> Result<bool, Self::Error> {
+        self._is_set_low()
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1::OutputPin for DynPin {
+    type Error = Error;
+    #[inline]
+    fn set_high(&mut self) -> Result<(), Self::Error> {
+        self._set_high()
+    }
+    #[inline]
+    fn set_low(&mut self) -> Result<(), Self::Error> {
+        self._set_low()
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1::InputPin for DynPin {
+    type Error = Error;
+    #[inline]
+    fn is_high(&self) -> Result<bool, Self::Error> {
+        self._is_high()
+    }
+    #[inline]
+    fn is_low(&self) -> Result<bool, Self::Error> {
+        self._is_low()
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1::ToggleableOutputPin for DynPin {
+    type Error = Error;
+    #[inline]
+    fn toggle(&mut self) -> Result<(), Self::Error> {
+        self._toggle()
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1::StatefulOutputPin for DynPin {
     #[inline]
     fn is_set_high(&self) -> Result<bool, Self::Error> {
         self._is_set_high()

@@ -103,6 +103,8 @@ use core::convert::Infallible;
 use core::marker::PhantomData;
 
 use crate::gpio::dynpin::DynFunction;
+#[cfg(feature = "eh1_0_alpha")]
+use eh1_0_alpha::digital::blocking as eh1;
 use hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin};
 
 use core::mem::transmute;
@@ -778,6 +780,88 @@ where
 }
 
 impl<I, C> StatefulOutputPin for Pin<I, Output<C>>
+where
+    I: PinId,
+    C: OutputConfig,
+{
+    #[inline]
+    fn is_set_high(&self) -> Result<bool, Self::Error> {
+        Ok(self._is_set_high())
+    }
+    #[inline]
+    fn is_set_low(&self) -> Result<bool, Self::Error> {
+        Ok(self._is_set_low())
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl<I, C> eh1::OutputPin for Pin<I, Output<C>>
+where
+    I: PinId,
+    C: OutputConfig,
+{
+    type Error = Infallible;
+    #[inline]
+    fn set_high(&mut self) -> Result<(), Self::Error> {
+        self._set_high();
+        Ok(())
+    }
+    #[inline]
+    fn set_low(&mut self) -> Result<(), Self::Error> {
+        self._set_low();
+        Ok(())
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl<I> eh1::InputPin for Pin<I, ReadableOutput>
+where
+    I: PinId,
+{
+    type Error = Infallible;
+    #[inline]
+    fn is_high(&self) -> Result<bool, Self::Error> {
+        Ok(self._is_high())
+    }
+    #[inline]
+    fn is_low(&self) -> Result<bool, Self::Error> {
+        Ok(self._is_low())
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl<I, C> eh1::InputPin for Pin<I, Input<C>>
+where
+    I: PinId,
+    C: InputConfig,
+{
+    type Error = Infallible;
+    #[inline]
+    fn is_high(&self) -> Result<bool, Self::Error> {
+        Ok(self._is_high())
+    }
+    #[inline]
+    fn is_low(&self) -> Result<bool, Self::Error> {
+        Ok(self._is_low())
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl<I, C> eh1::ToggleableOutputPin for Pin<I, Output<C>>
+where
+    I: PinId,
+    C: OutputConfig,
+{
+    type Error = Infallible;
+    #[inline]
+    fn toggle(&mut self) -> Result<(), Self::Error> {
+        self._toggle();
+        Ok(())
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl<I, C> eh1::StatefulOutputPin for Pin<I, Output<C>>
 where
     I: PinId,
     C: OutputConfig,
