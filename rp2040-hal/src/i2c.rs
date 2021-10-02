@@ -383,9 +383,14 @@ macro_rules! hal {
                         }
                     }
 
+                    if abort {
+                        return Err(Error::Abort(abort_reason));
+                    }
+
+                    let buffer_len = buffer.len();
                     for (i, byte) in buffer.iter_mut().enumerate() {
                         let first = i == 0;
-                        let last = i == bytes.len() - 1;
+                        let last = i == buffer_len - 1;
 
                         // wait until there is space in the FIFO to write the next byte
                         while self.tx_fifo_full()  {}
