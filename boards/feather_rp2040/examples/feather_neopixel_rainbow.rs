@@ -56,7 +56,7 @@ fn main() -> ! {
 
     let _neopixel: Pin<_, FunctionPio0> = pins.neopixel.into_mode();
 
-    let timer = Timer::new(pac.TIMER);
+    let timer = Timer::new(pac.TIMER, &mut pac.RESETS);
     let mut delay = timer.count_down();
 
     // Configure the addressable LED
