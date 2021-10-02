@@ -1,6 +1,7 @@
 //! Programmable IO (PIO)
 //! See [Chapter 3 of the datasheet](https://rptl.io/rp2040-datasheet#section_pio) for more details.
 use crate::{
+    dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget},
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
     resets::SubsystemReset,
 };
@@ -59,10 +60,21 @@ pub trait PIOExt:
             sm3,
         )
     }
+
+    /// Number of this PIO (0..1).
+    fn id() -> usize;
 }
 
-impl PIOExt for PIO0 {}
-impl PIOExt for PIO1 {}
+impl PIOExt for PIO0 {
+    fn id() -> usize {
+        0
+    }
+}
+impl PIOExt for PIO1 {
+    fn id() -> usize {
+        0
+    }
+}
 
 /// Programmable IO Block
 pub struct PIO<P: PIOExt> {
@@ -367,6 +379,10 @@ pub trait ValidStateMachine {
 
     /// The index of this state machine (between 0 and 3).
     fn id() -> usize;
+    /// The DREQ number for which TX DMA requests are triggered.
+    fn tx_dreq() -> u8;
+    /// The DREQ number for which RX DMA requests are triggered.
+    fn rx_dreq() -> u8;
 }
 
 /// First state machine of the first PIO block.
@@ -390,6 +406,12 @@ impl<P: PIOExt, SM: StateMachineIndex> ValidStateMachine for (P, SM) {
     type PIO = P;
     fn id() -> usize {
         SM::id()
+    }
+    fn tx_dreq() -> u8 {
+        ((P::id() << 3) | SM::id()) as u8
+    }
+    fn rx_dreq() -> u8 {
+        ((P::id() << 3) | SM::id() | 0x4) as u8
     }
 }
 
@@ -1324,6 +1346,27 @@ impl<SM: ValidStateMachine> Rx<SM> {
     }
 }
 
+impl<SM: ValidStateMachine> ReadTarget for Rx<SM> {
+    type ReceivedWord = u32;
+
+    fn rx_treq() -> Option<u8> {
+        Some(SM::rx_dreq())
+    }
+
+    fn rx_address_count(&self) -> (u32, u32) {
+        (
+            &unsafe { &*self.block }.rxf[SM::id()] as *const _ as u32,
+            u32::MAX,
+        )
+    }
+
+    fn rx_increment(&self) -> bool {
+        false
+    }
+}
+
+impl<SM: ValidStateMachine> EndlessReadTarget for Rx<SM> {}
+
 /// PIO TX FIFO handle.
 pub struct Tx<SM: ValidStateMachine> {
     block: *const rp2040_pac::pio0::RegisterBlock,
@@ -1494,6 +1537,27 @@ impl<SM: ValidStateMachine> Tx<SM> {
         }
     }
 }
+
+impl<SM: ValidStateMachine> WriteTarget for Tx<SM> {
+    type TransmittedWord = u32;
+
+    fn tx_treq() -> Option<u8> {
+        Some(SM::tx_dreq())
+    }
+
+    fn tx_address_count(&mut self) -> (u32, u32) {
+        (
+            &unsafe { &*self.block }.txf[SM::id()] as *const _ as u32,
+            u32::MAX,
+        )
+    }
+
+    fn tx_increment(&self) -> bool {
+        false
+    }
+}
+
+impl<SM: ValidStateMachine> EndlessWriteTarget for Tx<SM> {}
 
 /// PIO Interrupt controller.
 #[derive(Debug)]
@@ -1873,6 +1937,7 @@ impl<P: PIOExt> PIOBuilder<P> {
         self.side_set_base = base;
         self
     }
+    // TODO: Update documentation above.
 
     /// Set buffer sharing.
     ///
