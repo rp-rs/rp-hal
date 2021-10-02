@@ -61,7 +61,7 @@ fn main() -> ! {
     .unwrap();
 
     // Configure the Timer peripheral in count-down mode
-    let timer = hal::timer::Timer::new(pac.TIMER);
+    let timer = hal::timer::Timer::new(pac.TIMER, &mut pac.RESETS);
     let mut count_down = timer.count_down();
 
     // The single-cycle I/O block controls our GPIO pins

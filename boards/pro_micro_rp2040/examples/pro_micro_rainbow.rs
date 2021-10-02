@@ -71,7 +71,7 @@ fn main() -> ! {
 
     let _led: Pin<_, FunctionPio0> = pins.led.into_mode();
 
-    let timer = Timer::new(pac.TIMER);
+    let timer = Timer::new(pac.TIMER, &mut pac.RESETS);
     let mut delay = timer.count_down();
 
     // Configure the addressable LED

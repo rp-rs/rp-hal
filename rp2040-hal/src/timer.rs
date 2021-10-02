@@ -3,7 +3,8 @@
 
 use embedded_time::duration::Microseconds;
 
-use crate::pac::TIMER;
+use crate::pac::{RESETS, TIMER};
+use crate::resets::SubsystemReset;
 
 /// Timer peripheral
 pub struct Timer {
@@ -12,7 +13,8 @@ pub struct Timer {
 
 impl Timer {
     /// Create a new [`Timer`]
-    pub fn new(timer: TIMER) -> Self {
+    pub fn new(timer: TIMER, resets: &mut RESETS) -> Self {
+        timer.reset_bring_up(resets);
         Self { timer }
     }
 
