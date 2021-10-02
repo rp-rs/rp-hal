@@ -22,6 +22,7 @@ use feather_rp2040::{
     Pins, XOSC_CRYSTAL_FREQ,
 };
 use panic_halt as _;
+use rp2040_hal::pio::PIOExt;
 use smart_leds::{brightness, SmartLedsWrite, RGB8};
 use ws2812_pio::Ws2812;
 #[link_section = ".boot2"]
@@ -60,11 +61,12 @@ fn main() -> ! {
     let mut delay = timer.count_down();
 
     // Configure the addressable LED
+    let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
     let mut ws = Ws2812::new(
         // The onboard NeoPixel is attached to GPIO pin #16 on the Feather RP2040.
         16,
-        pac.PIO0,
-        &mut pac.RESETS,
+        &mut pio,
+        sm0,
         clocks.peripheral_clock.freq(),
         timer.count_down(),
     );

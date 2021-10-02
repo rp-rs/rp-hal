@@ -8,6 +8,7 @@ use embedded_hal::digital::v2::OutputPin;
 use embedded_hal::timer::CountDown;
 use embedded_time::duration::Extensions;
 use panic_halt as _;
+use rp2040_hal::pio::PIOExt;
 use smart_leds::{brightness, SmartLedsWrite, RGB8};
 use ws2812_pio::Ws2812;
 
@@ -59,13 +60,14 @@ fn main() -> ! {
         .set_high()
         .unwrap();
 
-    let timer = rp2040_hal::timer::Timer::new(pac.TIMER);
+    let timer = rp2040_hal::timer::Timer::new(pac.TIMER, &mut pac.RESETS);
     let mut delay = timer.count_down();
 
+    let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
     let mut ws = Ws2812::new(
         12,
-        pac.PIO0,
-        &mut pac.RESETS,
+        &mut pio,
+        sm0,
         clocks.peripheral_clock.freq(),
         timer.count_down(),
     );
