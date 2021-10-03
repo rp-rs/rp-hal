@@ -28,7 +28,7 @@ rand_core = "0.6.3"
 [dev-dependencies]
 cortex-m-rt = "0.7"
 panic-halt = "0.2.0"
-rp2040-boot2 = { git = "https://github.com/rp-rs/rp2040-boot2-rs", rev = "67400f600b192e950b58df79ddc9b57ff209ef08" }
+rp2040-boot2 = { git = "https://github.com/rp-rs/rp2040-boot2-rs", rev = "d2128ef9875e91e454dd0fb0d747c7439ae0627b" }
 hd44780-driver = "0.4.0"
 
 [features]
