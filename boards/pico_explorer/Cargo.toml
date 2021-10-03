@@ -18,14 +18,16 @@ st7789 = "0.6.1"
 display-interface-spi = "0.4.1"
 embedded-time = "0.12.0"
 embedded-graphics = "0.7.1"
-
-[features]
-default = ["rt"]
-rt = ["cortex-m-rt","rp2040-hal/rt"]
+rp2040-boot2 = { git = "https://github.com/rp-rs/rp2040-boot2-rs",  rev = "d2128ef9875e91e454dd0fb0d747c7439ae0627b", optional = true }
 
 [dev-dependencies]
 display-interface = "0.4.1"
 panic-halt = "0.2.0"
 arrayvec = { version="0.7.1", default-features=false }
-rp2040-boot2 = { git = "https://github.com/rp-rs/rp2040-boot2-rs",  rev = "67400f600b192e950b58df79ddc9b57ff209ef08" }
+rp2040-boot2 = { git = "https://github.com/rp-rs/rp2040-boot2-rs",  rev = "d2128ef9875e91e454dd0fb0d747c7439ae0627b" }
 nb = "1.0.0"
+
+[features]
+default = ["rt"]
+boot2 = ["rp2040-boot2"]
+rt = ["cortex-m-rt","rp2040-hal/rt"]

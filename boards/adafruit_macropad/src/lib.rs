@@ -7,6 +7,12 @@ extern crate cortex_m_rt;
 #[cfg(feature = "rt")]
 pub use cortex_m_rt::entry;
 
+// Adafruit macropad uses W25Q64JVxQ flash chip. Should work with BOOT_LOADER_W25Q080 (untested)
+#[cfg(feature = "boot2")]
+#[link_section = ".boot2"]
+#[used]
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
+
 pub use hal::pac;
 
 hal::bsp_pins!(

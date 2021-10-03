@@ -14,6 +14,7 @@ cortex-m = "0.7.2"
 rp2040-hal = { path = "../../rp2040-hal", version = "0.3.0"}
 cortex-m-rt = { version = "0.7", optional = true }
 embedded-time = "0.12.0"
+rp2040-boot2 = { git = "https://github.com/rp-rs/rp2040-boot2-rs",  rev = "d2128ef9875e91e454dd0fb0d747c7439ae0627b", optional = true }
 
 [dev-dependencies]
 panic-halt= "0.2.0"
@@ -26,4 +27,5 @@ ws2812-pio = { git = "https://github.com/ithinuel/ws2812-pio-rs" }
 
 [features]
 default = ["rt"]
+boot2 = ["rp2040-boot2"]
 rt = ["cortex-m-rt","rp2040-hal/rt"]
