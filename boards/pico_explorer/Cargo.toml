@@ -28,6 +28,6 @@ rp2040-boot2 = { git = "https://github.com/rp-rs/rp2040-boot2-rs",  rev = "d2128
 nb = "1.0.0"
 
 [features]
-default = ["rt"]
+default = ["boot2", "rt"]
 boot2 = ["rp2040-boot2"]
 rt = ["cortex-m-rt","rp2040-hal/rt"]

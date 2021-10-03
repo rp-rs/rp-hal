@@ -26,6 +26,6 @@ pio = { git = "https://github.com/rp-rs/pio-rs.git", branch = "main" }
 ws2812-pio = { git = "https://github.com/ithinuel/ws2812-pio-rs" }
 
 [features]
-default = ["rt"]
+default = ["boot2", "rt"]
 boot2 = ["rp2040-boot2"]
 rt = ["cortex-m-rt","rp2040-hal/rt"]
