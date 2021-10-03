@@ -18,7 +18,7 @@ use pico_explorer::{hal, pac, Button, PicoExplorer, XOSC_CRYSTAL_FREQ};
 
 #[link_section = ".boot2"]
 #[used]
-pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
 // See 4.9.5 from RP2040 datasheet
 fn calc_temp(adc_value: f32, refv: f64) -> f64 {
