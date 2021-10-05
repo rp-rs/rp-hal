@@ -24,6 +24,7 @@ fn main() {
         .write_all(include_bytes!("memory.x"))
         .unwrap();
     println!("cargo:rustc-link-search={}", out.display());
+    println!("cargo:rustc-env=GIT_VERSION={}", "v1.2.3");
 
     // By default, Cargo will re-run a build script whenever
     // any file in the project changes. By specifying `memory.x`
