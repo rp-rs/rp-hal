@@ -3,12 +3,14 @@
 //! If a LED is connected to that pin, like on a Pico board, it will continously output "HELLO
 //! WORLD" in morse code. The example also tries to read the data back. If reading the data fails,
 //! the message will only be shown once, and then the LED remains dark.
+//!
+//! See the `Cargo.toml` file for Copyright and licence details.
 #![no_std]
 #![no_main]
 
 use cortex_m::singleton;
 use cortex_m_rt::entry;
-use hal::dma::{DMAExt, TransferConfig};
+use hal::dma::{DMAExt, DoubleBufferingConfig, SingleBufferingConfig};
 use hal::gpio::{FunctionPio0, Pin};
 use hal::pac;
 use hal::pio::PIOExt;
@@ -96,8 +98,8 @@ fn main() -> ! {
     // Transfer a single message via DMA.
     let tx_buf = singleton!(: [u32; 4] = message).unwrap();
     let rx_buf = singleton!(: [u32; 4] = [0; 4]).unwrap();
-    let tx_transfer = TransferConfig::new(dma.ch0, tx_buf, tx).start();
-    let rx_transfer = TransferConfig::new(dma.ch1, rx, rx_buf).start();
+    let tx_transfer = SingleBufferingConfig::new(dma.ch0, tx_buf, tx).start();
+    let rx_transfer = SingleBufferingConfig::new(dma.ch1, rx, rx_buf).start();
     let (ch0, tx_buf, tx) = tx_transfer.wait();
     let (ch1, rx, rx_buf) = rx_transfer.wait();
     for i in 0..rx_buf.len() {
@@ -108,39 +110,48 @@ fn main() -> ! {
         }
     }
 
-    // Chain three buffers together.
-    /*let tx_buf1 = singleton!(: [u32; 4] = message).unwrap();
+    // Chain some buffers together.
     let tx_buf2 = singleton!(: [u32; 4] = message).unwrap();
-    let rx_buf1 = singleton!(: [u32; 4] = [0; 4]).unwrap();
     let rx_buf2 = singleton!(: [u32; 4] = [0; 4]).unwrap();
-    let tx_transfer = Transfer::new((dma.ch0, dma.ch1), tx_buf1, tx)
-        .read_next(tx_buf2)
-        .start();
-    let rx_transfer = Transfer::new((dma.ch2, dma.ch3), rx, rx_buf)
-        .write_next(rx_buf2)
-        .start();
-    let (_ch0, _tx_buf, next_tx_transfer) = tx_transfer.wait();
-    let (_ch1, _tx_buf, _tx) = next_tx_transfer.wait();
-    let (_ch2, _rx_buf, next_rx_transfer) = rx_transfer.wait();
-    let (_ch3, _rx_buf, _tx) = next_rx_transfer.wait();*/
-    // TODO: Check the received data.
+    let tx_transfer = DoubleBufferingConfig::new((ch0, ch1), tx_buf, tx).start();
+    let mut tx_transfer = tx_transfer.read_next(tx_buf2);
+    let rx_transfer = DoubleBufferingConfig::new((dma.ch2, dma.ch3), rx, rx_buf).start();
+    let mut rx_transfer = rx_transfer.write_next(rx_buf2);
+    loop {
+        // We simply immediately enqueue the buffers again.
+        if tx_transfer.is_done() {
+            let (tx_buf, next_tx_transfer) = tx_transfer.wait();
+            tx_transfer = next_tx_transfer.read_next(tx_buf);
+        }
+        if rx_transfer.is_done() {
+            let (rx_buf, next_rx_transfer) = rx_transfer.wait();
+            for i in 0..rx_buf.len() {
+                if rx_buf[i] != message[i] {
+                    // The data did not match, abort.
+                    #[allow(clippy::empty_loop)]
+                    loop {}
+                }
+            }
+            rx_transfer = next_rx_transfer.write_next(rx_buf);
+        }
+    }
 
-    // Endless transfer from a ring buffer via DMA - note that unaligned ring buffers require three
+    /*// Endless transfer from a ring buffer via DMA - note that unaligned ring buffers require three
     // (!) DMA channels, one for each buffer and one to control the other two channels.
     // TODO: The API should use two buffers, so that the transfer can then return one half of the
     // buffer while the other one is in progress of being transferred.
     let tx_buf = singleton!(: AlignedBuffer = AlignedBuffer(message)).unwrap();
     let rx_buf = singleton!(: AlignedBuffer = AlignedBuffer([0; 4])).unwrap();
-    TransferConfig::new((ch0, ch1), &tx_buf.0, tx)
+    Endless::new((ch0, ch1), &tx_buf.0, tx)
         .start_ring()
         .unwrap();
-    TransferConfig::new((dma.ch2, dma.ch3), rx, &mut rx_buf.0)
+    Endless::new((dma.ch2, dma.ch3), rx, &mut rx_buf.0)
         .start_ring()
         .unwrap();
 
     #[allow(clippy::empty_loop)]
-    loop {}
+    loop {}*/
 }
 
-#[repr(align(16))]
-struct AlignedBuffer([u32; 4]);
+/*#[repr(align(16))]
+struct AlignedBuffer([u32; 4]);*/

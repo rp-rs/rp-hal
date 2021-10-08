@@ -119,10 +119,9 @@ pub trait SingleChannel {
     ///
     /// In the case of channel pairs, this returns the first channel.
     fn ch(&self) -> &rp2040_pac::dma::CH;
-    fn id() -> u8;
+    /// Returns the index of the DMA channel.
+    fn id(&self) -> u8;
 }
-
-// TODO: ChannelPair is not actually required, we can just implement SingleChannel on a tuple.
 
 /// Trait which implements low-level functionality for transfers requiring two DMA channels.
 ///
@@ -132,7 +131,8 @@ pub trait ChannelPair: SingleChannel {
     /// Returns the registers associated with the second DMA channel associated with this channel
     /// pair.
     fn ch2(&self) -> &rp2040_pac::dma::CH;
-    fn id2() -> u8;
+    /// Returns the index of the second DMA channel.
+    fn id2(&self) -> u8;
 }
 
 impl<CH: ChannelIndex> SingleChannel for Channel<CH> {
@@ -140,7 +140,7 @@ impl<CH: ChannelIndex> SingleChannel for Channel<CH> {
         self.regs()
     }
 
-    fn id() -> u8 {
+    fn id(&self) -> u8 {
         CH::id()
     }
 }
@@ -150,18 +150,104 @@ impl<CH1: ChannelIndex, CH2: ChannelIndex> SingleChannel for (Channel<CH1>, Chan
         self.0.regs()
     }
 
-    fn id() -> u8 {
+    fn id(&self) -> u8 {
         CH1::id()
     }
 }
 
-impl<CH1: ChannelIndex, CH2: ChannelIndex> ChannelPair for (Channel<CH1>, Channel<CH2>) {
-    fn ch2(&self) -> &rp2040_pac::dma::CH {
-        self.1.regs()
+trait ChannelConfig {
+    fn config<WORD, FROM, TO>(
+        &mut self,
+        from: &FROM,
+        to: &mut TO,
+        pace: Pace,
+        chain_to: Option<u8>,
+        start: bool,
+    ) where
+        FROM: ReadTarget<ReceivedWord = WORD>,
+        TO: WriteTarget<TransmittedWord = WORD>;
+
+    fn set_chain_to_enabled<CH: SingleChannel>(&mut self, other: &mut CH);
+    fn start(&mut self);
+}
+
+impl<CH: SingleChannel> ChannelConfig for CH {
+    fn config<WORD, FROM, TO>(
+        &mut self,
+        from: &FROM,
+        to: &mut TO,
+        pace: Pace,
+        chain_to: Option<u8>,
+        start: bool,
+    ) where
+        FROM: ReadTarget<ReceivedWord = WORD>,
+        TO: WriteTarget<TransmittedWord = WORD>,
+    {
+        // Configure the DMA channel.
+        let (src, src_count) = from.rx_address_count();
+        let src_incr = from.rx_increment();
+        let (dest, dest_count) = to.tx_address_count();
+        let dest_incr = to.tx_increment();
+        const TREQ_UNPACED: u8 = 0x3f;
+        let treq = match pace {
+            Pace::PreferSource => FROM::rx_treq().or(TO::tx_treq()).unwrap_or(TREQ_UNPACED),
+            Pace::PreferSink => TO::tx_treq().or(FROM::rx_treq()).unwrap_or(TREQ_UNPACED),
+        };
+        let len = u32::min(src_count, dest_count);
+        self.ch().ch_al1_ctrl.write(|w| unsafe {
+            w.data_size()
+                .bits(mem::size_of::<WORD>() as u8 >> 1)
+                .incr_read()
+                .bit(src_incr)
+                .incr_write()
+                .bit(dest_incr)
+                .treq_sel()
+                .bits(treq)
+                .chain_to()
+                .bits(chain_to.unwrap_or(self.id()))
+                .en()
+                .bit(true)
+        });
+        self.ch().ch_read_addr.write(|w| unsafe { w.bits(src) });
+        self.ch().ch_trans_count.write(|w| unsafe { w.bits(len) });
+        if start {
+            self.ch()
+                .ch_al2_write_addr_trig
+                .write(|w| unsafe { w.bits(dest) });
+        } else {
+            self.ch().ch_write_addr.write(|w| unsafe { w.bits(dest) });
+        }
     }
 
-    fn id2() -> u8 {
-        CH2::id()
+    fn set_chain_to_enabled<CH2: SingleChannel>(&mut self, other: &mut CH2) {
+        // We temporarily pause the channel when setting CHAIN_TO, to prevent any race condition
+        // that could occur, as we need to check afterwards whether the channel was successfully
+        // chained to this channel or whether this channel was already completed. If we did not
+        // pause this channel, we could get into a situation where both channels completed in quick
+        // succession, yet we did not notice, as the situation is not distinguishable from one
+        // where the second channel was not started at all.
+
+        self.ch()
+            .ch_al1_ctrl
+            .modify(|_, w| unsafe { w.chain_to().bits(other.id()).en().clear_bit() });
+        if self.ch().ch_al1_ctrl.read().busy().bit_is_set() {
+            // This channel is still active, so just continue.
+            self.ch()
+                .ch_al1_ctrl
+                .modify(|_, w| unsafe { w.en().set_bit() });
+            return;
+        } else {
+            // This channel has already finished, so just start the other channel directly.
+            other.start();
+        }
+    }
+
+    fn start(&mut self) {
+        // Safety: The write does not interfere with any other writes, it only affects this
+        // channel.
+        unsafe { &*rp2040_pac::DMA::ptr() }
+            .multi_chan_trigger
+            .write(|w| unsafe { w.bits(1 << self.id()) });
     }
 }
 
@@ -176,7 +262,7 @@ pub trait ReadTarget {
     /// Returns the address and the maximum number of words that can be transferred from this data
     /// source in a single DMA operation.
     ///
-    /// For peripherals, the cound should likely be u32::MAX. If a data source implements
+    /// For peripherals, the count should likely be u32::MAX. If a data source implements
     /// EndlessReadTarget, it is suitable for infinite transfers from or to ring buffers. Note that
     /// ring buffers designated for endless transfers, but with a finite buffer size, should return
     /// the size of their individual buffers here.
@@ -257,145 +343,65 @@ impl<B: StaticWriteBuffer> WriteTarget for B {
     }
 }
 
-/*/// Ring buffer consisting of two aligned memory regions.
-///
-/// We require buffers to have a power-of-two size and to be aligned to their size, as otherwise
-/// the RP2040 would require an additional DMA channel as well as an additional aligned buffer to
-/// implement operations on the ring buffer.
-///
-/// The two buffers do not have to have the same size.
-pub struct ReadRingBuffer<TYPE, BUF1, BUF2> {
-    buf1: BUF1,
-    buf2: BUF2,
-    _phantom: PhantomData<TYPE>,
+/*SingleBuffered<CH, RX, TX> {
+    config(...) -> SingleBufferedConfig;
+    is_done() -> bool
+    wait() -> (CH1, RX, TX)
 }
 
-impl<TYPE, BUF1, BUF2> ReadRingBuffer<TYPE, BUF1, BUF2>
-where
-    BUF1: StaticReadBuffer<Word = TYPE>,
-    BUF2: StaticReadBuffer<Word = TYPE>,
-{
-    /// Creates a new ring buffer from the two buffers, checking their size and alignment.
-    pub fn new(buf1: BUF1, buf2: BUF2) -> Result<Self, DMAError> {
-        // We check the alignment of the buffers before creating
-        // Safety: We do not actually access the pointers returned by the function. According to
-        // the documentation, later calls are required to return identical values.
-        let (ptr1, len1) = unsafe { buf1.static_read_buffer() };
-        let (ptr2, len2) = unsafe { buf2.static_read_buffer() };
-        let len1 = len1 * mem::size_of::<TYPE>();
-        let len2 = len2 * mem::size_of::<TYPE>();
-        if !len1.is_power_of_two() || !len2.is_power_of_two() {
-            return Err(DMAError::Alignment);
-        }
-        if (ptr1 as usize & (len1 - 1)) != 0 {
-            return Err(DMAError::Alignment);
-        }
-        if (ptr2 as usize & (len2 - 1)) != 0 {
-            return Err(DMAError::Alignment);
-        }
-
-        Ok(Self {
-            buf1,
-            buf2,
-            _phantom: PhantomData,
-        })
-    }
+DoubleBuffered<(CH1, CH2), RX, TX, ()> {
+    config(...) -> SingleBufferedConfig;
+    is_done() -> bool
+    read_next(BUF) -> DoubleReadBuffer<CH, RX, TX, BUF>
+    write_next(BUF) -> DoubleWriteBuffer<CH, RX, TX, BUF>
+    wait() -> ((CH1, CH2), RX, TX)
+}
+DoubleBuffered<CH, RX, TX, ReadNext<RX2>> {
+    is_done() -> bool
+    wait() -> (DoubleBuffered<CH, RX2, TX>, RX)
+}
+DoubleBuffered<CH, RX, TX, WriteNext<TX2>> {
+    is_done() -> bool
+    wait() -> (DoubleBuffered<CH, RX2, TX>, RX)
 }
 
-impl<TYPE, BUF1, BUF2> ReadTarget for ReadRingBuffer<TYPE, BUF1, BUF2>
-where
-    BUF1: StaticReadBuffer<Word = TYPE>,
-    BUF2: StaticReadBuffer<Word = TYPE>,
-{
-    type ReceivedWord = TYPE;
-
-    fn rx_treq() -> Option<u8> {
-        None
-    }
-
-    fn rx_address_count(&self) -> (u32, u32) {
-        // TODO
-        (0, 0)
-    }
-
-    fn rx_increment(&self) -> bool {
-        true
-    }
+Bidirectional<(CH1, CH2), FROM, BIDI, TO> {
+    config(...) -> BidirectionalConfig;
+    from_is_done() -> bool
+    to_is_done() -> bool
+    is_done() -> bool
+    from_wait() -> (CH1, FROM, SingleBuffered<CH2, BIDI, TO>)
+    to_wait() -> (CH2, SingleBuffered<CH2, FROM, BIDI>, TO)
+    wait() -> (CH1, CH2, FROM, BIDI, TO)
 }
 
-impl<TYPE, BUF1, BUF2> EndlessReadTarget for ReadRingBuffer<TYPE, BUF1, BUF2>
-where
-    BUF1: StaticReadBuffer<Word = TYPE>,
-    BUF2: StaticReadBuffer<Word = TYPE>,
-{
+BidiDoubleBuffered<(CH1, CH2), FROM, BIDI, TO, (), ()> {
+    config(...) -> BidirectionalConfig;
+    from_is_done() -> bool
+    to_is_done() -> bool
+    is_done() -> bool
+    wait() -> (CH1, CH2, FROM, BIDI, TO)
 }
 
-pub struct WriteRingBuffer<TYPE, BUF1, BUF2> {
-    buf1: BUF1,
-    buf2: BUF2,
-    _phantom: PhantomData<TYPE>,
-}
-
-impl<TYPE, BUF1, BUF2> WriteRingBuffer<TYPE, BUF1, BUF2>
-where
-    BUF1: StaticWriteBuffer<Word = TYPE>,
-    BUF2: StaticWriteBuffer<Word = TYPE>,
-{
-    pub fn new(buf1: BUF1, buf2: BUF2) -> Result<Self, DMAError> {
-        // TODO: Check alignment.
-        Ok(Self {
-            buf1,
-            buf2,
-            _phantom: PhantomData,
-        })
-    }
-}
-
-impl<TYPE, BUF1, BUF2> WriteTarget for WriteRingBuffer<TYPE, BUF1, BUF2>
-where
-    BUF1: StaticWriteBuffer<Word = TYPE>,
-    BUF2: StaticWriteBuffer<Word = TYPE>,
-{
-    type TransmittedWord = TYPE;
-
-    fn tx_treq() -> Option<u8> {
-        None
-    }
-
-    fn tx_address_count(&mut self) -> (u32, u32) {
-        // TODO
-        (0, 0)
-    }
-
-    fn tx_increment(&self) -> bool {
-        true
-    }
-}
-
-impl<TYPE, BUF1, BUF2> EndlessWriteTarget for WriteRingBuffer<TYPE, BUF1, BUF2>
-where
-    BUF1: StaticWriteBuffer<Word = TYPE>,
-    BUF2: StaticWriteBuffer<Word = TYPE>,
-{
+Endless<(CH1, CH2), RX, TX> {
+    stop() -> bool
 }*/
 
-// TODO: Drop for Transfer and TransferConfig?
-
-pub struct TransferConfig<CH: SingleChannel, FROM: ReadTarget, TO: WriteTarget> {
+pub struct SingleBufferingConfig<CH: SingleChannel, FROM: ReadTarget, TO: WriteTarget> {
     ch: CH,
     from: FROM,
     to: TO,
     pace: Pace,
 }
 
-impl<WORD, CH, FROM, TO> TransferConfig<CH, FROM, TO>
+impl<CH, FROM, TO, WORD> SingleBufferingConfig<CH, FROM, TO>
 where
     CH: SingleChannel,
     FROM: ReadTarget<ReceivedWord = WORD>,
     TO: WriteTarget<TransmittedWord = WORD>,
 {
-    pub fn new(ch: CH, from: FROM, to: TO) -> TransferConfig<CH, FROM, TO> {
-        TransferConfig {
+    pub fn new(ch: CH, from: FROM, to: TO) -> SingleBufferingConfig<CH, FROM, TO> {
+        SingleBufferingConfig {
             ch,
             from,
             to,
@@ -412,7 +418,7 @@ where
         self.pace = pace;
     }
 
-    pub fn start(mut self) -> Transfer<CH, FROM, TO> {
+    pub fn start(mut self) -> SingleBuffering<CH, FROM, TO> {
         // TODO: Do we want to call any callbacks to configure source/sink?
 
         // Make sure that memory contents reflect what the user intended.
@@ -420,41 +426,11 @@ where
         cortex_m::asm::dsb();
         compiler_fence(Ordering::SeqCst);
 
-        // Configure the DMA channel.
-        let (src, src_count) = self.from.rx_address_count();
-        let src_incr = self.from.rx_increment();
-        let (dest, dest_count) = self.to.tx_address_count();
-        let dest_incr = self.to.tx_increment();
-        const TREQ_UNPACED: u8 = 0x3f;
-        let treq = match self.pace {
-            Pace::PreferSource => FROM::rx_treq().or(TO::tx_treq()).unwrap_or(TREQ_UNPACED),
-            Pace::PreferDest => TO::tx_treq().or(FROM::rx_treq()).unwrap_or(TREQ_UNPACED),
-        };
-        let len = u32::min(src_count, dest_count);
-        self.ch.ch().ch_read_addr.write(|w| unsafe { w.bits(src) });
+        // Configure the DMA channel and start it.
         self.ch
-            .ch()
-            .ch_trans_count
-            .write(|w| unsafe { w.bits(len) });
-        self.ch
-            .ch()
-            .ch_write_addr
-            .write(|w| unsafe { w.bits(dest) });
-        // The following access starts the transfer.
-        self.ch.ch().ch_ctrl_trig.write(|w| unsafe {
-            w.data_size()
-                .bits(mem::size_of::<WORD>() as u8 >> 1)
-                .incr_read()
-                .bit(src_incr)
-                .incr_write()
-                .bit(dest_incr)
-                .treq_sel()
-                .bits(treq)
-                .en()
-                .bit(true)
-        });
+            .config(&self.from, &mut self.to, self.pace, None, true);
 
-        Transfer {
+        SingleBuffering {
             ch: self.ch,
             from: self.from,
             to: self.to,
@@ -462,7 +438,379 @@ where
     }
 }
 
-impl<WORD, CH, FROM, TO> TransferConfig<CH, FROM, TO>
+// TODO: Drop for most of these structs
+
+pub struct SingleBuffering<CH: SingleChannel, FROM: ReadTarget, TO: WriteTarget> {
+    ch: CH,
+    from: FROM,
+    to: TO,
+}
+
+impl<CH, FROM, TO, WORD> SingleBuffering<CH, FROM, TO>
+where
+    CH: SingleChannel,
+    FROM: ReadTarget<ReceivedWord = WORD>,
+    TO: WriteTarget<TransmittedWord = WORD>,
+{
+    /// Returns whether the transfer has completed.
+    pub fn is_done(&self) -> bool {
+        !self.ch.ch().ch_ctrl_trig.read().busy().bit_is_set()
+    }
+
+    pub fn wait(self) -> (CH, FROM, TO) {
+        while !self.is_done() {}
+
+        // Make sure that memory contents reflect what the user intended.
+        cortex_m::asm::dsb();
+        compiler_fence(Ordering::SeqCst);
+
+        (self.ch, self.from, self.to)
+    }
+}
+
+pub struct DoubleBufferingConfig<
+    CH1: SingleChannel,
+    CH2: SingleChannel,
+    FROM: ReadTarget,
+    TO: WriteTarget,
+> {
+    ch: (CH1, CH2),
+    from: FROM,
+    to: TO,
+    pace: Pace,
+}
+
+impl<CH1, CH2, FROM, TO, WORD> DoubleBufferingConfig<CH1, CH2, FROM, TO>
+where
+    CH1: SingleChannel,
+    CH2: SingleChannel,
+    FROM: ReadTarget<ReceivedWord = WORD>,
+    TO: WriteTarget<TransmittedWord = WORD>,
+{
+    pub fn new(ch: (CH1, CH2), from: FROM, to: TO) -> DoubleBufferingConfig<CH1, CH2, FROM, TO> {
+        DoubleBufferingConfig {
+            ch,
+            from,
+            to,
+            pace: Pace::PreferSource,
+        }
+    }
+
+    /// Sets the (preferred) pace for the DMA transfers.
+    ///
+    /// Usually, the code will automatically configure the correct pace, but
+    /// peripheral-to-peripheral transfers require the user to manually select whether the source
+    /// or the sink shall be queried for the pace signal.
+    pub fn pace(&mut self, pace: Pace) {
+        self.pace = pace;
+    }
+
+    pub fn start(mut self) -> DoubleBuffering<CH1, CH2, FROM, TO, ()> {
+        // TODO: Do we want to call any callbacks to configure source/sink?
+
+        // Make sure that memory contents reflect what the user intended.
+        // TODO: How much of the following is necessary?
+        cortex_m::asm::dsb();
+        compiler_fence(Ordering::SeqCst);
+
+        // Configure the DMA channel and start it.
+        self.ch
+            .0
+            .config(&self.from, &mut self.to, self.pace, None, true);
+
+        DoubleBuffering {
+            ch: self.ch,
+            from: self.from,
+            to: self.to,
+            pace: self.pace,
+            state: (),
+            second_ch: false,
+        }
+    }
+}
+
+pub struct ReadNext<BUF: ReadTarget>(BUF);
+pub struct WriteNext<BUF: WriteTarget>(BUF);
+
+pub struct DoubleBuffering<CH1, CH2, FROM, TO, STATE>
+where
+    CH1: SingleChannel,
+    CH2: SingleChannel,
+    FROM: ReadTarget,
+    TO: WriteTarget,
+{
+    ch: (CH1, CH2),
+    from: FROM,
+    to: TO,
+    pace: Pace,
+    state: STATE,
+    second_ch: bool,
+}
+
+impl<CH1, CH2, FROM, TO, WORD, STATE> DoubleBuffering<CH1, CH2, FROM, TO, STATE>
+where
+    CH1: SingleChannel,
+    CH2: SingleChannel,
+    FROM: ReadTarget<ReceivedWord = WORD>,
+    TO: WriteTarget<TransmittedWord = WORD>,
+{
+    pub fn is_done(&self) -> bool {
+        if self.second_ch {
+            !self.ch.1.ch().ch_ctrl_trig.read().busy().bit_is_set()
+        } else {
+            !self.ch.0.ch().ch_ctrl_trig.read().busy().bit_is_set()
+        }
+    }
+}
+
+impl<CH1, CH2, FROM, TO, WORD> DoubleBuffering<CH1, CH2, FROM, TO, ()>
+where
+    CH1: SingleChannel,
+    CH2: SingleChannel,
+    FROM: ReadTarget<ReceivedWord = WORD>,
+    TO: WriteTarget<TransmittedWord = WORD> + EndlessWriteTarget,
+{
+    pub fn wait(self) -> (CH1, CH2, FROM, TO) {
+        while !self.is_done() {}
+
+        // Make sure that memory contents reflect what the user intended.
+        cortex_m::asm::dsb();
+        compiler_fence(Ordering::SeqCst);
+
+        // TODO: Use a tuple type?
+        (self.ch.0, self.ch.1, self.from, self.to)
+    }
+}
+
+impl<CH1, CH2, FROM, TO, WORD> DoubleBuffering<CH1, CH2, FROM, TO, ()>
+where
+    CH1: SingleChannel,
+    CH2: SingleChannel,
+    FROM: ReadTarget<ReceivedWord = WORD>,
+    TO: WriteTarget<TransmittedWord = WORD> + EndlessWriteTarget,
+{
+    pub fn read_next<BUF: ReadTarget<ReceivedWord = WORD>>(
+        mut self,
+        buf: BUF,
+    ) -> DoubleBuffering<CH1, CH2, FROM, TO, ReadNext<BUF>> {
+        // Make sure that memory contents reflect what the user intended.
+        // TODO: How much of the following is necessary?
+        cortex_m::asm::dsb();
+        compiler_fence(Ordering::SeqCst);
+
+        // Configure the _other_ DMA channel, but do not start it yet.
+        if self.second_ch {
+            self.ch.0.config(&buf, &mut self.to, self.pace, None, false);
+        } else {
+            self.ch.1.config(&buf, &mut self.to, self.pace, None, false);
+        }
+
+        // Chain the first channel to the second.
+        if self.second_ch {
+            self.ch.1.set_chain_to_enabled(&mut self.ch.0);
+        } else {
+            self.ch.0.set_chain_to_enabled(&mut self.ch.1);
+        }
+
+        DoubleBuffering {
+            ch: self.ch,
+            from: self.from,
+            to: self.to,
+            pace: self.pace,
+            state: ReadNext(buf),
+            second_ch: self.second_ch,
+        }
+    }
+}
+
+impl<CH1, CH2, FROM, TO, WORD> DoubleBuffering<CH1, CH2, FROM, TO, ()>
+where
+    CH1: SingleChannel,
+    CH2: SingleChannel,
+    FROM: ReadTarget<ReceivedWord = WORD> + EndlessReadTarget,
+    TO: WriteTarget<TransmittedWord = WORD>,
+{
+    pub fn write_next<BUF: WriteTarget<TransmittedWord = WORD>>(
+        mut self,
+        mut buf: BUF,
+    ) -> DoubleBuffering<CH1, CH2, FROM, TO, WriteNext<BUF>> {
+        // Make sure that memory contents reflect what the user intended.
+        // TODO: How much of the following is necessary?
+        cortex_m::asm::dsb();
+        compiler_fence(Ordering::SeqCst);
+
+        // Configure the _other_ DMA channel, but do not start it yet.
+        if self.second_ch {
+            self.ch
+                .0
+                .config(&self.from, &mut buf, self.pace, None, false);
+        } else {
+            self.ch
+                .1
+                .config(&self.from, &mut buf, self.pace, None, false);
+        }
+
+        // Chain the first channel to the second.
+        if self.second_ch {
+            self.ch.1.set_chain_to_enabled(&mut self.ch.0);
+        } else {
+            self.ch.0.set_chain_to_enabled(&mut self.ch.1);
+        }
+
+        DoubleBuffering {
+            ch: self.ch,
+            from: self.from,
+            to: self.to,
+            pace: self.pace,
+            state: WriteNext(buf),
+            second_ch: self.second_ch,
+        }
+    }
+}
+
+impl<CH1, CH2, FROM, TO, NEXT, WORD> DoubleBuffering<CH1, CH2, FROM, TO, ReadNext<NEXT>>
+where
+    CH1: SingleChannel,
+    CH2: SingleChannel,
+    FROM: ReadTarget<ReceivedWord = WORD>,
+    TO: WriteTarget<TransmittedWord = WORD> + EndlessWriteTarget,
+    NEXT: ReadTarget<ReceivedWord = WORD>,
+{
+    pub fn wait(self) -> (FROM, DoubleBuffering<CH1, CH2, NEXT, TO, ()>) {
+        while !self.is_done() {}
+
+        // Make sure that memory contents reflect what the user intended.
+        cortex_m::asm::dsb();
+        compiler_fence(Ordering::SeqCst);
+
+        // Invert second_ch as now the other channel is the "active" channel.
+        (
+            self.from,
+            DoubleBuffering {
+                ch: self.ch,
+                from: self.state.0,
+                to: self.to,
+                pace: self.pace,
+                state: (),
+                second_ch: !self.second_ch,
+            },
+        )
+    }
+}
+
+impl<CH1, CH2, FROM, TO, NEXT, WORD> DoubleBuffering<CH1, CH2, FROM, TO, WriteNext<NEXT>>
+where
+    CH1: SingleChannel,
+    CH2: SingleChannel,
+    FROM: ReadTarget<ReceivedWord = WORD> + EndlessReadTarget,
+    TO: WriteTarget<TransmittedWord = WORD>,
+    NEXT: WriteTarget<TransmittedWord = WORD>,
+{
+    pub fn wait(self) -> (TO, DoubleBuffering<CH1, CH2, FROM, NEXT, ()>) {
+        while !self.is_done() {}
+
+        // Make sure that memory contents reflect what the user intended.
+        cortex_m::asm::dsb();
+        compiler_fence(Ordering::SeqCst);
+
+        // Invert second_ch as now the other channel is the "active" channel.
+        (
+            self.to,
+            DoubleBuffering {
+                ch: self.ch,
+                from: self.from,
+                to: self.state.0,
+                pace: self.pace,
+                state: (),
+                second_ch: !self.second_ch,
+            },
+        )
+    }
+}
+
+pub struct BidirectionalConfig<CH1, CH2, FROM, BIDI, TO>
+where
+    CH1: SingleChannel,
+    CH2: SingleChannel,
+    FROM: ReadTarget,
+    BIDI: ReadTarget + WriteTarget,
+    TO: WriteTarget,
+{
+    ch: (CH1, CH2),
+    from: FROM,
+    bidi: BIDI,
+    to: TO,
+    from_pace: Pace,
+    to_pace: Pace,
+}
+
+impl<CH1, CH2, FROM, BIDI, TO, WORD> BidirectionalConfig<CH1, CH2, FROM, BIDI, TO>
+where
+    CH1: SingleChannel,
+    CH2: SingleChannel,
+    FROM: ReadTarget<ReceivedWord = WORD>,
+    BIDI: ReadTarget<ReceivedWord = WORD> + WriteTarget<TransmittedWord = WORD>,
+    TO: WriteTarget<TransmittedWord = WORD>,
+{
+    pub fn new(
+        ch: (CH1, CH2),
+        from: FROM,
+        bidi: BIDI,
+        to: TO,
+    ) -> BidirectionalConfig<CH1, CH2, FROM, BIDI, TO> {
+        BidirectionalConfig {
+            ch,
+            from,
+            bidi,
+            to,
+            from_pace: Pace::PreferSink,
+            to_pace: Pace::PreferSink,
+        }
+    }
+
+    pub fn from_pace(&mut self, pace: Pace) {
+        self.from_pace = pace;
+    }
+
+    pub fn to_pace(&mut self, pace: Pace) {
+        self.to_pace = pace;
+    }
+
+    pub fn start(mut self) -> Bidirectional<CH1, CH2, FROM, BIDI, TO> {
+        // TODO
+        panic!("Not yet implemented.");
+    }
+}
+
+pub struct Bidirectional<CH1, CH2, FROM, BIDI, TO>
+where
+    CH1: SingleChannel,
+    CH2: SingleChannel,
+    FROM: ReadTarget,
+    BIDI: ReadTarget + WriteTarget,
+    TO: WriteTarget,
+{
+    ch: (CH1, CH2),
+    from: FROM,
+    bidi: BIDI,
+    to: TO,
+}
+
+impl<CH1, CH2, FROM, BIDI, TO, WORD> Bidirectional<CH1, CH2, FROM, BIDI, TO>
+where
+    CH1: SingleChannel,
+    CH2: SingleChannel,
+    FROM: ReadTarget<ReceivedWord = WORD>,
+    BIDI: ReadTarget<ReceivedWord = WORD> + WriteTarget<TransmittedWord = WORD>,
+    TO: WriteTarget<TransmittedWord = WORD>,
+{
+    pub fn wait(self) -> ((CH1, CH2), FROM, BIDI, TO) {
+        // TODO
+        panic!("Not yet implemented.");
+    }
+}
+
+/*impl<WORD, CH, FROM, TO> SingleBufferingConfig<CH, FROM, TO>
 where
     CH: ChannelPair,
     FROM: ReadTarget<ReceivedWord = WORD>,
@@ -498,7 +846,7 @@ where
         const TREQ_UNPACED: u8 = 0x3f;
         let treq = match self.pace {
             Pace::PreferSource => FROM::rx_treq().or(TO::tx_treq()).unwrap_or(TREQ_UNPACED),
-            Pace::PreferDest => TO::tx_treq().or(FROM::rx_treq()).unwrap_or(TREQ_UNPACED),
+            Pace::PreferSink => TO::tx_treq().or(FROM::rx_treq()).unwrap_or(TREQ_UNPACED),
         };
 
         // We split buffers in two halves for the two DMA channels.
@@ -544,7 +892,7 @@ where
                 .en()
                 .bit(true)
                 .chain_to()
-                .bits(CH::id())
+                .bits(self.ch.id())
                 .ring_sel()
                 .bit(wrap_dest)
                 .ring_size()
@@ -572,7 +920,7 @@ where
                 .en()
                 .bit(true)
                 .chain_to()
-                .bits(CH::id2())
+                .bits(self.ch.id2())
                 .ring_sel()
                 .bit(wrap_dest)
                 .ring_size()
@@ -597,34 +945,6 @@ where
     }
 }
 
-pub struct Transfer<CH: SingleChannel, FROM: ReadTarget, TO: WriteTarget> {
-    ch: CH,
-    from: FROM,
-    to: TO,
-}
-
-impl<CH, FROM, TO, WORD> Transfer<CH, FROM, TO>
-where
-    CH: SingleChannel,
-    FROM: ReadTarget<ReceivedWord = WORD>,
-    TO: WriteTarget<TransmittedWord = WORD>,
-{
-    /// Returns whether the transfer has completed.
-    pub fn is_done(&self) -> bool {
-        !self.ch.ch().ch_ctrl_trig.read().busy().bit_is_set()
-    }
-
-    pub fn wait(self) -> (CH, FROM, TO) {
-        while !self.is_done() {}
-
-        // Make sure that memory contents reflect what the user intended.
-        cortex_m::asm::dsb();
-        compiler_fence(Ordering::SeqCst);
-
-        (self.ch, self.from, self.to)
-    }
-}
-
 pub struct RingTransfer<CH: ChannelPair, FROM: ReadTarget, TO: WriteTarget> {
     ch: CH,
     from: FROM,
@@ -638,17 +958,32 @@ where
     TO: WriteTarget,
 {
     // TODO
-}
+}*/
 
+/// Pacing for DMA transfers.
+///
+/// Generally, while memory-to-memory DMA transfers can operate at maximum possible throughput,
+/// transfers involving peripherals commonly have to wait for data to be available or for available
+/// space in write queues. This type defines whether the sink or the source shall pace the transfer
+/// for peripheral-to-peripheral transfers.
+#[derive(Clone, Copy)]
 pub enum Pace {
+    /// The DREQ signal from the source is used, if available. If not, the sink's DREQ signal is
+    /// used.
     PreferSource,
-    PreferDest,
+    /// The DREQ signal from the sink is used, if available. If not, the source's DREQ signal is
+    /// used.
+    PreferSink,
     // TODO: Timers?
 }
 
+/// Error during DMA configuration.
 #[derive(Debug)]
 pub enum DMAError {
+    /// Buffers were not aligned to their size even though they needed to be.
     Alignment,
+    /// An illegal configuration (i.e., buffer sizes not suitable for a memory-to-memory transfer)
+    /// was specified.
     IllegalConfig,
 }
 
