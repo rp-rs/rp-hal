@@ -66,8 +66,7 @@ fn main() -> ! {
         pins.gpio3.into_mode(),
         &mut pac.RESETS,
         ADDRESS,
-    )
-    .into_async();
+    );
 
     let mut ctrl = nostd_async::Task::new(async { controller::run_demo(&mut i2c0).await });
     let mut prph = nostd_async::Task::new(async { peripheral::run_demo(&mut i2c1).await });

@@ -24,18 +24,6 @@ pub enum I2CEvent {
     Stop,
 }
 
-impl<T: SubsystemReset + Deref<Target = I2CBlock>, Pins> I2C<T, Pins, Peripheral> {
-    /// Turn the I2C instance into async/await handler.
-    ///
-    /// The bus *MUST* be idle when this method is called.
-    pub fn into_async(self) -> I2CAsyncPeripheral<T, Pins> {
-        I2CAsyncPeripheral {
-            i2c: self,
-            state: State::Idle,
-        }
-    }
-}
-
 impl<T, Sda, Scl> I2C<T, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>), Peripheral>
 where
     T: SubsystemReset + Deref<Target = I2CBlock>,
@@ -43,13 +31,16 @@ where
     Scl: PinId + BankPinId,
 {
     /// Configures the I2C peripheral to work in peripheral mode
+    ///
+    /// The bus *MUST* be idle when this method is called.
+    #[allow(clippy::type_complexity)]
     pub fn new_peripheral(
         i2c: T,
         sda_pin: Pin<Sda, FunctionI2C>,
         scl_pin: Pin<Scl, FunctionI2C>,
         resets: &mut RESETS,
         addr: u16,
-    ) -> Self
+    ) -> I2CAsyncPeripheral<T, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)>
     where
         Sda: SdaPin<T>,
         Scl: SclPin<T>,
@@ -88,10 +79,13 @@ where
         // Enable IP
         i2c.ic_enable.write(|w| w.enable().enabled());
 
-        Self {
-            i2c,
-            pins: (sda_pin, scl_pin),
-            mode: PhantomData,
+        I2CAsyncPeripheral {
+            i2c: Self {
+                i2c,
+                pins: (sda_pin, scl_pin),
+                mode: PhantomData,
+            },
+            state: State::Idle,
         }
     }
 }
@@ -197,5 +191,21 @@ impl<T: Deref<Target = I2CBlock>, PINS> I2CAsyncPeripheral<T, PINS> {
             read += 1;
         }
         read
+    }
+}
+
+impl<Block, Sda, Scl> I2CAsyncPeripheral<Block, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)>
+where
+    Block: SubsystemReset + Deref<Target = I2CBlock>,
+    Sda: PinId + BankPinId,
+    Scl: PinId + BankPinId,
+{
+    /// Releases the I2C peripheral and associated pins
+    #[allow(clippy::type_complexity)]
+    pub fn free(
+        self,
+        resets: &mut RESETS,
+    ) -> (Block, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)) {
+        self.i2c.free(resets)
     }
 }
