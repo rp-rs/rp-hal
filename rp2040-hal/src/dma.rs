@@ -121,6 +121,92 @@ pub trait SingleChannel {
     fn ch(&self) -> &rp2040_pac::dma::CH;
     /// Returns the index of the DMA channel.
     fn id(&self) -> u8;
+
+    /// Enables the DMA_IRQ_0 signal for this channel.
+    fn listen_irq0(&mut self) {
+        const ATOMIC_SET_OFFSET: usize = 0x2000;
+        // Safety: We only use the atomic alias of the register.
+        unsafe {
+            (&*DMA::ptr())
+                .inte0
+                .as_ptr()
+                .add(ATOMIC_SET_OFFSET / 4)
+                .write_volatile(1 << self.id());
+        }
+    }
+
+    /// Disables the DMA_IRQ_0 signal for this channel.
+    fn unlisten_irq0(&mut self) {
+        const ATOMIC_CLEAR_OFFSET: usize = 0x3000;
+        // Safety: We only use the atomic alias of the register.
+        unsafe {
+            (&*DMA::ptr())
+                .inte1
+                .as_ptr()
+                .add(ATOMIC_CLEAR_OFFSET / 4)
+                .write_volatile(1 << self.id());
+        }
+    }
+
+    /// Checks whether an interrupt is pending for this channel and clears the corresponding IRQ
+    /// bit.
+    fn check_irq0(&mut self) -> bool {
+        // Safety: The following is race-free as we only ever clear the bit for this channel.
+        // Nobody else modifies that bit.
+        unsafe {
+            let status = (&*DMA::ptr()).ints0.read().bits();
+            if (status & (1 << self.id())) != 0 {
+                // Clear the interrupt.
+                (&*DMA::ptr()).ints0.write(|w| w.bits(1 << self.id()));
+                true
+            } else {
+                false
+            }
+        }
+    }
+
+    /// Enables the DMA_IRQ_0 signal for this channel.
+    fn listen_irq1(&mut self) {
+        const ATOMIC_SET_OFFSET: usize = 0x2000;
+        // Safety: We only use the atomic alias of the register.
+        unsafe {
+            (&*DMA::ptr())
+                .inte1
+                .as_ptr()
+                .add(ATOMIC_SET_OFFSET / 4)
+                .write_volatile(1 << self.id());
+        }
+    }
+
+    /// Disables the DMA_IRQ_1 signal for this channel.
+    fn unlisten_irq1(&mut self) {
+        const ATOMIC_CLEAR_OFFSET: usize = 0x3000;
+        // Safety: We only use the atomic alias of the register.
+        unsafe {
+            (&*DMA::ptr())
+                .inte1
+                .as_ptr()
+                .add(ATOMIC_CLEAR_OFFSET / 4)
+                .write_volatile(1 << self.id());
+        }
+    }
+
+    /// Checks whether an interrupt is pending for this channel and clears the corresponding IRQ
+    /// bit.
+    fn check_irq1(&mut self) -> bool {
+        // Safety: The following is race-free as we only ever clear the bit for this channel.
+        // Nobody else modifies that bit.
+        unsafe {
+            let status = (&*DMA::ptr()).ints1.read().bits();
+            if (status & (1 << self.id())) != 0 {
+                // Clear the interrupt.
+                (&*DMA::ptr()).ints1.write(|w| w.bits(1 << self.id()));
+                true
+            } else {
+                false
+            }
+        }
+    }
 }
 
 /// Trait which implements low-level functionality for transfers requiring two DMA channels.
@@ -452,6 +538,14 @@ where
     FROM: ReadTarget<ReceivedWord = WORD>,
     TO: WriteTarget<TransmittedWord = WORD>,
 {
+    pub fn check_irq0(&mut self) -> bool {
+        self.ch.check_irq0()
+    }
+
+    pub fn check_irq1(&mut self) -> bool {
+        self.ch.check_irq1()
+    }
+
     /// Returns whether the transfer has completed.
     pub fn is_done(&self) -> bool {
         !self.ch.ch().ch_ctrl_trig.read().busy().bit_is_set()
