@@ -127,7 +127,7 @@ rom_funcs_unsafe! {
 
     /// Copies n bytes starting at src to dest and returns dest. The results are undefined if the
     /// regions overlap.
-    /// 
+    ///
     /// Note this is a slightly more efficient variant of _memcpy that may only be
     /// used if dest and src are word aligned.
     b"C4" memcpy44(dest: *mut u32, src: *mut u32, n: u32) -> *mut u8;
@@ -136,7 +136,7 @@ rom_funcs_unsafe! {
     b"IF" connect_internal_flash() -> ();
 
     /// First set up the SSI for serial-mode operations, then issue the fixed XIP exit sequence.
-    /// 
+    ///
     /// Note that the bootrom code uses the IO forcing logic to drive the CS pin, which must be
     /// cleared before returning the SSI to XIP mode (e.g. by a call to _flash_flush_cache). This
     /// function configures the SSI with a fixed SCK clock divisor of /6.
