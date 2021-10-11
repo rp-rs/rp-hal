@@ -1,3 +1,9 @@
+//! I2C Peripheral demo
+//!
+//! This module implements a state machine serving the I2C requests from the controller in this
+//! demo. In a real-life application the state machine may not need to be validated as thoroughly
+//! demonstrated here.
+
 use core::ops::Deref;
 use rp2040_hal::i2c::peripheral::I2CAsyncPeripheral;
 use rp2040_hal::i2c::peripheral::I2CEvent;

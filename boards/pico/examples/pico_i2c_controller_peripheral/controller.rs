@@ -1,3 +1,10 @@
+//! I2C Controller demo
+//!
+//! This module implements a demonstration of an I2C controller sending read & write requests to a
+//! peripheral.
+//! This demo takes advandage of rust's async.await support to run read & write operation while
+//! serving those request from an independant context.
+
 use super::ADDRESS;
 use core::ops::Deref;
 use rp2040_hal::i2c::I2C;
