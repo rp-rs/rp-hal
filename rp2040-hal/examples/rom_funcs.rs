@@ -138,7 +138,7 @@ fn main() -> ! {
     // Some functions require a look-up in a table. First we do the lookup and
     // find the function pointer in ROM (you only want to do this once per
     // function).
-    let fmul = hal::rom_data::fmul();
+    let fmul = hal::rom_data::float_funcs::fmul();
 
     // Then we can call the function whenever we want
     let start_rom = cortex_m::peripheral::SYST::get_current();

@@ -209,284 +209,310 @@ pub fn soft_double_table() -> *const usize {
     rom_table_lookup(DATA_TABLE, *b"SD")
 }
 
-macro_rules! float_funcs {
-    (
-        $(
-            $(#[$outer:meta])*
-            $offset:literal $name:ident (
-                $( $aname:ident : $aty:ty ),*
-            ) -> $ret:ty;
-        )*
-    ) => {
-        $(
-            $(#[$outer])*
-            pub fn $name() -> extern "C" fn( $( $aname : $aty ),* ) -> $ret {
-                let table: *const usize = $crate::rom_data::soft_float_table() as *const usize;
-                unsafe {
-                    // This is the entry in the table. Our offset is given as a
-                    // byte offset, but we want the table index (each pointer in
-                    // the table is 4 bytes long)
-                    let entry: *const usize = table.offset($offset / 4);
-                    // Read the pointer from the table
-                    let ptr: usize = core::ptr::read(entry);
-                    // Convert the pointer we read into a function
-                    core::mem::transmute_copy(&ptr)
+/// ROM functions using single-precision arithmetic (i.e. 'f64' in Rust terms)
+pub mod float_funcs {
+
+    macro_rules! make_functions {
+        (
+            $(
+                $(#[$outer:meta])*
+                $offset:literal $name:ident (
+                    $( $aname:ident : $aty:ty ),*
+                ) -> $ret:ty;
+            )*
+        ) => {
+            $(
+                $(#[$outer])*
+                pub fn $name() -> extern "C" fn( $( $aname : $aty ),* ) -> $ret {
+                    let table: *const usize = $crate::rom_data::soft_float_table() as *const usize;
+                    unsafe {
+                        // This is the entry in the table. Our offset is given as a
+                        // byte offset, but we want the table index (each pointer in
+                        // the table is 4 bytes long)
+                        let entry: *const usize = table.offset($offset / 4);
+                        // Read the pointer from the table
+                        let ptr: usize = core::ptr::read(entry);
+                        // Convert the pointer we read into a function
+                        core::mem::transmute_copy(&ptr)
+                    }
                 }
-            }
-        )*
+            )*
+        }
+    }
+
+    make_functions! {
+        /// Returns a function that will calculate `a + b`
+        0x00 fadd(a: f32, b: f32) -> f32;
+        /// Returns a function that will calculate `a - b`
+        0x04 fsub(a: f32, b: f32) -> f32;
+        /// Returns a function that will calculate `a * b`
+        0x08 fmul(a: f32, b: f32) -> f32;
+        /// Returns a function that will calculate `a / b`
+        0x0c fdiv(a: f32, b: f32) -> f32;
+
+        // 0x10 and 0x14 are deprecated
+
+        /// Returns a function that will calculate `sqrt(v)` (or return -Infinity if v is negative)
+        0x18 fsqrt(v: f32) -> f32;
+        /// Returns a function that will convert an f32 to a signed integer,
+        /// rounding towards -Infinity, and clamping the result to lie within the
+        /// range `-0x80000000` to `0x7FFFFFFF`
+        0x1c float_to_int(v: f32) -> i32;
+        /// Returns a function that will convert an f32 to an signed fixed point
+        /// integer representation where n specifies the position of the binary
+        /// point in the resulting fixed point representation, e.g.
+        /// `f(0.5f, 16) == 0x8000`. This method rounds towards -Infinity,
+        /// and clamps the resulting integer to lie within the range `0x00000000` to
+        /// `0xFFFFFFFF`
+        0x20 float_to_fix(v: f32, n: i32) -> i32;
+        /// Returns a function that will convert an f32 to an unsigned integer,
+        /// rounding towards -Infinity, and clamping the result to lie within the
+        /// range `0x00000000` to `0xFFFFFFFF`
+        0x24 float_to_uint(v: f32) -> u32;
+        /// Returns a function that will convert an f32 to an unsigned fixed point
+        /// integer representation where n specifies the position of the binary
+        /// point in the resulting fixed point representation, e.g.
+        /// `f(0.5f, 16) == 0x8000`. This method rounds towards -Infinity,
+        /// and clamps the resulting integer to lie within the range `0x00000000` to
+        /// `0xFFFFFFFF`
+        0x28 float_to_ufix(v: f32, n: i32) -> u32;
+        /// Returns a function that will convert a signed integer to the nearest
+        /// f32 value, rounding to even on tie
+        0x2c int_to_float(v: i32) -> f32;
+        /// Returns a function that will convert a signed fixed point integer
+        /// representation to the nearest f32 value, rounding to even on tie. `n`
+        /// specifies the position of the binary point in fixed point, so `f =
+        /// nearest(v/(2^n))`
+        0x30 fix_to_float(v: i32, n: i32) -> f32;
+        /// Returns a function that will convert an unsigned integer to the nearest
+        /// f32 value, rounding to even on tie
+        0x34 uint_to_float(v: u32) -> f32;
+        /// Returns a function that will convert an unsigned fixed point integer
+        /// representation to the nearest f32 value, rounding to even on tie. `n`
+        /// specifies the position of the binary point in fixed point, so `f =
+        /// nearest(v/(2^n))`
+        0x38 ufix_to_float(v: u32, n: i32) -> f32;
+        /// Returns a function that will calculate the cosine of `angle`. The value
+        /// of `angle` is in radians, and must be in the range `-1024` to `1024`
+        0x3c fcos(angle: f32) -> f32;
+        /// Returns a function that will calculate the sine of `angle`. The value of
+        /// `angle` is in radians, and must be in the range `-1024` to `1024`
+        0x40 fsin(angle: f32) -> f32;
+        /// Returns a function that will calculate the tangent of `angle`. The value
+        /// of `angle` is in radians, and must be in the range `-1024` to `1024`
+        0x44 ftan(angle: f32) -> f32;
+
+        // 0x48 is deprecated
+
+        /// Returns a function that will calculate the exponential value of `v`,
+        /// i.e. `e ** v`
+        0x4c fexp(v: f32) -> f32;
+        /// Returns a function that will calculate the natural logarithm of `v`. If `v <= 0` return -Infinity
+        0x50 fln(v: f32) -> f32;
+
+        // These are only on BootROM v2 or higher
+
+        /// Returns a function that will compare two floating point numbers, returning:
+        ///     • 0 if a == b
+        ///     • -1 if a < b
+        ///     • 1 if a > b
+        0x54 fcmp(a: f32, b: f32) -> i32;
+        /// Returns a function that will compute the arc tangent of `y/x` using the
+        /// signs of arguments to determine the correct quadrant
+        0x58 fatan2(y: f32, x: f32) -> f32;
+        /// Returns a function that will convert a signed 64-bit integer to the
+        /// nearest f32 value, rounding to even on tie
+        0x5c int64_to_float(v: i64) -> f32;
+        /// Returns a function that will convert a signed fixed point 64-bit integer
+        /// representation to the nearest f32 value, rounding to even on tie. `n`
+        /// specifies the position of the binary point in fixed point, so `f =
+        /// nearest(v/(2^n))`
+        0x60 fix64_to_float(v: i64, n: i32) -> f32;
+        /// Returns a function that will convert an unsigned 64-bit integer to the
+        /// nearest f32 value, rounding to even on tie
+        0x64 uint64_to_float(v: u64) -> f32;
+        /// Returns a function that will convert an unsigned fixed point 64-bit
+        /// integer representation to the nearest f32 value, rounding to even on
+        /// tie. `n` specifies the position of the binary point in fixed point, so
+        /// `f = nearest(v/(2^n))`
+        0x68 ufix64_to_float(v: u64, n: i32) -> f32;
+        /// Convert an f32 to a signed 64-bit integer, rounding towards -Infinity,
+        /// and clamping the result to lie within the range `-0x8000000000000000` to
+        /// `0x7FFFFFFFFFFFFFFF`
+        0x6c float_to_int64(v: f32) -> i64;
+        /// Returns a function that will convert an f32 to a signed fixed point
+        /// 64-bit integer representation where n specifies the position of the
+        /// binary point in the resulting fixed point representation - e.g. `f(0.5f,
+        /// 16) == 0x8000`. This method rounds towards -Infinity, and clamps the
+        /// resulting integer to lie within the range `-0x8000000000000000` to
+        /// `0x7FFFFFFFFFFFFFFF`
+        0x70 float_to_fix64(v: f32, n: i32) -> f32;
+        /// Returns a function that will convert an f32 to an unsigned 64-bit
+        /// integer, rounding towards -Infinity, and clamping the result to lie
+        /// within the range `0x0000000000000000` to `0xFFFFFFFFFFFFFFFF`
+        0x74 float_to_uint64(v: f32) -> u64;
+        /// Returns a function that will convert an f32 to an unsigned fixed point
+        /// 64-bit integer representation where n specifies the position of the
+        /// binary point in the resulting fixed point representation, e.g. `f(0.5f,
+        /// 16) == 0x8000`. This method rounds towards -Infinity, and clamps the
+        /// resulting integer to lie within the range `0x0000000000000000` to
+        /// `0xFFFFFFFFFFFFFFFF`
+        0x78 float_to_ufix64(v: f32, n: i32) -> u64;
+        /// Converts an f32 to an f64.
+        0x7c float_to_double(v: f32) -> f64;
     }
 }
 
-float_funcs! {
-    /// Returns a function that will calculate `a + b`
-    0x00 fadd(a: f32, b: f32) -> f32;
-    /// Returns a function that will calculate `a - b`
-    0x04 fsub(a: f32, b: f32) -> f32;
-    /// Returns a function that will calculate `a * b`
-    0x08 fmul(a: f32, b: f32) -> f32;
-    /// Returns a function that will calculate `a / b`
-    0x0c fdiv(a: f32, b: f32) -> f32;
-    /// Returns a function that will calculate `sqrt(v)` (or return -Infinity if v is negative)
-    0x18 fsqrt(v: f32) -> f32;
-    /// Returns a function that will convert an f32 to a signed integer,
-    /// rounding towards -Infinity, and clamping the result to lie within the
-    /// range `-0x80000000` to `0x7FFFFFFF`
-    0x1c float_to_int(v: f32) -> i32;
-    /// Returns a function that will convert an f32 to an signed fixed point
-    /// integer representation where n specifies the position of the binary
-    /// point in the resulting fixed point representation, e.g.
-    /// `f(0.5f, 16) == 0x8000`. This method rounds towards -Infinity,
-    /// and clamps the resulting integer to lie within the range `0x00000000` to
-    /// `0xFFFFFFFF`
-    0x20 float_to_fix(v: f32, n: i32) -> i32;
-    /// Returns a function that will convert an f32 to an unsigned integer,
-    /// rounding towards -Infinity, and clamping the result to lie within the
-    /// range `0x00000000` to `0xFFFFFFFF`
-    0x24 float_to_uint(v: f32) -> u32;
-    /// Returns a function that will convert an f32 to an unsigned fixed point
-    /// integer representation where n specifies the position of the binary
-    /// point in the resulting fixed point representation, e.g.
-    /// `f(0.5f, 16) == 0x8000`. This method rounds towards -Infinity,
-    /// and clamps the resulting integer to lie within the range `0x00000000` to
-    /// `0xFFFFFFFF`
-    0x28 float_to_ufix(v: f32, n: i32) -> u32;
-    /// Returns a function that will convert a signed integer to the nearest
-    /// f32 value, rounding to even on tie
-    0x2c int_to_float(v: i32) -> f32;
-    /// Returns a function that will convert a signed fixed point integer
-    /// representation to the nearest f32 value, rounding to even on tie. `n`
-    /// specifies the position of the binary point in fixed point, so `f =
-    /// nearest(v/(2^n))`
-    0x30 fix_to_float(v: i32, n: i32) -> f32;
-    /// Returns a function that will convert an unsigned integer to the nearest
-    /// f32 value, rounding to even on tie
-    0x34 uint_to_float(v: u32) -> f32;
-    /// Returns a function that will convert an unsigned fixed point integer
-    /// representation to the nearest f32 value, rounding to even on tie. `n`
-    /// specifies the position of the binary point in fixed point, so `f =
-    /// nearest(v/(2^n))`
-    0x38 ufix_to_float(v: u32, n: i32) -> f32;
-    /// Returns a function that will calculate the cosine of `angle`. The value
-    /// of `angle` is in radians, and must be in the range `-1024` to `1024`
-    0x3c fcos(angle: f32) -> f32;
-    /// Returns a function that will calculate the sine of `angle`. The value of
-    /// `angle` is in radians, and must be in the range `-1024` to `1024`
-    0x40 fsin(angle: f32) -> f32;
-    /// Returns a function that will calculate the tangent of `angle`. The value
-    /// of `angle` is in radians, and must be in the range `-1024` to `1024`
-    0x44 ftan(angle: f32) -> f32;
-    /// Returns a function that will calculate the exponential value of `v`,
-    /// i.e. `e ** v`
-    0x4c fexp(v: f32) -> f32;
-    /// Returns a function that will calculate the natural logarithm of `v`. If `v <= 0` return -Infinity
-    0x50 fln(v: f32) -> f32;
-    /// Returns a function that will compare two floating point numbers, returning:
-    ///     • 0 if a == b
-    ///     • -1 if a < b
-    ///     • 1 if a > b
-    0x54 fcmp(a: f32, b: f32) -> i32;
-    /// Returns a function that will compute the arc tangent of `y/x` using the
-    /// signs of arguments to determine the correct quadrant
-    0x58 fatan2(y: f32, x: f32) -> f32;
-    /// Returns a function that will convert a signed 64-bit integer to the
-    /// nearest f32 value, rounding to even on tie
-    0x5c int64_to_float(v: i64) -> f32;
-    /// Returns a function that will convert a signed fixed point 64-bit integer
-    /// representation to the nearest f32 value, rounding to even on tie. `n`
-    /// specifies the position of the binary point in fixed point, so `f =
-    /// nearest(v/(2^n))`
-    0x60 fix64_to_float(v: i64, n: i32) -> f32;
-    /// Returns a function that will convert an unsigned 64-bit integer to the
-    /// nearest f32 value, rounding to even on tie
-    0x64 uint64_to_float(v: u64) -> f32;
-    /// Returns a function that will convert an unsigned fixed point 64-bit
-    /// integer representation to the nearest f32 value, rounding to even on
-    /// tie. `n` specifies the position of the binary point in fixed point, so
-    /// `f = nearest(v/(2^n))`
-    0x68 ufix64_to_float(v: u64, n: i32) -> f32;
-    /// Convert an f32 to a signed 64-bit integer, rounding towards -Infinity,
-    /// and clamping the result to lie within the range `-0x8000000000000000` to
-    /// `0x7FFFFFFFFFFFFFFF`
-    0x6c float_to_int64(v: f32) -> i64;
-    /// Returns a function that will convert a f32 to a signed fixed point
-    /// 64-bit integer representation where n specifies the position of the
-    /// binary point in the resulting fixed point representation - e.g. `f(0.5f,
-    /// 16) == 0x8000`. This method rounds towards -Infinity, and clamps the
-    /// resulting integer to lie within the range `-0x8000000000000000` to
-    /// `0x7FFFFFFFFFFFFFFF`
-    0x70 float_to_fix64(v: f32, n: i32) -> f32;
-    /// Returns a function that will convert an f32 to an unsigned 64-bit
-    /// integer, rounding towards -Infinity, and clamping the result to lie
-    /// within the range `0x0000000000000000` to `0xFFFFFFFFFFFFFFFF`
-    0x74 float_to_uint64(v: f32) -> u64;
-    /// Returns a function that will convert an f32 to an unsigned fixed point
-    /// 64-bit integer representation where n specifies the position of the
-    /// binary point in the resulting fixed point representation, e.g. `f(0.5f,
-    /// 16) == 0x8000`. This method rounds towards -Infinity, and clamps the
-    /// resulting integer to lie within the range `0x0000000000000000` to
-    /// `0xFFFFFFFFFFFFFFFF`
-    0x78 float_to_ufix64(v: f32, n: i32) -> u64;
-    /// Converts an f32 to an f64.
-    0x7c float_to_double(v: f32) -> f64;
-}
+/// Functions using double-precision arithmetic (i.e. 'f64' in Rust terms)
+pub mod double_funcs {
 
-macro_rules! double_funcs {
-    (
-        $(
-            $(#[$outer:meta])*
-            $offset:literal $name:ident (
-                $( $aname:ident : $aty:ty ),*
-            ) -> $ret:ty;
-        )*
-    ) => {
-        $(
-            $(#[$outer])*
-            pub fn $name() -> extern "C" fn( $( $aname : $aty ),* ) -> $ret {
-                let table: *const usize = $crate::rom_data::soft_double_table() as *const usize;
-                unsafe {
-                    // This is the entry in the table. Our offset is given as a
-                    // byte offset, but we want the table index (each pointer in
-                    // the table is 4 bytes long)
-                    let entry: *const usize = table.offset($offset / 4);
-                    // Read the pointer from the table
-                    let ptr: usize = core::ptr::read(entry);
-                    // Convert the pointer we read into a function
-                    core::mem::transmute_copy(&ptr)
+    macro_rules! make_double_funcs {
+        (
+            $(
+                $(#[$outer:meta])*
+                $offset:literal $name:ident (
+                    $( $aname:ident : $aty:ty ),*
+                ) -> $ret:ty;
+            )*
+        ) => {
+            $(
+                $(#[$outer])*
+                pub fn $name() -> extern "C" fn( $( $aname : $aty ),* ) -> $ret {
+                    let table: *const usize = $crate::rom_data::soft_double_table() as *const usize;
+                    unsafe {
+                        // This is the entry in the table. Our offset is given as a
+                        // byte offset, but we want the table index (each pointer in
+                        // the table is 4 bytes long)
+                        let entry: *const usize = table.offset($offset / 4);
+                        // Read the pointer from the table
+                        let ptr: usize = core::ptr::read(entry);
+                        // Convert the pointer we read into a function
+                        core::mem::transmute_copy(&ptr)
+                    }
                 }
-            }
-        )*
+            )*
+        }
     }
-}
 
-double_funcs! {
-    /// Returns a function that will calculate `a + b`
-    0x00 dadd(a: f64, b: f64) -> f64;
-    /// Returns a function that will calculate `a - b`
-    0x04 dsub(a: f64, b: f64) -> f64;
-    /// Returns a function that will calculate `a * b`
-    0x08 dmul(a: f64, b: f64) -> f64;
-    /// Returns a function that will calculate `a / b`
-    0x0c ddiv(a: f64, b: f64) -> f64;
-    /// Returns a function that will calculate `sqrt(v)` (or return -Infinity if v is negative)
-    0x18 dsqrt(v: f64) -> f64;
-    /// Returns a function that will convert an f64 to a signed integer,
-    /// rounding towards -Infinity, and clamping the result to lie within the
-    /// range `-0x80000000` to `0x7FFFFFFF`
-    0x1c double_to_int(v: f64) -> i32;
-    /// Returns a function that will convert an f64 to an signed fixed point
-    /// integer representation where n specifies the position of the binary
-    /// point in the resulting fixed point representation, e.g.
-    /// `f(0.5f, 16) == 0x8000`. This method rounds towards -Infinity,
-    /// and clamps the resulting integer to lie within the range `0x00000000` to
-    /// `0xFFFFFFFF`
-    0x20 double_to_fix(v: f64, n: i32) -> i32;
-    /// Returns a function that will convert an f64 to an unsigned integer,
-    /// rounding towards -Infinity, and clamping the result to lie within the
-    /// range `0x00000000` to `0xFFFFFFFF`
-    0x24 double_to_uint(v: f64) -> u32;
-    /// Returns a function that will convert an f64 to an unsigned fixed point
-    /// integer representation where n specifies the position of the binary
-    /// point in the resulting fixed point representation, e.g.
-    /// `f(0.5f, 16) == 0x8000`. This method rounds towards -Infinity,
-    /// and clamps the resulting integer to lie within the range `0x00000000` to
-    /// `0xFFFFFFFF`
-    0x28 double_to_ufix(v: f64, n: i32) -> u32;
-    /// Returns a function that will convert a signed integer to the nearest
-    /// double value, rounding to even on tie
-    0x2c int_to_double(v: i32) -> f64;
-    /// Returns a function that will convert a signed fixed point integer
-    /// representation to the nearest double value, rounding to even on tie. `n`
-    /// specifies the position of the binary point in fixed point, so `f =
-    /// nearest(v/(2^n))`
-    0x30 fix_to_double(v: i32, n: i32) -> f64;
-    /// Returns a function that will convert an unsigned integer to the nearest
-    /// double value, rounding to even on tie
-    0x34 uint_to_double(v: u32) -> f64;
-    /// Returns a function that will convert an unsigned fixed point integer
-    /// representation to the nearest double value, rounding to even on tie. `n`
-    /// specifies the position of the binary point in fixed point, so f =
-    /// nearest(v/(2^n))
-    0x38 ufix_to_double(v: u32, n: i32) -> f64;
-    /// Returns a function that will calculate the cosine of `angle`. The value
-    /// of `angle` is in radians, and must be in the range `-1024` to `1024`
-    0x3c dcos(angle: f64) -> f64;
-    /// Returns a function that will calculate the sine of `angle`. The value of
-    /// `angle` is in radians, and must be in the range -1024 to 1024
-    0x40 dsin(angle: f64) -> f64;
-    /// Returns a function that will calculate the tangent of `angle`. The value
-    /// of `angle` is in radians, and must be in the range `-1024` to `1024`
-    0x44 dtan(angle: f64) -> f64;
-    /// Returns a function that will calculate the exponential value of `v`,
-    /// i.e. `e ** v`
-    0x4c dexp(v: f64) -> f64;
-    /// Returns a function that will calculate the natural logarithm of v. If v <= 0 return -Infinity
-    0x50 dln(v: f64) -> f64;
-    /// Returns a function that will compare two floating point numbers, returning:
-    ///     • 0 if a == b
-    ///     • -1 if a < b
-    ///     • 1 if a > b
-    0x54 dcmp(a: f64, b: f64) -> i32;
-    /// Returns a function that will compute the arc tangent of `y/x` using the
-    /// signs of arguments to determine the correct quadrant
-    0x58 datan2(y: f64, x: f64) -> f64;
-    /// Returns a function that will convert a signed 64-bit integer to the
-    /// nearest double value, rounding to even on tie
-    0x5c int64_to_double(v: i64) -> f64;
-    /// Returns a function that will convert a signed fixed point 64-bit integer
-    /// representation to the nearest double value, rounding to even on tie. `n`
-    /// specifies the position of the binary point in fixed point, so `f =
-    /// nearest(v/(2^n))`
-    0x60 fix64_to_doubl(v: i64, n: i32) -> f64;
-    /// Returns a function that will convert an unsigned 64-bit integer to the
-    /// nearest double value, rounding to even on tie
-    0x64 uint64_to_double(v: u64) -> f64;
-    /// Returns a function that will convert an unsigned fixed point 64-bit
-    /// integer representation to the nearest double value, rounding to even on
-    /// tie. `n` specifies the position of the binary point in fixed point, so
-    /// `f = nearest(v/(2^n))`
-    0x68 ufix64_to_double(v: u64, n: i32) -> f64;
-    /// Convert an f64 to a signed 64-bit integer, rounding towards -Infinity,
-    /// and clamping the result to lie within the range `-0x8000000000000000` to
-    /// `0x7FFFFFFFFFFFFFFF`
-    0x6c double_to_int64(v: f64) -> i64;
-    /// Returns a function that will convert an f64 to a signed fixed point
-    /// 64-bit integer representation where n specifies the position of the
-    /// binary point in the resulting fixed point representation - e.g. `f(0.5f,
-    /// 16) == 0x8000`. This method rounds towards -Infinity, and clamps the
-    /// resulting integer to lie within the range `-0x8000000000000000` to
-    /// `0x7FFFFFFFFFFFFFFF`
-    0x70 double_to_fix64(v: f64, n: i32) -> i64;
-    /// Returns a function that will convert an f64 to an unsigned 64-bit
-    /// integer, rounding towards -Infinity, and clamping the result to lie
-    /// within the range `0x0000000000000000` to `0xFFFFFFFFFFFFFFFF`
-    0x74 double_to_uint64(v: f64) -> u64;
-    /// Returns a function that will convert an f64 to an unsigned fixed point
-    /// 64-bit integer representation where n specifies the position of the
-    /// binary point in the resulting fixed point representation, e.g. `f(0.5f,
-    /// 16) == 0x8000`. This method rounds towards -Infinity, and clamps the
-    /// resulting integer to lie within the range `0x0000000000000000` to
-    /// `0xFFFFFFFFFFFFFFFF`
-    0x78 double_to_ufix64(v: f64, n: i32) -> u64;
-    /// Returns a function that will convert an f64 to a f32
-    0x7c double_to_float(v: f64) -> f32;
+    make_double_funcs! {
+        /// Returns a function that will calculate `a + b`
+        0x00 dadd(a: f64, b: f64) -> f64;
+        /// Returns a function that will calculate `a - b`
+        0x04 dsub(a: f64, b: f64) -> f64;
+        /// Returns a function that will calculate `a * b`
+        0x08 dmul(a: f64, b: f64) -> f64;
+        /// Returns a function that will calculate `a / b`
+        0x0c ddiv(a: f64, b: f64) -> f64;
+
+        // 0x10 and 0x14 are deprecated
+
+        /// Returns a function that will calculate `sqrt(v)` (or return -Infinity if v is negative)
+        0x18 dsqrt(v: f64) -> f64;
+        /// Returns a function that will convert an f64 to a signed integer,
+        /// rounding towards -Infinity, and clamping the result to lie within the
+        /// range `-0x80000000` to `0x7FFFFFFF`
+        0x1c double_to_int(v: f64) -> i32;
+        /// Returns a function that will convert an f64 to an signed fixed point
+        /// integer representation where n specifies the position of the binary
+        /// point in the resulting fixed point representation, e.g.
+        /// `f(0.5f, 16) == 0x8000`. This method rounds towards -Infinity,
+        /// and clamps the resulting integer to lie within the range `0x00000000` to
+        /// `0xFFFFFFFF`
+        0x20 double_to_fix(v: f64, n: i32) -> i32;
+        /// Returns a function that will convert an f64 to an unsigned integer,
+        /// rounding towards -Infinity, and clamping the result to lie within the
+        /// range `0x00000000` to `0xFFFFFFFF`
+        0x24 double_to_uint(v: f64) -> u32;
+        /// Returns a function that will convert an f64 to an unsigned fixed point
+        /// integer representation where n specifies the position of the binary
+        /// point in the resulting fixed point representation, e.g.
+        /// `f(0.5f, 16) == 0x8000`. This method rounds towards -Infinity,
+        /// and clamps the resulting integer to lie within the range `0x00000000` to
+        /// `0xFFFFFFFF`
+        0x28 double_to_ufix(v: f64, n: i32) -> u32;
+        /// Returns a function that will convert a signed integer to the nearest
+        /// double value, rounding to even on tie
+        0x2c int_to_double(v: i32) -> f64;
+        /// Returns a function that will convert a signed fixed point integer
+        /// representation to the nearest double value, rounding to even on tie. `n`
+        /// specifies the position of the binary point in fixed point, so `f =
+        /// nearest(v/(2^n))`
+        0x30 fix_to_double(v: i32, n: i32) -> f64;
+        /// Returns a function that will convert an unsigned integer to the nearest
+        /// double value, rounding to even on tie
+        0x34 uint_to_double(v: u32) -> f64;
+        /// Returns a function that will convert an unsigned fixed point integer
+        /// representation to the nearest double value, rounding to even on tie. `n`
+        /// specifies the position of the binary point in fixed point, so f =
+        /// nearest(v/(2^n))
+        0x38 ufix_to_double(v: u32, n: i32) -> f64;
+        /// Returns a function that will calculate the cosine of `angle`. The value
+        /// of `angle` is in radians, and must be in the range `-1024` to `1024`
+        0x3c dcos(angle: f64) -> f64;
+        /// Returns a function that will calculate the sine of `angle`. The value of
+        /// `angle` is in radians, and must be in the range `-1024` to `1024`
+        0x40 dsin(angle: f64) -> f64;
+        /// Returns a function that will calculate the tangent of `angle`. The value
+        /// of `angle` is in radians, and must be in the range `-1024` to `1024`
+        0x44 dtan(angle: f64) -> f64;
+
+        // 0x48 is deprecated
+
+        /// Returns a function that will calculate the exponential value of `v`,
+        /// i.e. `e ** v`
+        0x4c dexp(v: f64) -> f64;
+        /// Returns a function that will calculate the natural logarithm of v. If v <= 0 return -Infinity
+        0x50 dln(v: f64) -> f64;
+
+        // These are only on BootROM v2 or higher
+
+        /// Returns a function that will compare two floating point numbers, returning:
+        ///     • 0 if a == b
+        ///     • -1 if a < b
+        ///     • 1 if a > b
+        0x54 dcmp(a: f64, b: f64) -> i32;
+        /// Returns a function that will compute the arc tangent of `y/x` using the
+        /// signs of arguments to determine the correct quadrant
+        0x58 datan2(y: f64, x: f64) -> f64;
+        /// Returns a function that will convert a signed 64-bit integer to the
+        /// nearest double value, rounding to even on tie
+        0x5c int64_to_double(v: i64) -> f64;
+        /// Returns a function that will convert a signed fixed point 64-bit integer
+        /// representation to the nearest double value, rounding to even on tie. `n`
+        /// specifies the position of the binary point in fixed point, so `f =
+        /// nearest(v/(2^n))`
+        0x60 fix64_to_doubl(v: i64, n: i32) -> f64;
+        /// Returns a function that will convert an unsigned 64-bit integer to the
+        /// nearest double value, rounding to even on tie
+        0x64 uint64_to_double(v: u64) -> f64;
+        /// Returns a function that will convert an unsigned fixed point 64-bit
+        /// integer representation to the nearest double value, rounding to even on
+        /// tie. `n` specifies the position of the binary point in fixed point, so
+        /// `f = nearest(v/(2^n))`
+        0x68 ufix64_to_double(v: u64, n: i32) -> f64;
+        /// Convert an f64 to a signed 64-bit integer, rounding towards -Infinity,
+        /// and clamping the result to lie within the range `-0x8000000000000000` to
+        /// `0x7FFFFFFFFFFFFFFF`
+        0x6c double_to_int64(v: f64) -> i64;
+        /// Returns a function that will convert an f64 to a signed fixed point
+        /// 64-bit integer representation where n specifies the position of the
+        /// binary point in the resulting fixed point representation - e.g. `f(0.5f,
+        /// 16) == 0x8000`. This method rounds towards -Infinity, and clamps the
+        /// resulting integer to lie within the range `-0x8000000000000000` to
+        /// `0x7FFFFFFFFFFFFFFF`
+        0x70 double_to_fix64(v: f64, n: i32) -> i64;
+        /// Returns a function that will convert an f64 to an unsigned 64-bit
+        /// integer, rounding towards -Infinity, and clamping the result to lie
+        /// within the range `0x0000000000000000` to `0xFFFFFFFFFFFFFFFF`
+        0x74 double_to_uint64(v: f64) -> u64;
+        /// Returns a function that will convert an f64 to an unsigned fixed point
+        /// 64-bit integer representation where n specifies the position of the
+        /// binary point in the resulting fixed point representation, e.g. `f(0.5f,
+        /// 16) == 0x8000`. This method rounds towards -Infinity, and clamps the
+        /// resulting integer to lie within the range `0x0000000000000000` to
+        /// `0xFFFFFFFFFFFFFFFF`
+        0x78 double_to_ufix64(v: f64, n: i32) -> u64;
+        /// Returns a function that will convert an f64 to an f32
+        0x7c double_to_float(v: f64) -> f32;
+    }
 }
