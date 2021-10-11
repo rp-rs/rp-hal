@@ -36,7 +36,8 @@ pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
 /// if your board has a different frequency
 const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
-/// Our Cortex-M systick goes from this value down to zero.
+/// Our Cortex-M systick goes from this value down to zero. For our timer maths
+/// to work, this value must be of the form `2**N - 1`.
 const SYSTICK_RELOAD: u32 = 0x00FF_FFFF;
 
 /// Entry point to our bare-metal application.
@@ -168,6 +169,15 @@ fn main() -> ! {
     }
 }
 
+/// Calculate the number of systicks elapsed between two counter readings.
+///
+/// Note: SYSTICK starts at `SYSTICK_RELOAD` and counts down towards zero, so
+/// these comparisons might appear to be backwards.
+///
+/// ```
+/// assert_eq!(1, calc_delta(SYSTICK_RELOAD, SYSTICK_RELOAD - 1));
+/// assert_eq!(2, calc_delta(0, SYSTICK_RELOAD - 1));
+//// ```
 fn calc_delta(start: u32, end: u32) -> u32 {
     if start < end {
         (start.wrapping_sub(end)) & SYSTICK_RELOAD
