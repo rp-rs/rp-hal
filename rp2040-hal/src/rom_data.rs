@@ -209,7 +209,7 @@ pub fn soft_double_table() -> *const usize {
     rom_table_lookup(DATA_TABLE, *b"SD")
 }
 
-/// ROM functions using single-precision arithmetic (i.e. 'f64' in Rust terms)
+/// ROM functions using single-precision arithmetic (i.e. 'f32' in Rust terms)
 pub mod float_funcs {
 
     macro_rules! make_functions {
