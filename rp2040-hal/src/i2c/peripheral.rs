@@ -24,6 +24,19 @@ pub enum I2CEvent {
     Stop,
 }
 
+#[derive(Debug)]
+enum State {
+    Idle,
+    Read,
+    Write,
+}
+
+/// Provides Async features to I2C peripheral.
+pub struct I2CAsyncPeripheral<Block, Pins> {
+    i2c: I2C<Block, Pins, Peripheral>,
+    state: State,
+}
+
 impl<T, Sda, Scl> I2C<T, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>), Peripheral>
 where
     T: SubsystemReset + Deref<Target = I2CBlock>,
@@ -90,18 +103,6 @@ where
     }
 }
 
-#[derive(Debug)]
-enum State {
-    Idle,
-    Read,
-    Write,
-}
-
-/// Provides Async features to I2C peripheral.
-pub struct I2CAsyncPeripheral<Block, Pins> {
-    i2c: I2C<Block, Pins, Peripheral>,
-    state: State,
-}
 impl<T: Deref<Target = I2CBlock>, PINS> I2CAsyncPeripheral<T, PINS> {
     /// Read data from a peripheral.
     pub async fn next_event(&mut self) -> Result<I2CEvent, super::Error> {
