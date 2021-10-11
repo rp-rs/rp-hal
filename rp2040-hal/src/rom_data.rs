@@ -1,4 +1,12 @@
 //! Functions and data from the RPI Bootrom.
+//!
+//! From the [RP2040 datasheet](https://datasheets.raspberrypi.org/rp2040/rp2040-datasheet.pdf), Section 2.8.2.1:
+//!
+//! > The Bootrom contains a number of public functions that provide useful
+//! > RP2040 functionality that might be needed in the absence of any other code
+//! > on the device, as well as highly optimized versions of certain key
+//! > functionality that would otherwise have to take up space in most user
+//! > binaries.
 
 /// A bootrom function table code.
 pub type RomFnTableCode = [u8; 2];
@@ -6,15 +14,15 @@ pub type RomFnTableCode = [u8; 2];
 /// This function searches for (table)
 type RomTableLookupFn<T> = unsafe extern "C" fn(*const u16, u32) -> T;
 
-/// The following addresses are described at `2.8.3. Bootrom Contents`
+/// The following addresses are described at `2.8.2. Bootrom Contents`
 /// Pointer to the lookup table function supplied by the rom.
-const ROM_TABLE_LOOKUP_PTR: *const u16 = 0x18 as _;
+const ROM_TABLE_LOOKUP_PTR: *const u16 = 0x0000_0018 as _;
 
 /// Pointer to helper functions lookup table.
-const FUNC_TABLE: *const u16 = 0x14 as _;
+const FUNC_TABLE: *const u16 = 0x0000_0014 as _;
 
 /// Pointer to the public data lookup table.
-const DATA_TABLE: *const u16 = 0x16 as _;
+const DATA_TABLE: *const u16 = 0x0000_0016 as _;
 
 /// Retrive rom content from a table using a code.
 fn rom_table_lookup<T>(table: *const u16, tag: RomFnTableCode) -> T {
@@ -28,6 +36,12 @@ fn rom_table_lookup<T>(table: *const u16, tag: RomFnTableCode) -> T {
     }
 }
 
+/// To save space, the ROM likes to store memory pointers (which are 32-bit on
+/// the Cortex-M0+) using only the bottom 16-bits. The assumption is that the
+/// values they point at live in the first 64 KiB of ROM, and the ROM is mapped
+/// to address `0x0000_0000` and so 16-bits are always sufficient.
+///
+/// This functions grabs a 16-bit value from ROM and expands it out to a full 32-bit pointer.
 unsafe fn rom_hword_as_ptr(rom_address: *const u16) -> *const u32 {
     let ptr: u16 = *rom_address;
     ptr as *const u32
@@ -180,8 +194,8 @@ pub fn fplib_start() -> *const u8 {
     rom_table_lookup(DATA_TABLE, *b"FS")
 }
 
-/// See Table 181 for the contents of this table.
-pub fn soft_float_table() -> *const u16 {
+/// See Table 180 in the RP2040 datasheet for the contents of this table.
+pub fn soft_float_table() -> *const usize {
     rom_table_lookup(DATA_TABLE, *b"SF")
 }
 
@@ -190,8 +204,8 @@ pub fn fplib_end() -> *const u8 {
     rom_table_lookup(DATA_TABLE, *b"FE")
 }
 
-/// This entry is only present in the V2 bootrom. See Table 182 for the contents of this table.
-pub fn soft_double_table() -> *const u16 {
+/// This entry is only present in the V2 bootrom. See Table 182 in the RP2040 datasheet for the contents of this table.
+pub fn soft_double_table() -> *const usize {
     rom_table_lookup(DATA_TABLE, *b"SD")
 }
 
@@ -207,9 +221,16 @@ macro_rules! float_funcs {
         $(
             $(#[$outer])*
             pub fn $name() -> extern "C" fn( $( $aname : $aty ),* ) -> $ret {
-                let table: *const *const u16 = rom_table_lookup(DATA_TABLE, *b"SF");
+                let table: *const usize = $crate::rom_data::soft_float_table() as *const usize;
                 unsafe {
-                    core::mem::transmute_copy(&table.add($offset))
+                    // This is the entry in the table. Our offset is given as a
+                    // byte offset, but we want the table index (each pointer in
+                    // the table is 4 bytes long)
+                    let entry: *const usize = table.offset($offset / 4);
+                    // Read the pointer from the table
+                    let ptr: usize = core::ptr::read(entry);
+                    // Convert the pointer we read into a function
+                    core::mem::transmute_copy(&ptr)
                 }
             }
         )*
@@ -318,9 +339,16 @@ macro_rules! double_funcs {
         $(
             $(#[$outer])*
             pub fn $name() -> extern "C" fn( $( $aname : $aty ),* ) -> $ret {
-                let table: *const *const u16 = rom_table_lookup(DATA_TABLE, *b"SD");
+                let table: *const usize = $crate::rom_data::soft_double_table() as *const usize;
                 unsafe {
-                    core::mem::transmute_copy(&table.add($offset))
+                    // This is the entry in the table. Our offset is given as a
+                    // byte offset, but we want the table index (each pointer in
+                    // the table is 4 bytes long)
+                    let entry: *const usize = table.offset($offset / 4);
+                    // Read the pointer from the table
+                    let ptr: usize = core::ptr::read(entry);
+                    // Convert the pointer we read into a function
+                    core::mem::transmute_copy(&ptr)
                 }
             }
         )*
