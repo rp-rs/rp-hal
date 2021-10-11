@@ -144,8 +144,9 @@ rom_funcs_unsafe! {
     /// 4096 bytes.
     b"RE" flash_range_erase(addr: u32, count: usize, block_size: u32, block_cmd: u8) -> ();
 
-    /// Program data to a range of flash addresses starting at addr (offset from the start of flash)
-    /// and count bytesin size. addr must be aligned to a 256-byte boundary, and count must be a
+    /// Program data to a range of flash addresses starting at `addr` (and
+    /// offset from the start of flash) and `count` bytes in size. The value
+    /// `addr` must be aligned to a 256-byte boundary, and `count` must be a
     /// multiple of 256.
     b"RP" flash_range_program(addr: u32, data: *const u8, count: usize) -> ();
 
