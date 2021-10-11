@@ -25,7 +25,7 @@ cortex-m-rtic = "0.6.0-alpha.5"
 rp2040-boot2 = "0.2"
 nb = "1.0"
 i2c-pio = { git = "https://github.com/ithinuel/i2c-pio-rs", rev = "fb6167d02b7fbc46a83f344f5242823bcd16e271" }
-nostd_async = { git = "https://github.com/sammhicks/nostd_async", features = ["cortex_m"] }
+nostd_async = { git = "https://github.com/sammhicks/nostd_async", rev = "6f170891e7f4d4f6772974bf4c02007a23b9ef26", features = ["cortex_m"] }
 
 [features]
 default = ["rt"]

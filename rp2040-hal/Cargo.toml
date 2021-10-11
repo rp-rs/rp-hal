@@ -23,7 +23,7 @@ usb-device = "0.2.8"
 vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
 rand_core = "0.6.3"
-futures = { version = "*", default-features = false }
+futures = { version = "0.3", default-features = false }
 
 [dev-dependencies]
 cortex-m-rt = "0.7"
