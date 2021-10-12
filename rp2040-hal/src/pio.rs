@@ -372,6 +372,50 @@ pub struct UninitStateMachine<SM: ValidStateMachine> {
 unsafe impl<SM: ValidStateMachine + Send> Send for UninitStateMachine<SM> {}
 
 impl<SM: ValidStateMachine> UninitStateMachine<SM> {
+    /// Sets unmasked pin directions
+    ///
+    /// The iterator's item are pairs of `(pin_number, pin_high)`.
+    pub fn set_pins_with_iter(&mut self, pins: impl Iterator<Item = (u8, bool)>) {
+        let saved_ctrl = self.sm().sm_pinctrl.read();
+        for (pinnum, pinstate) in pins {
+            self.sm()
+                .sm_pinctrl
+                .write(|w| unsafe { w.set_base().bits(pinnum).set_count().bits(1) });
+            self.set_instruction(
+                pio::InstructionOperands::SET {
+                    destination: pio::SetDestination::PINS,
+                    data: if pinstate { 1 } else { 0 },
+                }
+                .encode(),
+            );
+        }
+        self.sm()
+            .sm_pinctrl
+            .write(|w| unsafe { w.bits(saved_ctrl.bits()) });
+    }
+
+    /// Set pin directions.
+    ///
+    /// The iterator's item are pairs of `(pin_number, as_output)`.
+    pub fn set_pindirs_with_iter(&mut self, pindirs: impl Iterator<Item = (u8, bool)>) {
+        let saved_ctrl = self.sm().sm_pinctrl.read();
+        for (pinnum, as_output) in pindirs {
+            self.sm()
+                .sm_pinctrl
+                .write(|w| unsafe { w.set_base().bits(pinnum).set_count().bits(1) });
+            self.set_instruction(
+                pio::InstructionOperands::SET {
+                    destination: pio::SetDestination::PINDIRS,
+                    data: if as_output { 1 } else { 0 },
+                }
+                .encode(),
+            );
+        }
+        self.sm()
+            .sm_pinctrl
+            .write(|w| unsafe { w.bits(saved_ctrl.bits()) });
+    }
+
     /// Start and stop the state machine.
     fn set_enabled(&mut self, enabled: bool) {
         // Bits 3:0 are SM_ENABLE.
