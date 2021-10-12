@@ -360,6 +360,24 @@ impl<P: PIOExt, SM: StateMachineIndex> ValidStateMachine for (P, SM) {
     }
 }
 
+/// Pin State
+///
+/// Note this may not be the same as its electrical state (e.g. if invert is enabled on the pin).
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[allow(missing_docs)]
+pub enum PinState {
+    Active,
+    InActive,
+}
+
+/// Pin direction
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[allow(missing_docs)]
+pub enum PinDir {
+    Input,
+    Output,
+}
+
 /// PIO State Machine (uninitialized, without a program).
 #[derive(Debug)]
 pub struct UninitStateMachine<SM: ValidStateMachine> {
@@ -374,18 +392,18 @@ unsafe impl<SM: ValidStateMachine + Send> Send for UninitStateMachine<SM> {}
 impl<SM: ValidStateMachine> UninitStateMachine<SM> {
     /// Sets unmasked pin directions
     ///
-    /// The iterator's item are pairs of `(pin_number, pin_high)`.
-    pub fn set_pins_with_iter(&mut self, pins: impl IntoIterator<Item = (u8, bool)>) {
+    /// The iterator's item are pairs of `(pin_number, pin_state)`.
+    pub fn set_pins_with_iter(&mut self, pins: impl IntoIterator<Item = (u8, PinState)>) {
         let pins = pins.into_iter();
         let saved_ctrl = self.sm().sm_pinctrl.read();
-        for (pinnum, pinstate) in pins {
+        for (pin_num, pin_state) in pins {
             self.sm()
                 .sm_pinctrl
-                .write(|w| unsafe { w.set_base().bits(pinnum).set_count().bits(1) });
+                .write(|w| unsafe { w.set_base().bits(pin_num).set_count().bits(1) });
             self.set_instruction(
                 pio::InstructionOperands::SET {
                     destination: pio::SetDestination::PINS,
-                    data: if pinstate { 1 } else { 0 },
+                    data: if PinState::Active == pin_state { 1 } else { 0 },
                 }
                 .encode(),
             );
@@ -397,17 +415,17 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
 
     /// Set pin directions.
     ///
-    /// The iterator's item are pairs of `(pin_number, as_output)`.
-    pub fn set_pindirs_with_iter(&mut self, pindirs: impl IntoIterator<Item = (u8, bool)>) {
+    /// The iterator's item are pairs of `(pin_number, pin_dir)`.
+    pub fn set_pindirs_with_iter(&mut self, pindirs: impl IntoIterator<Item = (u8, PinDir)>) {
         let saved_ctrl = self.sm().sm_pinctrl.read();
-        for (pinnum, as_output) in pindirs {
+        for (pinnum, pin_dir) in pindirs {
             self.sm()
                 .sm_pinctrl
                 .write(|w| unsafe { w.set_base().bits(pinnum).set_count().bits(1) });
             self.set_instruction(
                 pio::InstructionOperands::SET {
                     destination: pio::SetDestination::PINDIRS,
-                    data: if as_output { 1 } else { 0 },
+                    data: if PinDir::Output == pin_dir { 1 } else { 0 },
                 }
                 .encode(),
             );
