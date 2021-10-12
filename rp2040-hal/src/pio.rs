@@ -375,7 +375,8 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
     /// Sets unmasked pin directions
     ///
     /// The iterator's item are pairs of `(pin_number, pin_high)`.
-    pub fn set_pins_with_iter(&mut self, pins: impl Iterator<Item = (u8, bool)>) {
+    pub fn set_pins_with_iter(&mut self, pins: impl IntoIterator<Item = (u8, bool)>) {
+        let pins = pins.into_iter();
         let saved_ctrl = self.sm().sm_pinctrl.read();
         for (pinnum, pinstate) in pins {
             self.sm()
@@ -397,7 +398,7 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
     /// Set pin directions.
     ///
     /// The iterator's item are pairs of `(pin_number, as_output)`.
-    pub fn set_pindirs_with_iter(&mut self, pindirs: impl Iterator<Item = (u8, bool)>) {
+    pub fn set_pindirs_with_iter(&mut self, pindirs: impl IntoIterator<Item = (u8, bool)>) {
         let saved_ctrl = self.sm().sm_pinctrl.read();
         for (pinnum, as_output) in pindirs {
             self.sm()
