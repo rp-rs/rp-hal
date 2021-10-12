@@ -86,7 +86,7 @@ impl<S: State, D: SpiDevice, const DS: u8> Spi<S, D, DS> {
         let freq_in = peri_frequency.into().integer();
         let baudrate = baudrate.into().integer();
         let mut prescale: u8 = u8::MAX;
-        let mut postdiv: u8 = 1;
+        let mut postdiv: u8 = 0;
 
         // Find smallest prescale value which puts output frequency in range of
         // post-divide. Prescale is an even number from 2 to 254 inclusive.
@@ -104,8 +104,8 @@ impl<S: State, D: SpiDevice, const DS: u8> Spi<S, D, DS> {
         debug_assert_ne!(prescale, u8::MAX);
 
         // Find largest post-divide which makes output <= baudrate. Post-divide is
-        // an integer in the range 1 to 256 inclusive.
-        for postdiv_option in (0..=255u8).rev() {
+        // an integer in the range 0 to 255 inclusive.
+        for postdiv_option in (1..=255u8).rev() {
             if freq_in / (prescale as u32 * postdiv_option as u32) > baudrate {
                 postdiv = postdiv_option;
                 break;
