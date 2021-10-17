@@ -258,12 +258,19 @@ pub(super) unsafe trait RegisterInterface {
     /// Clear interrupt.
     #[inline]
     fn clear_interrupt(&self, interrupt: Interrupt) {
+        // The GPIO number associated with this pin
         let num = self.id().num as usize;
+        // 32 bits in each register. there are 4 interrupts
+        // per gpio, therefore 8 gpios per register.
+        // 0-7 will be in the 0 index register, 8-15 1 index, etc
+        let interrupt_reg = num / 8;
+        // Now that we're in the right register, we only care about pins 0-7
+        // 4x the pin number will skip to the first interrupt for that pin
+        // and add in the index of our interrupt type at the end
+        let bit_in_reg = num % 8 * 4 + interrupt as usize;
         unsafe {
             let io = &(*pac::IO_BANK0::ptr());
-            let reg = (&io.intr0).as_ptr().add(num / 8);
-            let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            *reg |= 1 << bit_in_reg;
+            io.intr[interrupt_reg].modify(|r, w| w.bits(r.bits() | 1 << bit_in_reg));
         }
     }
 
@@ -271,14 +278,18 @@ pub(super) unsafe trait RegisterInterface {
     #[inline]
     fn interrupt_status(&self, interrupt: Interrupt) -> bool {
         let num = self.id().num as usize;
+        let interrupt_reg = num / 8;
+        let bit_in_reg = num % 8 * 4 + interrupt as usize;
         unsafe {
             let cpuid = (*pac::SIO::ptr()).cpuid.read().bits();
             let io = &(*pac::IO_BANK0::ptr());
-            let reg = (&io.proc0_ints0)
-                .as_ptr()
-                .add(num / 8 + cpuid as usize * 12);
-            let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            (*reg & (1 << bit_in_reg)) != 0
+
+            let reg = if cpuid == 0 {
+                io.proc0_ints[interrupt_reg].read().bits()
+            } else {
+                io.proc1_ints[interrupt_reg].read().bits()
+            };
+            (reg & (1 << bit_in_reg)) != 0
         }
     }
 
@@ -286,14 +297,18 @@ pub(super) unsafe trait RegisterInterface {
     #[inline]
     fn is_interrupt_enabled(&self, interrupt: Interrupt) -> bool {
         let num = self.id().num as usize;
+        let interrupt_reg = num / 8;
+        let bit_in_reg = num % 8 * 4 + interrupt as usize;
         unsafe {
             let cpuid = (*pac::SIO::ptr()).cpuid.read().bits();
             let io = &(*pac::IO_BANK0::ptr());
-            let reg = (&io.proc0_inte0)
-                .as_ptr()
-                .add(num / 8 + cpuid as usize * 12);
-            let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            (*reg & (1 << bit_in_reg)) != 0
+
+            let reg = if cpuid == 0 {
+                io.proc0_inte[interrupt_reg].read().bits()
+            } else {
+                io.proc1_inte[interrupt_reg].read().bits()
+            };
+            (reg & (1 << bit_in_reg)) != 0
         }
     }
 
@@ -301,17 +316,28 @@ pub(super) unsafe trait RegisterInterface {
     #[inline]
     fn set_interrupt_enabled(&self, interrupt: Interrupt, enabled: bool) {
         let num = self.id().num as usize;
+        let interrupt_reg = num / 8;
+        let bit_in_reg = num % 8 * 4 + interrupt as usize;
         unsafe {
             let cpuid = (*pac::SIO::ptr()).cpuid.read().bits();
             let io = &(*pac::IO_BANK0::ptr());
-            let reg = (&io.proc0_inte0)
-                .as_ptr()
-                .add(num / 8 + cpuid as usize * 12);
-            let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            if enabled {
-                *reg |= 1 << bit_in_reg;
+
+            if cpuid == 0 {
+                io.proc0_inte[interrupt_reg].modify(|r, w| {
+                    if enabled {
+                        w.bits(r.bits() | 1 << bit_in_reg)
+                    } else {
+                        w.bits(r.bits() & !(1 << bit_in_reg))
+                    }
+                });
             } else {
-                *reg &= !(1 << bit_in_reg);
+                io.proc1_inte[interrupt_reg].modify(|r, w| {
+                    if enabled {
+                        w.bits(r.bits() | 1 << bit_in_reg)
+                    } else {
+                        w.bits(r.bits() & !(1 << bit_in_reg))
+                    }
+                });
             }
         }
     }
@@ -320,14 +346,19 @@ pub(super) unsafe trait RegisterInterface {
     #[inline]
     fn is_interrupt_forced(&self, interrupt: Interrupt) -> bool {
         let num = self.id().num as usize;
+        let interrupt_reg = num / 8;
+        let bit_in_reg = num % 8 * 4 + interrupt as usize;
+
         unsafe {
             let cpuid = (*pac::SIO::ptr()).cpuid.read().bits();
             let io = &(*pac::IO_BANK0::ptr());
-            let reg = (&io.proc0_intf0)
-                .as_ptr()
-                .add(num / 8 + cpuid as usize * 12);
-            let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            (*reg & (1 << bit_in_reg)) != 0
+
+            let reg = if cpuid == 0 {
+                io.proc0_intf[interrupt_reg].read().bits()
+            } else {
+                io.proc1_intf[interrupt_reg].read().bits()
+            };
+            (reg & (1 << bit_in_reg)) != 0
         }
     }
 
@@ -335,17 +366,29 @@ pub(super) unsafe trait RegisterInterface {
     #[inline]
     fn set_interrupt_forced(&self, interrupt: Interrupt, forced: bool) {
         let num = self.id().num as usize;
+        let interrupt_reg = num / 8;
+        let bit_in_reg = num % 8 * 4 + interrupt as usize;
+
         unsafe {
             let cpuid = (*pac::SIO::ptr()).cpuid.read().bits();
             let io = &(*pac::IO_BANK0::ptr());
-            let reg = (&io.proc0_intf0)
-                .as_ptr()
-                .add(num / 8 + cpuid as usize * 12);
-            let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            if forced {
-                *reg |= 1 << bit_in_reg;
+
+            if cpuid == 0 {
+                io.proc0_intf[interrupt_reg].modify(|r, w| {
+                    if forced {
+                        w.bits(r.bits() | 1 << bit_in_reg)
+                    } else {
+                        w.bits(r.bits() & !(1 << bit_in_reg))
+                    }
+                });
             } else {
-                *reg &= !(1 << bit_in_reg);
+                io.proc1_intf[interrupt_reg].modify(|r, w| {
+                    if forced {
+                        w.bits(r.bits() | 1 << bit_in_reg)
+                    } else {
+                        w.bits(r.bits() & !(1 << bit_in_reg))
+                    }
+                });
             }
         }
     }
