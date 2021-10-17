@@ -1,6 +1,9 @@
 //! Programmable IO (PIO)
 /// See [Chapter 3](https://rptl.io/pico-datasheet) for more details.
-use crate::resets::SubsystemReset;
+use crate::{
+    atomic_register_access::{write_bitmask_clear, write_bitmask_set},
+    resets::SubsystemReset,
+};
 use pio::{Program, SideSet, Wrap};
 use rp2040_pac::{PIO0, PIO1};
 
@@ -394,26 +397,16 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
     }
 
     fn set_ctrl_bits(&mut self, bits: u32) {
-        const ATOMIC_SET_OFFSET: usize = 0x2000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            (*self.block)
-                .ctrl
-                .as_ptr()
-                .add(ATOMIC_SET_OFFSET / 4)
-                .write_volatile(bits);
+            write_bitmask_set((*self.block).ctrl.as_ptr(), bits);
         }
     }
 
     fn clear_ctrl_bits(&mut self, bits: u32) {
-        const ATOMIC_CLEAR_OFFSET: usize = 0x3000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            (*self.block)
-                .ctrl
-                .as_ptr()
-                .add(ATOMIC_CLEAR_OFFSET / 4)
-                .write_volatile(bits);
+            write_bitmask_clear((*self.block).ctrl.as_ptr(), bits);
         }
     }
 
@@ -600,14 +593,9 @@ impl<'sm, SM: ValidStateMachine> Drop for Synchronize<'sm, SM> {
         // Restart the clocks of all state machines specified by the mask.
         // Bits 11:8 of CTRL contain CLKDIV_RESTART.
         let sm_mask = self.sm_mask << 8;
-        const ATOMIC_SET_OFFSET: usize = 0x2000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            (*self.sm.sm.block)
-                .ctrl
-                .as_ptr()
-                .add(ATOMIC_SET_OFFSET / 4)
-                .write_volatile(sm_mask as u32);
+            write_bitmask_set((*self.sm.sm.block).ctrl.as_ptr(), sm_mask as u32);
         }
     }
 }
