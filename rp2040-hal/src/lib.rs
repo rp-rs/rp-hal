@@ -14,6 +14,7 @@ pub use paste;
 pub extern crate rp2040_pac as pac;
 
 pub mod adc;
+pub mod atomic_register_access;
 pub mod clocks;
 pub mod gpio;
 pub mod i2c;

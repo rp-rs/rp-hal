@@ -4,9 +4,10 @@ use super::{
     InputOverride, Interrupt, InterruptOverride, OutputDriveStrength, OutputEnableOverride,
     OutputOverride, OutputSlewRate,
 };
+use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
 use crate::gpio::dynpin::{DynDisabled, DynFunction, DynInput, DynOutput, DynPinMode};
 use crate::pac;
-use core::ptr::{read_volatile, write_volatile};
+use core::ptr::read_volatile;
 
 //==============================================================================
 //  ModeFields
@@ -309,12 +310,11 @@ pub(super) unsafe trait RegisterInterface {
                 .as_ptr()
                 .add(num / 8 + cpuid as usize * 12);
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            let alias = if enabled {
-                reg as usize + 0x2000 // atomic bitmask set on write alias
+            if enabled {
+                write_bitmask_set(reg, 1 << bit_in_reg);
             } else {
-                reg as usize + 0x3000 // atomic bitmask clear on write alias
-            } as *mut u32;
-            write_volatile(alias, 1 << bit_in_reg);
+                write_bitmask_clear(reg, 1 << bit_in_reg);
+            }
         }
     }
 
@@ -344,12 +344,11 @@ pub(super) unsafe trait RegisterInterface {
                 .as_ptr()
                 .add(num / 8 + cpuid as usize * 12);
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            let alias = if forced {
-                reg as usize + 0x2000 // atomic bitmask set on write alias
+            if forced {
+                write_bitmask_set(reg, 1 << bit_in_reg);
             } else {
-                reg as usize + 0x3000 // atomic bitmask clear on write alias
-            } as *mut u32;
-            write_volatile(alias, 1 << bit_in_reg);
+                write_bitmask_clear(reg, 1 << bit_in_reg);
+            }
         }
     }
 
