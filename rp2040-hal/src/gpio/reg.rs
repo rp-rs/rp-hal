@@ -6,6 +6,7 @@ use super::{
 };
 use crate::gpio::dynpin::{DynDisabled, DynFunction, DynInput, DynOutput, DynPinMode};
 use crate::pac;
+use core::ptr::{read_volatile, write_volatile};
 
 //==============================================================================
 //  ModeFields
@@ -278,7 +279,7 @@ pub(super) unsafe trait RegisterInterface {
                 .as_ptr()
                 .add(num / 8 + cpuid as usize * 12);
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            (*reg & (1 << bit_in_reg)) != 0
+            (read_volatile(reg) & (1 << bit_in_reg)) != 0
         }
     }
 
@@ -293,7 +294,7 @@ pub(super) unsafe trait RegisterInterface {
                 .as_ptr()
                 .add(num / 8 + cpuid as usize * 12);
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            (*reg & (1 << bit_in_reg)) != 0
+            (read_volatile(reg) & (1 << bit_in_reg)) != 0
         }
     }
 
@@ -308,11 +309,12 @@ pub(super) unsafe trait RegisterInterface {
                 .as_ptr()
                 .add(num / 8 + cpuid as usize * 12);
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            if enabled {
-                *reg |= 1 << bit_in_reg;
+            let alias = if enabled {
+                reg as usize + 0x2000 // atomic bitmask set on write alias
             } else {
-                *reg &= !(1 << bit_in_reg);
-            }
+                reg as usize + 0x3000 // atomic bitmask clear on write alias
+            } as *mut u32;
+            write_volatile(alias, 1 << bit_in_reg);
         }
     }
 
@@ -327,7 +329,7 @@ pub(super) unsafe trait RegisterInterface {
                 .as_ptr()
                 .add(num / 8 + cpuid as usize * 12);
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            (*reg & (1 << bit_in_reg)) != 0
+            (read_volatile(reg) & (1 << bit_in_reg)) != 0
         }
     }
 
@@ -342,11 +344,12 @@ pub(super) unsafe trait RegisterInterface {
                 .as_ptr()
                 .add(num / 8 + cpuid as usize * 12);
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            if forced {
-                *reg |= 1 << bit_in_reg;
+            let alias = if forced {
+                reg as usize + 0x2000 // atomic bitmask set on write alias
             } else {
-                *reg &= !(1 << bit_in_reg);
-            }
+                reg as usize + 0x3000 // atomic bitmask clear on write alias
+            } as *mut u32;
+            write_volatile(alias, 1 << bit_in_reg);
         }
     }
 
