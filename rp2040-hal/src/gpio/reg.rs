@@ -272,7 +272,7 @@ pub(super) unsafe trait RegisterInterface {
     fn interrupt_status(&self, interrupt: Interrupt) -> bool {
         let num = self.id().num as usize;
         unsafe {
-            let cpuid = *(pac::SIO::ptr() as *const u32);
+            let cpuid = (*pac::SIO::ptr()).cpuid.read().bits();
             let io = &(*pac::IO_BANK0::ptr());
             let reg = (&io.proc0_ints0)
                 .as_ptr()
@@ -287,7 +287,7 @@ pub(super) unsafe trait RegisterInterface {
     fn is_interrupt_enabled(&self, interrupt: Interrupt) -> bool {
         let num = self.id().num as usize;
         unsafe {
-            let cpuid = *(pac::SIO::ptr() as *const u32);
+            let cpuid = (*pac::SIO::ptr()).cpuid.read().bits();
             let io = &(*pac::IO_BANK0::ptr());
             let reg = (&io.proc0_inte0)
                 .as_ptr()
@@ -302,7 +302,7 @@ pub(super) unsafe trait RegisterInterface {
     fn set_interrupt_enabled(&self, interrupt: Interrupt, enabled: bool) {
         let num = self.id().num as usize;
         unsafe {
-            let cpuid = *(pac::SIO::ptr() as *const u32);
+            let cpuid = (*pac::SIO::ptr()).cpuid.read().bits();
             let io = &(*pac::IO_BANK0::ptr());
             let reg = (&io.proc0_inte0)
                 .as_ptr()
@@ -321,7 +321,7 @@ pub(super) unsafe trait RegisterInterface {
     fn is_interrupt_forced(&self, interrupt: Interrupt) -> bool {
         let num = self.id().num as usize;
         unsafe {
-            let cpuid = *(pac::SIO::ptr() as *const u32);
+            let cpuid = (*pac::SIO::ptr()).cpuid.read().bits();
             let io = &(*pac::IO_BANK0::ptr());
             let reg = (&io.proc0_intf0)
                 .as_ptr()
@@ -336,7 +336,7 @@ pub(super) unsafe trait RegisterInterface {
     fn set_interrupt_forced(&self, interrupt: Interrupt, forced: bool) {
         let num = self.id().num as usize;
         unsafe {
-            let cpuid = *(pac::SIO::ptr() as *const u32);
+            let cpuid = (*pac::SIO::ptr()).cpuid.read().bits();
             let io = &(*pac::IO_BANK0::ptr());
             let reg = (&io.proc0_intf0)
                 .as_ptr()
