@@ -49,7 +49,7 @@ use usbd_serial::SerialPort;
 //// need this to help the ROM bootloader get our code up and running.
 #[link_section = ".boot2"]
 #[used]
-pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
 /// The USB Device Driver (shared with the interrupt).
 static mut USB_DEVICE: Option<UsbDevice<hal::usb::UsbBus>> = None;

@@ -33,7 +33,7 @@ use ws2812_pio::Ws2812;
 /// We need this to help the ROM bootloader get our code up and running.
 #[link_section = ".boot2"]
 #[used]
-pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
 /// Entry point to our bare-metal application.
 ///
