@@ -18,7 +18,7 @@ embedded-time = "0.12.0"
 [dev-dependencies]
 panic-halt= "0.2.0"
 embedded-hal ="0.2.5"
-rp2040-boot2 = { git = "https://github.com/rp-rs/rp2040-boot2-rs",  rev = "d2128ef9875e91e454dd0fb0d747c7439ae0627b" }
+rp2040-boot2 = "0.2"
 nb = "1.0.0"
 smart-leds = "0.3.0"
 pio = { git = "https://github.com/rp-rs/pio-rs.git", branch = "main" }

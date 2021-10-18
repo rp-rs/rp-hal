@@ -21,7 +21,7 @@ rt = ["cortex-m-rt", "rp2040-hal/rt"]
 
 [dev-dependencies]
 panic-halt = "0.2.0"
-rp2040-boot2 = { git = "https://github.com/rp-rs/rp2040-boot2-rs", rev = "67400f600b192e950b58df79ddc9b57ff209ef08" }
+rp2040-boot2 = "0.2"
 smart-leds = "0.3.0"
 embedded-time = "0.12.0"
 nb = "1.0.0"
