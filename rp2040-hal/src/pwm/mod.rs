@@ -92,6 +92,8 @@ use eh1_0_alpha::pwm::blocking as eh1;
 use embedded_hal::PwmPin;
 use pac::PWM;
 
+use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
+
 pub mod dyn_slice;
 pub use dyn_slice::*;
 
@@ -370,6 +372,45 @@ where
     #[inline]
     pub fn set_top(&mut self, value: u16) {
         self.regs.write_top(value)
+    }
+
+    /// Create the interrupt bitmask corresponding to this slice
+    #[inline]
+    fn bitmask(&self) -> u32 {
+        1 << I::DYN.num
+    }
+
+    /// Enable the PWM_IRQ_WRAP interrupt when this slice overflows.
+    #[inline]
+    pub fn enable_interrupt(&mut self) {
+        unsafe {
+            let pwm = &(*pac::PWM::ptr());
+            let reg = (&pwm.inte).as_ptr();
+            write_bitmask_set(reg, self.bitmask());
+        }
+    }
+
+    /// Disable the PWM_IRQ_WRAP interrupt for this slice.
+    #[inline]
+    pub fn disable_interrupt(&mut self) {
+        unsafe {
+            let pwm = &(*pac::PWM::ptr());
+            let reg = (&pwm.inte).as_ptr();
+            write_bitmask_clear(reg, self.bitmask());
+        };
+    }
+
+    /// Did this slice trigger an overflow interrupt?
+    #[inline]
+    pub fn is_overflow(&self) -> bool {
+        let mask = self.bitmask();
+        unsafe { (*pac::PWM::ptr()).ints.read().bits() & mask == mask }
+    }
+
+    /// Mark the interrupt handled for this slice.
+    #[inline]
+    pub fn clear_interrupt(&mut self) {
+        unsafe { (*pac::PWM::ptr()).intr.write(|w| w.bits(self.bitmask())) };
     }
 }
 
