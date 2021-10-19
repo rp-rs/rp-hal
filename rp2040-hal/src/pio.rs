@@ -22,6 +22,7 @@ pub trait PIOExt:
         UninitStateMachine<(Self, SM2)>,
         UninitStateMachine<(Self, SM3)>,
     ) {
+        self.reset_bring_down(resets);
         self.reset_bring_up(resets);
 
         let sm0 = UninitStateMachine {
