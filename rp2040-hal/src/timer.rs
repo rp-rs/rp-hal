@@ -11,6 +11,9 @@ pub struct Timer {
     timer: TIMER,
 }
 
+// Safety: All access is read-only.
+unsafe impl Sync for Timer {}
+
 impl Timer {
     /// Create a new [`Timer`]
     pub fn new(timer: TIMER, resets: &mut RESETS) -> Self {
