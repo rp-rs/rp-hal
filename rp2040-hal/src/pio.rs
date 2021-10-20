@@ -662,6 +662,24 @@ impl<SM: ValidStateMachine> StateMachine<SM, Running> {
             _phantom: core::marker::PhantomData,
         }
     }
+
+    /// Restarts the execution of the selected program from its wrap target.
+    pub fn restart(&mut self) {
+        // pause the state machine
+        self.sm.set_enabled(false);
+        // revert it to its wrap target
+        self.sm.set_instruction(
+            pio::InstructionOperands::JMP {
+                condition: pio::JmpCondition::Always,
+                address: self.program.wrap_target(),
+            }
+            .encode(),
+        );
+        // clear osr/isr
+        self.sm.restart();
+        // unpause the state machine
+        self.sm.set_enabled(true);
+    }
 }
 
 /// PIO RX FIFO handle.
