@@ -487,6 +487,9 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     }
 }
 
+/// Safety: All shared register access is atomic.
+unsafe impl<SM: ValidStateMachine + Send, State> Send for StateMachine<SM, State> {}
+
 impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
     /// Starts execution of the selected program.
     pub fn start(mut self) -> StateMachine<SM, Running> {
@@ -632,6 +635,9 @@ pub struct Rx<SM: ValidStateMachine> {
     _phantom: core::marker::PhantomData<SM>,
 }
 
+/// Safety: All shared register access is atomic.
+unsafe impl<SM: ValidStateMachine + Send> Send for Rx<SM> {}
+
 impl<SM: ValidStateMachine> Rx<SM> {
     /// Get the next element from RX FIFO.
     ///
@@ -654,6 +660,9 @@ pub struct Tx<SM: ValidStateMachine> {
     block: *const rp2040_pac::pio0::RegisterBlock,
     _phantom: core::marker::PhantomData<SM>,
 }
+
+/// Safety: All shared register access is atomic.
+unsafe impl<SM: ValidStateMachine + Send> Send for Tx<SM> {}
 
 impl<SM: ValidStateMachine> Tx<SM> {
     /// Write an element to TX FIFO.
