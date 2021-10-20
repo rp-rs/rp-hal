@@ -778,6 +778,13 @@ impl<SM: ValidStateMachine> Tx<SM> {
 
     /// Drain Tx fifo.
     pub fn drain_fifo(&mut self) {
+        // According to the datasheet 3.5.4.2 Page 358:
+        //
+        // When autopull is enabled, the behaviour of 'PULL'  is  altered:  it  becomes  a  no-op
+        // if  the  OSR  is  full.  This  is  to  avoid  a  race  condition  against  the  system
+        // DMA.  It behaves as a fence: either an autopull has already taken place, in which case
+        // the 'PULL' has no effect, or the program will stall on the 'PULL' until data becomes
+        // available in the FIFO.
         let instr = if self.block().sm[SM::id()]
             .sm_shiftctrl
             .read()
