@@ -1,0 +1,143 @@
+//! # Pico I2C PIO Example
+//!
+//! Reads the temperature from an LM75B
+//!
+//! This read over I2C the temerature from an LM75B temperature sensor wired on pins 20 and 21
+//! using the PIO peripheral as an I2C bus controller.
+//! The pins used for the I2C can be remapped to any other pin available to the PIO0 peripheral.
+//!
+//! See the `Cargo.toml` file for Copyright and licence details.
+
+#![no_std]
+#![no_main]
+
+// The macro for our start-up function
+use cortex_m_rt::entry;
+
+// I2C HAL traits & Types.
+use embedded_hal::blocking::i2c::{Operation, Read, Transactional, Write};
+
+// Time handling traits
+use embedded_time::rate::*;
+
+// Ensure we halt the program on panic (if we don't mention this crate it won't
+// be linked)
+use panic_halt as _;
+
+// Pull in any important traits
+use pico::hal::prelude::*;
+
+// A shorter alias for the Peripheral Access Crate, which provides low-level
+// register access
+use pico::hal::pac;
+
+// A shorter alias for the Hardware Abstraction Layer, which provides
+// higher-level drivers.
+use pico::hal;
+
+//// The linker will place this boot block at the start of our program image. We
+//// need this to help the ROM bootloader get our code up and running.
+#[link_section = ".boot2"]
+#[used]
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
+
+/// Prints the temperature received from the sensor
+fn print_temperature(temp: [u8; 2]) {
+    let temp_i16 = i16::from_be_bytes(temp) >> 5;
+    let _temp_f32 = f32::from(temp_i16) * 0.125;
+    // using defmt/rtt_target or uart
+}
+
+/// Entry point to our bare-metal application.
+///
+/// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables are initialised.
+///
+/// The function configures the RP2040 peripherals, then blinks the LED in an
+/// infinite loop.
+#[entry]
+fn main() -> ! {
+    // Grab our singleton objects
+    let mut pac = pac::Peripherals::take().unwrap();
+
+    // Set up the watchdog driver - needed by the clock setup code
+    let mut watchdog = hal::watchdog::Watchdog::new(pac.WATCHDOG);
+
+    // Configure the clocks
+    //
+    // The default is to generate a 125 MHz system clock
+    let clocks = hal::clocks::init_clocks_and_plls(
+        pico::XOSC_CRYSTAL_FREQ,
+        pac.XOSC,
+        pac.CLOCKS,
+        pac.PLL_SYS,
+        pac.PLL_USB,
+        &mut pac.RESETS,
+        &mut watchdog,
+    )
+    .ok()
+    .unwrap();
+
+    // The single-cycle I/O block controls our GPIO pins
+    let sio = hal::sio::Sio::new(pac.SIO);
+
+    // Set the pins up according to their function on this particular board
+    let pins = pico::Pins::new(
+        pac.IO_BANK0,
+        pac.PADS_BANK0,
+        sio.gpio_bank0,
+        &mut pac.RESETS,
+    );
+
+    let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
+
+    let mut i2c_pio = i2c_pio::I2C::<_, _, _, _, hal::gpio::FunctionPio0>::new(
+        &mut pio,
+        pins.gpio20,
+        pins.gpio21,
+        sm0,
+        100_000.Hz(),
+        clocks.system_clock.freq(),
+    );
+
+    let mut temp = [0; 2];
+    i2c_pio
+        .read(0x48u8, &mut temp)
+        .expect("Failed to read from the peripheral");
+    print_temperature(temp);
+
+    i2c_pio
+        .write(0x48u8, &[0])
+        .expect("Failed to write to the peripheral");
+
+    let mut temp = [0; 2];
+    i2c_pio
+        .read(0x48u8, &mut temp)
+        .expect("Failed to read from the peripheral");
+    print_temperature(temp);
+
+    let mut config = [0];
+    let mut thyst = [0; 2];
+    let mut tos = [0; 2];
+    let mut temp = [0; 2];
+    let mut operations = [
+        Operation::Write(&[1]),
+        Operation::Read(&mut config),
+        Operation::Write(&[2]),
+        Operation::Read(&mut thyst),
+        Operation::Write(&[3]),
+        Operation::Read(&mut tos),
+        Operation::Write(&[0]),
+        Operation::Read(&mut temp),
+    ];
+    i2c_pio
+        .exec(0x48u8, &mut operations)
+        .expect("Failed to run all operations");
+    print_temperature(temp);
+
+    loop {
+        cortex_m::asm::nop();
+    }
+}
+
+// End of file
