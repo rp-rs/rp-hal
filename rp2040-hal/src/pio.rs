@@ -113,6 +113,14 @@ impl<P: PIOExt> PIO<P> {
         &self.interrupts
     }
 
+    /// Get raw irq flags.
+    ///
+    /// The PIO has 8 IRQ flags, of which 4 are visible to the host processor. Each bit of `flags` corresponds to one of
+    /// the IRQ flags.
+    pub fn get_irq_raw(&self) -> u8 {
+        self.pio.irq.read().irq().bits()
+    }
+
     /// Clear PIO's IRQ flags indicated by the bits.
     ///
     /// The PIO has 8 IRQ flags, of which 4 are visible to the host processor. Each bit of `flags` corresponds to one of
@@ -270,6 +278,11 @@ pub struct InstalledProgram<P> {
 }
 
 impl<P: PIOExt> InstalledProgram<P> {
+    /// Get the warp target (entry point) of the instaled program.
+    pub fn wrap_target(&self) -> u8 {
+        self.offset + self.wrap.target
+    }
+
     /// Clones this program handle so that it can be executed by two state machines at the same
     /// time.
     ///
@@ -658,19 +671,33 @@ pub struct Rx<SM: ValidStateMachine> {
 }
 
 impl<SM: ValidStateMachine> Rx<SM> {
+    fn block(&self) -> &pac::pio0::RegisterBlock {
+        // Safety: The register is unique to this Tx instance.
+        unsafe { &*self.block }
+    }
+
     /// Get the next element from RX FIFO.
     ///
     /// Returns `None` if the FIFO is empty.
     pub fn read(&mut self) -> Option<u32> {
-        // Safety: The register is never written by software.
-        let is_empty = unsafe { &*self.block }.fstat.read().rxempty().bits() & (1 << SM::id()) != 0;
-
-        if is_empty {
+        if self.is_empty() {
             return None;
         }
 
         // Safety: The register is unique to this Rx instance.
-        Some(unsafe { &*self.block }.rxf[SM::id() as usize].read().bits())
+        Some(self.block().rxf[SM::id() as usize].read().bits())
+    }
+
+    /// Enable/Disable the autopush feature of the state machine.
+    pub fn enable_autopush(&mut self, enable: bool) {
+        self.block().sm[SM::id()]
+            .sm_shiftctrl
+            .modify(|_, w| w.autopush().bit(enable))
+    }
+
+    /// Indicate if the tx FIFO is full
+    pub fn is_empty(&self) -> bool {
+        self.block().fstat.read().rxempty().bits() & (1 << SM::id()) != 0
     }
 }
 
@@ -681,21 +708,81 @@ pub struct Tx<SM: ValidStateMachine> {
 }
 
 impl<SM: ValidStateMachine> Tx<SM> {
+    fn block(&self) -> &pac::pio0::RegisterBlock {
+        // Safety: The register is unique to this Tx instance.
+        unsafe { &*self.block }
+    }
+
     /// Write an element to TX FIFO.
     ///
     /// Returns `true` if the value was written to FIFO, `false` otherwise.
-    pub fn write(&mut self, value: u32) -> bool {
+    pub fn write<T>(&mut self, value: T) -> bool {
         // Safety: The register is never written by software.
-        let is_full = unsafe { &*self.block }.fstat.read().txfull().bits() & (1 << SM::id()) != 0;
+        let is_full = self.is_full();
 
         if is_full {
             return false;
         }
 
-        // Safety: The register is unique to this Tx instance.
-        unsafe { &*self.block }.txf[SM::id()].write(|w| unsafe { w.bits(value) });
+        unsafe {
+            let reg_ptr = self.block().txf[SM::id()].as_ptr() as *mut T;
+            core::ptr::write_volatile(reg_ptr, value);
+        }
 
         true
+    }
+
+    /// Checks if the state machine has stalled on empty TX FIFO during a blocking PULL, or an OUT
+    /// with autopull enabled.
+    pub fn has_stalled(&self) -> bool {
+        let mask = 1 << SM::id();
+        self.block().fdebug.read().txstall().bits() & mask == mask
+    }
+
+    /// Clears the `tx_stalled` flag.
+    pub fn clear_stalled_flag(&self) {
+        let mask = 1 << SM::id();
+
+        self.block()
+            .fdebug
+            .write(|w| unsafe { w.txstall().bits(mask) });
+    }
+
+    /// Indicate if the tx FIFO is empty
+    pub fn is_empty(&self) -> bool {
+        self.block().fstat.read().txempty().bits() & (1 << SM::id()) != 0
+    }
+
+    /// Indicate if the tx FIFO is full
+    pub fn is_full(&self) -> bool {
+        self.block().fstat.read().txfull().bits() & (1 << SM::id()) != 0
+    }
+
+    /// Drain Tx fifo.
+    pub fn drain_fifo(&mut self) {
+        let instr = if self.block().sm[SM::id()]
+            .sm_shiftctrl
+            .read()
+            .autopull()
+            .bit_is_set()
+        {
+            pio::InstructionOperands::OUT {
+                destination: pio::OutDestination::NULL,
+                bit_count: 32,
+            }
+        } else {
+            pio::InstructionOperands::PULL {
+                if_empty: false,
+                block: false,
+            }
+        }
+        .encode();
+        let mask = 1 << SM::id();
+        while self.block().fstat.read().txempty().bits() & mask != mask {
+            self.block().sm[SM::id()]
+                .sm_instr
+                .write(|w| unsafe { w.sm0_instr().bits(instr) })
+        }
     }
 }
 
@@ -714,7 +801,7 @@ impl<P: PIOExt> Interrupt<P> {
     /// Enable interrupts raised by state machines.
     ///
     /// The PIO peripheral has 4 outside visible interrupts that can be raised by the state machines. Note that this
-    /// don't correspond with the state machine index; any state machine can raise any one of the four interrupts.
+    /// does not correspond with the state machine index; any state machine can raise any one of the four interrupts.
     pub fn enable_sm_interrupt(&self, id: u8) {
         match id {
             0 => self.irq().irq_inte.modify(|_, w| w.sm0().set_bit()),
