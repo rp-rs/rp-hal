@@ -752,6 +752,8 @@ impl<SM: ValidStateMachine> Tx<SM> {
 
     /// Checks if the state machine has stalled on empty TX FIFO during a blocking PULL, or an OUT
     /// with autopull enabled.
+    ///
+    /// **Note this is a sticky flag and may not reflect the current state of the machine.**
     pub fn has_stalled(&self) -> bool {
         let mask = 1 << SM::id();
         self.block().fdebug.read().txstall().bits() & mask == mask
@@ -1210,7 +1212,7 @@ impl<P: PIOExt> PIOBuilder<P> {
     /// Set the pins used by side-set instructions.
     ///
     /// The least-significant side-set bit asserts the state of the pin indicated by `base`, the next bit asserts the
-    /// state of the next pin, and so on up to number of bits set using [`Self::side_set`] function.
+    /// state of the next pin, and so on up to number of bits set using [`SideSet::new`] function.
     pub fn side_set_pin_base(mut self, base: u8) -> Self {
         self.side_set_base = base;
         self
