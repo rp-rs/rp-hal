@@ -53,8 +53,8 @@ fn print_temperature(temp: [u8; 2]) {
 /// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
 /// as soon as all global variables are initialised.
 ///
-/// The function configures the RP2040 peripherals, then blinks the LED in an
-/// infinite loop.
+/// The function configures the RP2040 peripherals, reads the temperature from
+/// the attached LM75B using PIO0.
 #[entry]
 fn main() -> ! {
     // Grab our singleton objects
