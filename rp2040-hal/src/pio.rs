@@ -689,7 +689,7 @@ pub struct Rx<SM: ValidStateMachine> {
 }
 
 impl<SM: ValidStateMachine> Rx<SM> {
-    fn block(&self) -> &pac::pio0::RegisterBlock {
+    fn register_block(&self) -> &pac::pio0::RegisterBlock {
         // Safety: The register is unique to this Tx instance.
         unsafe { &*self.block }
     }
@@ -703,19 +703,19 @@ impl<SM: ValidStateMachine> Rx<SM> {
         }
 
         // Safety: The register is unique to this Rx instance.
-        Some(self.block().rxf[SM::id() as usize].read().bits())
+        Some(self.register_block().rxf[SM::id() as usize].read().bits())
     }
 
     /// Enable/Disable the autopush feature of the state machine.
     pub fn enable_autopush(&mut self, enable: bool) {
-        self.block().sm[SM::id()]
+        self.register_block().sm[SM::id()]
             .sm_shiftctrl
             .modify(|_, w| w.autopush().bit(enable))
     }
 
     /// Indicate if the tx FIFO is full
     pub fn is_empty(&self) -> bool {
-        self.block().fstat.read().rxempty().bits() & (1 << SM::id()) != 0
+        self.register_block().fstat.read().rxempty().bits() & (1 << SM::id()) != 0
     }
 }
 
@@ -726,7 +726,7 @@ pub struct Tx<SM: ValidStateMachine> {
 }
 
 impl<SM: ValidStateMachine> Tx<SM> {
-    fn block(&self) -> &pac::pio0::RegisterBlock {
+    fn register_block(&self) -> &pac::pio0::RegisterBlock {
         // Safety: The register is unique to this Tx instance.
         unsafe { &*self.block }
     }
@@ -743,7 +743,7 @@ impl<SM: ValidStateMachine> Tx<SM> {
         }
 
         unsafe {
-            let reg_ptr = self.block().txf[SM::id()].as_ptr() as *mut T;
+            let reg_ptr = self.register_block().txf[SM::id()].as_ptr() as *mut T;
             core::ptr::write_volatile(reg_ptr, value);
         }
 
@@ -756,26 +756,26 @@ impl<SM: ValidStateMachine> Tx<SM> {
     /// **Note this is a sticky flag and may not reflect the current state of the machine.**
     pub fn has_stalled(&self) -> bool {
         let mask = 1 << SM::id();
-        self.block().fdebug.read().txstall().bits() & mask == mask
+        self.register_block().fdebug.read().txstall().bits() & mask == mask
     }
 
     /// Clears the `tx_stalled` flag.
     pub fn clear_stalled_flag(&self) {
         let mask = 1 << SM::id();
 
-        self.block()
+        self.register_block()
             .fdebug
             .write(|w| unsafe { w.txstall().bits(mask) });
     }
 
     /// Indicate if the tx FIFO is empty
     pub fn is_empty(&self) -> bool {
-        self.block().fstat.read().txempty().bits() & (1 << SM::id()) != 0
+        self.register_block().fstat.read().txempty().bits() & (1 << SM::id()) != 0
     }
 
     /// Indicate if the tx FIFO is full
     pub fn is_full(&self) -> bool {
-        self.block().fstat.read().txfull().bits() & (1 << SM::id()) != 0
+        self.register_block().fstat.read().txfull().bits() & (1 << SM::id()) != 0
     }
 
     /// Drain Tx fifo.
@@ -787,7 +787,7 @@ impl<SM: ValidStateMachine> Tx<SM> {
         // DMA.  It behaves as a fence: either an autopull has already taken place, in which case
         // the 'PULL' has no effect, or the program will stall on the 'PULL' until data becomes
         // available in the FIFO.
-        let instr = if self.block().sm[SM::id()]
+        let instr = if self.register_block().sm[SM::id()]
             .sm_shiftctrl
             .read()
             .autopull()
@@ -805,8 +805,8 @@ impl<SM: ValidStateMachine> Tx<SM> {
         }
         .encode();
         let mask = 1 << SM::id();
-        while self.block().fstat.read().txempty().bits() & mask != mask {
-            self.block().sm[SM::id()]
+        while self.register_block().fstat.read().txempty().bits() & mask != mask {
+            self.register_block().sm[SM::id()]
                 .sm_instr
                 .write(|w| unsafe { w.sm0_instr().bits(instr) })
         }
@@ -999,7 +999,7 @@ impl<P: PIOExt> Interrupt<P> {
     ///
     /// This is the state of the interrupts without interrupt masking and forcing.
     pub fn raw(&self) -> InterruptState {
-        InterruptState(self.block().intr.read().bits())
+        InterruptState(self.register_block().intr.read().bits())
     }
 
     /// Get the interrupt state.
@@ -1009,12 +1009,12 @@ impl<P: PIOExt> Interrupt<P> {
         InterruptState(self.irq().irq_ints.read().bits())
     }
 
-    fn block(&self) -> &rp2040_pac::pio0::RegisterBlock {
+    fn register_block(&self) -> &rp2040_pac::pio0::RegisterBlock {
         unsafe { &*self.block }
     }
 
     fn irq(&self) -> &rp2040_pac::pio0::SM_IRQ {
-        &self.block().sm_irq[self.id as usize]
+        &self.register_block().sm_irq[self.id as usize]
     }
 }
 
