@@ -11,6 +11,9 @@
 #![no_std]
 #![no_main]
 
+// The trait used by formatting macros like write! and writeln!
+use core::fmt::Write as FmtWrite;
+
 // The macro for our start-up function
 use cortex_m_rt::entry;
 
@@ -42,10 +45,12 @@ use pico::hal;
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
 /// Prints the temperature received from the sensor
-fn print_temperature(temp: [u8; 2]) {
+fn print_temperature(serial: &mut impl FmtWrite, temp: [u8; 2]) {
     let temp_i16 = i16::from_be_bytes(temp) >> 5;
-    let _temp_f32 = f32::from(temp_i16) * 0.125;
-    // using defmt/rtt_target or uart
+    let temp_f32 = f32::from(temp_i16) * 0.125;
+
+    // Write formatted output but ignore any error.
+    let _ = writeln!(serial, "Temperature: {:0.2}°C", temp_f32);
 }
 
 /// Entry point to our bare-metal application.
@@ -89,6 +94,19 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
+    let mut uart = hal::uart::UartPeripheral::<_, _>::enable(
+        pac.UART0,
+        &mut pac.RESETS,
+        hal::uart::common_configs::_115200_8_N_1,
+        clocks.peripheral_clock.into(),
+    )
+    .unwrap();
+
+    // UART TX (characters sent from RP2040) on pin 1 (GPIO0)
+    let _tx_pin = pins.gpio0.into_mode::<hal::gpio::FunctionUart>();
+    // UART RX (characters reveived by RP2040) on pin 2 (GPIO1)
+    let _rx_pin = pins.gpio1.into_mode::<hal::gpio::FunctionUart>();
+
     let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
 
     let mut i2c_pio = i2c_pio::I2C::<_, _, _, _, hal::gpio::FunctionPio0>::new(
@@ -104,7 +122,7 @@ fn main() -> ! {
     i2c_pio
         .read(0x48u8, &mut temp)
         .expect("Failed to read from the peripheral");
-    print_temperature(temp);
+    print_temperature(&mut uart, temp);
 
     i2c_pio
         .write(0x48u8, &[0])
@@ -114,7 +132,7 @@ fn main() -> ! {
     i2c_pio
         .read(0x48u8, &mut temp)
         .expect("Failed to read from the peripheral");
-    print_temperature(temp);
+    print_temperature(&mut uart, temp);
 
     let mut config = [0];
     let mut thyst = [0; 2];
@@ -133,7 +151,7 @@ fn main() -> ! {
     i2c_pio
         .exec(0x48u8, &mut operations)
         .expect("Failed to run all operations");
-    print_temperature(temp);
+    print_temperature(&mut uart, temp);
 
     loop {
         cortex_m::asm::nop();
