@@ -542,7 +542,7 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
     /// other state machines of the same PIO block.
     ///
     /// The iterator's item are pairs of `(pin_number, pin_state)`.
-    pub fn set_pins_with_iter(&mut self, pins: impl IntoIterator<Item = (u8, PinState)>) {
+    pub fn set_pins(&mut self, pins: impl IntoIterator<Item = (u8, PinState)>) {
         let saved_ctrl = self.sm.sm().sm_pinctrl.read();
         for (pin_num, pin_state) in pins {
             self.sm
@@ -569,7 +569,7 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
     /// other state machines of the same PIO block.
     ///
     /// The iterator's item are pairs of `(pin_number, pin_dir)`.
-    pub fn set_pindirs_with_iter(&mut self, pindirs: impl IntoIterator<Item = (u8, PinDir)>) {
+    pub fn set_pindirs(&mut self, pindirs: impl IntoIterator<Item = (u8, PinDir)>) {
         let saved_ctrl = self.sm.sm().sm_pinctrl.read();
         for (pinnum, pin_dir) in pindirs {
             self.sm
