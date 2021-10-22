@@ -4,8 +4,10 @@ use super::{
     InputOverride, Interrupt, InterruptOverride, OutputDriveStrength, OutputEnableOverride,
     OutputOverride, OutputSlewRate,
 };
+use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
 use crate::gpio::dynpin::{DynDisabled, DynFunction, DynInput, DynOutput, DynPinMode};
 use crate::pac;
+use core::ptr::read_volatile;
 
 //==============================================================================
 //  ModeFields
@@ -278,7 +280,7 @@ pub(super) unsafe trait RegisterInterface {
                 .as_ptr()
                 .add(num / 8 + cpuid as usize * 12);
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            (*reg & (1 << bit_in_reg)) != 0
+            (read_volatile(reg) & (1 << bit_in_reg)) != 0
         }
     }
 
@@ -293,7 +295,7 @@ pub(super) unsafe trait RegisterInterface {
                 .as_ptr()
                 .add(num / 8 + cpuid as usize * 12);
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            (*reg & (1 << bit_in_reg)) != 0
+            (read_volatile(reg) & (1 << bit_in_reg)) != 0
         }
     }
 
@@ -309,9 +311,9 @@ pub(super) unsafe trait RegisterInterface {
                 .add(num / 8 + cpuid as usize * 12);
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
             if enabled {
-                *reg |= 1 << bit_in_reg;
+                write_bitmask_set(reg, 1 << bit_in_reg);
             } else {
-                *reg &= !(1 << bit_in_reg);
+                write_bitmask_clear(reg, 1 << bit_in_reg);
             }
         }
     }
@@ -327,7 +329,7 @@ pub(super) unsafe trait RegisterInterface {
                 .as_ptr()
                 .add(num / 8 + cpuid as usize * 12);
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            (*reg & (1 << bit_in_reg)) != 0
+            (read_volatile(reg) & (1 << bit_in_reg)) != 0
         }
     }
 
@@ -343,9 +345,9 @@ pub(super) unsafe trait RegisterInterface {
                 .add(num / 8 + cpuid as usize * 12);
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
             if forced {
-                *reg |= 1 << bit_in_reg;
+                write_bitmask_set(reg, 1 << bit_in_reg);
             } else {
-                *reg &= !(1 << bit_in_reg);
+                write_bitmask_clear(reg, 1 << bit_in_reg);
             }
         }
     }
