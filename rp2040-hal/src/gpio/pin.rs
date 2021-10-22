@@ -959,9 +959,13 @@ macro_rules! gpio {
                 impl Pins {
                     /// Take ownership of the PAC peripherals and SIO slice and split it into discrete [`Pin`]s
                     pub fn new(io : [<IO_ $Group:upper>], pads: [<PADS_ $Group:upper>], sio: [<SioGpio $Group>], reset : &mut pac::RESETS) -> Self {
+                        pads.reset_bring_down(reset);
+                        io.reset_bring_down(reset);
+
                         io.reset_bring_up(reset);
                         pads.reset_bring_up(reset);
-                            unsafe { Self {
+                        unsafe {
+                            Self {
                                 _io: io,
                                 _pads: pads,
                                 _sio: sio,
