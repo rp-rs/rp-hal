@@ -402,7 +402,7 @@ where
 
     /// Did this slice trigger an overflow interrupt?
     #[inline]
-    pub fn is_overflow(&self) -> bool {
+    pub fn has_overflown(&self) -> bool {
         let mask = self.bitmask();
         unsafe { (*pac::PWM::ptr()).ints.read().bits() & mask == mask }
     }
