@@ -5,12 +5,12 @@
 //! demonstrated here.
 
 use core::ops::Deref;
-use rp2040_hal::i2c::peripheral::I2CAsyncPeripheral;
 use rp2040_hal::i2c::peripheral::I2CEvent;
+use rp2040_hal::i2c::peripheral::I2CPeripheralEventIterator;
 use rp2040_hal::pac::i2c0::RegisterBlock as I2CBlock;
 
 pub async fn run_demo<Block, Pins>(
-    i2c: &mut I2CAsyncPeripheral<Block, Pins>,
+    i2c: &mut I2CPeripheralEventIterator<Block, Pins>,
 ) -> Result<(), rp2040_hal::i2c::Error>
 where
     Block: Deref<Target = I2CBlock>,
@@ -32,7 +32,13 @@ where
     let mut stage = Stage::Idle0;
 
     while stage != Stage::Done {
-        let ev = i2c.next_event().await?;
+        let ev = futures::future::poll_fn(|cx| {
+            cx.waker().wake_by_ref();
+            i2c.next()
+                .map(core::task::Poll::Ready)
+                .unwrap_or(core::task::Poll::Pending)
+        })
+        .await;
         match ev {
             I2CEvent::Start => {
                 stage = match stage {

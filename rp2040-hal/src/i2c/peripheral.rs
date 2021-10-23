@@ -32,7 +32,7 @@ enum State {
 }
 
 /// Provides Async features to I2C peripheral.
-pub struct I2CAsyncPeripheral<Block, Pins> {
+pub struct I2CPeripheralEventIterator<Block, Pins> {
     i2c: I2C<Block, Pins, Peripheral>,
     state: State,
 }
@@ -47,13 +47,13 @@ where
     ///
     /// The bus *MUST* be idle when this method is called.
     #[allow(clippy::type_complexity)]
-    pub fn new_peripheral(
+    pub fn new_peripheral_event_iterator(
         i2c: T,
         sda_pin: Pin<Sda, FunctionI2C>,
         scl_pin: Pin<Scl, FunctionI2C>,
         resets: &mut RESETS,
         addr: u16,
-    ) -> I2CAsyncPeripheral<T, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)>
+    ) -> I2CPeripheralEventIterator<T, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)>
     where
         Sda: SdaPin<T>,
         Scl: SclPin<T>,
@@ -83,16 +83,10 @@ where
         i2c.ic_tx_tl.write(|w| unsafe { w.tx_tl().bits(0) });
         i2c.ic_rx_tl.write(|w| unsafe { w.rx_tl().bits(0) });
 
-        // Enable DMA operations
-        //i2c.ic_dma_cr.write(|w| {
-        //    w.tdmae().enabled();
-        //    w.rdmae().enabled()
-        //});
-
         // Enable IP
         i2c.ic_enable.write(|w| w.enable().enabled());
 
-        I2CAsyncPeripheral {
+        I2CPeripheralEventIterator {
             i2c: Self {
                 i2c,
                 pins: (sda_pin, scl_pin),
@@ -103,58 +97,7 @@ where
     }
 }
 
-impl<T: Deref<Target = I2CBlock>, PINS> I2CAsyncPeripheral<T, PINS> {
-    /// Read data from a peripheral.
-    pub async fn next_event(&mut self) -> Result<I2CEvent, super::Error> {
-        // check flags
-        let event = futures::future::poll_fn(|cx| {
-            // always ready to check status.
-            cx.waker().wake_by_ref();
-
-            let stat = self.i2c.i2c.ic_raw_intr_stat.read();
-            self.i2c.i2c.ic_clr_activity.read();
-
-            match self.state {
-                State::Idle if stat.start_det().bit_is_set() => {
-                    self.i2c.i2c.ic_clr_start_det.read();
-                    self.state = if stat.rd_req().bit_is_set() {
-                        State::Read
-                    } else {
-                        State::Write
-                    };
-                    core::task::Poll::Ready(I2CEvent::Start)
-                }
-                State::Read if stat.rd_req().bit_is_set() => {
-                    // Bit is cleared by a call to write
-                    // self.0.i2c.ic_clr_rd_req.read();
-
-                    core::task::Poll::Ready(I2CEvent::TransferRead)
-                }
-                State::Read if stat.restart_det().bit_is_set() => {
-                    self.i2c.i2c.ic_clr_restart_det.read();
-                    self.state = State::Write;
-                    core::task::Poll::Ready(I2CEvent::Restart)
-                }
-                State::Write if !self.i2c.rx_fifo_empty() => {
-                    core::task::Poll::Ready(I2CEvent::TransferWrite)
-                }
-                State::Write if stat.restart_det().bit_is_set() => {
-                    self.i2c.i2c.ic_clr_restart_det.read();
-                    self.state = State::Read;
-                    core::task::Poll::Ready(I2CEvent::Restart)
-                }
-                _ if stat.stop_det().bit_is_set() => {
-                    self.i2c.i2c.ic_clr_stop_det.read();
-                    self.state = State::Idle;
-                    core::task::Poll::Ready(I2CEvent::Stop)
-                }
-                _ => core::task::Poll::Pending,
-            }
-        })
-        .await;
-        Ok(event)
-    }
-
+impl<T: Deref<Target = I2CBlock>, PINS> I2CPeripheralEventIterator<T, PINS> {
     /// Pushs up to `usize::min(TX_FIFO_SIZE, buf.len())` bytes to the TX FIFO.
     /// Returns the number of bytes pushed to the FIFO. Note this does *not* reflect how many bytes
     /// are effectively received by the controller.
@@ -194,8 +137,52 @@ impl<T: Deref<Target = I2CBlock>, PINS> I2CAsyncPeripheral<T, PINS> {
         read
     }
 }
+impl<T: Deref<Target = I2CBlock>, PINS> Iterator for I2CPeripheralEventIterator<T, PINS> {
+    type Item = I2CEvent;
 
-impl<Block, Sda, Scl> I2CAsyncPeripheral<Block, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)>
+    fn next(&mut self) -> Option<Self::Item> {
+        let stat = self.i2c.i2c.ic_raw_intr_stat.read();
+        self.i2c.i2c.ic_clr_activity.read();
+
+        match self.state {
+            State::Idle if stat.start_det().bit_is_set() => {
+                self.i2c.i2c.ic_clr_start_det.read();
+                self.state = if stat.rd_req().bit_is_set() {
+                    State::Read
+                } else {
+                    State::Write
+                };
+                Some(I2CEvent::Start)
+            }
+            State::Read if stat.rd_req().bit_is_set() => {
+                // Bit is cleared by a call to write
+                // self.0.i2c.ic_clr_rd_req.read();
+
+                Some(I2CEvent::TransferRead)
+            }
+            State::Read if stat.restart_det().bit_is_set() => {
+                self.i2c.i2c.ic_clr_restart_det.read();
+                self.state = State::Write;
+                Some(I2CEvent::Restart)
+            }
+            State::Write if !self.i2c.rx_fifo_empty() => Some(I2CEvent::TransferWrite),
+            State::Write if stat.restart_det().bit_is_set() => {
+                self.i2c.i2c.ic_clr_restart_det.read();
+                self.state = State::Read;
+                Some(I2CEvent::Restart)
+            }
+            _ if stat.stop_det().bit_is_set() => {
+                self.i2c.i2c.ic_clr_stop_det.read();
+                self.state = State::Idle;
+                Some(I2CEvent::Stop)
+            }
+            _ => None,
+        }
+    }
+}
+
+impl<Block, Sda, Scl>
+    I2CPeripheralEventIterator<Block, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)>
 where
     Block: SubsystemReset + Deref<Target = I2CBlock>,
     Sda: PinId + BankPinId,
