@@ -24,7 +24,7 @@ embedded-hal ="0.2.5"
 cortex-m-rtic = "0.6.0-alpha.5"
 rp2040-boot2 = "0.2"
 nb = "1.0"
-i2c-pio = { git = "https://github.com/ithinuel/i2c-pio-rs", rev = "6883ae973c78f2d9a319241a7edc0308c1ebf445" }
+i2c-pio = { git = "https://github.com/ithinuel/i2c-pio-rs", rev = "fb6167d02b7fbc46a83f344f5242823bcd16e271" }
 
 [features]
 default = ["rt"]
