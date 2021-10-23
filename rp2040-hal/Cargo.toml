@@ -24,10 +24,15 @@ vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
 rand_core = "0.6.3"
 
-# namespaced features will let use use "dep:embassy-traits" in the features rather than using this
-# trick.
-embassy_traits = { git = "https://github.com/embassy-rs/embassy", package = "embassy-traits", optional = true }
 futures = { version = "0.3", default-features = false, optional = true }
+
+# namespaced features will let use use "dep:embassy-traits" in the features rather than using this
+# trick of renaming the crate.
+[dependencies.embassy_traits]
+git = "https://github.com/embassy-rs/embassy"
+rev = "a8797f84f69b7668a3f89b6cba3e39bce5649079"
+package = "embassy-traits"
+optional = true
 
 [dev-dependencies]
 cortex-m-rt = "0.7"

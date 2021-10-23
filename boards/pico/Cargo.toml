@@ -18,8 +18,19 @@ usb-device= "0.2.8"
 usbd-serial = "0.1.1"
 usbd-hid = "0.5.1"
 futures = { version = "0.3", default-features = false, optional = true }
-embassy = { git = "https://github.com/embassy-rs/embassy", optional = true }
-embassy_traits = { git = "https://github.com/embassy-rs/embassy", package = "embassy-traits", optional = true }
+
+[dependencies.embassy]
+git = "https://github.com/embassy-rs/embassy"
+rev = "a8797f84f69b7668a3f89b6cba3e39bce5649079"
+optional = true
+
+# namespaced features will let use use "dep:embassy-traits" in the features rather than using this
+# trick of renaming the crate.
+[dependencies.embassy_traits]
+git = "https://github.com/embassy-rs/embassy"
+rev = "a8797f84f69b7668a3f89b6cba3e39bce5649079"
+package = "embassy-traits"
+optional = true
 
 [dev-dependencies]
 panic-halt= "0.2.0"
