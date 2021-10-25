@@ -487,7 +487,7 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     }
 }
 
-/// Safety: All shared register access is atomic.
+/// Safety: All shared register accesses are atomic.
 unsafe impl<SM: ValidStateMachine + Send, State> Send for StateMachine<SM, State> {}
 
 impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
