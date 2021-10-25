@@ -1174,7 +1174,7 @@ impl<P: PIOExt> PIOBuilder<P> {
     /// The least-significant bit of `OUT` instruction asserts the state of the pin indicated by `base`, the next bit
     /// asserts the state of the next pin, and so on up to `count` pins. The pin numbers are considered modulo 32.
     pub fn out_pins(mut self, base: u8, count: u8) -> Self {
-        assert!(count <= 5);
+        assert!(count <= 32);
         self.out_base = base;
         self.out_count = count;
         self
