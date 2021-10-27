@@ -516,6 +516,9 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     }
 }
 
+/// Safety: All shared register accesses are atomic.
+unsafe impl<SM: ValidStateMachine + Send, State> Send for StateMachine<SM, State> {}
+
 impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
     /// Starts execution of the selected program.
     pub fn start(mut self) -> StateMachine<SM, Running> {
@@ -676,6 +679,9 @@ pub struct Rx<SM: ValidStateMachine> {
     _phantom: core::marker::PhantomData<SM>,
 }
 
+/// Safety: All shared register access is atomic.
+unsafe impl<SM: ValidStateMachine + Send> Send for Rx<SM> {}
+
 impl<SM: ValidStateMachine> Rx<SM> {
     fn register_block(&self) -> &pac::pio0::RegisterBlock {
         // Safety: The register is unique to this Tx instance.
@@ -712,6 +718,9 @@ pub struct Tx<SM: ValidStateMachine> {
     block: *const rp2040_pac::pio0::RegisterBlock,
     _phantom: core::marker::PhantomData<SM>,
 }
+
+/// Safety: All shared register access is atomic.
+unsafe impl<SM: ValidStateMachine + Send> Send for Tx<SM> {}
 
 impl<SM: ValidStateMachine> Tx<SM> {
     fn register_block(&self) -> &pac::pio0::RegisterBlock {
