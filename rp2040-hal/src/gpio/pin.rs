@@ -259,7 +259,7 @@ impl<C: OutputConfig> Sealed for Output<C> {}
 pub type PushPullOutput = Output<PushPull>;
 
 /// Type-level variant of [`PinMode`] for readable push-pull output mode
-type ReadableOutput = Output<Readable>;
+pub type ReadableOutput = Output<Readable>;
 
 impl<I: PinId, C: OutputConfig> ValidPinMode<I> for Output<C> {}
 
