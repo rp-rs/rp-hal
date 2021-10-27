@@ -16,8 +16,6 @@ unsafe impl critical_section::Impl for RpSpinlockCs {
         // Store the initial interrupt state and current core id in stack variables
         let interrupts_active = cortex_m::register::primask::read().is_active();
         let core = (*pac::SIO::ptr()).cpuid.read().bits() as u8 + 1_u8;
-        // Need interrupts to be disabled to check/set our static variables
-        cortex_m::interrupt::disable();
         if LOCK_CORE.load(Ordering::Acquire) == core {
             // We already own the lock, so we must have called acquire within a critical_section.
             // Return the magic inner-loop value so that we know not to re-enable interrupts in release()
