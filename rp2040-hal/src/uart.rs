@@ -328,19 +328,21 @@ impl<D: UartDevice> UartPeripheral<Enabled, D> {
             if bytes_read < buffer.len() {
                 let mut error: Option<ReadErrorType> = None;
 
-                if self.device.uartdr.read().oe().bit_is_set() {
+                let read = self.device.uartdr.read();
+
+                if read.oe().bit_is_set() {
                     error = Some(ReadErrorType::Overrun);
                 }
 
-                if self.device.uartdr.read().be().bit_is_set() {
+                if read.be().bit_is_set() {
                     error = Some(ReadErrorType::Break);
                 }
 
-                if self.device.uartdr.read().pe().bit_is_set() {
+                if read.pe().bit_is_set() {
                     error = Some(ReadErrorType::Parity);
                 }
 
-                if self.device.uartdr.read().fe().bit_is_set() {
+                if read.fe().bit_is_set() {
                     error = Some(ReadErrorType::Framing);
                 }
 
@@ -351,7 +353,7 @@ impl<D: UartDevice> UartPeripheral<Enabled, D> {
                     }));
                 }
 
-                buffer[bytes_read] = self.device.uartdr.read().data().bits();
+                buffer[bytes_read] = read.data().bits();
                 bytes_read += 1;
             } else {
                 break &mut buffer[bytes_read..];
