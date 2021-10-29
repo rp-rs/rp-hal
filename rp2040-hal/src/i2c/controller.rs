@@ -116,19 +116,20 @@ impl<T: SubsystemReset + Deref<Target = Block>, Sda: PinId + BankPinId, Scl: Pin
     }
 }
 impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
-    // TODO support transfers of more than 255 bytes
-    fn validate(addr: u16, opt_tx: Option<&[u8]>, opt_rx: Option<&mut [u8]>) -> Result<(), Error> {
+    fn validate(
+        addr: u16,
+        opt_tx_empty: Option<bool>,
+        opt_rx_empty: Option<bool>,
+    ) -> Result<(), Error> {
         // validate tx parameters if present
-        opt_tx
-            .filter(|tx| tx.len() > 255 || tx.is_empty())
-            .map(|tx| Err(Error::InvalidWriteBufferLength(tx.len())))
-            .unwrap_or(Ok(()))?;
+        if opt_tx_empty.unwrap_or(false) {
+            return Err(Error::InvalidWriteBufferLength);
+        }
 
         // validate rx parameters if present
-        opt_rx
-            .filter(|rx| rx.len() > 255 || rx.is_empty())
-            .map(|rx| Err(Error::InvalidReadBufferLength(rx.len())))
-            .unwrap_or(Ok(()))?;
+        if opt_rx_empty.unwrap_or(false) {
+            return Err(Error::InvalidReadBufferLength);
+        }
 
         // validate address
         if addr >= 0x80 {
@@ -244,7 +245,7 @@ impl<T: Deref<Target = Block>, PINS> Read for I2C<T, PINS, Controller> {
     fn read(&mut self, addr: u8, buffer: &mut [u8]) -> Result<(), Error> {
         let addr: u16 = addr.into();
 
-        Self::validate(addr, None, Some(buffer))?;
+        Self::validate(addr, None, Some(buffer.is_empty()))?;
 
         self.setup(addr);
         self.read_internal(buffer)
@@ -256,7 +257,7 @@ impl<T: Deref<Target = Block>, PINS> WriteRead for I2C<T, PINS, Controller> {
     fn write_read(&mut self, addr: u8, tx: &[u8], rx: &mut [u8]) -> Result<(), Error> {
         let addr: u16 = addr.into();
 
-        Self::validate(addr, Some(tx), Some(rx))?;
+        Self::validate(addr, Some(tx.is_empty()), Some(rx.is_empty()))?;
         self.setup(addr);
 
         self.write_internal(tx, false)?;
@@ -268,7 +269,7 @@ impl<T: Deref<Target = Block>, PINS> Write for I2C<T, PINS, Controller> {
 
     fn write(&mut self, addr: u8, tx: &[u8]) -> Result<(), Error> {
         let addr: u16 = addr.into();
-        Self::validate(addr, Some(tx), None)?;
+        Self::validate(addr, Some(tx.is_empty()), None)?;
         self.setup(addr);
 
         self.write_internal(tx, true)

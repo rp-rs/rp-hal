@@ -30,7 +30,7 @@ futures = { version = "0.3", default-features = false, optional = true }
 # trick of renaming the crate.
 [dependencies.embassy_traits]
 git = "https://github.com/embassy-rs/embassy"
-rev = "a8797f84f69b7668a3f89b6cba3e39bce5649079"
+rev = "3dcf899babff5b735b1f1a5a99a9005ce06f517f"
 package = "embassy-traits"
 optional = true
 

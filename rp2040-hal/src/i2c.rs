@@ -69,10 +69,10 @@ pub mod peripheral;
 pub enum Error {
     /// I2C abort with error
     Abort(u32),
-    /// User passed in a read buffer that was 0 or >255 length
-    InvalidReadBufferLength(usize),
-    /// User passed in a write buffer that was 0 or >255 length
-    InvalidWriteBufferLength(usize),
+    /// User passed in a read buffer that was 0 length
+    InvalidReadBufferLength,
+    /// User passed in a write buffer that was 0 length
+    InvalidWriteBufferLength,
     /// Target i2c address is out of range
     AddressOutOfRange(u16),
     /// Target i2c address is reserved
