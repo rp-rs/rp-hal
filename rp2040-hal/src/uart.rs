@@ -221,18 +221,17 @@ impl<D: UartDevice> UartPeripheral<Disabled, D> {
 
         let effective_baudrate = configure_baudrate(&mut device, &config.baudrate, &frequency)?;
 
+        device.uartlcr_h.write(|w| {
+            w.fen().set_bit();
+            set_format(w, &config.data_bits, &config.stop_bits, &config.parity);
+            w
+        });
+
         // Enable the UART, both TX and RX
         device.uartcr.write(|w| {
             w.uarten().set_bit();
             w.txe().set_bit();
             w.rxe().set_bit();
-            w
-        });
-
-        device.uartlcr_h.write(|w| {
-            w.fen().set_bit();
-
-            set_format(w, &config.data_bits, &config.stop_bits, &config.parity);
             w
         });
 
