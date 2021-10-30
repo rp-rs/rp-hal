@@ -312,7 +312,7 @@ impl<D: UartDevice> UartPeripheral<Enabled, D> {
     /// - 0 bytes were read, a WouldBlock Error is returned
     /// - some bytes were read, it is deemed to be a success
     /// Upon success, the remaining slice is returned.
-    pub fn read_raw<'b>(&self, buffer: &'b mut [u8]) -> nb::Result<&'b mut [u8], ReadError<'b>> {
+    pub fn read_raw<'b>(&self, buffer: &'b mut [u8]) -> nb::Result<usize, ReadError<'b>> {
         let mut bytes_read = 0;
 
         Ok(loop {
@@ -320,7 +320,7 @@ impl<D: UartDevice> UartPeripheral<Enabled, D> {
                 if bytes_read == 0 {
                     return Err(WouldBlock);
                 } else {
-                    break &mut buffer[bytes_read..];
+                    break bytes_read;
                 }
             }
 
@@ -355,7 +355,7 @@ impl<D: UartDevice> UartPeripheral<Enabled, D> {
                 buffer[bytes_read] = read.data().bits();
                 bytes_read += 1;
             } else {
-                break &mut buffer[bytes_read..];
+                break bytes_read;
             }
         })
     }
@@ -381,7 +381,7 @@ impl<D: UartDevice> UartPeripheral<Enabled, D> {
 
         while offset != buffer.len() {
             offset += match self.read_raw(&mut buffer[offset..]) {
-                Ok(remaining) => remaining.len(),
+                Ok(bytes_read) => bytes_read,
                 Err(e) => match e {
                     Other(inner) => return Err(inner.err_type),
                     WouldBlock => continue,
