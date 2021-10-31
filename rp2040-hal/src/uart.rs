@@ -311,7 +311,7 @@ impl<D: UartDevice> UartPeripheral<Enabled, D> {
     /// This function reads as long as it can. As soon that the FIFO is empty, if :
     /// - 0 bytes were read, a WouldBlock Error is returned
     /// - some bytes were read, it is deemed to be a success
-    /// Upon success, the remaining slice is returned.
+    /// Upon success, it will return how many bytes were read.
     pub fn read_raw<'b>(&self, buffer: &'b mut [u8]) -> nb::Result<usize, ReadError<'b>> {
         let mut bytes_read = 0;
 
