@@ -519,6 +519,12 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
         self.sm.sm().sm_addr.read().bits()
     }
 
+    #[deprecated(note = "Renamed to exec_instruction")]
+    ///Execute the instruction immediately.
+    pub fn set_instruction(&mut self, instruction: u16) {
+        self.exec_instruction(instruction);
+    }
+
     ///Execute the instruction immediately.
     pub fn exec_instruction(&mut self, instruction: u16) {
         // This is allowed even if the state machine is running.
