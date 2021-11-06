@@ -26,4 +26,4 @@ smart-leds = "0.3.0"
 embedded-time = "0.12.0"
 nb = "1.0.0"
 pio = { git = "https://github.com/rp-rs/pio-rs.git", branch = "main" }
-ws2812-pio = { git = "https://github.com/ithinuel/ws2812-pio-rs", rev = "e1cdd475de20697aaa0bc58803512927094f0326" }
+ws2812-pio = { git = "https://github.com/ithinuel/ws2812-pio-rs", rev = "7a11616f994025f5c99f28b283d2b25d60d46a43" }

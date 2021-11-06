@@ -15,7 +15,6 @@ use ws2812_pio::Ws2812;
 use itsy_bitsy_rp2040::{
     hal::{
         clocks::{init_clocks_and_plls, Clock},
-        gpio::{FunctionPio0, Pin},
         pac,
         sio::Sio,
         watchdog::Watchdog,
@@ -53,7 +52,7 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    let _led: Pin<_, FunctionPio0> = pins.neopixel_data.into_mode();
+    let led = pins.neopixel_data.into_mode();
 
     pins.neopixel_power
         .into_push_pull_output()
@@ -65,7 +64,7 @@ fn main() -> ! {
 
     let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
     let mut ws = Ws2812::new(
-        17,
+        led,
         &mut pio,
         sm0,
         clocks.peripheral_clock.freq(),
