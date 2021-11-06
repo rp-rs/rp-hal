@@ -1,7 +1,7 @@
 # [itsy_bitsy_rp2040] - Board Support for the [Adafruit ItsyBitsy RP2040]
 
 You should include this crate if you are writing code that you want to run on
-an [Adafruit ItsyBitsy RP2040] - an extremely small form-factor RP2040 board from Adafruit.
+an [Adafruit ItsyBitsy RP2040] - an RP2040 board in the Itsy family from Adafruit.
 
 This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the ItsyBitsy RP2040.
