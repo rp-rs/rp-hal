@@ -83,7 +83,7 @@ where
         i2c.ic_tx_tl.write(|w| unsafe { w.tx_tl().bits(0) });
         i2c.ic_rx_tl.write(|w| unsafe { w.rx_tl().bits(0) });
 
-        // Enable IP
+        // Enable I2C block
         i2c.ic_enable.write(|w| w.enable().enabled());
 
         I2CPeripheralEventIterator {

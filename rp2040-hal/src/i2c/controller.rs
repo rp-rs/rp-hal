@@ -105,7 +105,7 @@ impl<T: SubsystemReset + Deref<Target = Block>, Sda: PinId + BankPinId, Scl: Pin
                 .modify(|_r, w| w.ic_sda_tx_hold().bits(sda_tx_hold_count as u16));
         }
 
-        // Enable IP
+        // Enable I2C block
         i2c.ic_enable.write(|w| w.enable().enabled());
 
         Self {
@@ -143,9 +143,7 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
 
     fn setup(&mut self, addr: u16) {
         self.i2c.ic_enable.write(|w| w.enable().disabled());
-        self.i2c
-            .ic_tar
-            .write(|w| unsafe { w.ic_tar().bits(addr as u16) });
+        self.i2c.ic_tar.write(|w| unsafe { w.ic_tar().bits(addr) });
         self.i2c.ic_enable.write(|w| w.enable().enabled());
     }
 
