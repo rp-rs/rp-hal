@@ -155,8 +155,9 @@ impl<T: Deref<Target = I2CBlock>, PINS> Iterator for I2CPeripheralEventIterator<
                 Some(I2CEvent::Start)
             }
             State::Read if stat.rd_req().bit_is_set() => {
-                // Bit is cleared by a call to write
-                // self.0.i2c.ic_clr_rd_req.read();
+                // `rd_req` is used by the hardware to detect when the I2C block can stop stretching
+                // the clock and start process the data pushed to the FIFO (if any).
+                // This is done in `Self::write`.
 
                 Some(I2CEvent::TransferRead)
             }
