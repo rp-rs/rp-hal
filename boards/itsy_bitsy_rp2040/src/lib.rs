@@ -14,15 +14,15 @@ hal::bsp_pins!(
         name: tx,
         aliases: { FunctionUart: UartTx }
     },
-    Gpio1 {  
+    Gpio1 {
         name: rx,
         aliases: { FunctionUart: UartRx }
     },
-    Gpio2 {  
+    Gpio2 {
         name: sda,
         aliases: { FunctionI2C: Sda }
     },
-    Gpio3 { 
+    Gpio3 {
         name: scl,
         aliases: { FunctionI2C: Scl }
     },
@@ -38,15 +38,15 @@ hal::bsp_pins!(
     Gpio14 { name: d5 },
     Gpio16 { name: neopixel_power },
     Gpio17 { name: neopixel_data },
-    Gpio18 { 
+    Gpio18 {
         name: sclk,
         aliases: { FunctionSpi: Sclk }
     },
-    Gpio19 { 
+    Gpio19 {
         name: mosi,
         aliases: { FunctionSpi: Mosi }
     },
-    Gpio20 { 
+    Gpio20 {
         name: miso
         aliases: { FunctionSpi: Miso }
     },
