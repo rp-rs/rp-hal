@@ -1,11 +1,25 @@
-//! Send data from an I2C controller to an I2C peripheral.
-//!
-//! This will transmit data between I2C0 on pins GP0, GP1 acting as a controller to I2C1 on pins
-//! GP2, GP3 acting as a peripheral.
-//!
-//! A pull up is required on SCL & SDA lines in order to reach the expected 1MHz. Although it
+//! I2C controller and I2C peripheral async demo.
+//! 
+//! This example demonstrates use of both I2C peripherals (I2C0 and I2C1) at the same time on a single Pico using [Embassy](https://github.com/embassy-rs/embassy), an async executor.
+//! 
+//! Each peripheral is passed to an async task, which allows them to operate independently of each other:
+//!   - The controller task (ctrl_demo) uses I2C0. It calls the demo controller code in `controller.rs`
+//!   - The peripheral task (prph_demo) uses I2C1. It calls the demo peripheral code in `peripheral.rs`
+//! 
+//! ### Wiring notes:
+//! 
+//! I2C0 uses pin `GP0` for `SDA`, and `GP1` for `SCL`.
+//! 
+//! I2C1 uses `GP2` for `SDA`, and `GP3` for `SCL`.
+//! 
+//! For this demo to function you must connect the `SDA` signals (`GP0` and `GP2`) to each other using wires.
+//! You must also connect the `SCL` signals (`GP1` and `GP3`) to each other.
+//! 
+//! A pull up resistor (to 3.3V, which is available on pin `36`) is required on SCL & SDA lines in order to reach the expected 1MHz. Although it
 //! depends on the hardware context (wire length, impedance & capacitance), a typical value of 2KOhm
 //! should generally work fine.
+//! 
+//! If you do not connect the resistor and instead use the internal pull-ups on the I2C pins, you may need to lower the I2C frequency to avoid transmission errors.
 #![no_std]
 #![no_main]
 #![feature(type_alias_impl_trait)]
