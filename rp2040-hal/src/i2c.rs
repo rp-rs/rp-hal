@@ -42,6 +42,9 @@
 //!
 //! See [examples/i2c.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/i2c.rs)
 //! for a complete example
+
+use core::{marker::PhantomData, ops::Deref};
+
 use crate::{
     gpio::pin::bank0::{
         BankPinId, Gpio0, Gpio1, Gpio10, Gpio11, Gpio12, Gpio13, Gpio14, Gpio15, Gpio16, Gpio17,
@@ -52,11 +55,13 @@ use crate::{
     resets::SubsystemReset,
     typelevel::Sealed,
 };
-#[cfg(feature = "eh1_0_alpha")]
-use eh1_0_alpha::i2c::blocking as eh1;
 use embedded_time::rate::Hertz;
-use hal::blocking::i2c::{Read, Write, WriteRead};
-use rp2040_pac::{I2C0, I2C1, RESETS};
+use pac::{i2c0::RegisterBlock as I2CBlock, I2C0, I2C1, RESETS};
+
+/// Controller implementaion
+pub mod controller;
+/// Peripheral implementation
+pub mod peripheral;
 
 /// I2C error
 #[non_exhaustive]
@@ -64,14 +69,14 @@ use rp2040_pac::{I2C0, I2C1, RESETS};
 pub enum Error {
     /// I2C abort with error
     Abort(u32),
-    /// User passed in a read buffer that was 0 or >255 length
-    InvalidReadBufferLength(usize),
-    /// User passed in a write buffer that was 0 or >255 length
-    InvalidWriteBufferLength(usize),
+    /// User passed in a read buffer that was 0 length
+    InvalidReadBufferLength,
+    /// User passed in a write buffer that was 0 length
+    InvalidWriteBufferLength,
     /// Target i2c address is out of range
-    AddressOutOfRange(u8),
+    AddressOutOfRange(u16),
     /// Target i2c address is reserved
-    AddressReserved(u8),
+    AddressReserved(u16),
 }
 
 /// SCL pin
@@ -116,22 +121,100 @@ impl SclPin<I2C0> for Gpio21 {}
 impl SdaPin<I2C1> for Gpio26 {}
 impl SclPin<I2C1> for Gpio27 {}
 
-/// I2C peripheral operating in master mode
-pub struct I2C<I2C, Pins> {
+/// Operational mode of the I2C peripheral.
+pub trait I2CMode: Sealed {
+    /// Indicates whether this mode is Controller or Peripheral.
+    const IS_CONTROLLER: bool;
+}
+/// Marker for an I2C peripheral operating as a controller.
+pub enum Controller {}
+impl Sealed for Controller {}
+impl I2CMode for Controller {
+    const IS_CONTROLLER: bool = true;
+}
+/// Marker for an I2C peripheral operating as a peripehral.
+pub enum Peripheral {}
+impl Sealed for Peripheral {}
+impl I2CMode for Peripheral {
+    const IS_CONTROLLER: bool = false;
+}
+
+/// I2C peripheral
+pub struct I2C<I2C, Pins, Mode = Controller> {
     i2c: I2C,
     pins: Pins,
+    mode: PhantomData<Mode>,
 }
 
 const TX_FIFO_SIZE: u8 = 16;
+const RX_FIFO_SIZE: u8 = 16;
 
-fn i2c_reserved_addr(addr: u8) -> bool {
+fn i2c_reserved_addr(addr: u16) -> bool {
     (addr & 0x78) == 0 || (addr & 0x78) == 0x78
+}
+
+impl<Block, Sda, Scl, Mode> I2C<Block, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>), Mode>
+where
+    Block: SubsystemReset + Deref<Target = I2CBlock>,
+    Sda: PinId + BankPinId,
+    Scl: PinId + BankPinId,
+    Mode: I2CMode,
+{
+    /// Releases the I2C peripheral and associated pins
+    #[allow(clippy::type_complexity)]
+    pub fn free(
+        self,
+        resets: &mut RESETS,
+    ) -> (Block, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)) {
+        self.i2c.reset_bring_down(resets);
+
+        (self.i2c, self.pins)
+    }
+}
+
+impl<Block: Deref<Target = I2CBlock>, PINS, Mode> I2C<Block, PINS, Mode> {
+    /// Number of bytes currently in the RX FIFO
+    #[inline]
+    pub fn rx_fifo_used(&self) -> u8 {
+        self.i2c.ic_rxflr.read().rxflr().bits()
+    }
+
+    /// Remaining capacity in the RX FIFO
+    #[inline]
+    pub fn rx_fifo_free(&self) -> u8 {
+        RX_FIFO_SIZE - self.rx_fifo_used()
+    }
+
+    /// RX FIFO is empty
+    #[inline]
+    pub fn rx_fifo_empty(&self) -> bool {
+        self.rx_fifo_used() == 0
+    }
+
+    /// Number of bytes currently in the TX FIFO
+    #[inline]
+    pub fn tx_fifo_used(&self) -> u8 {
+        self.i2c.ic_txflr.read().txflr().bits()
+    }
+
+    /// Remaining capacity in the TX FIFO
+    #[inline]
+    pub fn tx_fifo_free(&self) -> u8 {
+        TX_FIFO_SIZE - self.tx_fifo_used()
+    }
+
+    /// TX FIFO is at capacity
+    #[inline]
+    pub fn tx_fifo_full(&self) -> bool {
+        self.tx_fifo_free() == 0
+    }
 }
 
 macro_rules! hal {
     ($($I2CX:ident: ($i2cX:ident),)+) => {
         $(
-            impl<Sda: PinId + BankPinId, Scl: PinId + BankPinId> I2C<$I2CX, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)> {
+            impl<Sda: PinId + BankPinId, Scl: PinId + BankPinId>
+                I2C<$I2CX, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)> {
                 /// Configures the I2C peripheral to work in master mode
                 pub fn $i2cX<F, SystemF>(
                     i2c: $I2CX,
@@ -146,385 +229,12 @@ macro_rules! hal {
                     Scl: SclPin<$I2CX>,
                     SystemF: Into<Hertz<u32>>,
                 {
-                    let freq = freq.into().0;
-                    assert!(freq <= 1_000_000);
-                    assert!(freq > 0);
-                    let freq = freq as u32;
-
-                    i2c.reset_bring_down(resets);
-                    i2c.reset_bring_up(resets);
-
-                    i2c.ic_enable.write(|w| w.enable().disabled());
-
-                    i2c.ic_con.modify(|_,w| {
-                        w.speed().fast();
-                        w.master_mode().enabled();
-                        w.ic_slave_disable().slave_disabled();
-                        w.ic_restart_en().enabled();
-                        w.tx_empty_ctrl().enabled()
-                    });
-
-                    i2c.ic_tx_tl.write(|w| unsafe { w.tx_tl().bits(0) });
-                    i2c.ic_rx_tl.write(|w| unsafe { w.rx_tl().bits(0) });
-
-                    i2c.ic_dma_cr.write(|w| {
-                        w.tdmae().enabled();
-                        w.rdmae().enabled()
-                    });
-
-                    let freq_in = system_clock.into().0;
-
-                    // There are some subtleties to I2C timing which we are completely ignoring here
-                    // See: https://github.com/raspberrypi/pico-sdk/blob/bfcbefafc5d2a210551a4d9d80b4303d4ae0adf7/src/rp2_common/hardware_i2c/i2c.c#L69
-                    let period = (freq_in + freq / 2) / freq;
-                    let lcnt = period * 3 / 5; // oof this one hurts
-                    let hcnt = period - lcnt;
-
-                    // Check for out-of-range divisors:
-                    assert!(hcnt <= 0xffff);
-                    assert!(lcnt <= 0xffff);
-                    assert!(hcnt >= 8);
-                    assert!(lcnt >= 8);
-
-                    // Per I2C-bus specification a device in standard or fast mode must
-                    // internally provide a hold time of at least 300ns for the SDA signal to
-                    // bridge the undefined region of the falling edge of SCL. A smaller hold
-                    // time of 120ns is used for fast mode plus.
-                    let sda_tx_hold_count = if freq < 1000000 {
-                        // sda_tx_hold_count = freq_in [cycles/s] * 300ns * (1s / 1e9ns)
-                        // Reduce 300/1e9 to 3/1e7 to avoid numbers that don't fit in uint.
-                        // Add 1 to avoid division truncation.
-                        ((freq_in * 3) / 10000000) + 1
-                    } else {
-                        // sda_tx_hold_count = freq_in [cycles/s] * 120ns * (1s / 1e9ns)
-                        // Reduce 120/1e9 to 3/25e6 to avoid numbers that don't fit in uint.
-                        // Add 1 to avoid division truncation.
-                        ((freq_in * 3) / 25000000) + 1
-                    };
-                    assert!(sda_tx_hold_count <= lcnt - 2);
-
-                    unsafe {
-                        i2c.ic_fs_scl_hcnt
-                            .write(|w| w.ic_fs_scl_hcnt().bits(hcnt as u16));
-                        i2c.ic_fs_scl_lcnt
-                            .write(|w| w.ic_fs_scl_lcnt().bits(lcnt as u16));
-                        i2c.ic_fs_spklen.write(|w| {
-                            w.ic_fs_spklen()
-                                .bits(if lcnt < 16 { 1 } else { (lcnt / 16) as u8 })
-                        });
-                        i2c.ic_sda_hold
-                            .modify(|_r,w| w.ic_sda_tx_hold().bits(sda_tx_hold_count as u16));
-                    }
-
-                    i2c.ic_enable.write(|w| w.enable().enabled());
-
-                    I2C { i2c, pins: (sda_pin, scl_pin) }
-                }
-
-                /// Releases the I2C peripheral and associated pins
-                pub fn free(self) -> ($I2CX, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)) {
-                    (self.i2c, self.pins)
+                    Self::new_controller(i2c, sda_pin, scl_pin, freq, resets, system_clock)
                 }
             }
-
-            impl<PINS> I2C<$I2CX, PINS> {
-                /// Number of bytes currently in the TX FIFO
-                #[inline]
-                fn tx_fifo_used(&self) -> u8 {
-                    self.i2c.ic_txflr.read().txflr().bits()
-                }
-
-                /// Remaining capacity in the TX FIFO
-                #[inline]
-                fn tx_fifo_free(&self) -> u8 {
-                    TX_FIFO_SIZE - self.tx_fifo_used()
-                }
-
-                /// TX FIFO is at capacity
-                #[inline]
-                fn tx_fifo_full(&self) -> bool {
-                    self.tx_fifo_free() == 0
-                }
-            }
-
-            impl<PINS> Write for I2C<$I2CX, PINS> {
-                type Error = Error;
-
-                fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Error> {
-                    // TODO support transfers of more than 255 bytes
-                    if (bytes.len() > 255 || bytes.len() == 0) {
-                        return Err(Error::InvalidWriteBufferLength(bytes.len()));
-                    } else if addr >= 0x80 {
-                        return Err(Error::AddressOutOfRange(addr));
-                    } else if i2c_reserved_addr(addr) {
-                        return Err(Error::AddressReserved(addr));
-                    }
-
-                    self.i2c.ic_enable.write(|w| w.enable().disabled());
-                    self.i2c
-                        .ic_tar
-                        .write(|w| unsafe { w.ic_tar().bits(addr as u16) });
-                    self.i2c.ic_enable.write(|w| w.enable().enabled());
-
-                    let mut abort = false;
-                    let mut abort_reason = 0;
-
-                    for (i, byte) in bytes.iter().enumerate() {
-                        let last = i == bytes.len() - 1;
-
-                        self.i2c.ic_data_cmd.write(|w| {
-                            if last {
-                                w.stop().enable();
-                            } else {
-                                w.stop().disable();
-                            }
-                            unsafe { w.dat().bits(*byte) }
-                        });
-
-                        // Wait until the transmission of the address/data from the internal
-                        // shift register has completed. For this to function correctly, the
-                        // TX_EMPTY_CTRL flag in IC_CON must be set. The TX_EMPTY_CTRL flag
-                        // was set in i2c_init.
-                        while self.i2c.ic_raw_intr_stat.read().tx_empty().is_inactive() {}
-
-                        abort_reason = self.i2c.ic_tx_abrt_source.read().bits();
-                        if abort_reason != 0 {
-                            // Note clearing the abort flag also clears the reason, and
-                            // this instance of flag is clear-on-read! Note also the
-                            // IC_CLR_TX_ABRT register always reads as 0.
-                            self.i2c.ic_clr_tx_abrt.read().clr_tx_abrt();
-                            abort = true;
-                        }
-
-                        if abort || last {
-                            // If the transaction was aborted or if it completed
-                            // successfully wait until the STOP condition has occured.
-
-                            while self.i2c.ic_raw_intr_stat.read().stop_det().is_inactive() {}
-
-                            self.i2c.ic_clr_stop_det.read().clr_stop_det();
-                        }
-
-                        // Note the hardware issues a STOP automatically on an abort condition.
-                        // Note also the hardware clears RX FIFO as well as TX on abort,
-                        // ecause we set hwparam IC_AVOID_RX_FIFO_FLUSH_ON_TX_ABRT to 0.
-                        if abort {
-                            break;
-                        }
-                    }
-
-                    if abort {
-                        Err(Error::Abort(abort_reason))
-                    } else {
-                        Ok(())
-                    }
-                }
-            }
-
-            impl<PINS> WriteRead for I2C<$I2CX, PINS> {
-                type Error = Error;
-
-                fn write_read(&mut self, addr: u8, bytes: &[u8], buffer: &mut [u8]) -> Result<(), Error> {
-                    // TODO support transfers of more than 255 bytes
-                    if (bytes.len() > 255 || bytes.len() == 0) {
-                        return Err(Error::InvalidWriteBufferLength(bytes.len()));
-                    } else if (buffer.len() > 255 || buffer.len() == 0) {
-                        return Err(Error::InvalidReadBufferLength(buffer.len()));
-                    } else if addr >= 0x80 {
-                        return Err(Error::AddressOutOfRange(addr));
-                    } else if i2c_reserved_addr(addr) {
-                        return Err(Error::AddressReserved(addr));
-                    }
-
-                    self.i2c.ic_enable.write(|w| w.enable().disabled());
-                    self.i2c
-                        .ic_tar
-                        .write(|w| unsafe { w.ic_tar().bits(addr as u16) });
-                    self.i2c.ic_enable.write(|w| w.enable().enabled());
-
-                    let mut abort = false;
-                    let mut abort_reason = 0;
-
-                    for byte in bytes {
-                        self.i2c.ic_data_cmd.write(|w| {
-                            w.stop().disable();
-                            unsafe { w.dat().bits(*byte) }
-                        });
-
-                        // Wait until the transmission of the address/data from the internal
-                        // shift register has completed. For this to function correctly, the
-                        // TX_EMPTY_CTRL flag in IC_CON must be set. The TX_EMPTY_CTRL flag
-                        // was set in i2c_init.
-                        while self.i2c.ic_raw_intr_stat.read().tx_empty().is_inactive() {}
-
-                        abort_reason = self.i2c.ic_tx_abrt_source.read().bits();
-                        if abort_reason != 0 {
-                            // Note clearing the abort flag also clears the reason, and
-                            // this instance of flag is clear-on-read! Note also the
-                            // IC_CLR_TX_ABRT register always reads as 0.
-                            self.i2c.ic_clr_tx_abrt.read().clr_tx_abrt();
-                            abort = true;
-                        }
-
-                        if abort {
-                            // If the transaction was aborted or if it completed
-                            // successfully wait until the STOP condition has occured.
-
-                            while self.i2c.ic_raw_intr_stat.read().stop_det().is_inactive() {}
-
-                            self.i2c.ic_clr_stop_det.read().clr_stop_det();
-                        }
-
-                        // Note the hardware issues a STOP automatically on an abort condition.
-                        // Note also the hardware clears RX FIFO as well as TX on abort,
-                        // ecause we set hwparam IC_AVOID_RX_FIFO_FLUSH_ON_TX_ABRT to 0.
-                        if abort {
-                            break;
-                        }
-                    }
-
-                    if abort {
-                        return Err(Error::Abort(abort_reason));
-                    }
-
-                    let buffer_len = buffer.len();
-                    for (i, byte) in buffer.iter_mut().enumerate() {
-                        let first = i == 0;
-                        let last = i == buffer_len - 1;
-
-                        // wait until there is space in the FIFO to write the next byte
-                        while self.tx_fifo_full()  {}
-
-                        self.i2c.ic_data_cmd.write(|w| {
-                            if first {
-                                w.restart().enable();
-                            } else {
-                                w.restart().disable();
-                            }
-
-                            if last {
-                                w.stop().enable();
-                            } else {
-                                w.stop().disable();
-                            }
-
-                            w.cmd().read()
-                        });
-
-                        while !abort && self.i2c.ic_rxflr.read().bits() == 0 {
-                            abort_reason = self.i2c.ic_tx_abrt_source.read().bits();
-                            abort = self.i2c.ic_clr_tx_abrt.read().bits() > 0;
-                        }
-
-                        if abort {
-                            break;
-                        }
-
-                        *byte = self.i2c.ic_data_cmd.read().dat().bits();
-                    }
-
-                    if abort {
-                        Err(Error::Abort(abort_reason))
-                    } else {
-                        Ok(())
-                    }
-                }
-            }
-
-            impl<PINS> Read for I2C<$I2CX, PINS> {
-                type Error = Error;
-
-                fn read(&mut self, addr: u8, buffer: &mut [u8]) -> Result<(), Error> {
-                    // TODO support transfers of more than 255 bytes
-                    if (buffer.len() > 255 || buffer.len() == 0) {
-                        return Err(Error::InvalidReadBufferLength(buffer.len()));
-                    } else if addr >= 0x80 {
-                        return Err(Error::AddressOutOfRange(addr));
-                    } else if i2c_reserved_addr(addr) {
-                        return Err(Error::AddressReserved(addr));
-                    }
-
-                    self.i2c.ic_enable.write(|w| w.enable().disabled());
-                    self.i2c
-                        .ic_tar
-                        .write(|w| unsafe { w.ic_tar().bits(addr as u16) });
-                    self.i2c.ic_enable.write(|w| w.enable().enabled());
-
-                    let mut abort = false;
-                    let mut abort_reason = 0;
-
-                    let lastindex = buffer.len() -1;
-                    for (i, byte) in buffer.iter_mut().enumerate() {
-                        let first = i == 0;
-                        let last = i == lastindex;
-
-                        // wait until there is space in the FIFO to write the next byte
-                        while self.tx_fifo_full()  {}
-
-                        self.i2c.ic_data_cmd.write(|w| {
-                            if first {
-                                w.restart().enable();
-                            } else {
-                                w.restart().disable();
-                            }
-
-                            if last {
-                                w.stop().enable();
-                            } else {
-                                w.stop().disable();
-                            }
-
-                            w.cmd().read()
-                        });
-
-                        while !abort && self.i2c.ic_rxflr.read().bits() == 0 {
-                            abort_reason = self.i2c.ic_tx_abrt_source.read().bits();
-                            abort = self.i2c.ic_clr_tx_abrt.read().bits() > 0;
-                        }
-
-                        if abort {
-                            break;
-                        }
-
-                        *byte = self.i2c.ic_data_cmd.read().dat().bits();
-                    }
-
-                    if abort {
-                        Err(Error::Abort(abort_reason))
-                    } else {
-                        Ok(())
-                    }
-                }
-            }
-
-            #[cfg(feature = "eh1_0_alpha")]
-            impl<PINS> eh1::Write for I2C<$I2CX, PINS> {
-                type Error = Error;
-
-                fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Error> {
-                    Write::write(self, addr, bytes)
-                }
-            }
-            #[cfg(feature = "eh1_0_alpha")]
-            impl<PINS> eh1::WriteRead for I2C<$I2CX, PINS> {
-                type Error = Error;
-                fn write_read(&mut self, addr: u8, bytes: &[u8], buffer: &mut [u8]) -> Result<(), Error> {
-                        WriteRead::write_read(self, addr, bytes, buffer)
-                }
-            }
-            #[cfg(feature = "eh1_0_alpha")]
-            impl<PINS> eh1::Read for I2C<$I2CX, PINS> {
-                type Error = Error;
-
-                fn read(&mut self, addr: u8, buffer: &mut [u8]) -> Result<(), Error> {
-                    Read::read(self, addr, buffer)
-                }
-            }
-
-         )+
+        )+
     }
 }
-
 hal! {
     I2C0: (i2c0),
     I2C1: (i2c1),
