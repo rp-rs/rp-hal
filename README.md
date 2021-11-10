@@ -223,7 +223,7 @@ More details can be found in the [Project Template](https://github.com/rp-rs/rp2
 *Step 1* - Install [`elf2uf2-rs`](https://github.com/JoNil/elf2uf2-rs):
 
 ```console
-$ cargo install elf2uf2-rs
+$ cargo install elf2uf2-rs --locked
 ```
 
 *Step 2* - Make sure your .cargo/config contains the following (it should by
