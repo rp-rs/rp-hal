@@ -22,7 +22,7 @@ rp2040-boot2 = "0.2"
 nb = "1.0.0"
 smart-leds = "0.3.0"
 pio = { git = "https://github.com/rp-rs/pio-rs.git", branch = "main" }
-ws2812-pio = { git = "https://github.com/ithinuel/ws2812-pio-rs" }
+ws2812-pio = { git = "https://github.com/ithinuel/ws2812-pio-rs", rev = "e1cdd475de20697aaa0bc58803512927094f0326" }
 
 [features]
 default = ["rt"]
