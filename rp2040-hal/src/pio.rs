@@ -96,6 +96,8 @@ impl<P: PIOExt> core::fmt::Debug for PIO<P> {
 // `StateMachine`.
 unsafe impl<P: PIOExt + Send> Send for PIO<P> {}
 
+// Safety: `PIO` is marked Send so ensure all accesses remain atomic and no new concurrent accesses
+// are added.
 impl<P: PIOExt> PIO<P> {
     /// Free this instance.
     ///
@@ -128,6 +130,8 @@ impl<P: PIOExt> PIO<P> {
     ///
     /// The PIO has 8 IRQ flags, of which 4 are visible to the host processor. Each bit of `flags` corresponds to one of
     /// the IRQ flags.
+    // Safety: PIOExt provides exclusive access to the pio.irq register, this must be preserved to
+    // satisfy Send trait.
     pub fn clear_irq(&self, flags: u8) {
         self.pio.irq.write(|w| unsafe { w.irq().bits(flags) });
     }
@@ -136,6 +140,8 @@ impl<P: PIOExt> PIO<P> {
     ///
     /// The PIO has 8 IRQ flags, of which 4 are visible to the host processor. Each bit of `flags` corresponds to one of
     /// the IRQ flags.
+    // Safety: PIOExt provides exclusive access to the pio.irq register, this must be preserved to
+    // satisfy Send trait.
     pub fn force_irq(&self, flags: u8) {
         self.pio
             .irq_force
@@ -171,6 +177,7 @@ impl<P: PIOExt> PIO<P> {
     /// The function returns a handle to the installed program that can be used to configure a
     /// `StateMachine` via `PIOBuilder`. The program can be uninstalled to free instruction memory
     /// via `uninstall()` once the state machine using the program has been uninitialized.
+    // Safety: PIOExt is marked send and should be the only object allowed to access pio.instr_mem
     pub fn install(
         &mut self,
         p: &Program<{ pio::RP2040_MAX_PROGRAM_SIZE }>,
@@ -410,6 +417,8 @@ pub struct UninitStateMachine<SM: ValidStateMachine> {
 // Safety: `UninitStateMachine` only uses atomic accesses to shared registers.
 unsafe impl<SM: ValidStateMachine + Send> Send for UninitStateMachine<SM> {}
 
+// Safety: `UninitStateMachine` is marked Send so ensure all accesses remain atomic and no new
+// concurrent accesses are added.
 impl<SM: ValidStateMachine> UninitStateMachine<SM> {
     /// Start and stop the state machine.
     fn set_enabled(&mut self, enabled: bool) {
@@ -432,6 +441,7 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
         self.set_ctrl_bits(1 << (SM::id() + 8));
     }
 
+    // Safety: All ctrl set access should go through this function to ensure atomic access.
     fn set_ctrl_bits(&mut self, bits: u32) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
@@ -439,6 +449,7 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
         }
     }
 
+    // Safety: All ctrl clear access should go through this function to ensure atomic access.
     fn clear_ctrl_bits(&mut self, bits: u32) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
@@ -446,6 +457,7 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
         }
     }
 
+    // Safety: The Send trait assumes this is the only write to sm_clkdiv
     fn set_clock_divisor(&self, divisor: f32) {
         // sm frequency = clock freq / (CLKDIV_INT + CLKDIV_FRAC / 256)
         let int = divisor as u16;
@@ -462,6 +474,9 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
     }
 
     /// Set the current instruction.
+    // Safety: The Send trait assumes this is the only write to sm_instr while uninitialized. The
+    // initialized `StateMachine` may also use this register. The `UnintStateMachine` is consumed
+    // by `PIOBuilder.build` to create `StateMachine`
     fn set_instruction(&mut self, instruction: u16) {
         self.sm()
             .sm_instr
@@ -516,9 +531,11 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     }
 }
 
-/// Safety: All shared register accesses are atomic.
+// Safety: All shared register accesses are atomic.
 unsafe impl<SM: ValidStateMachine + Send, State> Send for StateMachine<SM, State> {}
 
+// Safety: `StateMachine` is marked Send so ensure all accesses remain atomic and no new concurrent
+// accesses are added.
 impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
     /// Starts execution of the selected program.
     pub fn start(mut self) -> StateMachine<SM, Running> {
@@ -538,6 +555,8 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
     /// other state machines of the same PIO block.
     ///
     /// The iterator's item are pairs of `(pin_number, pin_state)`.
+    // Safety: this exclusively manages the SM resource and is created from the
+    // `UninitStateMachine` byt adding a program.
     pub fn set_pins(&mut self, pins: impl IntoIterator<Item = (u8, PinState)>) {
         let saved_ctrl = self.sm.sm().sm_pinctrl.read();
         for (pin_num, pin_state) in pins {
@@ -565,6 +584,8 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
     /// other state machines of the same PIO block.
     ///
     /// The iterator's item are pairs of `(pin_number, pin_dir)`.
+    // Safety: this exclusively manages the SM resource and is created from the
+    // `UninitStateMachine` byt adding a program.
     pub fn set_pindirs(&mut self, pindirs: impl IntoIterator<Item = (u8, PinDir)>) {
         let saved_ctrl = self.sm.sm().sm_pinctrl.read();
         for (pinnum, pin_dir) in pindirs {
@@ -679,9 +700,11 @@ pub struct Rx<SM: ValidStateMachine> {
     _phantom: core::marker::PhantomData<SM>,
 }
 
-/// Safety: All shared register access is atomic.
+// Safety: All shared register accesses are atomic.
 unsafe impl<SM: ValidStateMachine + Send> Send for Rx<SM> {}
 
+// Safety: `Rx` is marked Send so ensure all accesses remain atomic and no new concurrent accesses
+// are added.
 impl<SM: ValidStateMachine> Rx<SM> {
     fn register_block(&self) -> &pac::pio0::RegisterBlock {
         // Safety: The register is unique to this Tx instance.
@@ -701,6 +724,7 @@ impl<SM: ValidStateMachine> Rx<SM> {
     }
 
     /// Enable/Disable the autopush feature of the state machine.
+    // Safety: This register is read by Tx, this is the only write.
     pub fn enable_autopush(&mut self, enable: bool) {
         self.register_block().sm[SM::id()]
             .sm_shiftctrl
@@ -719,9 +743,11 @@ pub struct Tx<SM: ValidStateMachine> {
     _phantom: core::marker::PhantomData<SM>,
 }
 
-/// Safety: All shared register access is atomic.
+// Safety: All shared register accesses are atomic.
 unsafe impl<SM: ValidStateMachine + Send> Send for Tx<SM> {}
 
+// Safety: `Tx` is marked Send so ensure all accesses remain atomic and no new concurrent accesses
+// are added.
 impl<SM: ValidStateMachine> Tx<SM> {
     fn register_block(&self) -> &pac::pio0::RegisterBlock {
         // Safety: The register is unique to this Tx instance.
@@ -760,6 +786,7 @@ impl<SM: ValidStateMachine> Tx<SM> {
     pub fn clear_stalled_flag(&self) {
         let mask = 1 << SM::id();
 
+        // Safety: These bits are WC, only the one corresponding to this SM is set.
         self.register_block()
             .fdebug
             .write(|w| unsafe { w.txstall().bits(mask) });
@@ -801,6 +828,8 @@ impl<SM: ValidStateMachine> Tx<SM> {
             }
         }
         .encode();
+        // Safety: The only other place this register is written is
+        // `UninitStatemachine.set_instruction`, `Tx` is only created after init.
         let mask = 1 << SM::id();
         while self.register_block().fstat.read().txempty().bits() & mask != mask {
             self.register_block().sm[SM::id()]
@@ -821,6 +850,10 @@ pub struct Interrupt<P: PIOExt> {
 // Safety: `Interrupt` provides exclusive access to interrupt registers.
 unsafe impl<P: PIOExt + Send> Send for Interrupt<P> {}
 
+// Safety: `Interrupt` is marked Send so ensure all accesses remain atomic and no new concurrent
+// accesses are added.
+// `Interrupt` provides exclusive access to `irq_intf` to `irq_inte` for it's state machine, this
+// must remain true to satisfy Send.
 impl<P: PIOExt> Interrupt<P> {
     /// Enable interrupts raised by state machines.
     ///
