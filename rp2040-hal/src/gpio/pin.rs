@@ -307,7 +307,21 @@ macro_rules! function {
     };
 }
 
-function!(Spi, Xip, Uart, I2C, Pwm, Pio0, Pio1, Clock, UsbAux);
+function!(Spi, Xip, Uart, I2C, Pwm, Clock, UsbAux);
+
+impl Sealed for pac::PIO0 {}
+impl FunctionConfig for pac::PIO0 {
+    const DYN: DynFunction = DynFunction::Pio0;
+}
+/// Type-level variant of [`PinMode`] for alternate peripheral function `pac::PIO0`
+pub type FunctionPio0 = Function<pac::PIO0>;
+
+impl Sealed for pac::PIO1 {}
+impl FunctionConfig for pac::PIO1 {
+    const DYN: DynFunction = DynFunction::Pio1;
+}
+/// Type-level variant of [`PinMode`] for alternate peripheral function `pac::PIO1`
+pub type FunctionPio1 = Function<pac::PIO1>;
 
 //==============================================================================
 //  Pin modes
@@ -977,7 +991,7 @@ macro_rules! gpio {
                     }
                 }
 
-                $( impl<I: PinId + BankPinId> super::ValidPinMode<I> for super::Function<super::$Func> {} )+
+                $( impl<I: PinId + BankPinId> super::ValidPinMode<I> for super::[<Function $Func>] {} )+
             }
         }
     }
