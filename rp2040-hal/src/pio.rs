@@ -11,7 +11,7 @@ const PIO_INSTRUCTION_COUNT: usize = 32;
 
 /// PIO Instance
 pub trait PIOExt:
-    core::ops::Deref<Target = rp2040_pac::pio0::RegisterBlock> + SubsystemReset + Sized
+    core::ops::Deref<Target = rp2040_pac::pio0::RegisterBlock> + SubsystemReset + Sized + Send
 {
     /// Create a new PIO wrapper and split the state machines into individual objects.
     #[allow(clippy::type_complexity)] // Required for symmetry with PIO::free().
@@ -94,7 +94,7 @@ impl<P: PIOExt> core::fmt::Debug for PIO<P> {
 
 // Safety: `PIO` only provides access to those registers which are not directly used by
 // `StateMachine`.
-unsafe impl<P: PIOExt + Send> Send for PIO<P> {}
+unsafe impl<P: PIOExt> Send for PIO<P> {}
 
 // Safety: `PIO` is marked Send so ensure all accesses remain atomic and no new concurrent accesses
 // are added.
@@ -315,7 +315,7 @@ impl<P: PIOExt> InstalledProgram<P> {
 }
 
 /// State machine identifier (without a specified PIO block).
-pub trait StateMachineIndex {
+pub trait StateMachineIndex: Send {
     /// Numerical index of the state machine (0 to 3).
     fn id() -> usize;
 }
@@ -892,7 +892,7 @@ pub struct Interrupt<P: PIOExt> {
 }
 
 // Safety: `Interrupt` provides exclusive access to interrupt registers.
-unsafe impl<P: PIOExt + Send> Send for Interrupt<P> {}
+unsafe impl<P: PIOExt> Send for Interrupt<P> {}
 
 // Safety: `Interrupt` is marked Send so ensure all accesses remain atomic and no new concurrent
 // accesses are added.
