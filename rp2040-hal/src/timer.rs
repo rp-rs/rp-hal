@@ -3,12 +3,14 @@
 
 use embedded_time::duration::Microseconds;
 
-use crate::pac::{RESETS, TIMER};
+use crate::pac::{timer, RESETS, TIMER};
 use crate::resets::SubsystemReset;
+use core::marker::PhantomData;
 
 /// Timer peripheral
 pub struct Timer {
     timer: TIMER,
+    alarms: [bool; 4],
 }
 
 // Safety: All access is read-only.
@@ -18,7 +20,10 @@ impl Timer {
     /// Create a new [`Timer`]
     pub fn new(timer: TIMER, resets: &mut RESETS) -> Self {
         timer.reset_bring_up(resets);
-        Self { timer }
+        Self {
+            timer,
+            alarms: [true; 4],
+        }
     }
 
     /// Get the current counter value.
@@ -45,6 +50,46 @@ impl Timer {
             timer: self,
             period: Microseconds::new(0),
             next_end: None,
+        }
+    }
+
+    /// Retrieve a reference to alarm 0. Will only return a value the first time this is called
+    pub fn alarm_0(&mut self) -> Option<Alarm0> {
+        if self.alarms[0] {
+            self.alarms[0] = false;
+            Some(Alarm0(PhantomData))
+        } else {
+            None
+        }
+    }
+
+    /// Retrieve a reference to alarm 1. Will only return a value the first time this is called
+    pub fn alarm_1(&mut self) -> Option<Alarm1> {
+        if self.alarms[1] {
+            self.alarms[1] = false;
+            Some(Alarm1(PhantomData))
+        } else {
+            None
+        }
+    }
+
+    /// Retrieve a reference to alarm 2. Will only return a value the first time this is called
+    pub fn alarm_2(&mut self) -> Option<Alarm2> {
+        if self.alarms[2] {
+            self.alarms[2] = false;
+            Some(Alarm2(PhantomData))
+        } else {
+            None
+        }
+    }
+
+    /// Retrieve a reference to alarm 3. Will only return a value the first time this is called
+    pub fn alarm_3(&mut self) -> Option<Alarm3> {
+        if self.alarms[3] {
+            self.alarms[3] = false;
+            Some(Alarm3(PhantomData))
+        } else {
+            None
         }
     }
 }
@@ -138,3 +183,90 @@ impl eh1_0_alpha::timer::nb::Cancel for CountDown<'_> {
         }
     }
 }
+
+macro_rules! impl_alarm {
+    ($name:ident  { rb: $timer_alarm:ident, int: $int_alarm:ident, int_name: $int_name:tt, armed_bit_mask: $armed_bit_mask: expr }) => {
+        /// An alarm that can be used to schedule events in the future. Alarms can also be configured to trigger interrupts.
+        pub struct $name(PhantomData<()>);
+
+        impl $name {
+            #[inline]
+            fn timer() -> &'static timer::RegisterBlock {
+                // # Safety
+                //
+                // This alarm should only have 1 instance available. This alarm
+                // only changes fields that are relevant to this alarm, and does
+                // not modify any other fields. Therefor it's safe to get a reference
+                // to this pointer.
+                unsafe { &*TIMER::ptr() }
+            }
+
+            /// Clear the interrupt flag. This should be called after interrupt `
+            #[doc = $int_name]
+            /// ` is called.
+            ///
+            /// The interrupt is unable to trigger a 2nd time until this interrupt is cleared.
+            pub fn clear_interrupt(&mut self) {
+                Self::timer().intr.modify(|_, w| w.$int_alarm().set_bit());
+            }
+
+            /// Enable this alarm to trigger an interrupt. This alarm will trigger `
+            #[doc = $int_name]
+            /// `.
+            ///
+            /// After this interrupt is triggered, make sure to clear the interrupt with [clear_interrupt].
+            ///
+            /// [clear_interrupt]: #method.clear_interrupt
+            pub fn enable_interrupt(&mut self) {
+                Self::timer().inte.modify(|_, w| w.$int_alarm().set_bit());
+            }
+
+            /// Schedule the alarm to be finished after `countdown`. If [enable_interrupt] is called, this will trigger interrupt `
+            #[doc = $int_name]
+            /// ` whenever this time elapses.
+            ///
+            /// [enable_interrupt]: #method.enable_interrupt
+            pub fn schedule<TIME: Into<Microseconds>>(&mut self, countdown: TIME) {
+                let duration = countdown.into().0;
+                let target_time = Self::timer().timelr.read().bits().wrapping_add(duration);
+                Self::timer()
+                    .$timer_alarm
+                    .write(|w| unsafe { w.bits(target_time) });
+            }
+
+            /// Return true if this alarm is finished.
+            pub fn finished(&self) -> bool {
+                let bits: u32 = Self::timer().armed.read().bits();
+                (bits & $armed_bit_mask) > 0
+            }
+        }
+    };
+}
+
+impl_alarm!(Alarm0 {
+    rb: alarm0,
+    int: alarm_0,
+    int_name: "IRQ_TIMER_0",
+    armed_bit_mask: 0b0001
+});
+
+impl_alarm!(Alarm1 {
+    rb: alarm1,
+    int: alarm_1,
+    int_name: "IRQ_TIMER_1",
+    armed_bit_mask: 0b0010
+});
+
+impl_alarm!(Alarm2 {
+    rb: alarm2,
+    int: alarm_2,
+    int_name: "IRQ_TIMER_2",
+    armed_bit_mask: 0b0100
+});
+
+impl_alarm!(Alarm3 {
+    rb: alarm3,
+    int: alarm_3,
+    int_name: "IRQ_TIMER_3",
+    armed_bit_mask: 0b1000
+});
