@@ -711,6 +711,28 @@ impl<SM: ValidStateMachine> Rx<SM> {
         unsafe { &*self.block }
     }
 
+    /// Gets the FIFO's address.
+    ///
+    /// This is useful if you want to DMA from this peripheral.
+    ///
+    /// NB: You are responsible for using the pointer correctly and not
+    /// underflowing the buffer.
+    pub fn fifo_address(&self) -> *const u32 {
+        self.register_block().rxf[SM::id()].as_ptr()
+    }
+
+    /// Gets the FIFO's `DREQ` value.
+    ///
+    /// This is a value between 0 and 39. Each FIFO on each state machine on
+    /// each PIO has a unique value.
+    pub fn dreq_value(&self) -> u8 {
+        if self.block as usize == 0x5020_0000usize {
+            crate::dma::DREQ_PIO0_RX0 + (SM::id() as u8)
+        } else {
+            crate::dma::DREQ_PIO1_RX0 + (SM::id() as u8)
+        }
+    }
+
     /// Get the next element from RX FIFO.
     ///
     /// Returns `None` if the FIFO is empty.
@@ -752,6 +774,28 @@ impl<SM: ValidStateMachine> Tx<SM> {
     fn register_block(&self) -> &pac::pio0::RegisterBlock {
         // Safety: The register is unique to this Tx instance.
         unsafe { &*self.block }
+    }
+
+    /// Gets the FIFO's address.
+    ///
+    /// This is useful if you want to DMA to this peripheral.
+    ///
+    /// NB: You are responsible for using the pointer correctly and not
+    /// overflowing the buffer.
+    pub fn fifo_address(&self) -> *const u32 {
+        self.register_block().txf[SM::id()].as_ptr()
+    }
+
+    /// Gets the FIFO's `DREQ` value.
+    ///
+    /// This is a value between 0 and 39. Each FIFO on each state machine on
+    /// each PIO has a unique value.
+    pub fn dreq_value(&self) -> u8 {
+        if self.block as usize == 0x5020_0000usize {
+            crate::dma::DREQ_PIO0_TX0 + (SM::id() as u8)
+        } else {
+            crate::dma::DREQ_PIO1_TX0 + (SM::id() as u8)
+        }
     }
 
     /// Write an element to TX FIFO.
