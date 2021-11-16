@@ -221,17 +221,34 @@ macro_rules! impl_alarm {
                 Self::timer().inte.modify(|_, w| w.$int_alarm().set_bit());
             }
 
+            /// Disable this alarm, preventing it from triggering an interrupt.
+            pub fn disable_interrupt(&mut self) {
+                Self::timer().inte.modify(|_, w| w.$int_alarm().clear_bit());
+            }
+
             /// Schedule the alarm to be finished after `countdown`. If [enable_interrupt] is called, this will trigger interrupt `
             #[doc = $int_name]
             /// ` whenever this time elapses.
             ///
+            /// The RP2040 has been observed to take a little while to schedule an alarm. For this reason, the minimum time that this function accepts is `10.microseconds()`
+            ///
             /// [enable_interrupt]: #method.enable_interrupt
-            pub fn schedule<TIME: Into<Microseconds>>(&mut self, countdown: TIME) {
+            pub fn schedule<TIME: Into<Microseconds>>(
+                &mut self,
+                countdown: TIME,
+            ) -> Result<(), ScheduleAlarmError> {
                 let duration = countdown.into().0;
-                let target_time = Self::timer().timelr.read().bits().wrapping_add(duration);
-                Self::timer()
-                    .$timer_alarm
-                    .write(|w| unsafe { w.bits(target_time) });
+
+                const MIN_MICROSECONDS: u32 = 10;
+                if duration < MIN_MICROSECONDS {
+                    return Err(ScheduleAlarmError::AlarmTooSoon);
+                } else {
+                    let target_time = Self::timer().timelr.read().bits().wrapping_add(duration);
+                    Self::timer()
+                        .$timer_alarm
+                        .write(|w| unsafe { w.bits(target_time) });
+                    Ok(())
+                }
             }
 
             /// Return true if this alarm is finished.
@@ -241,6 +258,14 @@ macro_rules! impl_alarm {
             }
         }
     };
+}
+
+/// Errors that can be returned from any of the `AlarmX::schedule` methods.
+#[non_exhaustive]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ScheduleAlarmError {
+    /// Alarm time is too low. Should be at least 10 microseconds.
+    AlarmTooSoon,
 }
 
 impl_alarm!(Alarm0 {
