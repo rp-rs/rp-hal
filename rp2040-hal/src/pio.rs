@@ -754,6 +754,66 @@ impl<SM: ValidStateMachine> Tx<SM> {
         unsafe { &*self.block }
     }
 
+    /// Gets the FIFO's DMA address
+    pub fn dma_address(&self) -> u32 {
+        self.register_block().txf[SM::id()].as_ptr() as usize as u32
+    }
+
+    /// Gets the FIFO's `DREQ` value.
+    ///
+    /// This is a value between 0 and 39. Each state machine on each PIO has a
+    /// unique value.
+    ///
+    /// | DREQ | DREQ Channel    |
+    /// |------|-----------------|
+    /// | 0    | DREQ_PIO0_TX0   |
+    /// | 1    | DREQ_PIO0_TX1   |
+    /// | 2    | DREQ_PIO0_TX2   |
+    /// | 3    | DREQ_PIO0_TX3   |
+    /// | 4    | DREQ_PIO0_RX0   |
+    /// | 5    | DREQ_PIO0_RX1   |
+    /// | 6    | DREQ_PIO0_RX2   |
+    /// | 7    | DREQ_PIO0_RX3   |
+    /// | 8    | DREQ_PIO1_TX0   |
+    /// | 9    | DREQ_PIO1_TX1   |
+    /// | 10   | DREQ_PIO1_TX2   |
+    /// | 11   | DREQ_PIO1_TX3   |
+    /// | 12   | DREQ_PIO1_RX0   |
+    /// | 13   | DREQ_PIO1_RX1   |
+    /// | 14   | DREQ_PIO1_RX2   |
+    /// | 15   | DREQ_PIO1_RX3   |
+    /// | 16   | DREQ_SPI0_TX    |
+    /// | 17   | DREQ_SPI0_RX    |
+    /// | 18   | DREQ_SPI1_TX    |
+    /// | 19   | DREQ_SPI1_RX    |
+    /// | 20   | DREQ_UART0_TX   |
+    /// | 21   | DREQ_UART0_RX   |
+    /// | 22   | DREQ_UART1_TX   |
+    /// | 23   | DREQ_UART1_RX   |
+    /// | 24   | DREQ_PWM_WRAP0  |
+    /// | 25   | DREQ_PWM_WRAP1  |
+    /// | 26   | DREQ_PWM_WRAP2  |
+    /// | 27   | DREQ_PWM_WRAP3  |
+    /// | 28   | DREQ_PWM_WRAP4  |
+    /// | 29   | DREQ_PWM_WRAP5  |
+    /// | 30   | DREQ_PWM_WRAP6  |
+    /// | 31   | DREQ_PWM_WRAP7  |
+    /// | 32   | DREQ_I2C0_TX    |
+    /// | 33   | DREQ_I2C0_RX    |
+    /// | 34   | DREQ_I2C1_TX    |
+    /// | 35   | DREQ_I2C1_RX    |
+    /// | 36   | DREQ_ADC        |
+    /// | 37   | DREQ_XIP_STREAM |
+    /// | 38   | DREQ_XIP_SSITX  |
+    /// | 39   | DREQ_XIP_SSIRX  |
+    pub fn dreq_value(&self) -> u8 {
+        if self.block as usize == 0x5020_0000usize {
+            SM::id() as u8
+        } else {
+            (SM::id() as u8) + 8
+        }
+    }
+
     /// Write an element to TX FIFO.
     ///
     /// Returns `true` if the value was written to FIFO, `false` otherwise.
