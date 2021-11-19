@@ -122,7 +122,7 @@ impl SioFifo {
 
     /// Read from the FIFO until it is empty, throwing the contents away.
     pub fn drain(&mut self) {
-        while let Some(_) = self.read() {
+        while self.read().is_some() {
             // Spin until FIFO empty
         }
     }
