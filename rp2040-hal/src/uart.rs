@@ -82,6 +82,18 @@ pub enum ReadErrorType {
     Framing,
 }
 
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1_0_alpha::serial::Error for ReadErrorType {
+    fn kind(&self) -> eh1_0_alpha::serial::ErrorKind {
+        match self {
+            ReadErrorType::Overrun => eh1_0_alpha::serial::ErrorKind::Overrun,
+            ReadErrorType::Break => eh1_0_alpha::serial::ErrorKind::Other,
+            ReadErrorType::Parity => eh1_0_alpha::serial::ErrorKind::Parity,
+            ReadErrorType::Framing => eh1_0_alpha::serial::ErrorKind::FrameFormat,
+        }
+    }
+}
+
 /// State of the UART Peripheral.
 pub trait State {}
 
@@ -516,6 +528,27 @@ impl<D: UartDevice> eh1::Read<u8> for UartPeripheral<Enabled, D> {
     }
 }
 
+/// Same as core::convert::Infallible, but implementing spi::Error
+///
+/// For eh 1.0.0-alpha.6, Infallible doesn't implement spi::Error,
+/// so use a locally defined type instead.
+#[cfg(feature = "eh1_0_alpha")]
+pub enum SerialInfallible {}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl core::fmt::Debug for SerialInfallible {
+    fn fmt(&self, _f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match *self {}
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1_0_alpha::serial::Error for SerialInfallible {
+    fn kind(&self) -> eh1_0_alpha::serial::ErrorKind {
+        match *self {}
+    }
+}
+
 impl<D: UartDevice> Write<u8> for UartPeripheral<Enabled, D> {
     type Error = Infallible;
 
@@ -534,7 +567,7 @@ impl<D: UartDevice> Write<u8> for UartPeripheral<Enabled, D> {
 
 #[cfg(feature = "eh1_0_alpha")]
 impl<D: UartDevice> eh1::Write<u8> for UartPeripheral<Enabled, D> {
-    type Error = Infallible;
+    type Error = SerialInfallible;
 
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
         if self.write_raw(&[word]).is_err() {
@@ -545,7 +578,10 @@ impl<D: UartDevice> eh1::Write<u8> for UartPeripheral<Enabled, D> {
     }
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
-        self.transmit_flushed()
+        self.transmit_flushed().map_err(|e| match e {
+            WouldBlock => WouldBlock,
+            Other(v) => match v {},
+        })
     }
 }
 
