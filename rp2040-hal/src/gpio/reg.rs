@@ -7,7 +7,6 @@ use super::{
 use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
 use crate::gpio::dynpin::{DynDisabled, DynFunction, DynInput, DynOutput, DynPinMode};
 use crate::pac;
-use core::ptr::read_volatile;
 
 //==============================================================================
 //  ModeFields
@@ -263,9 +262,11 @@ pub(super) unsafe trait RegisterInterface {
         let num = self.id().num as usize;
         unsafe {
             let io = &(*pac::IO_BANK0::ptr());
-            let reg = (&io.intr0).as_ptr().add(num / 8);
+            // There are four bits for each GPIO pin (one for each enumerator
+            // in the `Interrupt` enum). There are therefore eight pins per
+            // 32-bit register, and four registers in total.
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            *reg |= 1 << bit_in_reg;
+            io.intr[num >> 3].write(|w| w.bits(1 << bit_in_reg));
         }
     }
 
@@ -274,13 +275,17 @@ pub(super) unsafe trait RegisterInterface {
     fn interrupt_status(&self, interrupt: Interrupt) -> bool {
         let num = self.id().num as usize;
         unsafe {
-            let cpuid = *(pac::SIO::ptr() as *const u32);
             let io = &(*pac::IO_BANK0::ptr());
-            let reg = (&io.proc0_ints0)
-                .as_ptr()
-                .add(num / 8 + cpuid as usize * 12);
-            let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            (read_volatile(reg) & (1 << bit_in_reg)) != 0
+            let cpuid = *(pac::SIO::ptr() as *const u32);
+            // There are four bits for each GPIO pin (one for each enumerator
+            // in the `Interrupt` enum). There are therefore eight pins per
+            // 32-bit register, and four registers per CPU.
+            let bit_in_reg = ((num % 8) * 4) + (interrupt as usize);
+            if cpuid == 0 {
+                (io.proc0_ints[num >> 3].read().bits() & (1 << bit_in_reg)) != 0
+            } else {
+                (io.proc1_ints[num >> 3].read().bits() & (1 << bit_in_reg)) != 0
+            }
         }
     }
 
@@ -289,13 +294,17 @@ pub(super) unsafe trait RegisterInterface {
     fn is_interrupt_enabled(&self, interrupt: Interrupt) -> bool {
         let num = self.id().num as usize;
         unsafe {
-            let cpuid = *(pac::SIO::ptr() as *const u32);
             let io = &(*pac::IO_BANK0::ptr());
-            let reg = (&io.proc0_inte0)
-                .as_ptr()
-                .add(num / 8 + cpuid as usize * 12);
+            let cpuid = *(pac::SIO::ptr() as *const u32);
+            // There are four bits for each GPIO pin (one for each enumerator
+            // in the `Interrupt` enum). There are therefore eight pins per
+            // 32-bit register, and four registers per CPU.
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            (read_volatile(reg) & (1 << bit_in_reg)) != 0
+            if cpuid == 0 {
+                (io.proc0_inte[num >> 3].read().bits() & (1 << bit_in_reg)) != 0
+            } else {
+                (io.proc1_inte[num >> 3].read().bits() & (1 << bit_in_reg)) != 0
+            }
         }
     }
 
@@ -306,9 +315,14 @@ pub(super) unsafe trait RegisterInterface {
         unsafe {
             let cpuid = *(pac::SIO::ptr() as *const u32);
             let io = &(*pac::IO_BANK0::ptr());
-            let reg = (&io.proc0_inte0)
-                .as_ptr()
-                .add(num / 8 + cpuid as usize * 12);
+            // There are four bits for each GPIO pin (one for each enumerator
+            // in the `Interrupt` enum). There are therefore eight pins per
+            // 32-bit register, and four registers per CPU.
+            let reg = if cpuid == 0 {
+                io.proc0_inte[num >> 3].as_ptr()
+            } else {
+                io.proc1_inte[num >> 3].as_ptr()
+            };
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
             if enabled {
                 write_bitmask_set(reg, 1 << bit_in_reg);
@@ -325,11 +339,15 @@ pub(super) unsafe trait RegisterInterface {
         unsafe {
             let cpuid = *(pac::SIO::ptr() as *const u32);
             let io = &(*pac::IO_BANK0::ptr());
-            let reg = (&io.proc0_intf0)
-                .as_ptr()
-                .add(num / 8 + cpuid as usize * 12);
+            // There are four bits for each GPIO pin (one for each enumerator
+            // in the `Interrupt` enum). There are therefore eight pins per
+            // 32-bit register, and four registers per CPU.
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
-            (read_volatile(reg) & (1 << bit_in_reg)) != 0
+            if cpuid == 0 {
+                (io.proc0_intf[num >> 3].read().bits() & (1 << bit_in_reg)) != 0
+            } else {
+                (io.proc1_intf[num >> 3].read().bits() & (1 << bit_in_reg)) != 0
+            }
         }
     }
 
@@ -340,9 +358,14 @@ pub(super) unsafe trait RegisterInterface {
         unsafe {
             let cpuid = *(pac::SIO::ptr() as *const u32);
             let io = &(*pac::IO_BANK0::ptr());
-            let reg = (&io.proc0_intf0)
-                .as_ptr()
-                .add(num / 8 + cpuid as usize * 12);
+            // There are four bits for each GPIO pin (one for each enumerator
+            // in the `Interrupt` enum). There are therefore eight pins per
+            // 32-bit register, and four registers per CPU.
+            let reg = if cpuid == 0 {
+                io.proc0_intf[num >> 3].as_ptr()
+            } else {
+                io.proc1_intf[num >> 3].as_ptr()
+            };
             let bit_in_reg = num % 8 * 4 + interrupt as usize;
             if forced {
                 write_bitmask_set(reg, 1 << bit_in_reg);
