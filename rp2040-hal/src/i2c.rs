@@ -79,6 +79,31 @@ pub enum Error {
     AddressReserved(u16),
 }
 
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1_0_alpha::i2c::Error for Error {
+    fn kind(&self) -> eh1_0_alpha::i2c::ErrorKind {
+        match &self {
+            Error::Abort(v) if v & 1<<12 != 0 // ARB_LOST
+                => eh1_0_alpha::i2c::ErrorKind::ArbitrationLoss,
+            Error::Abort(v) if v & 1<<7 != 0 // ABRT_SBYTE_ACKDET
+                => eh1_0_alpha::i2c::ErrorKind::Bus,
+            Error::Abort(v) if v & 1<<6 != 0 // ABRT_HS_ACKDET
+                => eh1_0_alpha::i2c::ErrorKind::Bus,
+            Error::Abort(v) if v & 1<<4 != 0 // ABRT_GCALL_NOACK
+                => eh1_0_alpha::i2c::ErrorKind::NoAcknowledge(eh1_0_alpha::i2c::NoAcknowledgeSource::Address),
+            Error::Abort(v) if v & 1<<3 != 0 // ABRT_TXDATA_NOACK
+                => eh1_0_alpha::i2c::ErrorKind::NoAcknowledge(eh1_0_alpha::i2c::NoAcknowledgeSource::Data),
+            Error::Abort(v) if v & 1<<2 != 0 // ABRT_10ADDR2_NOACK
+                => eh1_0_alpha::i2c::ErrorKind::NoAcknowledge(eh1_0_alpha::i2c::NoAcknowledgeSource::Address),
+            Error::Abort(v) if v & 1<<1 != 0 // ABRT_10ADDR1_NOACK
+                => eh1_0_alpha::i2c::ErrorKind::NoAcknowledge(eh1_0_alpha::i2c::NoAcknowledgeSource::Address),
+            Error::Abort(v) if v & 1<<0 != 0 // ABRT_7B_ADDR_NOACK
+                => eh1_0_alpha::i2c::ErrorKind::NoAcknowledge(eh1_0_alpha::i2c::NoAcknowledgeSource::Address),
+            _ => eh1_0_alpha::i2c::ErrorKind::Other,
+        }
+    }
+}
+
 /// SCL pin
 pub trait SclPin<I2C>: Sealed {}
 
