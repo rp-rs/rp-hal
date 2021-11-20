@@ -3,7 +3,7 @@
 
 use embedded_time::duration::Microseconds;
 
-use crate::pac::{timer, RESETS, TIMER};
+use crate::pac::{RESETS, TIMER};
 use crate::resets::SubsystemReset;
 use core::marker::PhantomData;
 
@@ -190,24 +190,17 @@ macro_rules! impl_alarm {
         pub struct $name(PhantomData<()>);
 
         impl $name {
-            #[inline]
-            fn timer() -> &'static timer::RegisterBlock {
-                // # Safety
-                //
-                // This alarm should only have 1 instance available. This alarm
-                // only changes fields that are relevant to this alarm, and does
-                // not modify any other fields. Therefor it's safe to get a reference
-                // to this pointer.
-                unsafe { &*TIMER::ptr() }
-            }
-
             /// Clear the interrupt flag. This should be called after interrupt `
             #[doc = $int_name]
             /// ` is called.
             ///
             /// The interrupt is unable to trigger a 2nd time until this interrupt is cleared.
-            pub fn clear_interrupt(&mut self) {
-                Self::timer().intr.modify(|_, w| w.$int_alarm().set_bit());
+            pub fn clear_interrupt(&mut self, timer: &mut Timer) {
+                // safety: Because we have a mutable reference on `timer`, we have exclusive access to `TIMER::ptr()`
+                let _ = timer;
+                let timer = unsafe { &*TIMER::ptr() };
+
+                timer.intr.modify(|_, w| w.$int_alarm().set_bit());
             }
 
             /// Enable this alarm to trigger an interrupt. This alarm will trigger `
@@ -217,13 +210,21 @@ macro_rules! impl_alarm {
             /// After this interrupt is triggered, make sure to clear the interrupt with [clear_interrupt].
             ///
             /// [clear_interrupt]: #method.clear_interrupt
-            pub fn enable_interrupt(&mut self) {
-                Self::timer().inte.modify(|_, w| w.$int_alarm().set_bit());
+            pub fn enable_interrupt(&mut self, timer: &mut Timer) {
+                // safety: Because we have a mutable reference on `timer`, we have exclusive access to `TIMER::ptr()`
+                let _ = timer;
+                let timer = unsafe { &*TIMER::ptr() };
+
+                timer.inte.modify(|_, w| w.$int_alarm().set_bit());
             }
 
             /// Disable this alarm, preventing it from triggering an interrupt.
-            pub fn disable_interrupt(&mut self) {
-                Self::timer().inte.modify(|_, w| w.$int_alarm().clear_bit());
+            pub fn disable_interrupt(&mut self, timer: &mut Timer) {
+                // safety: Because we have a mutable reference on `timer`, we have exclusive access to `TIMER::ptr()`
+                let _ = timer;
+                let timer = unsafe { &*TIMER::ptr() };
+
+                timer.inte.modify(|_, w| w.$int_alarm().clear_bit());
             }
 
             /// Schedule the alarm to be finished after `countdown`. If [enable_interrupt] is called, this will trigger interrupt `
@@ -243,8 +244,15 @@ macro_rules! impl_alarm {
                 if duration < MIN_MICROSECONDS {
                     return Err(ScheduleAlarmError::AlarmTooSoon);
                 } else {
-                    let target_time = Self::timer().timelr.read().bits().wrapping_add(duration);
-                    Self::timer()
+                    // safety: This is a read action and should not have any UB
+                    let target_time = unsafe { &*TIMER::ptr() }
+                        .timelr
+                        .read()
+                        .bits()
+                        .wrapping_add(duration);
+
+                    // safety: This is the only code in the codebase that accesses memory address $timer_alarm
+                    unsafe { &*TIMER::ptr() }
                         .$timer_alarm
                         .write(|w| unsafe { w.bits(target_time) });
                     Ok(())
@@ -253,8 +261,9 @@ macro_rules! impl_alarm {
 
             /// Return true if this alarm is finished.
             pub fn finished(&self) -> bool {
-                let bits: u32 = Self::timer().armed.read().bits();
-                (bits & $armed_bit_mask) > 0
+                // safety: This is a read action and should not have any UB
+                let bits: u32 = unsafe { &*TIMER::ptr() }.armed.read().bits();
+                (bits & $armed_bit_mask) == 0
             }
         }
     };
