@@ -1,6 +1,9 @@
 //! Programmable IO (PIO)
-/// See [Chapter 3](https://rptl.io/pico-datasheet) for more details.
-use crate::resets::SubsystemReset;
+//! See [Chapter 3 of the datasheet](https://rptl.io/rp2040-datasheet#section_pio) for more details.
+use crate::{
+    atomic_register_access::{write_bitmask_clear, write_bitmask_set},
+    resets::SubsystemReset,
+};
 use pio::{Program, SideSet, Wrap};
 use rp2040_pac::{PIO0, PIO1};
 
@@ -22,6 +25,7 @@ pub trait PIOExt:
         UninitStateMachine<(Self, SM2)>,
         UninitStateMachine<(Self, SM3)>,
     ) {
+        self.reset_bring_down(resets);
         self.reset_bring_up(resets);
 
         let sm0 = UninitStateMachine {
@@ -92,6 +96,8 @@ impl<P: PIOExt> core::fmt::Debug for PIO<P> {
 // `StateMachine`.
 unsafe impl<P: PIOExt + Send> Send for PIO<P> {}
 
+// Safety: `PIO` is marked Send so ensure all accesses remain atomic and no new concurrent accesses
+// are added.
 impl<P: PIOExt> PIO<P> {
     /// Free this instance.
     ///
@@ -112,10 +118,20 @@ impl<P: PIOExt> PIO<P> {
         &self.interrupts
     }
 
+    /// Get raw irq flags.
+    ///
+    /// The PIO has 8 IRQ flags, of which 4 are visible to the host processor. Each bit of `flags` corresponds to one of
+    /// the IRQ flags.
+    pub fn get_irq_raw(&self) -> u8 {
+        self.pio.irq.read().irq().bits()
+    }
+
     /// Clear PIO's IRQ flags indicated by the bits.
     ///
     /// The PIO has 8 IRQ flags, of which 4 are visible to the host processor. Each bit of `flags` corresponds to one of
     /// the IRQ flags.
+    // Safety: PIOExt provides exclusive access to the pio.irq register, this must be preserved to
+    // satisfy Send trait.
     pub fn clear_irq(&self, flags: u8) {
         self.pio.irq.write(|w| unsafe { w.irq().bits(flags) });
     }
@@ -124,6 +140,8 @@ impl<P: PIOExt> PIO<P> {
     ///
     /// The PIO has 8 IRQ flags, of which 4 are visible to the host processor. Each bit of `flags` corresponds to one of
     /// the IRQ flags.
+    // Safety: PIOExt provides exclusive access to the pio.irq register, this must be preserved to
+    // satisfy Send trait.
     pub fn force_irq(&self, flags: u8) {
         self.pio
             .irq_force
@@ -159,6 +177,7 @@ impl<P: PIOExt> PIO<P> {
     /// The function returns a handle to the installed program that can be used to configure a
     /// `StateMachine` via `PIOBuilder`. The program can be uninstalled to free instruction memory
     /// via `uninstall()` once the state machine using the program has been uninitialized.
+    // Safety: PIOExt is marked send and should be the only object allowed to access pio.instr_mem
     pub fn install(
         &mut self,
         p: &Program<{ pio::RP2040_MAX_PROGRAM_SIZE }>,
@@ -269,6 +288,11 @@ pub struct InstalledProgram<P> {
 }
 
 impl<P: PIOExt> InstalledProgram<P> {
+    /// Get the warp target (entry point) of the instaled program.
+    pub fn wrap_target(&self) -> u8 {
+        self.offset + self.wrap.target
+    }
+
     /// Clones this program handle so that it can be executed by two state machines at the same
     /// time.
     ///
@@ -360,6 +384,28 @@ impl<P: PIOExt, SM: StateMachineIndex> ValidStateMachine for (P, SM) {
     }
 }
 
+/// Pin State in the PIO
+///
+/// Note the GPIO is able to override/invert that.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum PinState {
+    /// Pin in Low state.
+    High,
+    /// Pin in Low state.
+    Low,
+}
+
+/// Pin direction in the PIO
+///
+/// Note the GPIO is able to override/invert that.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum PinDir {
+    /// Pin set as an Input
+    Input,
+    /// Pin set as an Output.
+    Output,
+}
+
 /// PIO State Machine (uninitialized, without a program).
 #[derive(Debug)]
 pub struct UninitStateMachine<SM: ValidStateMachine> {
@@ -371,6 +417,8 @@ pub struct UninitStateMachine<SM: ValidStateMachine> {
 // Safety: `UninitStateMachine` only uses atomic accesses to shared registers.
 unsafe impl<SM: ValidStateMachine + Send> Send for UninitStateMachine<SM> {}
 
+// Safety: `UninitStateMachine` is marked Send so ensure all accesses remain atomic and no new
+// concurrent accesses are added.
 impl<SM: ValidStateMachine> UninitStateMachine<SM> {
     /// Start and stop the state machine.
     fn set_enabled(&mut self, enabled: bool) {
@@ -393,30 +441,23 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
         self.set_ctrl_bits(1 << (SM::id() + 8));
     }
 
+    // Safety: All ctrl set access should go through this function to ensure atomic access.
     fn set_ctrl_bits(&mut self, bits: u32) {
-        const ATOMIC_SET_OFFSET: usize = 0x2000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            (*self.block)
-                .ctrl
-                .as_ptr()
-                .add(ATOMIC_SET_OFFSET / 4)
-                .write_volatile(bits);
+            write_bitmask_set((*self.block).ctrl.as_ptr(), bits);
         }
     }
 
+    // Safety: All ctrl clear access should go through this function to ensure atomic access.
     fn clear_ctrl_bits(&mut self, bits: u32) {
-        const ATOMIC_CLEAR_OFFSET: usize = 0x3000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            (*self.block)
-                .ctrl
-                .as_ptr()
-                .add(ATOMIC_CLEAR_OFFSET / 4)
-                .write_volatile(bits);
+            write_bitmask_clear((*self.block).ctrl.as_ptr(), bits);
         }
     }
 
+    // Safety: The Send trait assumes this is the only write to sm_clkdiv
     fn set_clock_divisor(&self, divisor: f32) {
         // sm frequency = clock freq / (CLKDIV_INT + CLKDIV_FRAC / 256)
         let int = divisor as u16;
@@ -433,6 +474,9 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
     }
 
     /// Set the current instruction.
+    // Safety: The Send trait assumes this is the only write to sm_instr while uninitialized. The
+    // initialized `StateMachine` may also use this register. The `UnintStateMachine` is consumed
+    // by `PIOBuilder.build` to create `StateMachine`
     fn set_instruction(&mut self, instruction: u16) {
         self.sm()
             .sm_instr
@@ -487,6 +531,11 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     }
 }
 
+// Safety: All shared register accesses are atomic.
+unsafe impl<SM: ValidStateMachine + Send, State> Send for StateMachine<SM, State> {}
+
+// Safety: `StateMachine` is marked Send so ensure all accesses remain atomic and no new concurrent
+// accesses are added.
 impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
     /// Starts execution of the selected program.
     pub fn start(mut self) -> StateMachine<SM, Running> {
@@ -500,56 +549,62 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
         }
     }
 
-    /// Sets the pin directions for the specified pins.
+    /// Sets the pin state for the specified pins.
     ///
-    /// The `pins` parameter specifies a set of pins as a mask, and `pindir` contains the
-    /// directions that are configured for these pins. The bits in both masks correspond to the pin
-    /// number. The user has to make sure that they do not select any pins that are in use by any
+    /// The user has to make sure that they do not select any pins that are in use by any
     /// other state machines of the same PIO block.
     ///
-    /// This function needs to be called for sideset pins if they are supposed to be used as
-    /// output pins.
-    pub fn set_pindirs_with_mask(&mut self, mut pins: u32, pindir: u32) {
-        let mut pin = 0;
-        let prev_pinctrl = self.sm.sm().sm_pinctrl.read().bits();
-        // For each pin in the mask, we select the pin as a SET pin and then execute "set PINDIRS,
-        // <direction>".
-        while pins != 0 {
-            if (pins & 1) != 0 {
-                self.sm.sm().sm_pinctrl.write(|w| {
-                    unsafe {
-                        w.set_count().bits(1);
-                        w.set_base().bits(pin as u8);
-                    }
-                    w
-                });
-                let set_pindirs = pio::Instruction {
-                    operands: pio::InstructionOperands::SET {
-                        destination: pio::SetDestination::PINDIRS,
-                        data: ((pindir >> pin) & 0x1) as u8,
-                    },
-                    delay: 0,
-                    side_set: None,
+    /// The iterator's item are pairs of `(pin_number, pin_state)`.
+    // Safety: this exclusively manages the SM resource and is created from the
+    // `UninitStateMachine` byt adding a program.
+    pub fn set_pins(&mut self, pins: impl IntoIterator<Item = (u8, PinState)>) {
+        let saved_ctrl = self.sm.sm().sm_pinctrl.read();
+        for (pin_num, pin_state) in pins {
+            self.sm
+                .sm()
+                .sm_pinctrl
+                .write(|w| unsafe { w.set_base().bits(pin_num).set_count().bits(1) });
+            self.set_instruction(
+                pio::InstructionOperands::SET {
+                    destination: pio::SetDestination::PINS,
+                    data: if PinState::High == pin_state { 1 } else { 0 },
                 }
-                .encode(SideSet::new(false, 0, false));
-                self.sm.sm().sm_instr.write(|w| {
-                    unsafe {
-                        w.sm0_instr().bits(set_pindirs);
-                    }
-                    w
-                });
-            }
-            pin += 1;
-            pins >>= 1;
+                .encode(),
+            );
         }
-        // We modified PINCTRL, yet the program assumes a certain configuration, so restore the
-        // previous value.
-        self.sm.sm().sm_pinctrl.write(|w| {
-            unsafe {
-                w.bits(prev_pinctrl);
-            }
-            w
-        });
+        self.sm
+            .sm()
+            .sm_pinctrl
+            .write(|w| unsafe { w.bits(saved_ctrl.bits()) });
+    }
+
+    /// Set pin directions.
+    ///
+    /// The user has to make sure that they do not select any pins that are in use by any
+    /// other state machines of the same PIO block.
+    ///
+    /// The iterator's item are pairs of `(pin_number, pin_dir)`.
+    // Safety: this exclusively manages the SM resource and is created from the
+    // `UninitStateMachine` byt adding a program.
+    pub fn set_pindirs(&mut self, pindirs: impl IntoIterator<Item = (u8, PinDir)>) {
+        let saved_ctrl = self.sm.sm().sm_pinctrl.read();
+        for (pinnum, pin_dir) in pindirs {
+            self.sm
+                .sm()
+                .sm_pinctrl
+                .write(|w| unsafe { w.set_base().bits(pinnum).set_count().bits(1) });
+            self.set_instruction(
+                pio::InstructionOperands::SET {
+                    destination: pio::SetDestination::PINDIRS,
+                    data: if PinDir::Output == pin_dir { 1 } else { 0 },
+                }
+                .encode(),
+            );
+        }
+        self.sm
+            .sm()
+            .sm_pinctrl
+            .write(|w| unsafe { w.bits(saved_ctrl.bits()) });
     }
 }
 
@@ -600,14 +655,9 @@ impl<'sm, SM: ValidStateMachine> Drop for Synchronize<'sm, SM> {
         // Restart the clocks of all state machines specified by the mask.
         // Bits 11:8 of CTRL contain CLKDIV_RESTART.
         let sm_mask = self.sm_mask << 8;
-        const ATOMIC_SET_OFFSET: usize = 0x2000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            (*self.sm.sm.block)
-                .ctrl
-                .as_ptr()
-                .add(ATOMIC_SET_OFFSET / 4)
-                .write_volatile(sm_mask as u32);
+            write_bitmask_set((*self.sm.sm.block).ctrl.as_ptr(), sm_mask as u32);
         }
     }
 }
@@ -624,6 +674,24 @@ impl<SM: ValidStateMachine> StateMachine<SM, Running> {
             _phantom: core::marker::PhantomData,
         }
     }
+
+    /// Restarts the execution of the selected program from its wrap target.
+    pub fn restart(&mut self) {
+        // pause the state machine
+        self.sm.set_enabled(false);
+        // revert it to its wrap target
+        self.sm.set_instruction(
+            pio::InstructionOperands::JMP {
+                condition: pio::JmpCondition::Always,
+                address: self.program.wrap_target(),
+            }
+            .encode(),
+        );
+        // clear osr/isr
+        self.sm.restart();
+        // unpause the state machine
+        self.sm.set_enabled(true);
+    }
 }
 
 /// PIO RX FIFO handle.
@@ -632,20 +700,62 @@ pub struct Rx<SM: ValidStateMachine> {
     _phantom: core::marker::PhantomData<SM>,
 }
 
+// Safety: All shared register accesses are atomic.
+unsafe impl<SM: ValidStateMachine + Send> Send for Rx<SM> {}
+
+// Safety: `Rx` is marked Send so ensure all accesses remain atomic and no new concurrent accesses
+// are added.
 impl<SM: ValidStateMachine> Rx<SM> {
+    fn register_block(&self) -> &pac::pio0::RegisterBlock {
+        // Safety: The register is unique to this Tx instance.
+        unsafe { &*self.block }
+    }
+
+    /// Gets the FIFO's address.
+    ///
+    /// This is useful if you want to DMA from this peripheral.
+    ///
+    /// NB: You are responsible for using the pointer correctly and not
+    /// underflowing the buffer.
+    pub fn fifo_address(&self) -> *const u32 {
+        self.register_block().rxf[SM::id()].as_ptr()
+    }
+
+    /// Gets the FIFO's `DREQ` value.
+    ///
+    /// This is a value between 0 and 39. Each FIFO on each state machine on
+    /// each PIO has a unique value.
+    pub fn dreq_value(&self) -> u8 {
+        if self.block as usize == 0x5020_0000usize {
+            crate::dma::DREQ_PIO0_RX0 + (SM::id() as u8)
+        } else {
+            crate::dma::DREQ_PIO1_RX0 + (SM::id() as u8)
+        }
+    }
+
     /// Get the next element from RX FIFO.
     ///
     /// Returns `None` if the FIFO is empty.
     pub fn read(&mut self) -> Option<u32> {
-        // Safety: The register is never written by software.
-        let is_empty = unsafe { &*self.block }.fstat.read().rxempty().bits() & (1 << SM::id()) != 0;
-
-        if is_empty {
+        if self.is_empty() {
             return None;
         }
 
         // Safety: The register is unique to this Rx instance.
-        Some(unsafe { &*self.block }.rxf[SM::id() as usize].read().bits())
+        Some(self.register_block().rxf[SM::id() as usize].read().bits())
+    }
+
+    /// Enable/Disable the autopush feature of the state machine.
+    // Safety: This register is read by Tx, this is the only write.
+    pub fn enable_autopush(&mut self, enable: bool) {
+        self.register_block().sm[SM::id()]
+            .sm_shiftctrl
+            .modify(|_, w| w.autopush().bit(enable))
+    }
+
+    /// Indicate if the tx FIFO is full
+    pub fn is_empty(&self) -> bool {
+        self.register_block().fstat.read().rxempty().bits() & (1 << SM::id()) != 0
     }
 }
 
@@ -655,22 +765,121 @@ pub struct Tx<SM: ValidStateMachine> {
     _phantom: core::marker::PhantomData<SM>,
 }
 
+// Safety: All shared register accesses are atomic.
+unsafe impl<SM: ValidStateMachine + Send> Send for Tx<SM> {}
+
+// Safety: `Tx` is marked Send so ensure all accesses remain atomic and no new concurrent accesses
+// are added.
 impl<SM: ValidStateMachine> Tx<SM> {
+    fn register_block(&self) -> &pac::pio0::RegisterBlock {
+        // Safety: The register is unique to this Tx instance.
+        unsafe { &*self.block }
+    }
+
+    /// Gets the FIFO's address.
+    ///
+    /// This is useful if you want to DMA to this peripheral.
+    ///
+    /// NB: You are responsible for using the pointer correctly and not
+    /// overflowing the buffer.
+    pub fn fifo_address(&self) -> *const u32 {
+        self.register_block().txf[SM::id()].as_ptr()
+    }
+
+    /// Gets the FIFO's `DREQ` value.
+    ///
+    /// This is a value between 0 and 39. Each FIFO on each state machine on
+    /// each PIO has a unique value.
+    pub fn dreq_value(&self) -> u8 {
+        if self.block as usize == 0x5020_0000usize {
+            crate::dma::DREQ_PIO0_TX0 + (SM::id() as u8)
+        } else {
+            crate::dma::DREQ_PIO1_TX0 + (SM::id() as u8)
+        }
+    }
+
     /// Write an element to TX FIFO.
     ///
     /// Returns `true` if the value was written to FIFO, `false` otherwise.
-    pub fn write(&mut self, value: u32) -> bool {
+    pub fn write<T>(&mut self, value: T) -> bool {
         // Safety: The register is never written by software.
-        let is_full = unsafe { &*self.block }.fstat.read().txfull().bits() & (1 << SM::id()) != 0;
+        let is_full = self.is_full();
 
         if is_full {
             return false;
         }
 
-        // Safety: The register is unique to this Tx instance.
-        unsafe { &*self.block }.txf[SM::id()].write(|w| unsafe { w.bits(value) });
+        unsafe {
+            let reg_ptr = self.register_block().txf[SM::id()].as_ptr() as *mut T;
+            core::ptr::write_volatile(reg_ptr, value);
+        }
 
         true
+    }
+
+    /// Checks if the state machine has stalled on empty TX FIFO during a blocking PULL, or an OUT
+    /// with autopull enabled.
+    ///
+    /// **Note this is a sticky flag and may not reflect the current state of the machine.**
+    pub fn has_stalled(&self) -> bool {
+        let mask = 1 << SM::id();
+        self.register_block().fdebug.read().txstall().bits() & mask == mask
+    }
+
+    /// Clears the `tx_stalled` flag.
+    pub fn clear_stalled_flag(&self) {
+        let mask = 1 << SM::id();
+
+        // Safety: These bits are WC, only the one corresponding to this SM is set.
+        self.register_block()
+            .fdebug
+            .write(|w| unsafe { w.txstall().bits(mask) });
+    }
+
+    /// Indicate if the tx FIFO is empty
+    pub fn is_empty(&self) -> bool {
+        self.register_block().fstat.read().txempty().bits() & (1 << SM::id()) != 0
+    }
+
+    /// Indicate if the tx FIFO is full
+    pub fn is_full(&self) -> bool {
+        self.register_block().fstat.read().txfull().bits() & (1 << SM::id()) != 0
+    }
+
+    /// Drain Tx fifo.
+    pub fn drain_fifo(&mut self) {
+        // According to the datasheet 3.5.4.2 Page 358:
+        //
+        // When autopull is enabled, the behaviour of 'PULL'  is  altered:  it  becomes  a  no-op
+        // if  the  OSR  is  full.  This  is  to  avoid  a  race  condition  against  the  system
+        // DMA.  It behaves as a fence: either an autopull has already taken place, in which case
+        // the 'PULL' has no effect, or the program will stall on the 'PULL' until data becomes
+        // available in the FIFO.
+        let instr = if self.register_block().sm[SM::id()]
+            .sm_shiftctrl
+            .read()
+            .autopull()
+            .bit_is_set()
+        {
+            pio::InstructionOperands::OUT {
+                destination: pio::OutDestination::NULL,
+                bit_count: 32,
+            }
+        } else {
+            pio::InstructionOperands::PULL {
+                if_empty: false,
+                block: false,
+            }
+        }
+        .encode();
+        // Safety: The only other place this register is written is
+        // `UninitStatemachine.set_instruction`, `Tx` is only created after init.
+        let mask = 1 << SM::id();
+        while self.register_block().fstat.read().txempty().bits() & mask != mask {
+            self.register_block().sm[SM::id()]
+                .sm_instr
+                .write(|w| unsafe { w.sm0_instr().bits(instr) })
+        }
     }
 }
 
@@ -685,11 +894,15 @@ pub struct Interrupt<P: PIOExt> {
 // Safety: `Interrupt` provides exclusive access to interrupt registers.
 unsafe impl<P: PIOExt + Send> Send for Interrupt<P> {}
 
+// Safety: `Interrupt` is marked Send so ensure all accesses remain atomic and no new concurrent
+// accesses are added.
+// `Interrupt` provides exclusive access to `irq_intf` to `irq_inte` for it's state machine, this
+// must remain true to satisfy Send.
 impl<P: PIOExt> Interrupt<P> {
     /// Enable interrupts raised by state machines.
     ///
     /// The PIO peripheral has 4 outside visible interrupts that can be raised by the state machines. Note that this
-    /// don't correspond with the state machine index; any state machine can raise any one of the four interrupts.
+    /// does not correspond with the state machine index; any state machine can raise any one of the four interrupts.
     pub fn enable_sm_interrupt(&self, id: u8) {
         match id {
             0 => self.irq().irq_inte.modify(|_, w| w.sm0().set_bit()),
@@ -860,7 +1073,7 @@ impl<P: PIOExt> Interrupt<P> {
     ///
     /// This is the state of the interrupts without interrupt masking and forcing.
     pub fn raw(&self) -> InterruptState {
-        InterruptState(self.block().intr.read().bits())
+        InterruptState(self.register_block().intr.read().bits())
     }
 
     /// Get the interrupt state.
@@ -870,12 +1083,12 @@ impl<P: PIOExt> Interrupt<P> {
         InterruptState(self.irq().irq_ints.read().bits())
     }
 
-    fn block(&self) -> &rp2040_pac::pio0::RegisterBlock {
+    fn register_block(&self) -> &rp2040_pac::pio0::RegisterBlock {
         unsafe { &*self.block }
     }
 
     fn irq(&self) -> &rp2040_pac::pio0::SM_IRQ {
-        &self.block().sm_irq[self.id as usize]
+        &self.register_block().sm_irq[self.id as usize]
     }
 }
 
@@ -1047,7 +1260,7 @@ impl<P: PIOExt> PIOBuilder<P> {
     /// The least-significant bit of `OUT` instruction asserts the state of the pin indicated by `base`, the next bit
     /// asserts the state of the next pin, and so on up to `count` pins. The pin numbers are considered modulo 32.
     pub fn out_pins(mut self, base: u8, count: u8) -> Self {
-        assert!(count <= 5);
+        assert!(count <= 32);
         self.out_base = base;
         self.out_count = count;
         self
@@ -1073,7 +1286,8 @@ impl<P: PIOExt> PIOBuilder<P> {
     /// Set the pins used by side-set instructions.
     ///
     /// The least-significant side-set bit asserts the state of the pin indicated by `base`, the next bit asserts the
-    /// state of the next pin, and so on up to number of bits set using [`Self::side_set`] function.
+    /// state of the next pin, and so on up to [`pio::SideSet::bits()`] bits as configured in
+    /// [`pio::Program`].
     pub fn side_set_pin_base(mut self, base: u8) -> Self {
         self.side_set_base = base;
         self

@@ -221,18 +221,17 @@ impl<D: UartDevice> UartPeripheral<Disabled, D> {
 
         let effective_baudrate = configure_baudrate(&mut device, &config.baudrate, &frequency)?;
 
+        device.uartlcr_h.write(|w| {
+            w.fen().set_bit();
+            set_format(w, &config.data_bits, &config.stop_bits, &config.parity);
+            w
+        });
+
         // Enable the UART, both TX and RX
         device.uartcr.write(|w| {
             w.uarten().set_bit();
             w.txe().set_bit();
             w.rxe().set_bit();
-            w
-        });
-
-        device.uartlcr_h.write(|w| {
-            w.fen().set_bit();
-
-            set_format(w, &config.data_bits, &config.stop_bits, &config.parity);
             w
         });
 
@@ -312,8 +311,8 @@ impl<D: UartDevice> UartPeripheral<Enabled, D> {
     /// This function reads as long as it can. As soon that the FIFO is empty, if :
     /// - 0 bytes were read, a WouldBlock Error is returned
     /// - some bytes were read, it is deemed to be a success
-    /// Upon success, the remaining slice is returned.
-    pub fn read_raw<'b>(&self, buffer: &'b mut [u8]) -> nb::Result<&'b mut [u8], ReadError<'b>> {
+    /// Upon success, it will return how many bytes were read.
+    pub fn read_raw<'b>(&self, buffer: &'b mut [u8]) -> nb::Result<usize, ReadError<'b>> {
         let mut bytes_read = 0;
 
         Ok(loop {
@@ -321,26 +320,28 @@ impl<D: UartDevice> UartPeripheral<Enabled, D> {
                 if bytes_read == 0 {
                     return Err(WouldBlock);
                 } else {
-                    break &mut buffer[bytes_read..];
+                    break bytes_read;
                 }
             }
 
             if bytes_read < buffer.len() {
                 let mut error: Option<ReadErrorType> = None;
 
-                if self.device.uartdr.read().oe().bit_is_set() {
+                let read = self.device.uartdr.read();
+
+                if read.oe().bit_is_set() {
                     error = Some(ReadErrorType::Overrun);
                 }
 
-                if self.device.uartdr.read().be().bit_is_set() {
+                if read.be().bit_is_set() {
                     error = Some(ReadErrorType::Break);
                 }
 
-                if self.device.uartdr.read().pe().bit_is_set() {
+                if read.pe().bit_is_set() {
                     error = Some(ReadErrorType::Parity);
                 }
 
-                if self.device.uartdr.read().fe().bit_is_set() {
+                if read.fe().bit_is_set() {
                     error = Some(ReadErrorType::Framing);
                 }
 
@@ -351,10 +352,10 @@ impl<D: UartDevice> UartPeripheral<Enabled, D> {
                     }));
                 }
 
-                buffer[bytes_read] = self.device.uartdr.read().data().bits();
+                buffer[bytes_read] = read.data().bits();
                 bytes_read += 1;
             } else {
-                break &mut buffer[bytes_read..];
+                break bytes_read;
             }
         })
     }
@@ -380,7 +381,7 @@ impl<D: UartDevice> UartPeripheral<Enabled, D> {
 
         while offset != buffer.len() {
             offset += match self.read_raw(&mut buffer[offset..]) {
-                Ok(remaining) => remaining.len(),
+                Ok(bytes_read) => bytes_read,
                 Err(e) => match e {
                     Other(inner) => return Err(inner.err_type),
                     WouldBlock => continue,

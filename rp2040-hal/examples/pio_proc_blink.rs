@@ -14,7 +14,7 @@ use rp2040_hal as hal;
 
 #[link_section = ".boot2"]
 #[used]
-pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
 #[entry]
 fn main() -> ! {
@@ -53,7 +53,7 @@ fn main() -> ! {
         .clock_divisor(div)
         .build(sm0);
     // The GPIO pin needs to be configured as an output.
-    sm.set_pindirs_with_mask(1 << led_pin_id, 1 << led_pin_id);
+    sm.set_pindirs([(led_pin_id, hal::pio::PinDir::Output)]);
     sm.start();
 
     // PIO runs in background, independently from CPU
