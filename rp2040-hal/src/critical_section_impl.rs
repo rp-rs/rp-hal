@@ -38,11 +38,13 @@ unsafe impl critical_section::Impl for RpSpinlockCs {
                 // Need to disable interrupts to ensure that we will not deadlock
                 // if an interrupt enters critical_section::Impl after we acquire the lock
                 cortex_m::interrupt::disable();
+                // Ensure the compiler doesn't re-order accesses and violate safety here
+                core::sync::atomic::compiler_fence(Ordering::SeqCst);
                 // Read the spinlock reserved for `critical_section`
                 if (*pac::SIO::ptr()).spinlock31.read().bits() != 0 {
                     // We just acquired the lock.
                     // Store which core we are so we can tell if we're called recursively
-                    LOCK_OWNER.store(core, Ordering::Release);
+                    LOCK_OWNER.store(core, Ordering::Relaxed);
                     break;
                 }
                 // We didn't get the lock, enable interrupts if they were enabled before we started
@@ -61,7 +63,9 @@ unsafe impl critical_section::Impl for RpSpinlockCs {
         if token != LOCK_ALREADY_OWNED {
             // No, it wasn't owned at the start of this `critical_section`, so this core no longer owns it.
             // Set `LOCK_OWNER` back to `LOCK_UNOWNED` to ensure the next critical section tries to obtain the spinlock instead
-            LOCK_OWNER.store(LOCK_UNOWNED, Ordering::Release);
+            LOCK_OWNER.store(LOCK_UNOWNED, Ordering::Relaxed);
+            // Ensure the compiler doesn't re-order accesses and violate safety here
+            core::sync::atomic::compiler_fence(Ordering::SeqCst);
             // Release the spinlock to allow others to enter critical_section again
             (*pac::SIO::ptr()).spinlock31.write_with_zero(|w| w.bits(1));
             // Re-enable interrupts if they were enabled when we first called acquire()
