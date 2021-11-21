@@ -532,6 +532,8 @@ impl<D: UartDevice> eh1::Read<u8> for UartPeripheral<Enabled, D> {
 ///
 /// For eh 1.0.0-alpha.6, Infallible doesn't implement spi::Error,
 /// so use a locally defined type instead.
+/// This should be removed with the next release of e-h.
+/// (https://github.com/rust-embedded/embedded-hal/pull/328)
 #[cfg(feature = "eh1_0_alpha")]
 pub enum SerialInfallible {}
 
