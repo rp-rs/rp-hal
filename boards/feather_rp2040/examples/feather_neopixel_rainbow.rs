@@ -13,7 +13,6 @@ use embedded_time::duration::Extensions;
 use feather_rp2040::{
     hal::{
         clocks::{init_clocks_and_plls, Clock},
-        gpio::{FunctionPio0, Pin},
         pac,
         sio::Sio,
         timer::Timer,
@@ -55,8 +54,6 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    let _neopixel: Pin<_, FunctionPio0> = pins.neopixel.into_mode();
-
     let timer = Timer::new(pac.TIMER, &mut pac.RESETS);
     let mut delay = timer.count_down();
 
@@ -64,7 +61,7 @@ fn main() -> ! {
     let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
     let mut ws = Ws2812::new(
         // The onboard NeoPixel is attached to GPIO pin #16 on the Feather RP2040.
-        16,
+        pins.neopixel.into_mode(),
         &mut pio,
         sm0,
         clocks.peripheral_clock.freq(),

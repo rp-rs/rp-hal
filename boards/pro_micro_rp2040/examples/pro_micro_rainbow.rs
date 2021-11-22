@@ -17,7 +17,6 @@ use panic_halt as _;
 use pro_micro_rp2040::{
     hal::{
         clocks::{init_clocks_and_plls, Clock},
-        gpio::{FunctionPio0, Pin},
         pac,
         sio::Sio,
         timer::Timer,
@@ -70,15 +69,13 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    let _led: Pin<_, FunctionPio0> = pins.led.into_mode();
-
     let timer = Timer::new(pac.TIMER, &mut pac.RESETS);
     let mut delay = timer.count_down();
 
     // Configure the addressable LED
     let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
     let mut ws = Ws2812::new(
-        25,
+        pins.led.into_mode(),
         &mut pio,
         sm0,
         clocks.peripheral_clock.freq(),
