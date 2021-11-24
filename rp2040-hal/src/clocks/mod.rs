@@ -352,5 +352,7 @@ pub fn init_clocks_and_plls(
     clocks
         .init_default(&xosc, &pll_sys, &pll_usb)
         .map_err(InitError::ClockError)?;
+
+    clocks.rtc_clock.init(resets);
     Ok(clocks)
 }

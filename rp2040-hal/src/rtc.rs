@@ -1,10 +1,11 @@
 //! Real Time Clock (RTC)
 // See [Chapter 4 Section 8](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 
-use crate::clocks::StoppableClock;
-use rp2040_pac::RTC;
-
 pub use crate::clocks::RtcClock;
+
+use crate::clocks::Clock;
+use embedded_time::fixed_point::FixedPoint;
+use rp2040_pac::{RESETS, RTC};
 
 /// Structure containing date and time information
 pub struct DateTime {
@@ -134,11 +135,28 @@ impl DateTimeFilter {
 }
 
 impl RtcClock {
+    /// Init the RTC clock. This should be called exactly once at the start of the application.
+    ///
+    /// [`init_clocks_and_plls`] will call this internally so you often won't have to call this.
+    pub fn init(&mut self, resets: &mut RESETS) {
+        // reset RTC
+        resets.reset.modify(|_, w| w.rtc().set_bit());
+        resets.reset.modify(|_, w| w.rtc().clear_bit());
+        while resets.reset_done.read().rtc().bit_is_clear() {
+            core::hint::spin_loop();
+        }
+        // Set the RTC divider
+        let freq = self.freq().integer() - 1;
+        unsafe { &*RTC::ptr() }
+            .clkdiv_m1
+            .write(|w| unsafe { w.bits(freq) });
+    }
     /// Checks to see if this RtcClock is running
     pub fn is_running(&mut self) -> bool {
         // Safety: We only read from the given address
         let rtc = unsafe { &*RTC::ptr() };
-        (rtc.ctrl.read().bits() & consts::RTC_CTRL_RTC_ACTIVE_BITS) > 0
+        let ctrl = rtc.ctrl.read().bits();
+        (ctrl & consts::RTC_CTRL_RTC_ACTIVE_BITS) > 0
     }
 
     /// Set the RTC clock to the given DateTime. After this is set, the RtcClock will automatically keep the date synchronized.
@@ -154,17 +172,17 @@ impl RtcClock {
     pub fn set_datetime(&mut self, t: &DateTime) -> Result<(), RtcError> {
         t.validate().map_err(RtcError::InvalidDateTime)?;
 
-        self.disable();
-        // TODO: Add a timeout to this?
-        while self.is_running() {
-            core::hint::spin_loop();
-        }
-
         // NOTE: No functions should be called in this block as we take an unsafe ownership of `RTC::ptr()`
         {
             // Safety: We should have unique access to this RtcClock because we have `&mut self`
             // and this file is the only file that messes with these addresses.
             let rtc = unsafe { &*RTC::ptr() };
+
+            rtc.ctrl.modify(|_, w| w.rtc_enable().clear_bit());
+            // TODO: Add a timeout to this?
+            while rtc.ctrl.read().rtc_active().bit_is_set() {
+                core::hint::spin_loop();
+            }
 
             let setup_0 = ((t.year as u32) << consts::RTC_SETUP_0_YEAR_LSB)
                 | ((t.month as u32) << consts::RTC_SETUP_0_MONTH_LSB)
@@ -177,17 +195,14 @@ impl RtcClock {
             rtc.setup_0.write(|w| unsafe { w.bits(setup_0) });
             rtc.setup_1.write(|w| unsafe { w.bits(setup_1) });
 
-            rtc.ctrl
-                .write(|w| unsafe { w.bits(consts::RTC_CTRL_LOAD_BITS) });
+            rtc.ctrl.write(|w| w.load().set_bit());
+            rtc.ctrl.write(|w| w.rtc_enable().set_bit());
+            // TODO: Add a timeout to this?
+            while rtc.ctrl.read().rtc_active().bit_is_clear() {
+                core::hint::spin_loop();
+            }
         }
         // The Rtc RegisterBlock is no longer available here, so we can call other methods again
-
-        self.enable();
-
-        // TODO: Add a timeout to this?
-        while !self.is_running() {
-            core::hint::spin_loop();
-        }
 
         Ok(())
     }
@@ -249,12 +264,7 @@ impl RtcClock {
             // and this file is the only file that messes with these addresses.
             let rtc = &*RTC::ptr();
 
-            // Safety: We know this register address has an atomic address, and we have ownership of the Rtc RegisterBlock
-            crate::atomic_register_access::write_bitmask_clear(
-                // IRQ_SETUP_0_SPEC::Ux = u32, so casting this as a pointer is fine
-                rtc.irq_setup_0.as_ptr() as *mut u32,
-                consts::RTC_IRQ_SETUP_0_MATCH_ENA_BITS,
-            );
+            rtc.irq_setup_0.modify(|_, s| s.match_ena().clear_bit());
 
             // TODO: Add a timeout to this?
             while rtc.irq_setup_0.read().match_active().bit() {
@@ -344,6 +354,7 @@ impl RtcClock {
 }
 
 /// Errors regarding the [`DateTime`] and [`DateTimeFilter`] structs.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DateTimeError {
     /// The [DateTime] contains an invalid year value. Must be between `0..=4095`.
     InvalidYear,
@@ -365,6 +376,7 @@ pub enum DateTimeError {
 }
 
 /// Errors that can occur on methods on [RtcClock]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RtcError {
     /// An invalid DateTime was given or stored on the hardware.
     InvalidDateTime(DateTimeError),
