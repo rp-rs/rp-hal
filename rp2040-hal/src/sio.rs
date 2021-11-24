@@ -150,6 +150,7 @@ macro_rules! impl_spinlock {
             /// **warning**: These spinlocks are not re-entrant, meaning that the following code will cause a deadlock:
             ///
             /// ```no_run
+            /// use rp2040_hal::sio::{Spinlock0, Spinlock};
             /// let lock_1 = Spinlock0::claim();
             /// let lock_2 = Spinlock0::claim(); // deadlock here
             /// ```
