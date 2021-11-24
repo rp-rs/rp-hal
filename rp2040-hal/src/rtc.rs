@@ -138,6 +138,8 @@ impl RtcClock {
     /// Init the RTC clock. This should be called exactly once at the start of the application.
     ///
     /// [`init_clocks_and_plls`] will call this internally so you often won't have to call this.
+    ///
+    /// [`init_clocks_and_plls`]: fn.init_clocks_and_plls.html
     pub fn init(&mut self, resets: &mut RESETS) {
         // reset RTC
         resets.reset.modify(|_, w| w.rtc().set_bit());
