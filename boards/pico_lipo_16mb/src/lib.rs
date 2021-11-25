@@ -40,7 +40,7 @@ hal::bsp_pins!(
     Gpio20 { name: gpio20 },
     Gpio21 { name: gpio21 },
     Gpio22 { name: gpio22 },
-    Gpio23 { name: bootsel },
+    Gpio23 { name: user_sw },
     Gpio24 { name: vbus_detect },
     Gpio25 { name: led },
     Gpio26 { name: gpio26 },
