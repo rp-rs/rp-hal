@@ -30,57 +30,15 @@
 //! uart.write_full_blocking(b"Hello World!\r\n");
 //! ```
 
+use super::*;
+use crate::pac::uart0::uartlcr_h::W as UART_LCR_H_Writer;
 use core::convert::Infallible;
 use core::fmt;
-use core::ops::Deref;
+use embedded_hal::serial::{Read, Write};
 use embedded_time::fixed_point::FixedPoint;
 use embedded_time::rate::Baud;
 use embedded_time::rate::Hertz;
-
-#[cfg(feature = "eh1_0_alpha")]
-use eh1_0_alpha::serial::nb as eh1;
-use embedded_hal::serial::{Read, Write};
-
 use nb::Error::{Other, WouldBlock};
-
-use crate::pac::{
-    uart0::{uartlcr_h::W as UART_LCR_H_Writer, RegisterBlock},
-    UART0, UART1,
-};
-
-use crate::resets::SubsystemReset;
-
-/// Error type for UART operations.
-#[derive(Debug)]
-pub enum Error {
-    /// Bad argument : when things overflow, ...
-    BadArgument,
-}
-
-/// When there's a read error.
-pub struct ReadError<'err> {
-    /// The type of error
-    pub err_type: ReadErrorType,
-
-    /// Reference to the data that was read but eventually discared because of the error.
-    pub discared: &'err [u8],
-}
-
-/// Possible types of read errors. See Chapter 4, Section 2 §8 - Table 436: "UARTDR Register"
-#[cfg_attr(feature = "eh1_0_alpha", derive(Debug))]
-pub enum ReadErrorType {
-    /// Triggered when the FIFO (or shift-register) is overflowed.
-    Overrun,
-
-    /// Triggered when a break is received
-    Break,
-
-    /// Triggered when there is a parity mismatch between what's received and our settings.
-    Parity,
-
-    /// Triggered when the received character didn't have a valid stop bit.
-    Framing,
-}
 
 #[cfg(feature = "eh1_0_alpha")]
 impl eh1_0_alpha::serial::Error for ReadErrorType {
@@ -92,113 +50,6 @@ impl eh1_0_alpha::serial::Error for ReadErrorType {
             ReadErrorType::Framing => eh1_0_alpha::serial::ErrorKind::FrameFormat,
         }
     }
-}
-
-/// State of the UART Peripheral.
-pub trait State {}
-
-/// Trait to handle both underlying devices (UART0 & UART1)
-pub trait UartDevice: Deref<Target = RegisterBlock> + SubsystemReset {}
-
-impl UartDevice for UART0 {}
-impl UartDevice for UART1 {}
-
-/// UART is enabled.
-pub struct Enabled;
-
-/// UART is disabled.
-pub struct Disabled;
-
-impl State for Enabled {}
-impl State for Disabled {}
-
-/// Data bits
-pub enum DataBits {
-    /// 5 bits
-    Five,
-    /// 6 bits
-    Six,
-    /// 7 bits
-    Seven,
-    /// 8 bits
-    Eight,
-}
-
-/// Stop bits
-pub enum StopBits {
-    /// 1 bit
-    One,
-
-    /// 2 bits
-    Two,
-}
-
-/// Parity
-/// The "none" state of parity is represented with the Option type (None).
-pub enum Parity {
-    /// Odd parity
-    Odd,
-
-    /// Even parity
-    Even,
-}
-
-/// A struct holding the configuration for an UART device.
-pub struct UartConfig {
-    /// The desired baud rate for the peripheral
-    pub baudrate: Baud,
-    /// Number of data bits per character (5, 6, 7 or 8)
-    pub data_bits: DataBits,
-    /// Number of stop bits after each character
-    pub stop_bits: StopBits,
-    /// Parity Bit: None, Some(Even), Some(Odd)
-    pub parity: Option<Parity>,
-}
-
-/// Common configurations for UART.
-pub mod common_configs {
-    use super::{DataBits, StopBits, UartConfig};
-    use embedded_time::rate::Baud;
-
-    /// 9600 baud, 8 data bits, no parity, 1 stop bit
-    pub const _9600_8_N_1: UartConfig = UartConfig {
-        baudrate: Baud(9600),
-        data_bits: DataBits::Eight,
-        stop_bits: StopBits::One,
-        parity: None,
-    };
-
-    /// 19200 baud, 8 data bits, no parity, 1 stop bit
-    pub const _19200_8_N_1: UartConfig = UartConfig {
-        baudrate: Baud(19200),
-        data_bits: DataBits::Eight,
-        stop_bits: StopBits::One,
-        parity: None,
-    };
-
-    /// 38400 baud, 8 data bits, no parity, 1 stop bit
-    pub const _38400_8_N_1: UartConfig = UartConfig {
-        baudrate: Baud(38400),
-        data_bits: DataBits::Eight,
-        stop_bits: StopBits::One,
-        parity: None,
-    };
-
-    /// 57600 baud, 8 data bits, no parity, 1 stop bit
-    pub const _57600_8_N_1: UartConfig = UartConfig {
-        baudrate: Baud(57600),
-        data_bits: DataBits::Eight,
-        stop_bits: StopBits::One,
-        parity: None,
-    };
-
-    /// 115200 baud, 8 data bits, no parity, 1 stop bit
-    pub const _115200_8_N_1: UartConfig = UartConfig {
-        baudrate: Baud(115200),
-        data_bits: DataBits::Eight,
-        stop_bits: StopBits::One,
-        parity: None,
-    };
 }
 
 /// An UART Peripheral based on an underlying UART device.
