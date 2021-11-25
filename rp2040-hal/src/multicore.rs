@@ -6,11 +6,11 @@ use crate::pac;
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-struct FIFO<'p> {
+struct Fifo<'p> {
     sio: &'p mut pac::SIO,
 }
 
-impl<'p> FIFO<'p> {
+impl<'p> Fifo<'p> {
     fn new(sio: &'p mut pac::SIO) -> Self {
         Self { sio }
     }
@@ -114,7 +114,7 @@ impl<'p> Multicore<'p> {
             MULTICORE_TRAMPOLINE.as_ptr() as usize,
         ];
 
-        let mut fifo = FIFO::new(self.sio);
+        let mut fifo = Fifo::new(self.sio);
 
         let mut seq = 0;
         loop {
