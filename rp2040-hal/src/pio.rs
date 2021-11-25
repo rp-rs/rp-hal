@@ -526,7 +526,7 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     }
 
     /// Execute the instruction immediately.
-    /// 
+    ///
     /// While this is allowed even when the state machine is running, the datasheet says:
     /// > If EXEC instructions are used, instructions written to INSTR must not stall.
     /// It's unclear what happens if this is violated.
