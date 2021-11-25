@@ -93,11 +93,11 @@ impl<'p> Multicore<'p> {
         let vector_table = self.ppb.vtor.read().bits();
 
         let core1_stack = unsafe { &mut CORE1_STACK };
-        let mut stack_ptr = unsafe { core1_stack.as_mut_ptr().add(core1_stack.len() - 1) };
+        let mut stack_ptr = unsafe { core1_stack.as_mut_ptr().add(core1_stack.len()) };
 
         let mut push = |v: usize| unsafe {
-            stack_ptr.write(v);
             stack_ptr = stack_ptr.sub(1);
+            stack_ptr.write(v);
         };
 
         push(wrapper as usize);
