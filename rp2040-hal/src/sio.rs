@@ -62,6 +62,7 @@ pub struct Sio {
     // interp0
     // interp1
 }
+
 impl Sio {
     /// Create `Sio` from the PAC.
     pub fn new(sio: pac::SIO) -> Self {
@@ -123,19 +124,19 @@ impl SioFifo {
     /// Read from the FIFO until it is empty, throwing the contents away.
     pub fn drain(&mut self) {
         while self.read().is_some() {
-            // Spin until FIFO empty
+            // Retry until FIFO empty
         }
     }
 
     /// Push to the FIFO, spinning if there's no space.
     pub fn write_blocking(&mut self, value: u32) {
-        // We wait for the FIFO to have some space
+        // We busy-wait for the FIFO to have some space
         while !self.is_write_ready() {
-            cortex_m::asm::wfe();
+            cortex_m::asm::nop();
         }
 
-        // Write the value to the FIFO - the other core will now be able to pop it
-        // off its end of the FIFO.
+        // Write the value to the FIFO - the other core will now be able to
+        // pop it off its end of the FIFO.
         self.write(value as u32);
 
         // Fire off an event to the other core
@@ -144,10 +145,16 @@ impl SioFifo {
 
     /// Pop from the FIFO, spinning if there's currently no data.
     pub fn read_blocking(&mut self) -> u32 {
-        // Spin until FIFO has data
+        // Keep trying until FIFO has data
         loop {
+            // Have we got something?
             if let Some(data) = self.read() {
+                // Yes, return it right away
                 return data;
+            } else {
+                // No, so sleep the CPU. We expect the sending core to `sev`
+                // on write.
+                cortex_m::asm::wfe();
             }
         }
     }
