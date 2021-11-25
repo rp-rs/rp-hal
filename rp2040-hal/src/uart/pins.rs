@@ -1,8 +1,10 @@
 use crate::gpio::{bank0, FunctionUart, Pin};
 use crate::pac::{UART0, UART1};
 
+use super::UartDevice;
+
 /// Declares a valid UART pinout.
-pub trait ValidUartPinout<UART> {
+pub trait ValidUartPinout<UART: UartDevice> {
     /// Indicates TX should be enabled for this pinout
     const TX_ENABLED: bool;
     /// Indicates RX should be enabled for this pinout
@@ -15,6 +17,7 @@ pub trait ValidUartPinout<UART> {
 
 impl<UART, TX, RX, CTS, RTS> ValidUartPinout<UART> for Pins<TX, RX, CTS, RTS>
 where
+    UART: UartDevice,
     TX: Tx<UART>,
     RX: Rx<UART>,
     CTS: Cts<UART>,
@@ -28,6 +31,7 @@ where
 
 impl<UART, TX, RX> ValidUartPinout<UART> for (TX, RX)
 where
+    UART: UartDevice,
     TX: Tx<UART>,
     RX: Rx<UART>,
 {
@@ -39,6 +43,7 @@ where
 
 impl<UART, TX, RX, CTS, RTS> ValidUartPinout<UART> for (TX, RX, CTS, RTS)
 where
+    UART: UartDevice,
     TX: Tx<UART>,
     RX: Rx<UART>,
     CTS: Cts<UART>,
@@ -136,36 +141,36 @@ impl<TX, RX, CTS, RTS> Pins<TX, RX, CTS, RTS> {
 }
 
 /// Indicates a valid TX pin for UART0 or UART1
-pub trait Tx<UART> {
+pub trait Tx<UART: UartDevice> {
     #[allow(missing_docs)]
     const ENABLED: bool;
 }
 /// Indicates a valid RX pin for UART0 or UART1
-pub trait Rx<UART> {
+pub trait Rx<UART: UartDevice> {
     #[allow(missing_docs)]
     const ENABLED: bool;
 }
 /// Indicates a valid CTS pin for UART0 or UART1
-pub trait Cts<UART> {
+pub trait Cts<UART: UartDevice> {
     #[allow(missing_docs)]
     const ENABLED: bool;
 }
 /// Indicates a valid RTS pin for UART0 or UART1
-pub trait Rts<UART> {
+pub trait Rts<UART: UartDevice> {
     #[allow(missing_docs)]
     const ENABLED: bool;
 }
 
-impl<UART> Tx<UART> for () {
+impl<UART: UartDevice> Tx<UART> for () {
     const ENABLED: bool = false;
 }
-impl<UART> Rx<UART> for () {
+impl<UART: UartDevice> Rx<UART> for () {
     const ENABLED: bool = false;
 }
-impl<UART> Cts<UART> for () {
+impl<UART: UartDevice> Cts<UART> for () {
     const ENABLED: bool = false;
 }
-impl<UART> Rts<UART> for () {
+impl<UART: UartDevice> Rts<UART> for () {
     const ENABLED: bool = false;
 }
 
