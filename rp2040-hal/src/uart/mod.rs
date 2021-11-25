@@ -16,17 +16,20 @@
 //! let mut watchdog = Watchdog::new(peripherals.WATCHDOG);
 //! let mut clocks = init_clocks_and_plls(XOSC_CRYSTAL_FREQ, peripherals.XOSC, peripherals.CLOCKS, peripherals.PLL_SYS, peripherals.PLL_USB, &mut peripherals.RESETS, &mut watchdog).ok().unwrap();
 //!
+//! // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
+//! let pins = (
+//!     pins.gpio0.into_mode::<FunctionUart>(),
+//!     pins.gpio1.into_mode::<FunctionUart>(),
+//! );
 //! // Need to perform clock init before using UART or it will freeze.
-//! let uart = UartPeripheral::<_, _>::enable(
+//! let uart = UartPeripheral::enable(
 //!         peripherals.UART0,
+//!         pins,
 //!         &mut peripherals.RESETS,
 //!         uart::common_configs::_9600_8_N_1,
 //!         clocks.peripheral_clock.into(),
 //!     ).unwrap();
 //!
-//! // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
-//! let _tx_pin = pins.gpio0.into_mode::<FunctionUart>();
-//! let _rx_pin = pins.gpio1.into_mode::<FunctionUart>();
 //! uart.write_full_blocking(b"Hello World!\r\n");
 //! ```
 

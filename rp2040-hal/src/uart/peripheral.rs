@@ -53,40 +53,43 @@ impl eh1_0_alpha::serial::Error for ReadErrorType {
 }
 
 /// An UART Peripheral based on an underlying UART device.
-pub struct UartPeripheral<S: State, D: UartDevice> {
+pub struct UartPeripheral<S: State, D: UartDevice, P: ValidUartPinout<D>> {
     device: D,
     _state: S,
+    pins: P,
     config: UartConfig,
     effective_baudrate: Baud,
 }
 
-impl<S: State, D: UartDevice> UartPeripheral<S, D> {
-    fn transition<To: State>(self, state: To) -> UartPeripheral<To, D> {
+impl<S: State, D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<S, D, P> {
+    fn transition<To: State>(self, state: To) -> UartPeripheral<To, D, P> {
         UartPeripheral {
             device: self.device,
+            pins: self.pins,
             config: self.config,
             effective_baudrate: self.effective_baudrate,
             _state: state,
         }
     }
 
-    /// Releases the underlying device.
-    pub fn free(self) -> D {
-        self.device
+    /// Releases the underlying device and pins.
+    pub fn free(self) -> (D, P) {
+        (self.device, self.pins)
     }
 }
 
-impl<D: UartDevice> UartPeripheral<Disabled, D> {
+impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
     /// Creates an UartPeripheral in Disabled state.
-    pub fn new(device: D, resets: &mut pac::RESETS) -> UartPeripheral<Disabled, D> {
+    pub fn new(device: D, pins: P, resets: &mut pac::RESETS) -> UartPeripheral<Disabled, D, P> {
         device.reset_bring_down(resets);
         device.reset_bring_up(resets);
 
         UartPeripheral {
             device,
+            _state: Disabled,
+            pins,
             config: common_configs::_9600_8_N_1, // placeholder
             effective_baudrate: Baud(0),
-            _state: Disabled,
         }
     }
 
@@ -95,8 +98,8 @@ impl<D: UartDevice> UartPeripheral<Disabled, D> {
         self,
         config: UartConfig,
         frequency: Hertz,
-    ) -> Result<UartPeripheral<Enabled, D>, Error> {
-        let mut device = self.free();
+    ) -> Result<UartPeripheral<Enabled, D, P>, Error> {
+        let (mut device, pins) = self.free();
         let effective_baudrate = configure_baudrate(&mut device, &config.baudrate, &frequency)?;
 
         device.uartlcr_h.write(|w| {
@@ -105,11 +108,14 @@ impl<D: UartDevice> UartPeripheral<Disabled, D> {
             w
         });
 
-        // Enable the UART, both TX and RX
+        // Enable the UART, and the TX,RC,CTS and RTS based on the pins
         device.uartcr.write(|w| {
             w.uarten().set_bit();
-            w.txe().set_bit();
-            w.rxe().set_bit();
+            w.txe().bit(P::TX_ENABLED);
+            w.rxe().bit(P::RX_ENABLED);
+            w.ctsen().bit(P::CTS_ENABLED);
+            w.rtsen().bit(P::RTS_ENABLED);
+
             w
         });
 
@@ -122,20 +128,23 @@ impl<D: UartDevice> UartPeripheral<Disabled, D> {
         Ok(UartPeripheral {
             device,
             config,
+            pins,
             effective_baudrate,
             _state: Enabled,
         })
     }
 }
 
-impl<D: UartDevice> UartPeripheral<Enabled, D> {
+impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
     /// Disable this UART Peripheral, falling back to the Disabled state.
-    pub fn disable(self) -> UartPeripheral<Disabled, D> {
+    pub fn disable(self) -> UartPeripheral<Disabled, D, P> {
         // Disable the UART, both TX and RX
         self.device.uartcr.write(|w| {
             w.uarten().clear_bit();
             w.txe().clear_bit();
             w.rxe().clear_bit();
+            w.ctsen().clear_bit();
+            w.rtsen().clear_bit();
             w
         });
 
@@ -361,7 +370,7 @@ fn set_format<'w>(
     w
 }
 
-impl<D: UartDevice> Read<u8> for UartPeripheral<Enabled, D> {
+impl<D: UartDevice, P: ValidUartPinout<D>> Read<u8> for UartPeripheral<Enabled, D, P> {
     type Error = ReadErrorType;
 
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
@@ -378,7 +387,7 @@ impl<D: UartDevice> Read<u8> for UartPeripheral<Enabled, D> {
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice> eh1::Read<u8> for UartPeripheral<Enabled, D> {
+impl<D: UartDevice, P: ValidUartPinout<D>> eh1::Read<u8> for UartPeripheral<Enabled, D, P> {
     type Error = ReadErrorType;
 
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
@@ -417,7 +426,7 @@ impl eh1_0_alpha::serial::Error for SerialInfallible {
     }
 }
 
-impl<D: UartDevice> Write<u8> for UartPeripheral<Enabled, D> {
+impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for UartPeripheral<Enabled, D, P> {
     type Error = Infallible;
 
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
@@ -434,7 +443,7 @@ impl<D: UartDevice> Write<u8> for UartPeripheral<Enabled, D> {
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice> eh1::Write<u8> for UartPeripheral<Enabled, D> {
+impl<D: UartDevice, P: ValidUartPinout<D>> eh1::Write<u8> for UartPeripheral<Enabled, D, P> {
     type Error = SerialInfallible;
 
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
@@ -453,7 +462,7 @@ impl<D: UartDevice> eh1::Write<u8> for UartPeripheral<Enabled, D> {
     }
 }
 
-impl<D: UartDevice> fmt::Write for UartPeripheral<Enabled, D> {
+impl<D: UartDevice, P: ValidUartPinout<D>> fmt::Write for UartPeripheral<Enabled, D, P> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         s.bytes()
             .try_for_each(|c| nb::block!(self.write(c)))

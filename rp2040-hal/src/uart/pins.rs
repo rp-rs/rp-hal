@@ -2,7 +2,16 @@ use crate::gpio::{bank0, FunctionUart, Pin};
 use crate::pac::{UART0, UART1};
 
 /// Declares a valid UART pinout.
-pub trait ValidUartPinout<UART> {}
+pub trait ValidUartPinout<UART> {
+    /// Indicates TX should be enabled for this pinout
+    const TX_ENABLED: bool;
+    /// Indicates RX should be enabled for this pinout
+    const RX_ENABLED: bool;
+    /// Indicates CTS should be enabled for this pinout
+    const CTS_ENABLED: bool;
+    /// Indicates RTS should be enabled for this pinout
+    const RTS_ENABLED: bool;
+}
 
 impl<UART, TX, RX, CTS, RTS> ValidUartPinout<UART> for Pins<TX, RX, CTS, RTS>
 where
@@ -11,6 +20,10 @@ where
     CTS: Cts<UART>,
     RTS: Rts<UART>,
 {
+    const TX_ENABLED: bool = TX::ENABLED;
+    const RX_ENABLED: bool = RX::ENABLED;
+    const CTS_ENABLED: bool = CTS::ENABLED;
+    const RTS_ENABLED: bool = RTS::ENABLED;
 }
 
 impl<UART, TX, RX> ValidUartPinout<UART> for (TX, RX)
@@ -18,6 +31,10 @@ where
     TX: Tx<UART>,
     RX: Rx<UART>,
 {
+    const TX_ENABLED: bool = TX::ENABLED;
+    const RX_ENABLED: bool = RX::ENABLED;
+    const CTS_ENABLED: bool = false;
+    const RTS_ENABLED: bool = false;
 }
 
 impl<UART, TX, RX, CTS, RTS> ValidUartPinout<UART> for (TX, RX, CTS, RTS)
@@ -27,6 +44,10 @@ where
     CTS: Cts<UART>,
     RTS: Rts<UART>,
 {
+    const TX_ENABLED: bool = TX::ENABLED;
+    const RX_ENABLED: bool = RX::ENABLED;
+    const CTS_ENABLED: bool = CTS::ENABLED;
+    const RTS_ENABLED: bool = RTS::ENABLED;
 }
 
 /// Customizable Uart pinout, allowing you to set the pins individually.
@@ -41,6 +62,21 @@ where
 /// Every field can be set to `()` to not configure them.
 ///
 /// Note that you can also use tuples `(RX, TX)` or `(RX, TX, CTS, RTS)` instead of this type.
+///
+/// This struct can either be filled manually or with a builder pattern:
+///
+/// ```no_run
+/// # use rp2040_hal::uart::{Pins, ValidUartPinout};
+/// # use rp2040_hal::pac::UART0;
+/// # let gpio_pins: rp2040_hal::gpio::Pins = unsafe { core::mem::zeroed() };
+/// let pins = Pins::default()
+///     .tx(gpio_pins.gpio0.into_mode())
+///     .rx(gpio_pins.gpio1.into_mode());
+///
+/// fn assert_is_valid_uart0<T: ValidUartPinout<UART0>>(_: T) {}
+///
+/// assert_is_valid_uart0(pins);
+/// ```
 #[allow(missing_docs)]
 pub struct Pins<TX, RX, CTS, RTS> {
     pub tx: TX,
@@ -49,22 +85,8 @@ pub struct Pins<TX, RX, CTS, RTS> {
     pub cts: CTS,
 }
 
-impl Pins<(), (), (), ()> {
-    /// Create a new pinout. This can be used as a builder pattern
-    ///
-    /// ```no_run
-    /// # use rp2040_hal::uart::{Pins, ValidUartPinout};
-    /// # use rp2040_hal::pac::UART0;
-    /// # let gpio_pins: rp2040_hal::gpio::Pins = unsafe { core::mem::zeroed() };
-    /// let pins = Pins::new()
-    ///     .tx(gpio_pins.gpio0.into_mode())
-    ///     .rx(gpio_pins.gpio1.into_mode());
-    ///
-    /// fn assert_is_valid_uart0<T: ValidUartPinout<UART0>>(_: T) {}
-    ///
-    /// assert_is_valid_uart0(pins);
-    /// ```
-    pub fn new() -> Self {
+impl Default for Pins<(), (), (), ()> {
+    fn default() -> Self {
         Self {
             tx: (),
             rx: (),
@@ -116,35 +138,35 @@ impl<TX, RX, CTS, RTS> Pins<TX, RX, CTS, RTS> {
 /// Indicates a valid TX pin for UART0 or UART1
 pub trait Tx<UART> {
     #[allow(missing_docs)]
-    const IS_SET: bool;
+    const ENABLED: bool;
 }
 /// Indicates a valid RX pin for UART0 or UART1
 pub trait Rx<UART> {
     #[allow(missing_docs)]
-    const IS_SET: bool;
+    const ENABLED: bool;
 }
 /// Indicates a valid CTS pin for UART0 or UART1
 pub trait Cts<UART> {
     #[allow(missing_docs)]
-    const IS_SET: bool;
+    const ENABLED: bool;
 }
 /// Indicates a valid RTS pin for UART0 or UART1
 pub trait Rts<UART> {
     #[allow(missing_docs)]
-    const IS_SET: bool;
+    const ENABLED: bool;
 }
 
 impl<UART> Tx<UART> for () {
-    const IS_SET: bool = false;
+    const ENABLED: bool = false;
 }
 impl<UART> Rx<UART> for () {
-    const IS_SET: bool = false;
+    const ENABLED: bool = false;
 }
 impl<UART> Cts<UART> for () {
-    const IS_SET: bool = false;
+    const ENABLED: bool = false;
 }
 impl<UART> Rts<UART> for () {
-    const IS_SET: bool = false;
+    const ENABLED: bool = false;
 }
 
 macro_rules! impl_valid_uart {
@@ -157,22 +179,22 @@ macro_rules! impl_valid_uart {
         $(
             $(
                 impl Tx<$uart> for Pin<bank0::$tx, FunctionUart> {
-                    const IS_SET: bool = true;
+                    const ENABLED: bool = true;
                 }
             )*
             $(
                 impl Rx<$uart> for Pin<bank0::$rx, FunctionUart> {
-                    const IS_SET: bool = true;
+                    const ENABLED: bool = true;
                 }
             )*
             $(
                 impl Cts<$uart> for Pin<bank0::$cts, FunctionUart> {
-                    const IS_SET: bool = true;
+                    const ENABLED: bool = true;
                 }
             )*
             $(
                 impl Rts<$uart> for Pin<bank0::$rts, FunctionUart> {
-                    const IS_SET: bool = true;
+                    const ENABLED: bool = true;
                 }
             )*
         )*
