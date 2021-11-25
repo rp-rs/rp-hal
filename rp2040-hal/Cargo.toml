@@ -12,7 +12,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 cortex-m = "0.7.2"
 embedded-hal = { version = "0.2.5", features = ["unproven"] }
-eh1_0_alpha = { version = "=1.0.0-alpha.5", package="embedded-hal", optional=true }
+eh1_0_alpha = { version = "=1.0.0-alpha.6", package="embedded-hal", optional=true }
 embedded-time = "0.12.0"
 itertools = { version = "0.10.1", default-features = false }
 nb = "1.0"

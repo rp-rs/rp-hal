@@ -278,7 +278,7 @@ impl<T: Deref<Target = Block>, PINS> Write for I2C<T, PINS, Controller> {
 impl<T: Deref<Target = Block>, PINS> eh1::Write for I2C<T, PINS, Controller> {
     type Error = Error;
 
-    fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Error> {
+    fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Self::Error> {
         Write::write(self, addr, bytes)
     }
 }

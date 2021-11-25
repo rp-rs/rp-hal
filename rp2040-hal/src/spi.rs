@@ -186,6 +186,29 @@ impl<D: SpiDevice, const DS: u8> Spi<Enabled, D, DS> {
     }
 }
 
+/// Same as core::convert::Infallible, but implementing spi::Error
+///
+/// For eh 1.0.0-alpha.6, Infallible doesn't implement spi::Error,
+/// so use a locally defined type instead.
+/// This should be removed with the next release of e-h.
+/// (https://github.com/rust-embedded/embedded-hal/pull/328)
+#[cfg(feature = "eh1_0_alpha")]
+pub enum SpiInfallible {}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl core::fmt::Debug for SpiInfallible {
+    fn fmt(&self, _f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match *self {}
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1::Error for SpiInfallible {
+    fn kind(&self) -> eh1::ErrorKind {
+        match *self {}
+    }
+}
+
 macro_rules! impl_write {
     ($type:ident, [$($nr:expr),+]) => {
 
@@ -221,16 +244,16 @@ macro_rules! impl_write {
 
         #[cfg(feature = "eh1_0_alpha")]
         impl<D: SpiDevice> eh1::nb::FullDuplex<$type> for Spi<Enabled, D, $nr> {
-            type Error = Infallible;
+            type Error = SpiInfallible;
 
-            fn read(&mut self) -> Result<$type, nb::Error<Infallible>> {
+            fn read(&mut self) -> Result<$type, nb::Error<SpiInfallible>> {
                 if !self.is_readable() {
                     return Err(nb::Error::WouldBlock);
                 }
 
                 Ok(self.device.sspdr.read().data().bits() as $type)
             }
-            fn write(&mut self, word: $type) -> Result<(), nb::Error<Infallible>> {
+            fn write(&mut self, word: $type) -> Result<(), nb::Error<SpiInfallible>> {
                 // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
                 // is full, PL022 inhibits RX pushes, and sets a sticky flag on
                 // push-on-full, but continues shifting. Safe if SSPIMSC_RORIM is not set.
