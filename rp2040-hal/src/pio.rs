@@ -525,13 +525,13 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
         self.exec_instruction(instruction);
     }
 
-    ///Execute the instruction immediately.
+    /// Execute the instruction immediately.
+    /// 
+    /// While this is allowed even when the state machine is running, the datasheet says:
+    /// > If EXEC instructions are used, instructions written to INSTR must not stall.
+    /// It's unclear what happens if this is violated.
     pub fn exec_instruction(&mut self, instruction: u16) {
-        // This is allowed even if the state machine is running.
-        //
-        // However, the datasheet says:
-        // "If EXEC instructions are used, instructions written to INSTR must not stall"
-        // It's unclear what happens if this is violated.
+        // TODO: clarify what happens if the instruction stalls.
         self.sm.exec_instruction(instruction);
     }
 
