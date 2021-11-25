@@ -51,9 +51,10 @@ impl<'p> FIFO<'p> {
 }
 
 static mut CORE1_STACK: [usize; 4096] = [0; 4096];
-extern "C" {
-    fn multicore_trampoline();
-}
+static MULTICORE_TRAMPOLINE: [u16; 2] = [
+    0xbd03, // pop {r0, r1, pc} - call wrapper (pc) with r0 and r1
+    0x46c0, // nop - pad this out to 32 bits long
+];
 
 fn core1_setup(_stack_bottom: *mut ()) {
     // TODO: stack guard
@@ -110,7 +111,7 @@ impl<'p> Multicore<'p> {
             1,
             vector_table as usize,
             stack_ptr as usize,
-            multicore_trampoline as usize,
+            MULTICORE_TRAMPOLINE.as_ptr() as usize,
         ];
 
         let mut fifo = FIFO::new(self.sio);
