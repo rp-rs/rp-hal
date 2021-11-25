@@ -473,11 +473,11 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
         });
     }
 
-    /// Set the current instruction.
+    /// Execute the instruction immediately.
     // Safety: The Send trait assumes this is the only write to sm_instr while uninitialized. The
     // initialized `StateMachine` may also use this register. The `UnintStateMachine` is consumed
     // by `PIOBuilder.build` to create `StateMachine`
-    fn set_instruction(&mut self, instruction: u16) {
+    fn exec_instruction(&mut self, instruction: u16) {
         self.sm()
             .sm_instr
             .write(|w| unsafe { w.sm0_instr().bits(instruction) })
@@ -519,10 +519,20 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
         self.sm.sm().sm_addr.read().bits()
     }
 
-    /// Set the current instruction.
+    #[deprecated(note = "Renamed to exec_instruction")]
+    ///Execute the instruction immediately.
     pub fn set_instruction(&mut self, instruction: u16) {
-        // TODO: Check if this function is safe to call while the state machine is running.
-        self.sm.set_instruction(instruction);
+        self.exec_instruction(instruction);
+    }
+
+    /// Execute the instruction immediately.
+    ///
+    /// While this is allowed even when the state machine is running, the datasheet says:
+    /// > If EXEC instructions are used, instructions written to INSTR must not stall.
+    /// It's unclear what happens if this is violated.
+    pub fn exec_instruction(&mut self, instruction: u16) {
+        // TODO: clarify what happens if the instruction stalls.
+        self.sm.exec_instruction(instruction);
     }
 
     /// Check if the current instruction is stalled.
@@ -564,7 +574,7 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
                 .sm()
                 .sm_pinctrl
                 .write(|w| unsafe { w.set_base().bits(pin_num).set_count().bits(1) });
-            self.set_instruction(
+            self.exec_instruction(
                 pio::InstructionOperands::SET {
                     destination: pio::SetDestination::PINS,
                     data: if PinState::High == pin_state { 1 } else { 0 },
@@ -593,7 +603,7 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
                 .sm()
                 .sm_pinctrl
                 .write(|w| unsafe { w.set_base().bits(pinnum).set_count().bits(1) });
-            self.set_instruction(
+            self.exec_instruction(
                 pio::InstructionOperands::SET {
                     destination: pio::SetDestination::PINDIRS,
                     data: if PinDir::Output == pin_dir { 1 } else { 0 },
@@ -680,7 +690,7 @@ impl<SM: ValidStateMachine> StateMachine<SM, Running> {
         // pause the state machine
         self.sm.set_enabled(false);
         // revert it to its wrap target
-        self.sm.set_instruction(
+        self.sm.exec_instruction(
             pio::InstructionOperands::JMP {
                 condition: pio::JmpCondition::Always,
                 address: self.program.wrap_target(),
@@ -873,7 +883,7 @@ impl<SM: ValidStateMachine> Tx<SM> {
         }
         .encode();
         // Safety: The only other place this register is written is
-        // `UninitStatemachine.set_instruction`, `Tx` is only created after init.
+        // `UninitStatemachine.exec_instruction`, `Tx` is only created after init.
         let mask = 1 << SM::id();
         while self.register_block().fstat.read().txempty().bits() & mask != mask {
             self.register_block().sm[SM::id()]
@@ -1473,9 +1483,9 @@ impl<P: PIOExt> PIOBuilder<P> {
         sm.restart();
         sm.reset_clock();
 
-        // Set starting location by setting the state machine to execute a jmp
+        // Set starting location by forcing the state machine to execute a jmp
         // to the beginning of the program we loaded in.
-        sm.set_instruction(
+        sm.exec_instruction(
             pio::InstructionOperands::JMP {
                 condition: pio::JmpCondition::Always,
                 address: offset as u8,
