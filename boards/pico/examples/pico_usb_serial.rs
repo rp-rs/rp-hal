@@ -116,9 +116,13 @@ fn main() -> ! {
                     // Send back to the host
                     let mut wr_ptr = &buf[..count];
                     while !wr_ptr.is_empty() {
-                        let _ = serial.write(wr_ptr).map(|len| {
-                            wr_ptr = &wr_ptr[len..];
-                        });
+                        match serial.write(wr_ptr) {
+                            Ok(len) => wr_ptr = &wr_ptr[len..],
+                            // On error, just drop unwritten data.
+                            // One possible error is Err(WouldBlock), meaning the USB
+                            // write buffer is full.
+                            Err(_) => break,
+                        };
                     }
                 }
             }
