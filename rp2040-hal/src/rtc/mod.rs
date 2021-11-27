@@ -8,13 +8,18 @@
 //!
 //! # Notes
 //!
-//! There are some limitations to the real time clock. As per the datasheet:
+//! There are some things to take into account. As per the datasheet:
 //!
 //! - **Day of week**: The RTC will not compute the correct day of the week; it will only increment the existing value.
-//! - **Leap year**: If the current year is evenly divisible by 4, a leap year is detected, and Feb 28th is followed by Feb 29th  instead  of  March  1st. This  is  not  always  true  (century  years  for  example).
-//!   - To disable leap year checking, and never have a Feb 29th, call `RealTimeClock::set_leap_year_check(false)`.
+//!   - With the `chrono` feature, the day of week is calculated by chrono and should be correct. The value from the rp2040 itself is not used.
+//! - **Leap year**: If the current year is evenly divisible by 4, a leap year is detected, then Feb 28th is followed by Feb 29th instead  of  March  1st.
+//!   - There are cases where this is incorrect, e.g. century years have no leap day, but the chip will still add a Feb 29th.
+//!   - To disable leap year checking and never have a Feb 29th, call `RealTimeClock::set_leap_year_check(false)`.
 //!
-//! This could give weird behavior, especially in combination with the `chrono` feature.
+//! Other limitations:
+//!
+//! - **Leap seconds**: The rp2040 will not take leap seconds into account
+//!   - With the `chrono` feature, leap seconds will be silently handled by `chrono`. This means there might be a slight difference between the value of [`RealTimeClock::now()`] and adding 2 times together in code.
 
 use crate::clocks::Clock;
 use crate::clocks::RtcClock;
