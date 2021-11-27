@@ -118,6 +118,9 @@ pub(crate) fn read_full_blocking<D: UartDevice>(
 }
 
 /// Half of an [`UartPeripheral`] that is only capable of reading. Obtained by calling [`UartPeripheral::split()`]
+///
+/// [`UartPeripheral`]: struct.UartPeripheral.html
+/// [`UartPeripheral::split()`]: struct.UartPeripheral.html#method.split
 pub struct Reader<D: UartDevice, P: ValidUartPinout<D>> {
     pub(super) device: D,
     pub(super) pins: P,

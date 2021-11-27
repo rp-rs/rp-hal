@@ -173,6 +173,8 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
     /// Join the reader and writer halves together back into the original Uart peripheral.
     ///
     /// A reader/writer pair can be obtained by calling [`split`].
+    ///
+    /// [`split`]: #method.split
     pub fn join(reader: Reader<D, P>, writer: Writer<D, P>) -> Self {
         let _ = writer;
         Self {

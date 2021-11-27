@@ -58,6 +58,9 @@ pub(crate) fn write_full_blocking(rb: &RegisterBlock, data: &[u8]) {
 }
 
 /// Half of an [`UartPeripheral`] that is only capable of writing. Obtained by calling [`UartPeripheral::split()`]
+///
+/// [`UartPeripheral`]: struct.UartPeripheral.html
+/// [`UartPeripheral::split()`]: struct.UartPeripheral.html#method.split
 pub struct Writer<D: UartDevice, P: ValidUartPinout<D>> {
     pub(super) device: &'static RegisterBlock,
     pub(super) device_marker: PhantomData<D>,
