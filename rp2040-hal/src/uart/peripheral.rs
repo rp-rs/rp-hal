@@ -39,6 +39,7 @@ use embedded_time::fixed_point::FixedPoint;
 use embedded_time::rate::Baud;
 use embedded_time::rate::Hertz;
 use nb::Error::{Other, WouldBlock};
+use rp2040_pac::{UART0, UART1};
 
 /// An UART Peripheral based on an underlying UART device.
 pub struct UartPeripheral<S: State, D: UartDevice, P: ValidUartPinout<D>> {
@@ -139,47 +140,13 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
         self.transition(Disabled)
     }
 
-    pub(crate) fn transmit_flushed(&self) -> nb::Result<(), Infallible> {
-        if self.device.uartfr.read().txfe().bit_is_set() {
-            Ok(())
-        } else {
-            Err(WouldBlock)
-        }
-    }
-
-    fn uart_is_writable(&self) -> bool {
-        self.device.uartfr.read().txff().bit_is_clear()
-    }
-
-    fn uart_is_readable(&self) -> bool {
-        self.device.uartfr.read().rxfe().bit_is_clear()
-    }
-
     /// Writes bytes to the UART.
     /// This function writes as long as it can. As soon that the FIFO is full, if :
     /// - 0 bytes were written, a WouldBlock Error is returned
     /// - some bytes were written, it is deemed to be a success
     /// Upon success, the remaining slice is returned.
     pub fn write_raw<'d>(&self, data: &'d [u8]) -> nb::Result<&'d [u8], Infallible> {
-        let mut bytes_written = 0;
-
-        for c in data {
-            if !self.uart_is_writable() {
-                if bytes_written == 0 {
-                    return Err(WouldBlock);
-                } else {
-                    return Ok(&data[bytes_written..]);
-                }
-            }
-
-            self.device.uartdr.write(|w| unsafe {
-                w.data().bits(*c);
-                w
-            });
-
-            bytes_written += 1;
-        }
-        Ok(&data[bytes_written..])
+        super::writer::write_raw(&self.device, data)
     }
 
     /// Reads bytes from the UART.
@@ -188,83 +155,73 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
     /// - some bytes were read, it is deemed to be a success
     /// Upon success, it will return how many bytes were read.
     pub fn read_raw<'b>(&self, buffer: &'b mut [u8]) -> nb::Result<usize, ReadError<'b>> {
-        let mut bytes_read = 0;
-
-        Ok(loop {
-            if !self.uart_is_readable() {
-                if bytes_read == 0 {
-                    return Err(WouldBlock);
-                } else {
-                    break bytes_read;
-                }
-            }
-
-            if bytes_read < buffer.len() {
-                let mut error: Option<ReadErrorType> = None;
-
-                let read = self.device.uartdr.read();
-
-                if read.oe().bit_is_set() {
-                    error = Some(ReadErrorType::Overrun);
-                }
-
-                if read.be().bit_is_set() {
-                    error = Some(ReadErrorType::Break);
-                }
-
-                if read.pe().bit_is_set() {
-                    error = Some(ReadErrorType::Parity);
-                }
-
-                if read.fe().bit_is_set() {
-                    error = Some(ReadErrorType::Framing);
-                }
-
-                if let Some(err_type) = error {
-                    return Err(Other(ReadError {
-                        err_type,
-                        discared: buffer,
-                    }));
-                }
-
-                buffer[bytes_read] = read.data().bits();
-                bytes_read += 1;
-            } else {
-                break bytes_read;
-            }
-        })
+        super::reader::read_raw(&self.device, buffer)
     }
 
     /// Writes bytes to the UART.
     /// This function blocks until the full buffer has been sent.
     pub fn write_full_blocking(&self, data: &[u8]) {
-        let mut temp = data;
-
-        while !temp.is_empty() {
-            temp = match self.write_raw(temp) {
-                Ok(remaining) => remaining,
-                Err(WouldBlock) => continue,
-                Err(_) => unreachable!(),
-            }
-        }
+        super::writer::write_full_blocking(&self.device, data);
     }
 
     /// Reads bytes from the UART.
     /// This function blocks until the full buffer has been received.
     pub fn read_full_blocking(&self, buffer: &mut [u8]) -> Result<(), ReadErrorType> {
-        let mut offset = 0;
+        super::reader::read_full_blocking(&self.device, buffer)
+    }
 
-        while offset != buffer.len() {
-            offset += match self.read_raw(&mut buffer[offset..]) {
-                Ok(bytes_read) => bytes_read,
-                Err(e) => match e {
-                    Other(inner) => return Err(inner.err_type),
-                    WouldBlock => continue,
-                },
-            }
+    /// Join the reader and writer halves together back into the original Uart peripheral.
+    ///
+    /// A reader/writer pair can be obtained by calling [`split`].
+    pub fn join(reader: Reader<D, P>, writer: Writer<D, P>) -> Self {
+        let _ = writer;
+        Self {
+            device: reader.device,
+            _state: Enabled,
+            pins: reader.pins,
+            config: reader.config,
+            effective_baudrate: reader.effective_baudrate,
         }
+    }
+}
 
-        Ok(())
+impl<P: ValidUartPinout<UART0>> UartPeripheral<Enabled, UART0, P> {
+    /// Split this peripheral into a separate reader and writer.
+    pub fn split(self) -> (Reader<UART0, P>, Writer<UART0, P>) {
+        let reader = Reader {
+            device: self.device,
+            pins: self.pins,
+            config: self.config,
+            effective_baudrate: self.effective_baudrate,
+        };
+        // Safety: reader and writer will never write to the same address
+        let device_copy = unsafe { &*UART0::ptr() };
+        let writer = Writer {
+            device: device_copy,
+            device_marker: core::marker::PhantomData,
+            pins: core::marker::PhantomData,
+        };
+        (reader, writer)
+    }
+}
+
+impl<P: ValidUartPinout<UART1>> UartPeripheral<Enabled, UART1, P> {
+    /// Split this peripheral into a separate reader and writer.
+    pub fn split(self) -> (Reader<UART1, P>, Writer<UART1, P>) {
+        let reader = Reader {
+            device: self.device,
+            pins: self.pins,
+            config: self.config,
+            effective_baudrate: self.effective_baudrate,
+        };
+        // Safety: reader and writer will never write to the same address
+        let device_copy = unsafe { &*UART1::ptr() };
+        let writer = Writer {
+            device: device_copy,
+            device_marker: core::marker::PhantomData,
+            pins: core::marker::PhantomData,
+        };
+        (reader, writer)
     }
 }
 
@@ -390,30 +347,6 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::Read<u8> for UartPeripheral<Enab
         }
     }
 }
-
-/// Same as core::convert::Infallible, but implementing spi::Error
-///
-/// For eh 1.0.0-alpha.6, Infallible doesn't implement spi::Error,
-/// so use a locally defined type instead.
-/// This should be removed with the next release of e-h.
-/// (https://github.com/rust-embedded/embedded-hal/pull/328)
-#[cfg(feature = "eh1_0_alpha")]
-pub enum SerialInfallible {}
-
-#[cfg(feature = "eh1_0_alpha")]
-impl core::fmt::Debug for SerialInfallible {
-    fn fmt(&self, _f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match *self {}
-    }
-}
-
-#[cfg(feature = "eh1_0_alpha")]
-impl eh1_0_alpha::serial::Error for SerialInfallible {
-    fn kind(&self) -> eh1_0_alpha::serial::ErrorKind {
-        match *self {}
-    }
-}
-
 impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for UartPeripheral<Enabled, D, P> {
     type Error = Infallible;
 
@@ -426,7 +359,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for UartPeripheral<Enabled,
     }
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
-        self.transmit_flushed()
+        super::writer::transmit_flushed(&self.device)
     }
 }
 
@@ -443,7 +376,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::Write<u8> for UartPeripheral<Ena
     }
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
-        self.transmit_flushed().map_err(|e| match e {
+        super::writer::transmit_flushed(&self.device).map_err(|e| match e {
             WouldBlock => WouldBlock,
             Other(v) => match v {},
         })

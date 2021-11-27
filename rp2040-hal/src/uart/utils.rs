@@ -9,49 +9,11 @@ pub enum Error {
     /// Bad argument : when things overflow, ...
     BadArgument,
 }
-
-/// When there's a read error.
-pub struct ReadError<'err> {
-    /// The type of error
-    pub err_type: ReadErrorType,
-
-    /// Reference to the data that was read but eventually discared because of the error.
-    pub discared: &'err [u8],
-}
-
-/// Possible types of read errors. See Chapter 4, Section 2 §8 - Table 436: "UARTDR Register"
-#[cfg_attr(feature = "eh1_0_alpha", derive(Debug))]
-pub enum ReadErrorType {
-    /// Triggered when the FIFO (or shift-register) is overflowed.
-    Overrun,
-
-    /// Triggered when a break is received
-    Break,
-
-    /// Triggered when there is a parity mismatch between what's received and our settings.
-    Parity,
-
-    /// Triggered when the received character didn't have a valid stop bit.
-    Framing,
-}
-
-#[cfg(feature = "eh1_0_alpha")]
-impl eh1_0_alpha::serial::Error for ReadErrorType {
-    fn kind(&self) -> eh1_0_alpha::serial::ErrorKind {
-        match self {
-            ReadErrorType::Overrun => eh1_0_alpha::serial::ErrorKind::Overrun,
-            ReadErrorType::Break => eh1_0_alpha::serial::ErrorKind::Other,
-            ReadErrorType::Parity => eh1_0_alpha::serial::ErrorKind::Parity,
-            ReadErrorType::Framing => eh1_0_alpha::serial::ErrorKind::FrameFormat,
-        }
-    }
-}
-
 /// State of the UART Peripheral.
 pub trait State {}
 
 /// Trait to handle both underlying devices (UART0 & UART1)
-pub trait UartDevice: Deref<Target = RegisterBlock> + SubsystemReset {}
+pub trait UartDevice: Deref<Target = RegisterBlock> + SubsystemReset + 'static {}
 
 impl UartDevice for UART0 {}
 impl UartDevice for UART1 {}
@@ -110,4 +72,27 @@ pub struct UartConfig {
 
     /// The parity that this uart should have
     pub parity: Option<Parity>,
+}
+
+/// Same as core::convert::Infallible, but implementing spi::Error
+///
+/// For eh 1.0.0-alpha.6, Infallible doesn't implement spi::Error,
+/// so use a locally defined type instead.
+/// This should be removed with the next release of e-h.
+/// (https://github.com/rust-embedded/embedded-hal/pull/328)
+#[cfg(feature = "eh1_0_alpha")]
+pub enum SerialInfallible {}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl core::fmt::Debug for SerialInfallible {
+    fn fmt(&self, _f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match *self {}
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1_0_alpha::serial::Error for SerialInfallible {
+    fn kind(&self) -> eh1_0_alpha::serial::ErrorKind {
+        match *self {}
+    }
 }

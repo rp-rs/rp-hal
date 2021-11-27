@@ -35,11 +35,15 @@
 
 mod peripheral;
 mod pins;
+mod reader;
 mod utils;
+mod writer;
 
 pub use self::peripheral::UartPeripheral;
 pub use self::pins::*;
+pub use self::reader::{ReadError, ReadErrorType, Reader};
 pub use self::utils::*;
+pub use self::writer::Writer;
 
 /// Common configurations for UART.
 pub mod common_configs;
