@@ -22,3 +22,7 @@ jobs:
         with:
           command: test
           args: --doc --target x86_64-unknown-linux-gnu
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --doc --target x86_64-unknown-linux-gnu --features chrono
