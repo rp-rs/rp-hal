@@ -35,6 +35,18 @@ pub enum ReadErrorType {
     Framing,
 }
 
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1_0_alpha::serial::Error for ReadErrorType {
+    fn kind(&self) -> eh1_0_alpha::serial::ErrorKind {
+        match self {
+            ReadErrorType::Overrun => eh1_0_alpha::serial::ErrorKind::Overrun,
+            ReadErrorType::Break => eh1_0_alpha::serial::ErrorKind::Other,
+            ReadErrorType::Parity => eh1_0_alpha::serial::ErrorKind::Parity,
+            ReadErrorType::Framing => eh1_0_alpha::serial::ErrorKind::FrameFormat,
+        }
+    }
+}
+
 /// State of the UART Peripheral.
 pub trait State {}
 

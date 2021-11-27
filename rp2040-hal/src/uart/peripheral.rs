@@ -40,18 +40,6 @@ use embedded_time::rate::Baud;
 use embedded_time::rate::Hertz;
 use nb::Error::{Other, WouldBlock};
 
-#[cfg(feature = "eh1_0_alpha")]
-impl eh1_0_alpha::serial::Error for ReadErrorType {
-    fn kind(&self) -> eh1_0_alpha::serial::ErrorKind {
-        match self {
-            ReadErrorType::Overrun => eh1_0_alpha::serial::ErrorKind::Overrun,
-            ReadErrorType::Break => eh1_0_alpha::serial::ErrorKind::Other,
-            ReadErrorType::Parity => eh1_0_alpha::serial::ErrorKind::Parity,
-            ReadErrorType::Framing => eh1_0_alpha::serial::ErrorKind::FrameFormat,
-        }
-    }
-}
-
 /// An UART Peripheral based on an underlying UART device.
 pub struct UartPeripheral<S: State, D: UartDevice, P: ValidUartPinout<D>> {
     device: D,
