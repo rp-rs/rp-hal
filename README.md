@@ -73,7 +73,7 @@ You may also want to install these helpful tools:
 # Useful to creating UF2 images for the RP2040 USB Bootloader
 cargo install elf2uf2-rs --locked
 # Useful for flashing over the SWD pins using a supported JTAG probe
-cargo install --git https://github.com/rp-rs/probe-run.git --branch rp2040-support 
+cargo install probe-run
 ```
 
 ## Packages
@@ -258,22 +258,17 @@ debug/JTAG probes. It is based on a library called
 [probe-rs](https://github.com/probe-rs/probe-rs). Unlike using, say, OpenOCD,
 probe-rs can autodetect your debug probe, which can make it easier to use.
 
-Currently, probe-rs supports the slightly unusual debug hardware in the RP2040,
-but the last released probe-run tool (v0.2.6, as of September 2021), does not.
-However, there is a special version of probe-run for the RP2040 called
-[probe-run-rp](https://github.com/rp-rs/probe-run/tree/rp2040-support).
-
-*Step 1* - Install `probe-run-rp`:
+*Step 1* - Install `probe-run`:
 
 ```console
-$ cargo install --git https://github.com/rp-rs/probe-run.git --branch rp2040-support 
+$ cargo install probe-run
 ```
 
 *Step 2* - Make sure your .cargo/config contains the following:
 
 ```toml
 [target.thumbv6m-none-eabi]
-runner = "probe-run-rp --chip RP2040"
+runner = "probe-run --chip RP2040"
 ```
 
 *Step 3* - Connect your USB JTAG/debug probe (such as a Raspberry Pi Pico
@@ -282,7 +277,7 @@ programming pins on your RP2040 board. Check the probe has been found by
 running:
 
 ```console
-$ probe-run-rp --chip RP2040 --list-probes
+$ probe-run --chip RP2040 --list-probes
 The following devices were found:
 [0]: J-Link (J-Link) (VID: 1366, PID: 0101, Serial: 000099999999, JLink)
 ```
@@ -291,7 +286,7 @@ There is a SEGGER J-Link connected in the example above - the mesage you see
 will reflect the probe you have connected.
 
 *Step 4* - Use `cargo run`, which will compile the code and start the specified
-'runner'. As the 'runner' is the `probe-run-rp` tool, it will connect to the
+'runner'. As the 'runner' is the `probe-run` tool, it will connect to the
 RP2040 via the first probe it finds, and install your firmware into the Flash
 connected to the RP2040.
 
