@@ -182,7 +182,7 @@ impl RealTimeClock {
 
         // Set the enable bit and check if it is set
         self.rtc.irq_setup_0.modify(|_, w| w.match_ena().set_bit());
-        while !self.rtc.irq_setup_0.read().match_active().bit_is_set() {
+        while self.rtc.irq_setup_0.read().match_active().bit_is_clear() {
             core::hint::spin_loop();
         }
     }

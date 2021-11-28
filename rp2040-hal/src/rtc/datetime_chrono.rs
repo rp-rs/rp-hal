@@ -33,24 +33,22 @@ pub(crate) fn validate_datetime(dt: &DateTime) -> Result<(), Error> {
     }
 }
 
-#[rustfmt::skip]
 pub(super) fn write_setup_0(dt: &DateTime, w: &mut setup_0::W) {
-	// Safety: the `.bits()` fields are marked `unsafe` but all bit values are valid
-    unsafe { 
-        w.year().bits(dt.year() as u16)
-         .month().bits(dt.month() as u8)
-         .day().bits(dt.day() as u8);
+    // Safety: the `.bits()` fields are marked `unsafe` but all bit values are valid
+    unsafe {
+        w.year().bits(dt.year() as u16);
+        w.month().bits(dt.month() as u8);
+        w.day().bits(dt.day() as u8);
     }
 }
 
-#[rustfmt::skip]
 pub(super) fn write_setup_1(dt: &DateTime, w: &mut setup_1::W) {
     // Safety: the `.bits()` fields are marked `unsafe` but all bit values are valid
     unsafe {
-        w.dotw().bits(dt.weekday().num_days_from_sunday() as u8)
-         .hour().bits(dt.hour() as u8)
-         .min().bits(dt.minute() as u8)
-         .sec().bits(dt.second() as u8);
+        w.dotw().bits(dt.weekday().num_days_from_sunday() as u8);
+        w.hour().bits(dt.hour() as u8);
+        w.min().bits(dt.minute() as u8);
+        w.sec().bits(dt.second() as u8);
     }
 }
 
