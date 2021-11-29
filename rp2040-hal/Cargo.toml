@@ -25,6 +25,7 @@ void = { version = "1.0.2", default-features = false }
 rand_core = "0.6.3"
 
 futures = { version = "0.3", default-features = false, optional = true }
+chrono = { version = "0.4", default-features = false, optional = true }
 
 # namespaced features will let use use "dep:embassy-traits" in the features rather than using this
 # trick of renaming the crate.
