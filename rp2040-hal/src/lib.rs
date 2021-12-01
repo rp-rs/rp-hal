@@ -18,6 +18,7 @@ pub extern crate rp2040_pac as pac;
 pub mod adc;
 pub(crate) mod atomic_register_access;
 pub mod clocks;
+mod critical_section_impl;
 pub mod dma;
 pub mod gpio;
 pub mod i2c;

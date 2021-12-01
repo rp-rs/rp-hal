@@ -23,6 +23,7 @@ usb-device = "0.2.8"
 vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
 rand_core = "0.6.3"
+critical-section = { version = "0.2.4", features = ["custom-impl"] }
 
 futures = { version = "0.3", default-features = false, optional = true }
 chrono = { version = "0.4", default-features = false, optional = true }
