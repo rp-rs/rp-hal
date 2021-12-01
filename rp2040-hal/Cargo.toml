@@ -45,4 +45,4 @@ pio-proc = { git = "https://github.com/rp-rs/pio-rs.git", branch = "main" }
 [features]
 rt = ["rp2040-pac/rt"]
 embassy-traits = ["embassy_traits", "futures"]
-
+alloc = []
