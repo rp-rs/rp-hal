@@ -23,7 +23,6 @@ static MULTICORE_TRAMPOLINE: [u16; 2] = [
     0xbd03, // pop {r0, r1, pc} - call wrapper (pc) with r0 and r1
     0x46c0, // nop - pad this out to 32 bits long
 ];
-static mut CORE1_STACK: [usize; 4096] = [0; 4096];
 
 #[inline(always)]
 fn install_stack_guard(stack_bottom: *mut usize) {
@@ -95,7 +94,12 @@ impl<'p> Core<'p> {
         }
     }
 
-    fn inner_spawn(&mut self, wrapper: *mut (), entry: *mut ()) -> Result<(), Error> {
+    fn inner_spawn(
+        &mut self,
+        wrapper: *mut (),
+        entry: *mut (),
+        stack: &'static mut [usize],
+    ) -> Result<(), Error> {
         if let Some((psm, ppb, sio)) = self.inner.as_mut() {
             // Reset the core
             psm.frce_off.modify(|_, w| w.proc1().set_bit());
@@ -105,8 +109,7 @@ impl<'p> Core<'p> {
             psm.frce_off.modify(|_, w| w.proc1().clear_bit());
 
             // Set up the stack
-            let core1_stack = unsafe { &mut CORE1_STACK };
-            let mut stack_ptr = unsafe { core1_stack.as_mut_ptr().add(core1_stack.len()) };
+            let mut stack_ptr = unsafe { stack.as_mut_ptr().add(stack.len()) };
 
             let mut push = |v: usize| unsafe {
                 stack_ptr = stack_ptr.sub(1);
@@ -114,7 +117,7 @@ impl<'p> Core<'p> {
             };
 
             push(wrapper as usize);
-            push(core1_stack.as_mut_ptr() as usize);
+            push(stack.as_mut_ptr() as usize);
             push(entry as usize);
 
             let vector_table = ppb.vtor.read().bits();
@@ -162,19 +165,19 @@ impl<'p> Core<'p> {
 
     /// Spawn a function on this core.
     #[cfg(not(feature = "alloc"))]
-    pub fn spawn(&mut self, entry: fn() -> !) -> Result<(), Error> {
+    pub fn spawn(&mut self, entry: fn() -> !, stack: &'static mut [usize]) -> Result<(), Error> {
         #[allow(improper_ctypes_definitions)]
         extern "C" fn core1_no_alloc(entry: fn() -> !, stack_bottom: *mut usize) -> ! {
             core1_setup(stack_bottom);
             entry();
         }
 
-        self.inner_spawn(core1_no_alloc as _, entry as _)
+        self.inner_spawn(core1_no_alloc as _, entry as _, stack)
     }
 
     /// Spawn a function on this core.
     #[cfg(feature = "alloc")]
-    pub fn spawn<F>(&mut self, entry: F) -> Result<(), Error>
+    pub fn spawn<F>(&mut self, entry: F, stack: &'static mut [usize]) -> Result<(), Error>
     where
         F: FnOnce() -> bad::Never,
         F: Send + 'static,
@@ -190,7 +193,7 @@ impl<'p> Core<'p> {
             main();
         }
 
-        self.inner_spawn(core1_alloc as _, p as _)
+        self.inner_spawn(core1_alloc as _, p as _, stack)
     }
 }
 
