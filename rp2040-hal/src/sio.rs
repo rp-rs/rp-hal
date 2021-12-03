@@ -109,6 +109,9 @@ impl SioFifo {
     pub fn write(&mut self, value: u32) {
         let sio = unsafe { &(*pac::SIO::ptr()) };
         sio.fifo_wr.write(|w| unsafe { w.bits(value) });
+        // Fire off an event to the other core.
+        // This is required as the other core may be `wfe` (waiting for event)
+        cortex_m::asm::sev();
     }
 
     /// Read from the inter-core FIFO.
