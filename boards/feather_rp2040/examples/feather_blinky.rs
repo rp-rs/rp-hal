@@ -11,7 +11,7 @@ use feather_rp2040::{
     hal::{
         clocks::{init_clocks_and_plls, Clock},
         pac,
-        sio::Sio,
+        Sio,
         watchdog::Watchdog,
     },
     Pins, XOSC_CRYSTAL_FREQ,

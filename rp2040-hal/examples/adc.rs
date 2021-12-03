@@ -24,7 +24,7 @@ use rp2040_hal as hal;
 use core::fmt::Write;
 use embedded_hal::adc::OneShot;
 use embedded_time::fixed_point::FixedPoint;
-use rp2040_hal::clocks::Clock;
+use rp2040_hal::Clock;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
@@ -54,7 +54,7 @@ fn main() -> ! {
     let core = pac::CorePeripherals::take().unwrap();
 
     // Set up the watchdog driver - needed by the clock setup code
-    let mut watchdog = hal::watchdog::Watchdog::new(pac.WATCHDOG);
+    let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
 
     // Configure the clocks
     let clocks = hal::clocks::init_clocks_and_plls(
@@ -74,7 +74,7 @@ fn main() -> ! {
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
 
     // The single-cycle I/O block controls our GPIO pins
-    let sio = hal::sio::Sio::new(pac.SIO);
+    let sio = hal::Sio::new(pac.SIO);
 
     // Set the pins to their default state
     let pins = hal::gpio::Pins::new(
@@ -101,7 +101,7 @@ fn main() -> ! {
     uart.write_full_blocking(b"ADC example\r\n");
 
     // Enable ADC
-    let mut adc = hal::adc::Adc::new(pac.ADC, &mut pac.RESETS);
+    let mut adc = hal::Adc::new(pac.ADC, &mut pac.RESETS);
 
     // Enable the temperature sense channel
     let mut temperature_sensor = adc.enable_temp_sensor();

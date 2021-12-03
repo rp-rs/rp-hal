@@ -55,7 +55,7 @@ fn main() -> ! {
     let core = pac::CorePeripherals::take().unwrap();
 
     // Set up the watchdog driver - needed by the clock setup code
-    let mut watchdog = hal::watchdog::Watchdog::new(pac.WATCHDOG);
+    let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
 
     // Configure the clocks
     let clocks = hal::clocks::init_clocks_and_plls(

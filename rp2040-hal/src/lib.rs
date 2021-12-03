@@ -40,3 +40,12 @@ pub mod uart;
 pub mod usb;
 pub mod watchdog;
 pub mod xosc;
+
+// Provide access to common datastructures to avoid repeating ourselves
+pub use adc::Adc;
+pub use clocks::Clock;
+pub use i2c::I2C;
+pub use sio::Sio;
+pub use spi::Spi;
+pub use timer::Timer;
+pub use watchdog::Watchdog;

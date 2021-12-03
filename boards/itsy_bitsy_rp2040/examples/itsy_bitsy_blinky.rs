@@ -26,7 +26,7 @@ use hal::pac;
 // Some traits we need
 use embedded_hal::digital::v2::OutputPin;
 use embedded_time::fixed_point::FixedPoint;
-use rp2040_hal::clocks::Clock;
+use rp2040_hal::Clock;
 
 /// The linker will place this boot block at the start of our program image. We
 // need this to help the ROM bootloader get our code up and running.
