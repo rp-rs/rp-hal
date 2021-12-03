@@ -197,6 +197,26 @@ RP2040 chip according to how it is connected up on the Feather RP2040.
 [Adafruit QT Py RP2040]: https://www.adafruit.com/product/4900
 [qt_py_rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/qt_py_rp2040
 
+### [itsy_bitsy_rp2040] - Board Support for the [Adafruit ItsyBitsy RP2040]
+You should include this crate if you are writing code that you want to run on
+an [Adafruit ItsyBitsy RP2040] - an RP2040 board in the ItsyBitsy family.
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the ItsyBitsy RP2040.
+
+[Adafruit ItsyBitsy RP2040]: https://www.adafruit.com/product/4888
+[itsy_bitsy_rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/itsy_bitsy_rp2040
+
+### [kb2040] - Board Support for the [Adafruit KB2040]
+You should include this crate if you are writing code that you want to run on
+an [Adafruit KB2040] - an Arduino Pro Micro-shaped board for keyboards.
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the KB2040.
+
+[Adafruit KB2040]: https://www.adafruit.com/product/5302
+[kb2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/kb2040
+
 <!-- PROGRAMMING -->
 ## Programming
 
