@@ -1,5 +1,12 @@
 use super::dyn_slice::{DynSliceId, DynSliceMode};
 use pac::pwm::CH;
+
+/// # Safety
+///
+/// Users should only implement the [`id`] function. No default function
+/// implementations should be overridden. The implementing type must also have
+/// "control" over the corresponding slice ID, i.e. it must guarantee that each
+/// slice ID is a singleton
 pub(super) unsafe trait RegisterInterface {
     /// Provide a [`DynSliceId`] identifying the set of registers controlled by
     /// this type.

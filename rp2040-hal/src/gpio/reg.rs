@@ -109,6 +109,13 @@ impl From<DynPinMode> for ModeFields {
         fields
     }
 }
+
+/// # Safety
+///
+/// Users should only implement the [`id`] function. No default function
+/// implementations should be overridden. The implementing type must also have
+/// "control" over the corresponding pin ID, i.e. it must guarantee that each
+/// pin ID is a singleton
 pub(super) unsafe trait RegisterInterface {
     /// Provide a [`DynPinId`] identifying the set of registers controlled by
     /// this type.

@@ -5,6 +5,7 @@ members = [
     "boards/feather_rp2040",
     "boards/qt_py_rp2040",
     "boards/itsy_bitsy_rp2040",
+    "boards/kb2040",
     "boards/pico",
     "boards/pico_explorer",
     "boards/pico_lipo_16mb",
