@@ -16,7 +16,7 @@ rp2040-hal = { path = "../../rp2040-hal", version = "0.3.0"}
 cortex-m-rt = { version = "0.7", optional = true }
 
 [features]
-default = ["rt"]
+default = ["rt", "boot2"]
 boot2 = ["rp2040-boot2"]
 rt = ["cortex-m-rt","rp2040-hal/rt"]
 

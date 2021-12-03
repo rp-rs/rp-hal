@@ -11,8 +11,9 @@ pub use cortex_m_rt::entry;
 //// need this to help the ROM bootloader get our code up and running.
 #[cfg(feature = "boot2")]
 #[link_section = ".boot2"]
+#[no_mangle]
 #[used]
-pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
+pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
 pub use hal::pac;
 
