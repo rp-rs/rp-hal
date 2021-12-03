@@ -9,8 +9,14 @@ pub use cortex_m_rt::entry;
 pub use hal::pac;
 
 hal::bsp_pins!(
-    Gpio0 { name: d0 },
-    Gpio1 { name: d1 },
+    Gpio0 {
+        name: tx,
+        aliases: { FunctionUart: UartTx }
+    },
+    Gpio1 {
+        name: rx,
+        aliases: { FunctionUart: UartRx }
+    },
     Gpio2 { name: d2 },
     Gpio3 { name: d3 },
     Gpio4 { name: d4 },
