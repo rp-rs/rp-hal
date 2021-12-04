@@ -94,8 +94,8 @@
 //! [`AnyKind`]: crate::typelevel#anykind-trait-pattern
 use super::dynpin::{DynDisabled, DynInput, DynOutput, DynPinId, DynPinMode};
 use super::{
-    InputOverride, InterruptOverride, OutputDriveStrength, OutputEnableOverride, OutputOverride,
-    OutputSlewRate,
+    InputOverride, Interrupt, InterruptOverride, OutputDriveStrength, OutputEnableOverride,
+    OutputOverride, OutputSlewRate,
 };
 use crate::gpio::reg::RegisterInterface;
 use crate::typelevel::{Is, NoneT, Sealed};
@@ -259,7 +259,7 @@ impl<C: OutputConfig> Sealed for Output<C> {}
 pub type PushPullOutput = Output<PushPull>;
 
 /// Type-level variant of [`PinMode`] for readable push-pull output mode
-type ReadableOutput = Output<Readable>;
+pub type ReadableOutput = Output<Readable>;
 
 impl<I: PinId, C: OutputConfig> ValidPinMode<I> for Output<C> {}
 
@@ -307,7 +307,21 @@ macro_rules! function {
     };
 }
 
-function!(Spi, Xip, Uart, I2C, Pwm, Pio0, Pio1, Clock, UsbAux);
+function!(Spi, Xip, Uart, I2C, Pwm, Clock, UsbAux);
+
+impl Sealed for pac::PIO0 {}
+impl FunctionConfig for pac::PIO0 {
+    const DYN: DynFunction = DynFunction::Pio0;
+}
+/// Type-level variant of [`PinMode`] for alternate peripheral function `pac::PIO0`
+pub type FunctionPio0 = Function<pac::PIO0>;
+
+impl Sealed for pac::PIO1 {}
+impl FunctionConfig for pac::PIO1 {
+    const DYN: DynFunction = DynFunction::Pio1;
+}
+/// Type-level variant of [`PinMode`] for alternate peripheral function `pac::PIO1`
+pub type FunctionPio1 = Function<pac::PIO1>;
 
 //==============================================================================
 //  Pin modes
@@ -547,6 +561,42 @@ where
     #[inline]
     pub fn set_slew_rate(&mut self, rate: OutputSlewRate) {
         self.regs.write_slew_rate(rate)
+    }
+
+    /// Clear interrupt.
+    #[inline]
+    pub fn clear_interrupt(&mut self, interrupt: Interrupt) {
+        self.regs.clear_interrupt(interrupt);
+    }
+
+    /// Interrupt status.
+    #[inline]
+    pub fn interrupt_status(&self, interrupt: Interrupt) -> bool {
+        self.regs.interrupt_status(interrupt)
+    }
+
+    /// Is interrupt enabled.
+    #[inline]
+    pub fn is_interrupt_enabled(&self, interrupt: Interrupt) -> bool {
+        self.regs.is_interrupt_enabled(interrupt)
+    }
+
+    /// Enable or disable interrupt.
+    #[inline]
+    pub fn set_interrupt_enabled(&self, interrupt: Interrupt, enabled: bool) {
+        self.regs.set_interrupt_enabled(interrupt, enabled);
+    }
+
+    /// Is interrupt forced.
+    #[inline]
+    pub fn is_interrupt_forced(&self, interrupt: Interrupt) -> bool {
+        self.regs.is_interrupt_forced(interrupt)
+    }
+
+    /// Force or release interrupt.
+    #[inline]
+    pub fn set_interrupt_forced(&self, interrupt: Interrupt, forced: bool) {
+        self.regs.set_interrupt_forced(interrupt, forced);
     }
 
     /// Set the interrupt override.
@@ -923,9 +973,13 @@ macro_rules! gpio {
                 impl Pins {
                     /// Take ownership of the PAC peripherals and SIO slice and split it into discrete [`Pin`]s
                     pub fn new(io : [<IO_ $Group:upper>], pads: [<PADS_ $Group:upper>], sio: [<SioGpio $Group>], reset : &mut pac::RESETS) -> Self {
+                        pads.reset_bring_down(reset);
+                        io.reset_bring_down(reset);
+
                         io.reset_bring_up(reset);
                         pads.reset_bring_up(reset);
-                            unsafe { Self {
+                        unsafe {
+                            Self {
                                 _io: io,
                                 _pads: pads,
                                 _sio: sio,
@@ -937,7 +991,7 @@ macro_rules! gpio {
                     }
                 }
 
-                $( impl<I: PinId + BankPinId> super::ValidPinMode<I> for super::Function<super::$Func> {} )+
+                $( impl<I: PinId + BankPinId> super::ValidPinMode<I> for super::[<Function $Func>] {} )+
             }
         }
     }

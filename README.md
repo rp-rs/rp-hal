@@ -71,7 +71,7 @@ You may also want to install these helpful tools:
 
 ```sh
 # Useful to creating UF2 images for the RP2040 USB Bootloader
-cargo install elf2uf2-rs
+cargo install elf2uf2-rs --locked
 # Useful for flashing over the SWD pins using a supported JTAG probe
 cargo install --git https://github.com/rp-rs/probe-run.git --branch rp2040-support 
 ```
@@ -223,7 +223,7 @@ More details can be found in the [Project Template](https://github.com/rp-rs/rp2
 *Step 1* - Install [`elf2uf2-rs`](https://github.com/JoNil/elf2uf2-rs):
 
 ```console
-$ cargo install elf2uf2-rs
+$ cargo install elf2uf2-rs --locked
 ```
 
 *Step 2* - Make sure your .cargo/config contains the following (it should by

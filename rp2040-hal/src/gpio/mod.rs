@@ -64,6 +64,19 @@ pub enum OutputSlewRate {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
+/// Interrupt kind
+pub enum Interrupt {
+    /// While low
+    LevelLow,
+    /// While high
+    LevelHigh,
+    /// On falling edge
+    EdgeLow,
+    /// On rising edge
+    EdgeHigh,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
 /// Interrupt override state.
 pub enum InterruptOverride {
     /// Don't invert the interrupt.

@@ -1,4 +1,4 @@
-//! Continuously changes the color of the Neopixel on a Adafruit QT Py RP2040 board
+//! Continuously changes the color of the Neopixel on a Adafruit ItsyBitsy RP2040 board
 #![no_std]
 #![no_main]
 
@@ -12,7 +12,7 @@ use rp2040_hal::pio::PIOExt;
 use smart_leds::{brightness, SmartLedsWrite, RGB8};
 use ws2812_pio::Ws2812;
 
-use qt_py_rp2040::{
+use itsy_bitsy_rp2040::{
     hal::{
         clocks::{init_clocks_and_plls, Clock},
         pac,
@@ -21,6 +21,10 @@ use qt_py_rp2040::{
     },
     Pins, XOSC_CRYSTAL_FREQ,
 };
+
+#[link_section = ".boot2"]
+#[used]
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
 #[entry]
 fn main() -> ! {
