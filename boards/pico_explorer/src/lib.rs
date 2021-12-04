@@ -7,6 +7,15 @@ extern crate cortex_m_rt;
 
 #[cfg(feature = "rt")]
 pub use cortex_m_rt::entry;
+
+//// The linker will place this boot block at the start of our program image. We
+//// need this to help the ROM bootloader get our code up and running.
+#[cfg(feature = "boot2")]
+#[link_section = ".boot2"]
+#[no_mangle]
+#[used]
+pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
+
 use display_interface_spi::SPIInterface;
 use embedded_graphics::{
     draw_target::DrawTarget,

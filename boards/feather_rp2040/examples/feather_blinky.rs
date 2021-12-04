@@ -17,9 +17,6 @@ use feather_rp2040::{
     Pins, XOSC_CRYSTAL_FREQ,
 };
 use panic_halt as _;
-#[link_section = ".boot2"]
-#[used]
-pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GD25Q64CS;
 
 #[entry]
 fn main() -> ! {
