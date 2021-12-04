@@ -73,7 +73,7 @@ fn main() -> ! {
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
 
     // The single-cycle I/O block controls our GPIO pins
-    let sio = hal::sio::Sio::new(pac.SIO);
+    let sio = hal::Sio::new(pac.SIO);
 
     // Set the pins to their default state
     let pins = hal::gpio::Pins::new(

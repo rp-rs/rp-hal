@@ -65,7 +65,7 @@ fn main() -> ! {
     let mut count_down = timer.count_down();
 
     // The single-cycle I/O block controls our GPIO pins
-    let sio = hal::sio::Sio::new(pac.SIO);
+    let sio = hal::Sio::new(pac.SIO);
 
     // Set the pins up according to their function on this particular board
     let pins = pico::Pins::new(

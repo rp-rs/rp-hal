@@ -18,9 +18,9 @@ use kb2040::{
     hal::{
         clocks::{init_clocks_and_plls, Clock},
         pac,
-        sio::Sio,
         timer::Timer,
         watchdog::Watchdog,
+        Sio,
     },
     XOSC_CRYSTAL_FREQ,
 };

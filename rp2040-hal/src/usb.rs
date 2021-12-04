@@ -4,7 +4,7 @@
 //!
 //! Initialize the Usb Bus forcing the VBUS detection.
 //! ```no_run
-//! use rp2040_hal::{clocks::init_clocks_and_plls, pac, sio::Sio, usb::UsbBus, watchdog::Watchdog};
+//! use rp2040_hal::{clocks::init_clocks_and_plls, pac, Sio, usb::UsbBus, watchdog::Watchdog};
 //! use usb_device::class_prelude::UsbBusAllocator;
 //!
 //! const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates

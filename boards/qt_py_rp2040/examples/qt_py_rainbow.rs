@@ -16,8 +16,8 @@ use qt_py_rp2040::{
     hal::{
         clocks::{init_clocks_and_plls, Clock},
         pac,
-        sio::Sio,
         watchdog::Watchdog,
+        Sio,
     },
     Pins, XOSC_CRYSTAL_FREQ,
 };

@@ -13,7 +13,7 @@ mod app {
 
     use embedded_hal::digital::v2::OutputPin;
     use pico::{
-        hal::{self, clocks::init_clocks_and_plls, pac, sio::Sio, watchdog::Watchdog},
+        hal::{self, clocks::init_clocks_and_plls, pac, watchdog::Watchdog, Sio},
         XOSC_CRYSTAL_FREQ,
     };
 

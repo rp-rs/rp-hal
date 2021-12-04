@@ -31,8 +31,8 @@ use hal::{
     gpio::{bank0, FunctionI2C, Pin},
     i2c::{peripheral::I2CPeripheralEventIterator, I2C},
     pac,
-    sio::Sio,
     watchdog::Watchdog,
+    Sio,
 };
 use pico::{hal, Pins, XOSC_CRYSTAL_FREQ};
 

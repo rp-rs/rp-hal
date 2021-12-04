@@ -63,7 +63,7 @@ pub struct Multicore<'p> {
 
 impl<'p> Multicore<'p> {
     /// Create a new |Multicore| instance.
-    pub fn new(psm: &'p mut pac::PSM, ppb: &'p mut pac::PPB, sio: &'p mut crate::sio::Sio) -> Self {
+    pub fn new(psm: &'p mut pac::PSM, ppb: &'p mut pac::PPB, sio: &'p mut crate::Sio) -> Self {
         Self {
             cores: [
                 Core { inner: None },
@@ -82,7 +82,7 @@ impl<'p> Multicore<'p> {
 
 /// A handle for controlling a logical core.
 pub struct Core<'p> {
-    inner: Option<(&'p mut pac::PSM, &'p mut pac::PPB, &'p mut crate::sio::Sio)>,
+    inner: Option<(&'p mut pac::PSM, &'p mut pac::PPB, &'p mut crate::Sio)>,
 }
 
 impl<'p> Core<'p> {
