@@ -1,6 +1,6 @@
 //! # GPIO 'Blinky' Example
 //!
-//! This application demonstrates how to control a GPIO pin on the RP2040.
+//! Blinks the LED on a Adafruit itsy-bitsy RP2040 board
 //!
 //! It may need to be adapted to your particular board layout and/or pin assignment.
 //!
@@ -19,18 +19,25 @@ use panic_halt as _;
 // Alias for our HAL crate
 use rp2040_hal as hal;
 
-// A shorter alias for the Peripheral Access Crate, which provides low-level
-// register access
-use hal::pac;
-
 // Some traits we need
 use embedded_hal::digital::v2::OutputPin;
 use embedded_time::fixed_point::FixedPoint;
-use rp2040_hal::clocks::Clock;
 
 /// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz. Adjust
 /// if your board has a different frequency
 const XTAL_FREQ_HZ: u32 = 12_000_000u32;
+
+use itsy_bitsy_rp2040::{
+    hal::{
+        clocks::{init_clocks_and_plls, Clock},
+        pac,
+        sio::Sio,
+        watchdog::Watchdog,
+    },
+    Pins, XOSC_CRYSTAL_FREQ,
+};
+
+use cortex_m::delay::Delay;
 
 /// Entry point to our bare-metal application.
 ///
@@ -46,10 +53,10 @@ fn main() -> ! {
     let core = pac::CorePeripherals::take().unwrap();
 
     // Set up the watchdog driver - needed by the clock setup code
-    let mut watchdog = hal::watchdog::Watchdog::new(pac.WATCHDOG);
+    let mut watchdog = Watchdog::new(pac.WATCHDOG);
 
     // Configure the clocks
-    let clocks = hal::clocks::init_clocks_and_plls(
+    let clocks = init_clocks_and_plls(
         XTAL_FREQ_HZ,
         pac.XOSC,
         pac.CLOCKS,
@@ -61,24 +68,21 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = Delay::new(core.SYST, clocks.system_clock.freq().integer());
 
     // The single-cycle I/O block controls our GPIO pins
-    let sio = hal::sio::Sio::new(pac.SIO);
+    let sio = Sio::new(pac.SIO);
 
-    // Set the pins to their default state
-    let pins = hal::gpio::Pins::new(
+    let pins = Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,
         &mut pac.RESETS,
     );
+    let mut led_pin = pins.d13.into_push_pull_output();
 
-    // Configure GPIO25 as an output
-    let mut led_pin = pins.gpio11.into_push_pull_output();
     loop {
         led_pin.set_high().unwrap();
-        // TODO: Replace with proper 1s delays once we have clocks working
         delay.delay_ms(500);
         led_pin.set_low().unwrap();
         delay.delay_ms(500);
