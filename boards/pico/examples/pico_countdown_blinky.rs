@@ -43,7 +43,7 @@ fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
 
     // Set up the watchdog driver - needed by the clock setup code
-    let mut watchdog = hal::watchdog::Watchdog::new(pac.WATCHDOG);
+    let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
 
     // Configure the clocks
     //
