@@ -318,7 +318,7 @@ $ cargo run --release --example pico_pwm_blink
 
 As ELF files produced by compiling Rust code are completely compatible with ELF
 files produced by compiling C or C++ code, you can also use the Raspberry Pi
-tool [picoprobe](https://github.com/raspberrypi/picotool). The only thing to be
+tool [picotool](https://github.com/raspberrypi/picotool). The only thing to be
 aware of is that picotool expects your ELF files to have a `.elf` extension, and
 by default Rust does not give the ELF files any extension. You can fix this by
 simply renaming the file.
