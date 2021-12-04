@@ -16,16 +16,9 @@ use cortex_m_rt::entry;
 // be linked)
 use panic_halt as _;
 
-// Alias for our HAL crate
-use rp2040_hal as hal;
-
 // Some traits we need
 use embedded_hal::digital::v2::OutputPin;
 use embedded_time::fixed_point::FixedPoint;
-
-/// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz. Adjust
-/// if your board has a different frequency
-const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
 use itsy_bitsy_rp2040::{
     hal::{
@@ -57,7 +50,7 @@ fn main() -> ! {
 
     // Configure the clocks
     let clocks = init_clocks_and_plls(
-        XTAL_FREQ_HZ,
+        XOSC_CRYSTAL_FREQ,
         pac.XOSC,
         pac.CLOCKS,
         pac.PLL_SYS,
