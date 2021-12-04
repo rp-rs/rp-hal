@@ -39,7 +39,7 @@ optional = true
 [dev-dependencies]
 cortex-m-rt = "0.7"
 panic-halt = "0.2.0"
-rp2040-boot2 = "0.2"
+rp2040-boot2 = "0.2.0"
 hd44780-driver = "0.4.0"
 pio-proc = { git = "https://github.com/rp-rs/pio-rs.git", branch = "main" }
 

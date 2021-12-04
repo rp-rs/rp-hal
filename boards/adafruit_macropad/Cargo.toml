@@ -11,9 +11,12 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 cortex-m = "0.7.2"
+rp2040-boot2 = { version = "0.2.0", optional = true }
 rp2040-hal = { path = "../../rp2040-hal", version = "0.3.0"}
 cortex-m-rt = { version = "0.7", optional = true }
 
 [features]
-default = ["rt"]
+default = ["rt", "boot2"]
+boot2 = ["rp2040-boot2"]
 rt = ["cortex-m-rt","rp2040-hal/rt"]
+

@@ -4,6 +4,8 @@ MEMORY {
     RAM   : ORIGIN = 0x20000000, LENGTH = 256K
 }
 
+EXTERN(BOOT2_FIRMWARE)
+
 SECTIONS {
     /* ### Boot loader */
     .boot2 ORIGIN(BOOT2) :
