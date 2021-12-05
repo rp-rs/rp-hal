@@ -22,14 +22,14 @@ futures = { version = "0.3", default-features = false, optional = true }
 
 [dependencies.embassy]
 git = "https://github.com/embassy-rs/embassy"
-rev = "a8797f84f69b7668a3f89b6cba3e39bce5649079"
+rev = "6d6e6f55b8a9ecd38b5a6d3bb11f74b2654afdeb"
 optional = true
 
 # namespaced features will let use use "dep:embassy-traits" in the features rather than using this
 # trick of renaming the crate.
 [dependencies.embassy_traits]
 git = "https://github.com/embassy-rs/embassy"
-rev = "a8797f84f69b7668a3f89b6cba3e39bce5649079"
+rev = "6d6e6f55b8a9ecd38b5a6d3bb11f74b2654afdeb"
 package = "embassy-traits"
 optional = true
 
