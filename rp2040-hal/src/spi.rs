@@ -7,7 +7,7 @@
 //! ```no_run
 //! use embedded_hal::spi::MODE_0;
 //! use embedded_time::rate::*;
-//! use rp2040_hal::{spi::Spi, gpio::{Pins, FunctionSpi}, pac, sio::Sio};
+//! use rp2040_hal::{spi::Spi, gpio::{Pins, FunctionSpi}, pac, Sio};
 //!
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);

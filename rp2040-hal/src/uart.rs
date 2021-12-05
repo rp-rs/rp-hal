@@ -6,7 +6,7 @@
 //!
 //! See [examples/uart.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/uart.rs) for a more complete example
 //! ```no_run
-//! use rp2040_hal::{clocks::init_clocks_and_plls, gpio::{Pins, FunctionUart}, pac, sio::Sio, uart::{self, UartPeripheral}, watchdog::Watchdog};
+//! use rp2040_hal::{clocks::init_clocks_and_plls, gpio::{Pins, FunctionUart}, pac, Sio, uart::{self, UartPeripheral}, watchdog::Watchdog};
 //!
 //! const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates
 //!

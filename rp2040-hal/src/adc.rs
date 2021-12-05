@@ -7,7 +7,7 @@
 //! Capture ADC reading from a pin
 //! ```no_run
 //! use embedded_hal::adc::OneShot;
-//! use rp2040_hal::{adc::Adc, gpio::Pins, pac, sio::Sio};
+//! use rp2040_hal::{adc::Adc, gpio::Pins, pac, Sio};
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
 //! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
@@ -22,7 +22,7 @@
 //! Capture ADC reading from temperature sensor. Note that this needs conversion to be a real-world temperature.
 //! ```no_run
 //! use embedded_hal::adc::OneShot;
-//! use rp2040_hal::{adc::Adc, gpio::Pins, pac, sio::Sio};
+//! use rp2040_hal::{adc::Adc, gpio::Pins, pac, Sio};
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
 //! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);

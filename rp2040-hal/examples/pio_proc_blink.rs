@@ -8,7 +8,7 @@ use cortex_m_rt::entry;
 use hal::gpio::{FunctionPio0, Pin};
 use hal::pac;
 use hal::pio::PIOExt;
-use hal::sio::Sio;
+use hal::Sio;
 use panic_halt as _;
 use rp2040_hal as hal;
 

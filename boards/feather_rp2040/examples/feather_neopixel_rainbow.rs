@@ -14,14 +14,14 @@ use feather_rp2040::{
     hal::{
         clocks::{init_clocks_and_plls, Clock},
         pac,
-        sio::Sio,
+        pio::PIOExt,
         timer::Timer,
         watchdog::Watchdog,
+        Sio,
     },
     Pins, XOSC_CRYSTAL_FREQ,
 };
 use panic_halt as _;
-use rp2040_hal::pio::PIOExt;
 use smart_leds::{brightness, SmartLedsWrite, RGB8};
 use ws2812_pio::Ws2812;
 

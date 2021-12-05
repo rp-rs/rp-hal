@@ -18,7 +18,7 @@
 //!
 //! ```no_run
 //! // Move a pin out of the Pins struct and convert to a DynPin
-//! # use rp2040_hal::{pac, gpio::{DynPin, bank0::Gpio12, Pins}, sio::Sio};
+//! # use rp2040_hal::{pac, gpio::{DynPin, bank0::Gpio12, Pins}, Sio};
 //! # let mut peripherals = pac::Peripherals::take().unwrap();
 //! # let sio = Sio::new(peripherals.SIO);
 //! # let pins = Pins::new(peripherals.IO_BANK0,peripherals.PADS_BANK0,sio.gpio_bank0, &mut peripherals.RESETS);
@@ -30,7 +30,7 @@
 //! API.
 //!
 //! ```no_run
-//! # use rp2040_hal::{pac, gpio::{DynPin, Pins}, sio::Sio};
+//! # use rp2040_hal::{pac, gpio::{DynPin, Pins}, Sio};
 //! # let mut peripherals = pac::Peripherals::take().unwrap();
 //! # let sio = Sio::new(peripherals.SIO);
 //! # let pins = Pins::new(peripherals.IO_BANK0,peripherals.PADS_BANK0,sio.gpio_bank0, &mut peripherals.RESETS);
@@ -54,7 +54,7 @@
 //!
 //! ```no_run
 //! # use core::convert::TryInto;
-//! # use rp2040_hal::{pac, gpio::{DynPin, bank0::Gpio12, Pin, Pins, FloatingInput}, sio::Sio};
+//! # use rp2040_hal::{pac, gpio::{DynPin, bank0::Gpio12, Pin, Pins, FloatingInput}, Sio};
 //! # let mut peripherals = pac::Peripherals::take().unwrap();
 //! # let sio = Sio::new(peripherals.SIO);
 //! # let pins = Pins::new(peripherals.IO_BANK0,peripherals.PADS_BANK0,sio.gpio_bank0, &mut peripherals.RESETS);

@@ -23,7 +23,7 @@
 //! Once you have the PWM slice struct, you can add individual pins:
 //!
 //! ```no_run
-//! # use rp2040_hal::{prelude::*, gpio::Pins, sio::Sio, pwm::{InputHighRunning, Slices}};
+//! # use rp2040_hal::{prelude::*, gpio::Pins, Sio, pwm::{InputHighRunning, Slices}};
 //! # let mut pac = rp2040_pac::Peripherals::take().unwrap();
 //! # let pwm_slices = Slices::new(pac.PWM, &mut pac.RESETS);
 //! # let mut pwm = pwm_slices.pwm4.into_mode::<InputHighRunning>();

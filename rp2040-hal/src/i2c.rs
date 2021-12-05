@@ -5,7 +5,7 @@
 //! ## Usage
 //! ```no_run
 //! use embedded_time::rate::Extensions;
-//! use rp2040_hal::{i2c::I2C, gpio::Pins, pac, sio::Sio};
+//! use rp2040_hal::{i2c::I2C, gpio::Pins, pac, Sio};
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
 //! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);

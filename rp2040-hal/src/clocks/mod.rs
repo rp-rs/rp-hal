@@ -15,7 +15,7 @@
 //! ## Usage extended
 //! ```no_run
 //! use embedded_time::rate::*;
-//! use rp2040_hal::{clocks::{Clock, ClocksManager, ClockSource, InitError}, gpio::Pins, pac, pll::{common_configs::{PLL_SYS_125MHZ, PLL_USB_48MHZ}, setup_pll_blocking}, sio::Sio, watchdog::Watchdog, xosc::setup_xosc_blocking};
+//! use rp2040_hal::{clocks::{Clock, ClocksManager, ClockSource, InitError}, gpio::Pins, pac, pll::{common_configs::{PLL_SYS_125MHZ, PLL_USB_48MHZ}, setup_pll_blocking}, Sio, watchdog::Watchdog, xosc::setup_xosc_blocking};
 //!
 //! # fn func() -> Result<(), InitError> {
 //! let mut peripherals = pac::Peripherals::take().unwrap();

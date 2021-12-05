@@ -5,7 +5,7 @@
 //! ## Basic usage
 //! ```no_run
 //! use embedded_hal::digital::v2::{InputPin, OutputPin};
-//! use rp2040_hal::{clocks::init_clocks_and_plls, gpio::Pins, watchdog::Watchdog, pac, sio::Sio};
+//! use rp2040_hal::{clocks::init_clocks_and_plls, gpio::Pins, watchdog::Watchdog, pac, Sio};
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let mut watchdog = Watchdog::new(peripherals.WATCHDOG);
 //! const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates

@@ -12,7 +12,7 @@ use embedded_graphics::{
 };
 use embedded_hal::digital::v2::OutputPin;
 use embedded_time::rate::*;
-use hal::{adc::Adc, clocks::*, sio::Sio, watchdog::Watchdog};
+use hal::{adc::Adc, clocks::*, watchdog::Watchdog, Sio};
 use panic_halt as _;
 use pico_explorer::{hal, pac, Button, PicoExplorer, XOSC_CRYSTAL_FREQ};
 

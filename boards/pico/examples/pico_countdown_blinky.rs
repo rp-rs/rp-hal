@@ -39,7 +39,7 @@ fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
 
     // Set up the watchdog driver - needed by the clock setup code
-    let mut watchdog = hal::watchdog::Watchdog::new(pac.WATCHDOG);
+    let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
 
     // Configure the clocks
     //
@@ -57,11 +57,11 @@ fn main() -> ! {
     .unwrap();
 
     // Configure the Timer peripheral in count-down mode
-    let timer = hal::timer::Timer::new(pac.TIMER, &mut pac.RESETS);
+    let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS);
     let mut count_down = timer.count_down();
 
     // The single-cycle I/O block controls our GPIO pins
-    let sio = hal::sio::Sio::new(pac.SIO);
+    let sio = hal::Sio::new(pac.SIO);
 
     // Set the pins up according to their function on this particular board
     let pins = pico::Pins::new(
