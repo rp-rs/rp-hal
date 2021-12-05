@@ -85,13 +85,12 @@ fn main() -> ! {
     );
 
     // Create a UART driver
-    let mut uart = hal::uart::UartPeripheral::<_, _>::enable(
-        pac.UART0,
-        &mut pac.RESETS,
-        hal::uart::common_configs::_9600_8_N_1,
-        clocks.peripheral_clock.into(),
-    )
-    .unwrap();
+    let mut uart = hal::uart::UartPeripheral::<_, _>::new(pac.UART0, &mut pac.RESETS)
+        .enable(
+            hal::uart::common_configs::_9600_8_N_1,
+            clocks.peripheral_clock.into(),
+        )
+        .unwrap();
 
     // UART TX (characters sent from pico) on pin 1 (GPIO0) and RX (on pin 2 (GPIO1)
     let _tx_pin = pins.gpio0.into_mode::<hal::gpio::FunctionUart>();

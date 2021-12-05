@@ -17,12 +17,12 @@
 //! let mut clocks = init_clocks_and_plls(XOSC_CRYSTAL_FREQ, peripherals.XOSC, peripherals.CLOCKS, peripherals.PLL_SYS, peripherals.PLL_USB, &mut peripherals.RESETS, &mut watchdog).ok().unwrap();
 //!
 //! // Need to perform clock init before using UART or it will freeze.
-//! let uart = UartPeripheral::<_, _>::enable(
-//!         peripherals.UART0,
-//!         &mut peripherals.RESETS,
+//! let uart = UartPeripheral::<_, _>::new(peripherals.UART0, &mut peripherals.RESETS)
+//!     .enable(
 //!         uart::common_configs::_9600_8_N_1,
 //!         clocks.peripheral_clock.into(),
-//!     ).unwrap();
+//!     )
+//!     .unwrap();
 //!
 //! // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
 //! let _tx_pin = pins.gpio0.into_mode::<FunctionUart>();
@@ -222,15 +222,26 @@ impl<S: State, D: UartDevice> UartPeripheral<S, D> {
 }
 
 impl<D: UartDevice> UartPeripheral<Disabled, D> {
+    /// Creates an UartPeripheral in Disabled state.
+    pub fn new(device: D, resets: &mut pac::RESETS) -> UartPeripheral<Disabled, D> {
+        device.reset_bring_down(resets);
+        device.reset_bring_up(resets);
+
+        UartPeripheral {
+            device,
+            config: common_configs::_9600_8_N_1, // placeholder
+            effective_baudrate: Baud(0),
+            _state: Disabled,
+        }
+    }
+
     /// Enables the provided UART device with the given configuration.
     pub fn enable(
-        mut device: D,
-        resets: &mut pac::RESETS,
+        self,
         config: UartConfig,
         frequency: Hertz,
     ) -> Result<UartPeripheral<Enabled, D>, Error> {
-        device.reset_bring_up(resets);
-
+        let mut device = self.free();
         let effective_baudrate = configure_baudrate(&mut device, &config.baudrate, &frequency)?;
 
         device.uartlcr_h.write(|w| {

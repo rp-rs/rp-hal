@@ -80,13 +80,12 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    let mut uart = hal::uart::UartPeripheral::<_, _>::enable(
-        pac.UART0,
-        &mut pac.RESETS,
-        hal::uart::common_configs::_9600_8_N_1,
-        clocks.peripheral_clock.into(),
-    )
-    .unwrap();
+    let mut uart = hal::uart::UartPeripheral::<_, _>::new(pac.UART0, &mut pac.RESETS)
+        .enable(
+            hal::uart::common_configs::_9600_8_N_1,
+            clocks.peripheral_clock.into(),
+        )
+        .unwrap();
 
     // UART TX (characters sent from RP2040) on pin 1 (GPIO0)
     let _tx_pin = pins.gpio0.into_mode::<hal::gpio::FunctionUart>();
