@@ -103,7 +103,7 @@ fn main() -> ! {
 
     let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
 
-    let mut i2c_pio = i2c_pio::I2C::<_, _, _, _, hal::gpio::FunctionPio0>::new(
+    let mut i2c_pio = i2c_pio::I2C::new(
         &mut pio,
         pins.gpio20,
         pins.gpio21,
