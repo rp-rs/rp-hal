@@ -224,6 +224,7 @@ impl<S: State, D: UartDevice> UartPeripheral<S, D> {
 impl<D: UartDevice> UartPeripheral<Disabled, D> {
     /// Creates an UartPeripheral in Disabled state.
     pub fn new(device: D, resets: &mut pac::RESETS) -> UartPeripheral<Disabled, D> {
+        device.reset_bring_down(resets);
         device.reset_bring_up(resets);
 
         UartPeripheral {
