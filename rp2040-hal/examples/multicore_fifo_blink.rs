@@ -15,6 +15,8 @@
 // The macro for our start-up function
 use cortex_m_rt::entry;
 
+use embedded_time::fixed_point::FixedPoint;
+use hal::clocks::Clock;
 use hal::multicore::Multicore;
 use hal::sio::Sio;
 // Ensure we halt the program on panic (if we don't mention this crate it won't
@@ -75,9 +77,11 @@ fn core1_task() -> ! {
     );
 
     let mut led_pin = pins.gpio25.into_push_pull_output();
-    // We set the system bus to use PLL set the system bus frequency to 160Mhz in main()
-    // our delay needs to know that, so set it.
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, 160_000_000u32);
+    // The first thing core0 sends us is the system bus frequency.
+    // The systick is based on this frequency, so we need that to
+    // be accurate when sleeping via cortex_m::delay::Delay
+    let sys_freq = sio.fifo.read_blocking();
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, sys_freq);
     loop {
         let input = sio.fifo.read();
         if let Some(word) = input {
@@ -105,7 +109,7 @@ fn main() -> ! {
     let mut watchdog = hal::watchdog::Watchdog::new(pac.WATCHDOG);
 
     // Configure the clocks
-    let _clocks = hal::clocks::init_clocks_and_plls(
+    let clocks = hal::clocks::init_clocks_and_plls(
         XTAL_FREQ_HZ,
         pac.XOSC,
         pac.CLOCKS,
@@ -125,6 +129,9 @@ fn main() -> ! {
     let core1 = &mut cores[1];
     let _test = core1.spawn(core1_task, unsafe { &mut CORE1_STACK.mem });
 
+    // Let core1 know how fast the system clock is running
+    let sys_freq = clocks.system_clock.freq().integer();
+    sio.fifo.write_blocking(sys_freq);
     /// How much we adjust the LED period every cycle
     const LED_PERIOD_INCREMENT: i32 = 2;
 
