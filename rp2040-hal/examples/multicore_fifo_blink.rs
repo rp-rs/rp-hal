@@ -17,7 +17,7 @@ use cortex_m_rt::entry;
 
 use embedded_time::fixed_point::FixedPoint;
 use hal::clocks::Clock;
-use hal::multicore::Multicore;
+use hal::multicore::{Multicore, Stack};
 use hal::sio::Sio;
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
