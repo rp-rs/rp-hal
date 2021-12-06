@@ -11,16 +11,12 @@
 //! # Usage
 //!
 //! ```no_run
-//! #[repr(C, align(32))]
-//! pub struct Stack<const SIZE: usize> {
-//!     pub mem: [usize; SIZE],
-//! }
 //! static mut CORE1_STACK: Stack<4096> = Stack { mem: [0; 4096] };
 //! fn core1_task() -> ! {
 //!     loop{}
 //! }
 //! // fn main() -> ! {
-//!     use rp2040_hal::{pac, gpio::Pins, sio::Sio, multicore::Multicore};
+//!     use rp2040_hal::{pac, gpio::Pins, sio::Sio, multicore::{Multicore, Stack}};
 //!     let mut pac = pac::Peripherals::take().unwrap();
 //!     let mut sio = Sio::new(pac.SIO);
 //!     // Other init code above this line
