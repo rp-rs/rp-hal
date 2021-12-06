@@ -57,13 +57,6 @@ const CORE1_TASK_COMPLETE: u32 = 0xEE;
 /// the stack guard to take up the least amount of usable RAM.
 static mut CORE1_STACK: Stack<4096> = Stack { mem: [0; 4096] };
 
-/// Data type for a properly aligned stack of N 32-bit (usize) words
-#[repr(C, align(32))]
-pub struct Stack<const SIZE: usize> {
-    /// Memory to be used for the stack
-    pub mem: [usize; SIZE],
-}
-
 fn core1_task() -> ! {
     let mut pac = unsafe { pac::Peripherals::steal() };
     let core = unsafe { pac::CorePeripherals::steal() };

@@ -97,6 +97,13 @@ pub struct Multicore<'p> {
     cores: [Core<'p>; 2],
 }
 
+/// Data type for a properly aligned stack of N 32-bit (usize) words
+#[repr(C, align(32))]
+pub struct Stack<const SIZE: usize> {
+    /// Memory to be used for the stack
+    pub mem: [usize; SIZE],
+}
+
 impl<'p> Multicore<'p> {
     /// Create a new |Multicore| instance.
     pub fn new(psm: &'p mut pac::PSM, ppb: &'p mut pac::PPB, sio: &'p mut crate::sio::Sio) -> Self {
