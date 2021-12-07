@@ -11,7 +11,7 @@
 //! # Usage
 //!
 //! ```no_run
-//! static mut CORE1_STACK: Stack<4096> = Stack { mem: [0; 4096] };
+//! static mut CORE1_STACK: Stack<4096> = Stack::new();
 //! fn core1_task() -> ! {
 //!     loop{}
 //! }
@@ -98,6 +98,13 @@ pub struct Multicore<'p> {
 pub struct Stack<const SIZE: usize> {
     /// Memory to be used for the stack
     pub mem: [usize; SIZE],
+}
+
+impl<const SIZE: usize> Stack<SIZE> {
+    /// Construct a stack of length SIZE, initialized to 0
+    pub const fn new() -> Stack<SIZE> {
+        Stack { mem: [0; SIZE] }
+    }
 }
 
 impl<'p> Multicore<'p> {

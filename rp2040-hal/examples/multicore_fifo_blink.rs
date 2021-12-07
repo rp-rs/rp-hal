@@ -55,7 +55,7 @@ const CORE1_TASK_COMPLETE: u32 = 0xEE;
 /// So instead, core1.spawn takes a [usize] which gets used for the stack.
 /// NOTE: We use the `Stack` struct here to ensure that it has 32-byte alignment, which allows
 /// the stack guard to take up the least amount of usable RAM.
-static mut CORE1_STACK: Stack<4096> = Stack { mem: [0; 4096] };
+static mut CORE1_STACK: Stack<4096> = Stack::new();
 
 fn core1_task() -> ! {
     let mut pac = unsafe { pac::Peripherals::steal() };
