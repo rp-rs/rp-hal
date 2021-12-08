@@ -8,8 +8,9 @@ use rp2040_hal as hal;
 mod app {
 
     use embedded_hal::digital::v2::OutputPin;
+    use embedded_time::duration::Extensions;
     use pico::{
-        hal::{self, clocks::init_clocks_and_plls, pac, watchdog::Watchdog, Sio},
+        hal::{self, clocks::init_clocks_and_plls, watchdog::Watchdog, Sio},
         XOSC_CRYSTAL_FREQ,
     };
 
@@ -17,7 +18,8 @@ mod app {
 
     #[shared]
     struct Shared {
-        scan_timer: pac::TIMER,
+        timer: hal::Timer,
+        alarm: hal::timer::Alarm0,
         led: hal::gpio::Pin<hal::gpio::pin::bank0::Gpio25, hal::gpio::PushPullOutput>,
     }
 
@@ -41,40 +43,30 @@ mod app {
         .unwrap();
 
         let sio = Sio::new(c.device.SIO);
-        let pins = hal::gpio::Pins::new(
+        let pins = pico::Pins::new(
             c.device.IO_BANK0,
             c.device.PADS_BANK0,
             sio.gpio_bank0,
             &mut resets,
         );
-        let mut led = pins.gpio25.into_push_pull_output();
+        let mut led = pins.led.into_push_pull_output();
         led.set_low().unwrap();
 
-        let timer = c.device.TIMER;
-        timer.dbgpause.write(|w| w.dbg0().set_bit());
-        let current_time = timer.timelr.read().bits();
-        timer
-            .alarm0
-            .write(|w| unsafe { w.bits(current_time + SCAN_TIME_US) });
-        timer.inte.write(|w| w.alarm_0().set_bit());
+        let mut timer = hal::Timer::new(c.device.TIMER, &mut resets);
+        let mut alarm = timer.alarm_0().unwrap();
+        let _ = alarm.schedule(SCAN_TIME_US.microseconds());
+        alarm.enable_interrupt(&mut timer);
 
-        (
-            Shared {
-                scan_timer: timer,
-                led,
-            },
-            Local {},
-            init::Monotonics(),
-        )
+        (Shared { timer, alarm, led }, Local {}, init::Monotonics())
     }
 
     #[task(
         binds = TIMER_IRQ_0,
         priority = 1,
-        shared = [scan_timer, led],
-        local = [tog: bool = false],
+        shared = [timer, alarm, led],
+        local = [tog: bool = true],
     )]
-    fn scan_timer_irq(mut c: scan_timer_irq::Context) {
+    fn timer_irq(mut c: timer_irq::Context) {
         if *c.local.tog {
             c.shared.led.lock(|l| l.set_high().unwrap());
         } else {
@@ -82,13 +74,11 @@ mod app {
         }
         *c.local.tog = !*c.local.tog;
 
-        let current_time = c.shared.scan_timer.lock(|t| t.timelr.read().bits());
-        c.shared.scan_timer.lock(|t| {
-            t.alarm0
-                .write(|w| unsafe { w.bits(current_time + SCAN_TIME_US) })
+        let timer = c.shared.timer;
+        let alarm = c.shared.alarm;
+        (timer, alarm).lock(|t, a| {
+            a.clear_interrupt(t);
+            let _ = a.schedule(SCAN_TIME_US.microseconds());
         });
-        c.shared
-            .scan_timer
-            .lock(|t| t.intr.write(|w| w.alarm_0().set_bit()));
     }
 }
