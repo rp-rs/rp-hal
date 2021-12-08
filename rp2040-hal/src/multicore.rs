@@ -1,5 +1,37 @@
 //! Multicore support
-// See [Chapter ?? Section ??](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
+//!
+//! This module handles setup of the 2nd cpu core on the rp2040, which we refer to as core1.
+//! It provides functionality for setting up the stack, and starting core1.
+//!
+//! The options for an entrypoint for core1 are
+//! - a function that never returns - eg
+//! `fn core1_task() -> ! { loop{} }; `
+//! - a lambda (note: This requires a global allocator which requires a nightly compiler. Not recommended for beginners)
+//!
+//! # Usage
+//!
+//! ```no_run
+//! static mut CORE1_STACK: Stack<4096> = Stack::new();
+//! fn core1_task() -> ! {
+//!     loop{}
+//! }
+//! // fn main() -> ! {
+//!     use rp2040_hal::{pac, gpio::Pins, sio::Sio, multicore::{Multicore, Stack}};
+//!     let mut pac = pac::Peripherals::take().unwrap();
+//!     let mut sio = Sio::new(pac.SIO);
+//!     // Other init code above this line
+//!     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio);
+//!     let cores = mc.cores();
+//!     let core1 = &mut cores[1];
+//!     let _test = core1.spawn(core1_task, unsafe { &mut CORE1_STACK.mem });
+//!     // The rest of your application below this line
+//! //}
+//!
+//! ```
+//!
+//! For inter-processor communications, see [`crate::sio::SioFifo`] and [`crate::sio::Spinlock0`]
+//!
+//! For a detailed example, see [examples/multicore_fifo_blink.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/multicore_fifo_blink.rs)
 
 use crate::pac;
 
@@ -59,6 +91,20 @@ fn core1_setup(stack_bottom: *mut usize) {
 /// Multicore execution management.
 pub struct Multicore<'p> {
     cores: [Core<'p>; 2],
+}
+
+/// Data type for a properly aligned stack of N 32-bit (usize) words
+#[repr(C, align(32))]
+pub struct Stack<const SIZE: usize> {
+    /// Memory to be used for the stack
+    pub mem: [usize; SIZE],
+}
+
+impl<const SIZE: usize> Stack<SIZE> {
+    /// Construct a stack of length SIZE, initialized to 0
+    pub const fn new() -> Stack<SIZE> {
+        Stack { mem: [0; SIZE] }
+    }
 }
 
 impl<'p> Multicore<'p> {
