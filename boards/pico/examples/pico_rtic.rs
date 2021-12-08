@@ -2,9 +2,8 @@
 #![no_main]
 
 use panic_halt as _;
-use rp2040_hal as hal;
 
-#[rtic::app(device = crate::hal::pac, peripherals = true)]
+#[rtic::app(device = pico::hal::pac, peripherals = true)]
 mod app {
 
     use embedded_hal::digital::v2::OutputPin;
