@@ -1,36 +1,7 @@
-//! Universal Asynchronous Receiver Transmitter (UART)
+//! Universal Asynchronous Receiver Transmitter - Bi-directional Peripheral Code
 //!
-//! See [Chapter 4 Section 2](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) of the datasheet for more details
-//!
-//! ## Usage
-//!
-//! See [examples/uart.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/uart.rs) for a more complete example
-//! ```no_run
-//! use rp2040_hal::{clocks::init_clocks_and_plls, gpio::{Pins, FunctionUart}, pac, Sio, uart::{self, UartPeripheral}, watchdog::Watchdog};
-//!
-//! const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates
-//!
-//! let mut peripherals = pac::Peripherals::take().unwrap();
-//! let sio = Sio::new(peripherals.SIO);
-//! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
-//! let mut watchdog = Watchdog::new(peripherals.WATCHDOG);
-//! let mut clocks = init_clocks_and_plls(XOSC_CRYSTAL_FREQ, peripherals.XOSC, peripherals.CLOCKS, peripherals.PLL_SYS, peripherals.PLL_USB, &mut peripherals.RESETS, &mut watchdog).ok().unwrap();
-//!
-//! // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
-//! let pins = (
-//!     pins.gpio0.into_mode::<FunctionUart>(),
-//!     pins.gpio1.into_mode::<FunctionUart>(),
-//! );
-//! // Need to perform clock init before using UART or it will freeze.
-//! let uart = UartPeripheral::new(peripherals.UART0, pins, &mut peripherals.RESETS)
-//!     .enable(
-//!         uart::common_configs::_9600_8_N_1,
-//!         clocks.peripheral_clock.into(),
-//!     )
-//!     .unwrap();
-//!
-//! uart.write_full_blocking(b"Hello World!\r\n");
-//! ```
+//! This module brings together `uart::reader` and `uart::writer` to give a
+//! UartPeripheral object that can both read and write.
 
 use super::*;
 use crate::pac::uart0::uartlcr_h::W as UART_LCR_H_Writer;
@@ -97,6 +68,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
         let effective_baudrate = configure_baudrate(&mut device, &config.baudrate, &frequency)?;
 
         device.uartlcr_h.write(|w| {
+            // FIFOs are enabled
             w.fen().set_bit();
             set_format(w, &config.data_bits, &config.stop_bits, &config.parity);
             w
@@ -143,6 +115,40 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
         });
 
         self.transition(Disabled)
+    }
+
+    /// Enables the Receive Interrupt.
+    ///
+    /// The relevant UARTx IRQ will fire when there is data in the receive register.
+    pub fn enable_rx_interrupt(&mut self) {
+        super::reader::enable_rx_interrupt(&self.device)
+    }
+
+    /// Enables the Transmit Interrupt.
+    ///
+    /// The relevant UARTx IRQ will fire when there is space in the transmit FIFO.
+    pub fn enable_tx_interrupt(&mut self) {
+        super::writer::enable_tx_interrupt(&self.device)
+    }
+
+    /// Disables the Receive Interrupt.
+    pub fn disable_rx_interrupt(&mut self) {
+        super::reader::disable_rx_interrupt(&self.device)
+    }
+
+    /// Disables the Transmit Interrupt.
+    pub fn disable_tx_interrupt(&mut self) {
+        super::writer::disable_tx_interrupt(&self.device)
+    }
+
+    /// Is there space in the UART TX FIFO for new data to be written?
+    pub fn uart_is_writable(&self) -> bool {
+        super::writer::uart_is_writable(&self.device)
+    }
+
+    /// Is there data in the UART RX FIFO ready to be read?
+    pub fn uart_is_readable(&self) -> bool {
+        super::reader::is_readable(&self.device)
     }
 
     /// Writes bytes to the UART.

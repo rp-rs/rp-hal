@@ -1,4 +1,10 @@
+//! Universal Asynchronous Receiver Transmitter - Receiver Code
+//!
+//! This module is for receiving data with a UART.
+
 use super::{UartConfig, UartDevice, ValidUartPinout};
+use rp2040_pac::uart0::RegisterBlock;
+
 use embedded_hal::serial::Read;
 use embedded_time::rate::Baud;
 use nb::Error::*;
@@ -45,6 +51,43 @@ impl eh1_0_alpha::serial::Error for ReadErrorType {
 
 pub(crate) fn is_readable<D: UartDevice>(device: &D) -> bool {
     device.uartfr.read().rxfe().bit_is_clear()
+}
+
+/// Enables the Receive Interrupt.
+///
+/// The relevant UARTx IRQ will fire when there is data in the receive register.
+pub(crate) fn enable_rx_interrupt(rb: &RegisterBlock) {
+    // Access the UART FIFO Level Select. We set the RX FIFO trip level
+    // to be half-full.
+
+    // 2 means '>= 1/2 full'.
+    rb.uartifls.modify(|_r, w| unsafe { w.rxiflsel().bits(2) });
+
+    // Access the UART Interrupt Mask Set/Clear register. Setting a bit
+    // high enables the interrupt.
+
+    // We set the RX interrupt, and the RX Timeout interrupt. This means
+    // we will get an interrupt when the RX FIFO level is triggered, or
+    // when the RX FIFO is non-empty, but 32-bit periods have passed with
+    // no further data. This means we don't have to interrupt on every
+    // single byte, but can make use of the hardware FIFO.
+    rb.uartimsc.modify(|_r, w| {
+        w.rxim().set_bit();
+        w.rtim().set_bit();
+        w
+    });
+}
+
+/// Disables the Receive Interrupt.
+pub(crate) fn disable_rx_interrupt(rb: &RegisterBlock) {
+    // Access the UART Interrupt Mask Set/Clear register. Setting a bit
+    // low disables the interrupt.
+
+    rb.uartimsc.modify(|_r, w| {
+        w.rxim().clear_bit();
+        w.rtim().clear_bit();
+        w
+    });
 }
 
 pub(crate) fn read_raw<'b, D: UartDevice>(
@@ -142,6 +185,18 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Reader<D, P> {
     /// This function blocks until the full buffer has been received.
     pub fn read_full_blocking(&self, buffer: &mut [u8]) -> Result<(), ReadErrorType> {
         read_full_blocking(&self.device, buffer)
+    }
+
+    /// Enables the Receive Interrupt.
+    ///
+    /// The relevant UARTx IRQ will fire when there is data in the receive register.
+    pub fn enable_rx_interrupt(&mut self) {
+        enable_rx_interrupt(&self.device)
+    }
+
+    /// Disables the Receive Interrupt.
+    pub fn disable_rx_interrupt(&mut self) {
+        disable_rx_interrupt(&self.device)
     }
 }
 
