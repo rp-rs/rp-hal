@@ -18,7 +18,7 @@ itertools = { version = "0.10.1", default-features = false }
 nb = "1.0"
 rp2040-pac = "0.2.0"
 paste = "1.0"
-pio = { git = "https://github.com/rp-rs/pio-rs.git", branch = "main" }
+pio = "0.1.0"
 usb-device = "0.2.8"
 vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
