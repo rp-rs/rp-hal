@@ -9,6 +9,19 @@
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
 //! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
+//! let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
+//! const XTAL_FREQ_HZ:u32 = 12_000_000;
+//! let clocks = hal::clocks::init_clocks_and_plls(
+//!         XTAL_FREQ_HZ,
+//!         pac.XOSC,
+//!         pac.CLOCKS,
+//!         pac.PLL_SYS,
+//!         pac.PLL_USB,
+//!         &mut pac.RESETS,
+//!         &mut watchdog,
+//!     )
+//!     .ok()
+//!     .unwrap();
 //!
 //! let mut i2c = I2C::i2c1(
 //!     peripherals.I2C1,
@@ -16,7 +29,7 @@
 //!     pins.gpio19.into_mode(), // scl
 //!     400.kHz(),
 //!     &mut peripherals.RESETS,
-//!     125_000_000.Hz(),
+//!     clocks.peripheral_clock,
 //! );
 //!
 //! // Scan for devices on the bus by attempting to read from them

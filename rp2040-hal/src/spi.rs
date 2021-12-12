@@ -9,9 +9,23 @@
 //! use embedded_time::rate::*;
 //! use rp2040_hal::{spi::Spi, gpio::{Pins, FunctionSpi}, pac, Sio};
 //!
-//! let mut peripherals = pac::Peripherals::take().unwrap();
+//! let mut pac = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
 //! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
+//! let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
+//!
+//! const XTAL_FREQ_HZ:u32 = 12_000_000;
+//! let clocks = hal::clocks::init_clocks_and_plls(
+//!         XTAL_FREQ_HZ,
+//!         pac.XOSC,
+//!         pac.CLOCKS,
+//!         pac.PLL_SYS,
+//!         pac.PLL_USB,
+//!         &mut pac.RESETS,
+//!         &mut watchdog,
+//!     )
+//!     .ok()
+//!     .unwrap();
 //!
 //! let _ = pins.gpio2.into_mode::<FunctionSpi>();
 //! let _ = pins.gpio3.into_mode::<FunctionSpi>();
