@@ -55,7 +55,7 @@ fn main() -> ! {
         sio.gpio_bank0,
         p.SPI0,
         adc,
-        clocks.peripheral_clock,
+        &clocks.peripheral_clock,
         &mut p.RESETS,
         &mut delay,
     );

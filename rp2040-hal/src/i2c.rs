@@ -260,7 +260,7 @@ macro_rules! hal {
                     scl_pin: Pin<Scl, FunctionI2C>,
                     freq: F,
                     resets: &mut RESETS,
-                    system_clock: super::clocks::PeripheralClock) -> Self
+                    system_clock: &super::clocks::PeripheralClock) -> Self
                 where
                     F: Into<Hertz<u64>>,
                     Sda: SdaPin<$I2CX>,

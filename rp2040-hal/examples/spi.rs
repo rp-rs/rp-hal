@@ -88,7 +88,7 @@ fn main() -> ! {
     // Exchange the uninitialised SPI driver for an initialised one
     let mut spi = spi.init(
         &mut pac.RESETS,
-        clocks.peripheral_clock,
+        &clocks.peripheral_clock,
         16_000_000u32.Hz(),
         &embedded_hal::spi::MODE_0,
     );

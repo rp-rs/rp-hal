@@ -163,14 +163,15 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
     pub fn init<B: Into<Hertz<u32>>>(
         mut self,
         resets: &mut RESETS,
-        peri_frequency: super::clocks::PeripheralClock,
+        peri_frequency: &super::clocks::PeripheralClock,
         baudrate: B,
         mode: &Mode,
     ) -> Spi<Enabled, D, DS> {
         self.device.reset_bring_down(resets);
         self.device.reset_bring_up(resets);
-
-        self.set_baudrate(peri_frequency, baudrate);
+        // Converting this so we can accept a &PeripheralClock without changing set_baudrate
+        let freq:Hertz<u32> = crate::Clock::freq(peri_frequency);
+        self.set_baudrate(freq, baudrate);
         self.set_format(DS as u8, mode);
         // Always enable DREQ signals -- harmless if DMA is not listening
         self.device

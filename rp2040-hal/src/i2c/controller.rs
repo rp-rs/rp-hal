@@ -29,7 +29,7 @@ impl<T: SubsystemReset + Deref<Target = Block>, Sda: PinId + BankPinId, Scl: Pin
         scl_pin: Pin<Scl, FunctionI2C>,
         freq: F,
         resets: &mut RESETS,
-        system_clock: crate::clocks::PeripheralClock,
+        system_clock: &crate::clocks::PeripheralClock,
     ) -> Self
     where
         F: Into<Hertz<u64>>,

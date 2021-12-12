@@ -188,7 +188,7 @@ impl PicoExplorer {
         sio: SioGpioBank0,
         spi0: SPI0,
         adc: Adc,
-        peripheral_clock: hal::clocks::PeripheralClock,
+        peripheral_clock: &hal::clocks::PeripheralClock,
         resets: &mut RESETS,
         delay: &mut impl DelayUs<u32>,
     ) -> (Self, Pins) {
