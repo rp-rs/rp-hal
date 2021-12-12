@@ -146,10 +146,10 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
     }
 
     /// Initialize the SPI
-    pub fn init<F: Into<Hertz<u32>>, B: Into<Hertz<u32>>>(
+    pub fn init<B: Into<Hertz<u32>>>(
         mut self,
         resets: &mut RESETS,
-        peri_frequency: F,
+        peri_frequency: super::clocks::PeripheralClock,
         baudrate: B,
         mode: &Mode,
     ) -> Spi<Enabled, D, DS> {

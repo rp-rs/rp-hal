@@ -241,18 +241,17 @@ macro_rules! hal {
             impl<Sda: PinId + BankPinId, Scl: PinId + BankPinId>
                 I2C<$I2CX, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)> {
                 /// Configures the I2C peripheral to work in master mode
-                pub fn $i2cX<F, SystemF>(
+                pub fn $i2cX<F>(
                     i2c: $I2CX,
                     sda_pin: Pin<Sda, FunctionI2C>,
                     scl_pin: Pin<Scl, FunctionI2C>,
                     freq: F,
                     resets: &mut RESETS,
-                    system_clock: SystemF) -> Self
+                    system_clock: super::clocks::PeripheralClock) -> Self
                 where
                     F: Into<Hertz<u64>>,
                     Sda: SdaPin<$I2CX>,
                     Scl: SclPin<$I2CX>,
-                    SystemF: Into<Hertz<u32>>,
                 {
                     Self::new_controller(i2c, sda_pin, scl_pin, freq, resets, system_clock)
                 }

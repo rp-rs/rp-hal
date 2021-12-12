@@ -181,12 +181,14 @@ impl OutputPin for DummyPin {
 }
 
 impl PicoExplorer {
+    #![allow(clippy::too_many_arguments)]
     pub fn new(
         io: pac::IO_BANK0,
         pads: pac::PADS_BANK0,
         sio: SioGpioBank0,
         spi0: SPI0,
         adc: Adc,
+        peripheral_clock: hal::clocks::PeripheralClock,
         resets: &mut RESETS,
         delay: &mut impl DelayUs<u32>,
     ) -> (Self, Pins) {
@@ -207,12 +209,8 @@ impl PicoExplorer {
         let spi_sclk = internal_pins.spi_sclk.into_mode::<FunctionSpi>();
         let spi_mosi = internal_pins.spi_mosi.into_mode::<FunctionSpi>();
 
-        let spi_screen = Spi::<_, _, 8>::new(spi0).init(
-            resets,
-            125_000_000u32.Hz(),
-            16_000_000u32.Hz(),
-            &MODE_0,
-        );
+        let spi_screen =
+            Spi::<_, _, 8>::new(spi0).init(resets, peripheral_clock, 16_000_000u32.Hz(), &MODE_0);
 
         let spii_screen = SPIInterface::new(spi_screen, dc, cs);
 
