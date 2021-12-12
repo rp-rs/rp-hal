@@ -22,10 +22,8 @@
 //!     pins.gpio1.into_mode::<FunctionUart>(),
 //! );
 //! // Need to perform clock init before using UART or it will freeze.
-//! let uart = UartPeripheral::enable(
-//!         peripherals.UART0,
-//!         pins,
-//!         &mut peripherals.RESETS,
+//! let uart = UartPeripheral::new(peripherals.UART0, pins, &mut peripherals.RESETS)
+//!     .enable(
 //!         uart::common_configs::_9600_8_N_1,
 //!         clocks.peripheral_clock.into(),
 //!     ).unwrap();

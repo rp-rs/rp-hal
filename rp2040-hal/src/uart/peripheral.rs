@@ -16,17 +16,19 @@
 //! let mut watchdog = Watchdog::new(peripherals.WATCHDOG);
 //! let mut clocks = init_clocks_and_plls(XOSC_CRYSTAL_FREQ, peripherals.XOSC, peripherals.CLOCKS, peripherals.PLL_SYS, peripherals.PLL_USB, &mut peripherals.RESETS, &mut watchdog).ok().unwrap();
 //!
+//! // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
+//! let pins = (
+//!     pins.gpio0.into_mode::<FunctionUart>(),
+//!     pins.gpio1.into_mode::<FunctionUart>(),
+//! );
 //! // Need to perform clock init before using UART or it will freeze.
-//! let uart = UartPeripheral::<_, _>::new(peripherals.UART0, &mut peripherals.RESETS)
+//! let uart = UartPeripheral::new(peripherals.UART0, pins, &mut peripherals.RESETS)
 //!     .enable(
 //!         uart::common_configs::_9600_8_N_1,
 //!         clocks.peripheral_clock.into(),
 //!     )
 //!     .unwrap();
 //!
-//! // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
-//! let _tx_pin = pins.gpio0.into_mode::<FunctionUart>();
-//! let _rx_pin = pins.gpio1.into_mode::<FunctionUart>();
 //! uart.write_full_blocking(b"Hello World!\r\n");
 //! ```
 
@@ -40,6 +42,9 @@ use embedded_time::rate::Baud;
 use embedded_time::rate::Hertz;
 use nb::Error::{Other, WouldBlock};
 use rp2040_pac::{UART0, UART1};
+
+#[cfg(feature = "eh1_0_alpha")]
+use eh1_0_alpha::serial::nb as eh1;
 
 /// An UART Peripheral based on an underlying UART device.
 pub struct UartPeripheral<S: State, D: UartDevice, P: ValidUartPinout<D>> {
