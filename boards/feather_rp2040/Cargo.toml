@@ -21,8 +21,8 @@ panic-halt= "0.2.0"
 embedded-hal ="0.2.5"
 nb = "1.0.0"
 smart-leds = "0.3.0"
-pio = { git = "https://github.com/rp-rs/pio-rs.git", branch = "main" }
-ws2812-pio = { git = "https://github.com/ithinuel/ws2812-pio-rs", rev = "7a11616f994025f5c99f28b283d2b25d60d46a43" }
+pio = "0.1.0"
+ws2812-pio = { git = "https://github.com/ithinuel/ws2812-pio-rs", rev = "4f0d81e594ea9934f9c4c38ed9824ad0cce4ebb5" }
 
 [features]
 default = ["boot2", "rt"]

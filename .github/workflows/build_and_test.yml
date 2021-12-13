@@ -1,5 +1,5 @@
 on: [push, pull_request]
-name: CI Checks
+name: Build and Test check
 jobs:
   check:
     name: cargo-check
@@ -17,7 +17,15 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: check
+          args: --workspace --examples
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
           args: --workspace --examples --features eh1_0_alpha
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --workspace --all
       - uses: actions-rs/cargo@v1
         with:
           command: test
