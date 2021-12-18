@@ -28,13 +28,16 @@ critical-section = { version = "0.2.4", features = ["custom-impl"] }
 futures = { version = "0.3", default-features = false, optional = true }
 chrono = { version = "0.4", default-features = false, optional = true }
 
-# namespaced features will let use use "dep:embassy-traits" in the features rather than using this
+# namespaced features will let us use "dep:embassy-traits" in the features rather than using this
 # trick of renaming the crate.
-[dependencies.embassy_traits]
-git = "https://github.com/embassy-rs/embassy"
-rev = "6d6e6f55b8a9ecd38b5a6d3bb11f74b2654afdeb"
-package = "embassy-traits"
-optional = true
+#
+# This is commented out so that we can publish to crates.io
+#
+# [dependencies.embassy_traits]
+# git = "https://github.com/embassy-rs/embassy"
+# rev = "6d6e6f55b8a9ecd38b5a6d3bb11f74b2654afdeb"
+# package = "embassy-traits"
+# optional = true
 
 [dev-dependencies]
 cortex-m-rt = "0.7"
@@ -45,5 +48,7 @@ pio-proc = "0.1.0"
 
 [features]
 rt = ["rp2040-pac/rt"]
-embassy-traits = ["embassy_traits", "futures"]
+# This is commented out so that we can publish to crates.io
+#
+# embassy-traits = ["embassy_traits", "futures"]
 alloc = []
