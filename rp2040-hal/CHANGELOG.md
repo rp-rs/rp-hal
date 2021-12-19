@@ -8,24 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- implement `rng_core::RngCore` for `RingOscillator`
+
+- None
+
+### Changed
+
+- None
+
+## [0.3.0] - 2021-12-19
+
+### Added
+- A README!
+- Implementation of the `critical-section` API
+- DMA support
+- Embedded HAL 1.0 Alpha support
+- I²C Controller and Peripheral support
+- Multi-core support
+- PIO support
+- Implementation of `rng_core::RngCore` for `RingOscillator`
+- ADC example
+- GPIO Interrupt support
+- Multi-core FIFO example
+- PIO LED Blinky example
+- ROM Functions example
+- SPI example
+- Watchdog example
+- ADC documentation
 
 ### Changed
 - Modified PIO API for better ergonomics
-
-## [0.3.0] - 2021-09-20
-
-### Added
-- peripheral drivers: Timer(counter) with EH traits, USB, PIO
-- examples: Watchdog, GPIO, ADC, i2c, rtic blinky, usb (serial echo, mouse)
-- docs: Watchdog
-- bsps: adafruit feather
-- bsp examples: sparkfun pro micro PIO RGB rainbow LED
-
-### Changed
-- i2c fixes
-- spi fixes
-- pwm fixes
+- Updated PAC to 0.2.0
+- Exported common driver structs from top-level (e.g. it's now `Sio`, not `sio::Sio`)
 
 ## [0.2.0] - 2021-08-14
 
