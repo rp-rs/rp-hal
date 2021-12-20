@@ -1,13 +1,13 @@
-# [adafruit_macropad] - Board Support for the [Adafruit Macropad]
+# [feather-rp2040] - Board Support for the [Adafruit Feather RP2040]
 
 You should include this crate if you are writing code that you want to run on
-an [Adafruit Macropad] - a 3x4 keyboard and OLED combo board from Adafruit.
+an [Adafruit Feather RP2040] - a Feather form-factor RP2040 board from Adafruit.
 
 This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the Feather.
 
-[adafruit_macropad]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit_macropad
-[Adafruit Macropad]: https://www.adafruit.com/product/5128
+[Adafruit Feather RP2040]: https://www.adafruit.com/product/4884
+[feather-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/feather-rp2040
 [rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
 [Raspberry Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
 
@@ -16,10 +16,10 @@ RP2040 chip according to how it is connected up on the Feather.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-adafruit_macropad = { git = "https://github.com/rp-rs/rp-hal.git" }
+feather-rp2040 = "0.1.0"
 ```
 
-In your program, you will need to call `adafruit_macropad::Pins::new` to create
+In your program, you will need to call `feather_rp2040::Pins::new` to create
 a new `Pins` structure. This will set up all the GPIOs for any on-board
 devices. See the [examples](./examples) folder for more details.
 
@@ -30,7 +30,7 @@ devices. See the [examples](./examples) folder for more details.
 To compile an example, clone the _rp-hal_ repository and run:
 
 ```console
-rp-hal/boards/adafruit_macropad $ cargo build --release --example <name>
+rp-hal/boards/feather-rp2040 $ cargo build --release --example <name>
 ```
 
 You will get an ELF file called
@@ -44,7 +44,7 @@ USB drive exported by the RP2040 bootloader, simply boot your board into
 bootloader mode and run:
 
 ```console
-rp-hal/boards/adafruit_macropad $ cargo run --release --example <name>
+rp-hal/boards/feather-rp2040 $ cargo run --release --example <name>
 ```
 
 If you get an error about not being able to find `elf2uf2-rs`, try:
@@ -55,12 +55,16 @@ $ cargo install elf2uf2-rs, then repeating the `cargo run` command above.
 
 ### [feather_blinky](./examples/feather_blinky.rs)
 
-Flashes the Feather's on-board LED on and off.
+Flashes the Feather's onboard LED on and off.
+
+### [feather_neopixel_rainbow](./examples/feather_neopixel_rainbow.rs)
+
+Flows smoothly through various colors on the Feather's onboard NeoPixel LED.
 
 ## Contributing
 
 Contributions are what make the open source community such an amazing place to
-be learn, inspire, and create. Any contributions you make are **greatly
+be, learn, inspire, and create. Any contributions you make are **greatly
 appreciated**.
 
 The steps are:

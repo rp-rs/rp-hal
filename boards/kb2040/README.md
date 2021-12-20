@@ -16,7 +16,7 @@ RP2040 chip according to how it is connected up on the KB2040.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-kb2040 = { git = "https://github.com/rp-rs/rp-hal.git" }
+kb2040 = "0.1.0"
 ```
 
 In your program, you will need to call `kb2040::Pins::new` to create

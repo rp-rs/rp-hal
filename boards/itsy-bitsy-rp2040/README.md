@@ -1,14 +1,13 @@
-# [pico_explorer] - Board Support for the [Pimoroni Pico Explorer]
+# [itsy-bitsy-rp2040] - Board Support for the [Adafruit ItsyBitsy RP2040]
 
 You should include this crate if you are writing code that you want to run on
-a [Pimoroni Pico Explorer] - a board featuring a small LCD screen, a
-breadboard and some breakout headers.
+an [Adafruit ItsyBitsy RP2040] - an RP2040 board in the Itsy family from Adafruit.
 
 This crate includes the [rp2040-hal], but also configures each pin of the
-RP2040 chip according to how it is connected up on the Pico Explorer.
+RP2040 chip according to how it is connected up on the ItsyBitsy RP2040.
 
-[Pimoroni Pico Explorer]: https://shop.pimoroni.com/products/pico-explorer-base
-[pico_explorer]: https://github.com/rp-rs/rp-hal/tree/main/boards/pico_explorer
+[Adafruit ItsyBitsy RP2040]: https://www.adafruit.com/product/4888
+[itsy-bitsy-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/itsy-bitsy-rp2040
 [rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
 [Raspberry Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
 
@@ -17,10 +16,10 @@ RP2040 chip according to how it is connected up on the Pico Explorer.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-pico_explorer = { git = "https://github.com/rp-rs/rp-hal.git" }
+itsy-bitsy-rp2040 = "0.1.0"
 ```
 
-In your program, you will need to call `pico_explorer::Pins::new` to create
+In your program, you will need to call `itsy_bitsy_rp2040::Pins::new` to create
 a new `Pins` structure. This will set up all the GPIOs for any on-board
 devices. See the [examples](./examples) folder for more details.
 
@@ -31,7 +30,7 @@ devices. See the [examples](./examples) folder for more details.
 To compile an example, clone the _rp-hal_ repository and run:
 
 ```console
-rp-hal/boards/pico_explorer $ cargo build --release --example <name>
+rp-hal/boards/itsy-bitsy-rp2040 $ cargo build --release --example <name>
 ```
 
 You will get an ELF file called
@@ -45,7 +44,7 @@ USB drive exported by the RP2040 bootloader, simply boot your board into
 bootloader mode and run:
 
 ```console
-rp-hal/boards/pico_explorer $ cargo run --release --example <name>
+rp-hal/boards/itsy-bitsy-rp2040 $ cargo run --release --example <name>
 ```
 
 If you get an error about not being able to find `elf2uf2-rs`, try:
@@ -54,9 +53,9 @@ If you get an error about not being able to find `elf2uf2-rs`, try:
 $ cargo install elf2uf2-rs, then repeating the `cargo run` command above.
 ```
 
-### [pico_explorer_showcase](./examples/pico_explorer_showcase.rs)
+### [itsy_bitsy_rainbow](./examples/itsy_bitsy_rainbow.rs)
 
-Displays the current temperature on the Pico Explorer's on-board LCD screen.
+Continuously changes the color of the ItsyBitsy's onboard Neopixel.
 
 ## Contributing
 

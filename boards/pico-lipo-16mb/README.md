@@ -1,25 +1,27 @@
-# [itsy_bitsy_rp2040] - Board Support for the [Adafruit ItsyBitsy RP2040]
+# [pico-lipo-16mb] - Board Support for the [Pimoroni Pico Lipo 16MB]
 
 You should include this crate if you are writing code that you want to run on
-an [Adafruit ItsyBitsy RP2040] - an RP2040 board in the Itsy family from Adafruit.
+a [Pimoroni Pico Lipo 16MB] - a board with USB-C, STEMMA QT/Qwiic connectors,
+plus a Li-Po battery charging circuit.
 
 This crate includes the [rp2040-hal], but also configures each pin of the
-RP2040 chip according to how it is connected up on the ItsyBitsy RP2040.
+RP2040 chip according to how it is connected up on the Pico Lipo.
 
-[Adafruit ItsyBitsy RP2040]: https://www.adafruit.com/product/4888
-[itsy_bitsy_rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/itsy_bitsy_rp2040
-[rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
-[Raspberry Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
+Note that if you use this crate the compiler will expect the full 16MB flash
+space, and so it may not work if you only have the 4MB variant. 
+
+[Pimoroni Pico Lipo 16MB]: https://shop.pimoroni.com/products/pimoroni-pico-lipo?variant=39335427080275
+[pico-lipo-16mb]: https://github.com/rp-rs/rp-hal/tree/main/boards/pico-lipo-16mb
 
 ## Using
 
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-itsy_bitsy_rp2040 = { git = "https://github.com/rp-rs/rp-hal.git" }
+pico-lipo-16mb = { git = "https://github.com/rp-rs/rp-hal.git" }
 ```
 
-In your program, you will need to call `itsy_bitsy_rp2040::Pins::new` to create
+In your program, you will need to call `pico_lipo_16mb::Pins::new` to create
 a new `Pins` structure. This will set up all the GPIOs for any on-board
 devices. See the [examples](./examples) folder for more details.
 
@@ -30,7 +32,7 @@ devices. See the [examples](./examples) folder for more details.
 To compile an example, clone the _rp-hal_ repository and run:
 
 ```console
-rp-hal/boards/itsy_bitsy_rp2040 $ cargo build --release --example <name>
+rp-hal/boards/pico-lipo-16mb $ cargo build --release --example <name>
 ```
 
 You will get an ELF file called
@@ -44,7 +46,7 @@ USB drive exported by the RP2040 bootloader, simply boot your board into
 bootloader mode and run:
 
 ```console
-rp-hal/boards/itsy_bitsy_rp2040 $ cargo run --release --example <name>
+rp-hal/boards/pico-lipo-16mb $ cargo run --release --example <name>
 ```
 
 If you get an error about not being able to find `elf2uf2-rs`, try:
@@ -53,9 +55,9 @@ If you get an error about not being able to find `elf2uf2-rs`, try:
 $ cargo install elf2uf2-rs, then repeating the `cargo run` command above.
 ```
 
-### [itsy_bitsy_rainbow](./examples/itsy_bitsy_rainbow.rs)
+### [pico_lipo_16mb_blinky](./examples/pico_lipo_16mb_blinky.rs)
 
-Continuously changes the color of the ItsyBitsy's onboard Neopixel.
+Flashes the Pico Lipo's on-board LED on and off.
 
 ## Contributing
 

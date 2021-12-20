@@ -24,15 +24,15 @@ use embedded_time::rate::*;
 use panic_halt as _;
 
 // Pull in any important traits
-use pico_lipo_16_mb::hal::prelude::*;
+use pico_lipo_16mb::hal::prelude::*;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
-use pico_lipo_16_mb::hal::pac;
+use pico_lipo_16mb::hal::pac;
 
 // A shorter alias for the Hardware Abstraction Layer, which provides
 // higher-level drivers.
-use pico_lipo_16_mb::hal;
+use pico_lipo_16mb::hal;
 
 /// Entry point to our bare-metal application.
 ///
@@ -54,7 +54,7 @@ fn main() -> ! {
     //
     // The default is to generate a 125 MHz system clock
     let clocks = hal::clocks::init_clocks_and_plls(
-        pico_lipo_16_mb::XOSC_CRYSTAL_FREQ,
+        pico_lipo_16mb::XOSC_CRYSTAL_FREQ,
         pac.XOSC,
         pac.CLOCKS,
         pac.PLL_SYS,
@@ -73,7 +73,7 @@ fn main() -> ! {
     let sio = hal::Sio::new(pac.SIO);
 
     // Set the pins up according to their function on this particular board
-    let pins = pico_lipo_16_mb::Pins::new(
+    let pins = pico_lipo_16mb::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,

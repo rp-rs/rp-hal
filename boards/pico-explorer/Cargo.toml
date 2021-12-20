@@ -1,11 +1,12 @@
 [package]
-name = "pico_explorer"
+name = "pico-explorer"
 version = "0.1.0"
 authors = ["Hmvp <hmvp@users.noreply.github.com>"]
 edition = "2018"
-homepage = "https://github.com/rp-rs/rp-hal/boards/pico_explorer"
+homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/pico-explorer"
 description = "Board Support Package for the Pico Explorer"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/rp-rs/rp-hal.git"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

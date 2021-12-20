@@ -1,13 +1,13 @@
-# [pro_micro_rp2040] - Board Support for the [Sparkfun Pro Micro RP2040]
+# [qt-py-rp2040] - Board Support for the [Adafruit QT Py RP2040]
 
 You should include this crate if you are writing code that you want to run on
-a [Sparkfun Pro Micro RP2040] - a smaller [RP2040][Raspberry Silicon RP2040] board with USB-C and a WS2812B addressable LED.
+an [Adafruit QT Py RP2040] - an extremely small form-factor RP2040 board from Adafruit.
 
 This crate includes the [rp2040-hal], but also configures each pin of the
-RP2040 chip according to how it is connected up on the Pro Micro RP2040.
+RP2040 chip according to how it is connected up on the QT Py.
 
-[Sparkfun Pro Micro RP2040]: https://www.sparkfun.com/products/18288
-[pro_micro_rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/pro_micro_rp2040
+[Adafruit QT Py RP2040]: https://www.adafruit.com/product/4900
+[qt-py-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/qt-py-rp2040
 [rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
 [Raspberry Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
 
@@ -16,10 +16,10 @@ RP2040 chip according to how it is connected up on the Pro Micro RP2040.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-pro_micro_rp2040 = { git = "https://github.com/rp-rs/rp-hal.git" }
+qt-py-rp2040 = { git = "https://github.com/rp-rs/rp-hal.git" }
 ```
 
-In your program, you will need to call `pro_micro_rp2040::Pins::new` to create
+In your program, you will need to call `qt_py_rp2040::Pins::new` to create
 a new `Pins` structure. This will set up all the GPIOs for any on-board
 devices. See the [examples](./examples) folder for more details.
 
@@ -30,7 +30,7 @@ devices. See the [examples](./examples) folder for more details.
 To compile an example, clone the _rp-hal_ repository and run:
 
 ```console
-rp-hal/boards/pro_micro_rp2040 $ cargo build --release --example <name>
+rp-hal/boards/qt-py-rp2040 $ cargo build --release --example <name>
 ```
 
 You will get an ELF file called
@@ -44,7 +44,7 @@ USB drive exported by the RP2040 bootloader, simply boot your board into
 bootloader mode and run:
 
 ```console
-rp-hal/boards/pro_micro_rp2040 $ cargo run --release --example <name>
+rp-hal/boards/qt-py-rp2040 $ cargo run --release --example <name>
 ```
 
 If you get an error about not being able to find `elf2uf2-rs`, try:
@@ -53,9 +53,9 @@ If you get an error about not being able to find `elf2uf2-rs`, try:
 $ cargo install elf2uf2-rs, then repeating the `cargo run` command above.
 ```
 
-### [Rainbow](./examples/pro_micro_rainbow.rs)
+### [qt_py_rainbow](./examples/qt_py_rainbow.rs)
 
-This example will display a colour-wheel rainbow effect on the on-board LED.
+Continuously changes the color of the QT Py's onboard Neopixel.
 
 ## Contributing
 

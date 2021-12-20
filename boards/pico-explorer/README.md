@@ -1,27 +1,26 @@
-# [pico_lipo_16mb] - Board Support for the [Pimoroni Pico Lipo 16MB]
+# [pico-explorer] - Board Support for the [Pimoroni Pico Explorer]
 
 You should include this crate if you are writing code that you want to run on
-a [Pimoroni Pico Lipo 16MB] - a board with USB-C, STEMMA QT/Qwiic connectors,
-plus a Li-Po battery charging circuit.
+a [Pimoroni Pico Explorer] - a board featuring a small LCD screen, a
+breadboard and some breakout headers.
 
 This crate includes the [rp2040-hal], but also configures each pin of the
-RP2040 chip according to how it is connected up on the Pico Lipo.
+RP2040 chip according to how it is connected up on the Pico Explorer.
 
-Note that if you use this crate the compiler will expect the full 16MB flash
-space, and so it may not work if you only have the 4MB variant. 
-
-[Pimoroni Pico Lipo 16MB]: https://shop.pimoroni.com/products/pimoroni-pico-lipo?variant=39335427080275
-[pico_lipo_16mb]: https://github.com/rp-rs/rp-hal/tree/main/boards/pico_lipo_16mb
+[Pimoroni Pico Explorer]: https://shop.pimoroni.com/products/pico-explorer-base
+[pico-explorer]: https://github.com/rp-rs/rp-hal/tree/main/boards/pico-explorer
+[rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
+[Raspberry Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
 
 ## Using
 
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-pico_lipo_16mb = { git = "https://github.com/rp-rs/rp-hal.git" }
+pico-explorer = "0.1.0"
 ```
 
-In your program, you will need to call `pico_lipo_16mb::Pins::new` to create
+In your program, you will need to call `pico_explorer::Pins::new` to create
 a new `Pins` structure. This will set up all the GPIOs for any on-board
 devices. See the [examples](./examples) folder for more details.
 
@@ -32,7 +31,7 @@ devices. See the [examples](./examples) folder for more details.
 To compile an example, clone the _rp-hal_ repository and run:
 
 ```console
-rp-hal/boards/pico_lipo_16mb $ cargo build --release --example <name>
+rp-hal/boards/pico-explorer $ cargo build --release --example <name>
 ```
 
 You will get an ELF file called
@@ -46,7 +45,7 @@ USB drive exported by the RP2040 bootloader, simply boot your board into
 bootloader mode and run:
 
 ```console
-rp-hal/boards/pico_lipo_16mb $ cargo run --release --example <name>
+rp-hal/boards/pico-explorer $ cargo run --release --example <name>
 ```
 
 If you get an error about not being able to find `elf2uf2-rs`, try:
@@ -55,9 +54,9 @@ If you get an error about not being able to find `elf2uf2-rs`, try:
 $ cargo install elf2uf2-rs, then repeating the `cargo run` command above.
 ```
 
-### [pico_lipo_16mb_blinky](./examples/pico_lipo_16mb_blinky.rs)
+### [pico_explorer_showcase](./examples/pico_explorer_showcase.rs)
 
-Flashes the Pico Lipo's on-board LED on and off.
+Displays the current temperature on the Pico Explorer's on-board LCD screen.
 
 ## Contributing
 
