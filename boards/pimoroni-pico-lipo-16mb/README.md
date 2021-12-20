@@ -1,25 +1,27 @@
-# [adafruit-macropad] - Board Support for the [Adafruit Macropad]
+# [pimoroni-pico-lipo-16mb] - Board Support for the [Pimoroni Pico Lipo 16MB]
 
 You should include this crate if you are writing code that you want to run on
-an [Adafruit Macropad] - a 3x4 keyboard and OLED combo board from Adafruit.
+a [Pimoroni Pico Lipo 16MB] - a board with USB-C, STEMMA QT/Qwiic connectors,
+plus a Li-Po battery charging circuit.
 
 This crate includes the [rp2040-hal], but also configures each pin of the
-RP2040 chip according to how it is connected up on the Feather.
+RP2040 chip according to how it is connected up on the Pico Lipo.
 
-[adafruit-macropad]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit-macropad
-[Adafruit Macropad]: https://www.adafruit.com/product/5128
-[rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
-[Raspberry Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
+Note that if you use this crate the compiler will expect the full 16MB flash
+space, and so it may not work if you only have the 4MB variant. 
+
+[Pimoroni Pico Lipo 16MB]: https://shop.pimoroni.com/products/pimoroni-pico-lipo?variant=39335427080275
+[pimoroni-pico-lipo-16mb]: https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-pico-lipo-16mb
 
 ## Using
 
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-adafruit-macropad = "0.1.0"
+pimoroni-pico-lipo-16mb = { git = "https://github.com/rp-rs/rp-hal.git" }
 ```
 
-In your program, you will need to call `adafruit_macropad::Pins::new` to create
+In your program, you will need to call `pimoroni_pico_lipo_16mb::Pins::new` to create
 a new `Pins` structure. This will set up all the GPIOs for any on-board
 devices. See the [examples](./examples) folder for more details.
 
@@ -30,7 +32,7 @@ devices. See the [examples](./examples) folder for more details.
 To compile an example, clone the _rp-hal_ repository and run:
 
 ```console
-rp-hal/boards/adafruit-macropad $ cargo build --release --example <name>
+rp-hal/boards/pimoroni-pico-lipo-16mb $ cargo build --release --example <name>
 ```
 
 You will get an ELF file called
@@ -44,7 +46,7 @@ USB drive exported by the RP2040 bootloader, simply boot your board into
 bootloader mode and run:
 
 ```console
-rp-hal/boards/adafruit-macropad $ cargo run --release --example <name>
+rp-hal/boards/pimoroni-pico-lipo-16mb $ cargo run --release --example <name>
 ```
 
 If you get an error about not being able to find `elf2uf2-rs`, try:
@@ -52,6 +54,10 @@ If you get an error about not being able to find `elf2uf2-rs`, try:
 ```console
 $ cargo install elf2uf2-rs, then repeating the `cargo run` command above.
 ```
+
+### [pimoroni_pico_lipo_16mb_blinky](./examples/pimoroni_pico_lipo_16mb_blinky.rs)
+
+Flashes the Pico Lipo's on-board LED on and off.
 
 ## Contributing
 

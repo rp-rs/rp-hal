@@ -2,15 +2,15 @@
 resolver = "2"
 members = [
     "rp2040-hal",
-    "boards/feather-rp2040",
-    "boards/qt-py-rp2040",
-    "boards/itsy-bitsy-rp2040",
-    "boards/kb2040",
+    "boards/adafruit-feather-rp2040",
+    "boards/adafruit-qt-py-rp2040",
+    "boards/adafruit-itsy-bitsy-rp2040",
+    "boards/adafruit-kb2040",
     "boards/pico",
-    "boards/pico-explorer",
-    "boards/pico-lipo-16mb",
+    "boards/pimoroni-pico-explorer",
+    "boards/pimoroni-pico-lipo-16mb",
     "boards/adafruit-macropad",
-    "boards/pro-micro-rp2040",
+    "boards/sparkfun-pro-micro-rp2040",
 ]
 
 [patch.'https://github.com/rp-rs/rp-hal.git']

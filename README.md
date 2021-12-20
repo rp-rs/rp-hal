@@ -126,18 +126,7 @@ RP2040 chip according to how it is connected up on the Pico.
 [Raspberry Pi Pico]: https://www.raspberrypi.org/products/raspberry-pi-pico/
 [pico]: https://github.com/rp-rs/rp-hal/tree/main/boards/pico
 
-### [adafruit_macropad] - Board Support for the [Adafruit Macropad]
-
-You should include this crate if you are writing code that you want to run on
-an [Adafruit Macropad] - a 3x4 keyboard and OLED combo board from Adafruit.
-
-This crate includes the [rp2040-hal], but also configures each pin of the
-RP2040 chip according to how it is connected up on the Macropad.
-
-[adafruit_macropad]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit_macropad
-[Adafruit Macropad]: https://www.adafruit.com/product/5128
-
-### [feather_rp2040] - Board Support for the [Adafruit Feather RP2040]
+### [adafruit-feather-rp2040] - Board Support for the [Adafruit Feather RP2040]
 
 You should include this crate if you are writing code that you want to run on
 an [Adafruit Feather RP2040] - a Feather form-factor RP2040 board from Adafruit.
@@ -146,9 +135,51 @@ This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the Feather RP2040.
 
 [Adafruit Feather RP2040]: https://www.adafruit.com/product/4884
-[feather_rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/feather_rp2040
+[adafruit-feather-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit_feather_rp2040
 
-### [pico_explorer] - Board Support for the [Pimoroni Pico Explorer]
+### [adafruit-itsy-bitsy-rp2040] - Board Support for the [Adafruit ItsyBitsy RP2040]
+You should include this crate if you are writing code that you want to run on
+an [Adafruit ItsyBitsy RP2040] - an RP2040 board in the ItsyBitsy family.
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the ItsyBitsy RP2040.
+
+[Adafruit ItsyBitsy RP2040]: https://www.adafruit.com/product/4888
+[adafruit-itsy-bitsy-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit_itsy_bitsy_rp2040
+
+### [adafruit-kb2040] - Board Support for the [Adafruit adafruit-kb2040]
+You should include this crate if you are writing code that you want to run on
+an [Adafruit adafruit-kb2040] - an Arduino Pro Micro-shaped board for keyboards.
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the adafruit-kb2040.
+
+[Adafruit adafruit-kb2040]: https://www.adafruit.com/product/5302
+[adafruit-kb2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit-kb2040
+
+### [adafruit-macropad] - Board Support for the [Adafruit Macropad]
+
+You should include this crate if you are writing code that you want to run on
+an [Adafruit Macropad] - a 3x4 keyboard and OLED combo board from Adafruit.
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the Macropad.
+
+[adafruit-macropad]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit_macropad
+[Adafruit Macropad]: https://www.adafruit.com/product/5128
+
+### [adafruit-qt-py-rp2040] - Board Support for the [Adafruit QT Py RP2040]
+
+You should include this crate if you are writing code that you want to run on
+an [Adafruit QT Py RP2040] - an extremely small form-factor RP2040 board from Adafruit.
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the Feather RP2040.
+
+[Adafruit QT Py RP2040]: https://www.adafruit.com/product/4900
+[adafruit-qt-py-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit_qt_py_rp2040
+
+### [pimoroni-pico-explorer] - Board Support for the [Pimoroni Pico Explorer]
 
 You should include this crate if you are writing code that you want to run on
 a [Pimoroni Pico Explorer] - a board featuring a small LCD screen, a
@@ -157,10 +188,10 @@ breadboard and some breakout headers.
 This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the Pico Explorer.
 
-[Pimoroni Pico Explorer]: https://shop.pimoroni.com/products/pico-explorer-base
-[pico_explorer]: https://github.com/rp-rs/rp-hal/tree/main/boards/pico_explorer
+[Pimoroni Pico Explorer]: https://shop.pimoroni.com/products/pimoroni-pico-explorer-base
+[pimoroni-pico-explorer]: https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni_pico_explorer
 
-### [pico_lipo_16mb] - Board Support for the [Pimoroni Pico Lipo 16MB]
+### [pimoroni-pico-lipo-16mb] - Board Support for the [Pimoroni Pico Lipo 16MB]
 
 You should include this crate if you are writing code that you want to run on
 a [Pimoroni Pico Lipo 16MB] - a board with USB-C, STEMMA QT/Qwiic connectors,
@@ -173,9 +204,9 @@ Note that if you use this crate the compiler will expect the full 16MB flash
 space, and so it may not work if you only have the 4MB variant. 
 
 [Pimoroni Pico Lipo 16MB]: https://shop.pimoroni.com/products/pimoroni-pico-lipo?variant=39335427080275
-[pico_lipo_16mb]: https://github.com/rp-rs/rp-hal/tree/main/boards/pico_lipo_16mb
+[pimoroni-pico-lipo-16mb]: https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni_pico_lipo_16mb
 
-### [pro_micro_rp2040] - Board Support for the [Sparkfun Pro Micro RP2040]
+### [sparkfun-pro-micro-rp2040] - Board Support for the [Sparkfun Pro Micro RP2040]
 
 You should include this crate if you are writing code that you want to run on
 a [Sparkfun Pro Micro RP2040] - a smaller RP2040 board with USB-C and a WS2812B addressable LED.
@@ -184,38 +215,7 @@ This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the Pro Micro RP2040.
 
 [Sparkfun Pro Micro RP2040]: https://www.sparkfun.com/products/18288
-[pro_micro_rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/pro_micro_rp2040
-
-### [qt_py_rp2040] - Board Support for the [Adafruit QT Py RP2040]
-
-You should include this crate if you are writing code that you want to run on
-an [Adafruit QT Py RP2040] - an extremely small form-factor RP2040 board from Adafruit.
-
-This crate includes the [rp2040-hal], but also configures each pin of the
-RP2040 chip according to how it is connected up on the Feather RP2040.
-
-[Adafruit QT Py RP2040]: https://www.adafruit.com/product/4900
-[qt_py_rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/qt_py_rp2040
-
-### [itsy_bitsy_rp2040] - Board Support for the [Adafruit ItsyBitsy RP2040]
-You should include this crate if you are writing code that you want to run on
-an [Adafruit ItsyBitsy RP2040] - an RP2040 board in the ItsyBitsy family.
-
-This crate includes the [rp2040-hal], but also configures each pin of the
-RP2040 chip according to how it is connected up on the ItsyBitsy RP2040.
-
-[Adafruit ItsyBitsy RP2040]: https://www.adafruit.com/product/4888
-[itsy_bitsy_rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/itsy_bitsy_rp2040
-
-### [kb2040] - Board Support for the [Adafruit KB2040]
-You should include this crate if you are writing code that you want to run on
-an [Adafruit KB2040] - an Arduino Pro Micro-shaped board for keyboards.
-
-This crate includes the [rp2040-hal], but also configures each pin of the
-RP2040 chip according to how it is connected up on the KB2040.
-
-[Adafruit KB2040]: https://www.adafruit.com/product/5302
-[kb2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/kb2040
+[sparkfun-pro-micro-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/sparkfun_pro_micro_rp2040
 
 <!-- PROGRAMMING -->
 ## Programming

@@ -1,13 +1,13 @@
-# [adafruit-macropad] - Board Support for the [Adafruit Macropad]
+# [adafruit-kb2040] - Board Support for the [Adafruit KB2040]
 
 You should include this crate if you are writing code that you want to run on
-an [Adafruit Macropad] - a 3x4 keyboard and OLED combo board from Adafruit.
+a [Adafruit KB2040] - an Arduino Pro Micro-shaped board for keyboards.
 
 This crate includes the [rp2040-hal], but also configures each pin of the
-RP2040 chip according to how it is connected up on the Feather.
+RP2040 chip according to how it is connected up on the KB2040.
 
-[adafruit-macropad]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit-macropad
-[Adafruit Macropad]: https://www.adafruit.com/product/5128
+[Adafruit KB2040]: https://www.adafruit.com/product/5302
+[adafruit-kb2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit-kb2040
 [rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
 [Raspberry Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
 
@@ -16,10 +16,10 @@ RP2040 chip according to how it is connected up on the Feather.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-adafruit-macropad = "0.1.0"
+adafruit-kb2040 = "0.1.0"
 ```
 
-In your program, you will need to call `adafruit_macropad::Pins::new` to create
+In your program, you will need to call `adafruit-kb2040::Pins::new` to create
 a new `Pins` structure. This will set up all the GPIOs for any on-board
 devices. See the [examples](./examples) folder for more details.
 
@@ -30,7 +30,7 @@ devices. See the [examples](./examples) folder for more details.
 To compile an example, clone the _rp-hal_ repository and run:
 
 ```console
-rp-hal/boards/adafruit-macropad $ cargo build --release --example <name>
+rp-hal/boards/adafruit-kb2040 $ cargo build --release --example <name>
 ```
 
 You will get an ELF file called
@@ -44,7 +44,7 @@ USB drive exported by the RP2040 bootloader, simply boot your board into
 bootloader mode and run:
 
 ```console
-rp-hal/boards/adafruit-macropad $ cargo run --release --example <name>
+rp-hal/boards/adafruit-kb2040$ cargo run --release --example <name>
 ```
 
 If you get an error about not being able to find `elf2uf2-rs`, try:
@@ -52,6 +52,10 @@ If you get an error about not being able to find `elf2uf2-rs`, try:
 ```console
 $ cargo install elf2uf2-rs, then repeating the `cargo run` command above.
 ```
+
+### [Rainbow](./examples/adafruit_kb2040_rainbow.rs)
+
+This example will display a colour-wheel rainbow effect on the on-board LED.
 
 ## Contributing
 
