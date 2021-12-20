@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SPI example
 - Watchdog example
 - ADC documentation
+- Lots of bug fixes :)
 
 ### Changed
 
