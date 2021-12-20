@@ -6,10 +6,6 @@
 #![no_std]
 #![no_main]
 
-use core::iter::once;
-use cortex_m_rt::entry;
-use embedded_hal::timer::CountDown;
-use embedded_time::duration::Extensions;
 use adafruit_feather_rp2040::{
     hal::{
         clocks::{init_clocks_and_plls, Clock},
@@ -21,6 +17,10 @@ use adafruit_feather_rp2040::{
     },
     Pins, XOSC_CRYSTAL_FREQ,
 };
+use core::iter::once;
+use cortex_m_rt::entry;
+use embedded_hal::timer::CountDown;
+use embedded_time::duration::Extensions;
 use panic_halt as _;
 use smart_leds::{brightness, SmartLedsWrite, RGB8};
 use ws2812_pio::Ws2812;

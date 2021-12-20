@@ -14,6 +14,7 @@ use embedded_hal::timer::CountDown;
 use embedded_time::duration::Extensions;
 use panic_halt as _;
 
+use smart_leds::{brightness, SmartLedsWrite, RGB8};
 use sparkfun_pro_micro_rp2040::{
     hal::{
         clocks::{init_clocks_and_plls, Clock},
@@ -25,7 +26,6 @@ use sparkfun_pro_micro_rp2040::{
     },
     XOSC_CRYSTAL_FREQ,
 };
-use smart_leds::{brightness, SmartLedsWrite, RGB8};
 use ws2812_pio::Ws2812;
 
 /// Entry point to our bare-metal application.

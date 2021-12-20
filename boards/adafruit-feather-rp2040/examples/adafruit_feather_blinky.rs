@@ -4,9 +4,6 @@
 #![no_std]
 #![no_main]
 
-use cortex_m_rt::entry;
-use embedded_hal::digital::v2::OutputPin;
-use embedded_time::rate::*;
 use adafruit_feather_rp2040::{
     hal::{
         clocks::{init_clocks_and_plls, Clock},
@@ -16,6 +13,9 @@ use adafruit_feather_rp2040::{
     },
     Pins, XOSC_CRYSTAL_FREQ,
 };
+use cortex_m_rt::entry;
+use embedded_hal::digital::v2::OutputPin;
+use embedded_time::rate::*;
 use panic_halt as _;
 
 #[entry]
