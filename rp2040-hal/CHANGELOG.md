@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.0] - 2021-12-19
 
+### MSRV
+
+The Minimum-Supported Rust Version (MSRV) for this release is 1.54.
+
 ### Added
 
 - A README!
