@@ -16,7 +16,7 @@ RP2040 chip according to how it is connected up on the Pico.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-rp-pico = "0.1.0"
+rp-pico = "0.2.0"
 ```
 
 In your program, you will need to call `rp_pico::Pins::new` to create
