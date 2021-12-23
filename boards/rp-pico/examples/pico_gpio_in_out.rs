@@ -24,11 +24,11 @@ use panic_halt as _;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
-use pico::hal::pac;
+use rp_pico::hal::pac;
 
 // A shorter alias for the Hardware Abstraction Layer, which provides
 // higher-level drivers.
-use pico::hal;
+use rp_pico::hal;
 
 /// Entry point to our bare-metal application.
 ///
@@ -49,7 +49,7 @@ fn main() -> ! {
     let sio = hal::Sio::new(pac.SIO);
 
     // Set the pins up according to their function on this particular board
-    let pins = pico::Pins::new(
+    let pins = rp_pico::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,

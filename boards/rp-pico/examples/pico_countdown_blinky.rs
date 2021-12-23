@@ -27,11 +27,11 @@ use panic_halt as _;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
-use pico::hal::pac;
+use rp_pico::hal::pac;
 
 // A shorter alias for the Hardware Abstraction Layer, which provides
 // higher-level drivers.
-use pico::hal;
+use rp_pico::hal;
 
 #[entry]
 fn main() -> ! {
@@ -45,7 +45,7 @@ fn main() -> ! {
     //
     // The default is to generate a 125 MHz system clock
     let _clocks = hal::clocks::init_clocks_and_plls(
-        pico::XOSC_CRYSTAL_FREQ,
+        rp_pico::XOSC_CRYSTAL_FREQ,
         pac.XOSC,
         pac.CLOCKS,
         pac.PLL_SYS,
@@ -64,7 +64,7 @@ fn main() -> ! {
     let sio = hal::Sio::new(pac.SIO);
 
     // Set the pins up according to their function on this particular board
-    let pins = pico::Pins::new(
+    let pins = rp_pico::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,

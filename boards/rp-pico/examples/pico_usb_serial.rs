@@ -21,11 +21,11 @@ use panic_halt as _;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
-use pico::hal::pac;
+use rp_pico::hal::pac;
 
 // A shorter alias for the Hardware Abstraction Layer, which provides
 // higher-level drivers.
-use pico::hal;
+use rp_pico::hal;
 
 // USB Device support
 use usb_device::{class_prelude::*, prelude::*};
@@ -52,7 +52,7 @@ fn main() -> ! {
     //
     // The default is to generate a 125 MHz system clock
     let clocks = hal::clocks::init_clocks_and_plls(
-        pico::XOSC_CRYSTAL_FREQ,
+        rp_pico::XOSC_CRYSTAL_FREQ,
         pac.XOSC,
         pac.CLOCKS,
         pac.PLL_SYS,

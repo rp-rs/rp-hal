@@ -3,12 +3,12 @@
 
 use panic_halt as _;
 
-#[rtic::app(device = pico::hal::pac, peripherals = true)]
+#[rtic::app(device = rp_pico::hal::pac, peripherals = true)]
 mod app {
 
     use embedded_hal::digital::v2::OutputPin;
     use embedded_time::duration::Extensions;
-    use pico::{
+    use rp_pico::{
         hal::{self, clocks::init_clocks_and_plls, watchdog::Watchdog, Sio},
         XOSC_CRYSTAL_FREQ,
     };
@@ -42,7 +42,7 @@ mod app {
         .unwrap();
 
         let sio = Sio::new(c.device.SIO);
-        let pins = pico::Pins::new(
+        let pins = rp_pico::Pins::new(
             c.device.IO_BANK0,
             c.device.PADS_BANK0,
             sio.gpio_bank0,

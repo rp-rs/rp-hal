@@ -19,5 +19,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[Unreleased]: https://github.com/rp-rs/rp-hal/compare/pico-v0.1.0...HEAD
-[0.1.0]: https://github.com/rp-rs/rp-hal/releases/tag/pico-v0.1.0
+[Unreleased]: https://github.com/rp-rs/rp-hal/compare/rp-pico-v0.1.0...HEAD
+[0.1.0]: https://github.com/rp-rs/rp-hal/releases/tag/rp-pico-v0.1.0
