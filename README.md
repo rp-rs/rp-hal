@@ -147,14 +147,14 @@ RP2040 chip according to how it is connected up on the ItsyBitsy RP2040.
 [Adafruit ItsyBitsy RP2040]: https://www.adafruit.com/product/4888
 [adafruit-itsy-bitsy-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit_itsy_bitsy_rp2040
 
-### [adafruit-kb2040] - Board Support for the [Adafruit adafruit-kb2040]
+### [adafruit-kb2040] - Board Support for the [Adafruit KB2040]
 You should include this crate if you are writing code that you want to run on
-an [Adafruit adafruit-kb2040] - an Arduino Pro Micro-shaped board for keyboards.
+an [Adafruit KB2040] - an Arduino Pro Micro-shaped board for keyboards.
 
 This crate includes the [rp2040-hal], but also configures each pin of the
-RP2040 chip according to how it is connected up on the adafruit-kb2040.
+RP2040 chip according to how it is connected up on the KB2040.
 
-[Adafruit adafruit-kb2040]: https://www.adafruit.com/product/5302
+[Adafruit KB2040]: https://www.adafruit.com/product/5302
 [adafruit-kb2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit-kb2040
 
 ### [adafruit-macropad] - Board Support for the [Adafruit Macropad]
