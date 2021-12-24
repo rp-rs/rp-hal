@@ -1,0 +1,31 @@
+[package]
+name = "sparkfun-pro-micro-rp2040"
+version = "0.1.0"
+authors = ["Wilfried Chauveau <wilfried.chauveau@ithinuel.me>"]
+edition = "2018"
+homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/sparkfun-pro-micro-rp2040"
+description = "Board Support Package for the Sparkfun Pro Micro RP2040"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/rp-rs/rp-hal.git"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cortex-m = "0.7.2"
+rp2040-hal = { path = "../../rp2040-hal", version = "0.3.0" }
+cortex-m-rt = { version = "0.7.0", optional = true }
+embedded-hal = { version = "0.2.4", features = ["unproven"] }
+rp2040-boot2 = { version = "0.2.0", optional = true }
+
+[dev-dependencies]
+panic-halt = "0.2.0"
+smart-leds = "0.3.0"
+embedded-time = "0.12.0"
+nb = "1.0.0"
+pio = "0.1.0"
+ws2812-pio = { git = "https://github.com/ithinuel/ws2812-pio-rs", rev = "4f0d81e594ea9934f9c4c38ed9824ad0cce4ebb5" }
+
+[features]
+default = ["boot2", "rt"]
+boot2 = ["rp2040-boot2"]
+rt = ["cortex-m-rt","rp2040-hal/rt"]
