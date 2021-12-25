@@ -84,17 +84,19 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
+    // UART TX (characters sent from pico) on pin 1 (GPIO0) and RX (on pin 2 (GPIO1)
+    let uart_pins = (
+        pins.gpio0.into_mode::<hal::gpio::FunctionUart>(),
+        pins.gpio1.into_mode::<hal::gpio::FunctionUart>(),
+    );
+
     // Create a UART driver
-    let mut uart = hal::uart::UartPeripheral::<_, _>::new(pac.UART0, &mut pac.RESETS)
+    let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
             hal::uart::common_configs::_9600_8_N_1,
             clocks.peripheral_clock.into(),
         )
         .unwrap();
-
-    // UART TX (characters sent from pico) on pin 1 (GPIO0) and RX (on pin 2 (GPIO1)
-    let _tx_pin = pins.gpio0.into_mode::<hal::gpio::FunctionUart>();
-    let _rx_pin = pins.gpio1.into_mode::<hal::gpio::FunctionUart>();
 
     // Write to the UART
     uart.write_full_blocking(b"ADC example\r\n");

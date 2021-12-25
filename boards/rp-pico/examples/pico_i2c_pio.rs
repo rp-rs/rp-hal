@@ -88,17 +88,19 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    let mut uart = hal::uart::UartPeripheral::<_, _>::new(pac.UART0, &mut pac.RESETS)
+    let uart_pins = (
+        // UART TX (characters sent from RP2040) on pin 1 (GPIO0)
+        pins.gpio0.into_mode::<hal::gpio::FunctionUart>(),
+        // UART RX (characters reveived by RP2040) on pin 2 (GPIO1)
+        pins.gpio1.into_mode::<hal::gpio::FunctionUart>(),
+    );
+
+    let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
             hal::uart::common_configs::_115200_8_N_1,
             clocks.peripheral_clock.into(),
         )
         .unwrap();
-
-    // UART TX (characters sent from RP2040) on pin 1 (GPIO0)
-    let _tx_pin = pins.gpio0.into_mode::<hal::gpio::FunctionUart>();
-    // UART RX (characters reveived by RP2040) on pin 2 (GPIO1)
-    let _rx_pin = pins.gpio1.into_mode::<hal::gpio::FunctionUart>();
 
     let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
 
