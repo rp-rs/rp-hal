@@ -181,9 +181,9 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::Write<u8> for Writer<D, P> {
     }
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
-        transmit_flushed(&self.device).map_err(|e| match e {
+        transmit_flushed(self.device).map_err(|e| match e {
             WouldBlock => WouldBlock,
-            Other(_v) => {}
+            Other(v) => match v {},
         })
     }
 }
