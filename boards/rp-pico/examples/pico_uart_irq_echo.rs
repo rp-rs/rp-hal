@@ -4,8 +4,7 @@
 //! connection. In this example, the IRQ owns the UART and you cannot do any UART
 //! access from the main thread.
 //!
-//! It may need to be adapted to your particular board layout and/or pin
-//! assignment. The pinouts assume you have a Raspberry Pi Pico or compatible:
+//! The pinouts are:
 //!
 //! * GPIO 0 - UART TX (out of the RP2040)
 //! * GPIO 1 - UART RX (in to the RP2040)
@@ -63,7 +62,7 @@ type UartPins = (
 type Uart = hal::uart::UartPeripheral<hal::uart::Enabled, pac::UART0, UartPins>;
 
 /// The linker will place this boot block at the start of our program image. We
-// need this to help the ROM bootloader get our code up and running.
+/// need this to help the ROM bootloader get our code up and running.
 #[link_section = ".boot2"]
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
@@ -81,7 +80,7 @@ static GLOBAL_UART: Mutex<RefCell<Option<Uart>>> = Mutex::new(RefCell::new(None)
 /// as soon as all global variables are initialised.
 ///
 /// The function configures the RP2040 peripherals, then writes to the UART in
-/// an inifinite loop.
+/// an infinite loop.
 #[entry]
 fn main() -> ! {
     // Grab our singleton objects
@@ -111,7 +110,7 @@ fn main() -> ! {
     let sio = hal::Sio::new(pac.SIO);
 
     // Set the pins to their default state
-    let pins = hal::gpio::Pins::new(
+    let pins = rp_pico::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,
@@ -121,7 +120,7 @@ fn main() -> ! {
     let uart_pins = (
         // UART TX (characters sent from RP2040) on pin 1 (GPIO0)
         pins.gpio0.into_mode::<hal::gpio::FunctionUart>(),
-        // UART RX (characters reveived by RP2040) on pin 2 (GPIO1)
+        // UART RX (characters received by RP2040) on pin 2 (GPIO1)
         pins.gpio1.into_mode::<hal::gpio::FunctionUart>(),
     );
 
@@ -154,7 +153,7 @@ fn main() -> ! {
     });
 
     // But we can blink an LED.
-    let mut led_pin = pins.gpio25.into_push_pull_output();
+    let mut led_pin = pins.led.into_push_pull_output();
 
     loop {
         // The normal *Wait For Interrupts* (WFI) has a race-hazard - the

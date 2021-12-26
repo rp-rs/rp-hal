@@ -34,7 +34,7 @@ use hal::pac;
 use embedded_hal::digital::v2::ToggleableOutputPin;
 
 /// The linker will place this boot block at the start of our program image. We
-// need this to help the ROM bootloader get our code up and running.
+/// need this to help the ROM bootloader get our code up and running.
 #[link_section = ".boot2"]
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;

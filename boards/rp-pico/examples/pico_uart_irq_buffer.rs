@@ -1,4 +1,4 @@
-//! # UART IRQ TX BUffer Example
+//! # UART IRQ TX Buffer Example
 //!
 //! This application demonstrates how to use the UART Driver to talk to a
 //! serial connection. In this example, the IRQ owns the UART and you cannot
@@ -6,8 +6,7 @@
 //! static queue, and have the queue contents transferred to the UART under
 //! interrupt.
 //!
-//! It may need to be adapted to your particular board layout and/or pin
-//! assignment. The pinouts assume you have a Raspberry Pi Pico or compatible:
+//! The pinouts are:
 //!
 //! * GPIO 0 - UART TX (out of the RP2040)
 //! * GPIO 1 - UART RX (in to the RP2040)
@@ -72,7 +71,7 @@ struct UartQueue {
 }
 
 /// The linker will place this boot block at the start of our program image. We
-// need this to help the ROM bootloader get our code up and running.
+/// need this to help the ROM bootloader get our code up and running.
 #[link_section = ".boot2"]
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
@@ -97,7 +96,7 @@ static UART_TX_QUEUE: UartQueue = UartQueue {
 /// as soon as all global variables are initialised.
 ///
 /// The function configures the RP2040 peripherals, then writes to the UART in
-/// an inifinite loop.
+/// an infinite loop.
 #[entry]
 fn main() -> ! {
     // Grab our singleton objects
@@ -127,7 +126,7 @@ fn main() -> ! {
     let sio = hal::Sio::new(pac.SIO);
 
     // Set the pins to their default state
-    let pins = hal::gpio::Pins::new(
+    let pins = rp_pico::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,
@@ -137,7 +136,7 @@ fn main() -> ! {
     let uart_pins = (
         // UART TX (characters sent from RP2040) on pin 1 (GPIO0)
         pins.gpio0.into_mode::<hal::gpio::FunctionUart>(),
-        // UART RX (characters reveived by RP2040) on pin 2 (GPIO1)
+        // UART RX (characters received by RP2040) on pin 2 (GPIO1)
         pins.gpio1.into_mode::<hal::gpio::FunctionUart>(),
     );
 
@@ -160,11 +159,11 @@ fn main() -> ! {
     });
 
     // But we can blink an LED.
-    let mut led_pin = pins.gpio25.into_push_pull_output();
+    let mut led_pin = pins.led.into_push_pull_output();
 
     loop {
         // Light the LED whilst the main thread is in the transmit routine. It
-        // shouldn't be on very long, but it will be on whilst we get enough
+        // shouldn't be on very long, but it will be on until we get enough
         // data /out/ of the queue and over the UART for this remainder of
         // this string to fit.
         led_pin.set_high().unwrap();
@@ -178,7 +177,8 @@ fn main() -> ! {
         )
         .unwrap();
         led_pin.set_low().unwrap();
-        // Wait for a second - the UART TX IRQ will transmit the remainder of our queue contents in the background.
+        // Wait for a second - the UART TX IRQ will transmit the remainder of
+        // our queue contents in the background.
         delay.delay_ms(1000);
     }
 }
