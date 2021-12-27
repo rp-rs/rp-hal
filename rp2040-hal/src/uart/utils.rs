@@ -74,9 +74,9 @@ pub struct UartConfig {
     pub parity: Option<Parity>,
 }
 
-/// Same as core::convert::Infallible, but implementing spi::Error
+/// Same as core::convert::Infallible, but implementing serial::Error
 ///
-/// For eh 1.0.0-alpha.6, Infallible doesn't implement spi::Error,
+/// For eh 1.0.0-alpha.6, Infallible doesn't implement serial::Error,
 /// so use a locally defined type instead.
 /// This should be removed with the next release of e-h.
 /// (https://github.com/rust-embedded/embedded-hal/pull/328)

@@ -27,7 +27,7 @@ use hal::pac;
 use core::fmt::Write;
 
 /// The linker will place this boot block at the start of our program image. We
-// need this to help the ROM bootloader get our code up and running.
+/// need this to help the ROM bootloader get our code up and running.
 #[link_section = ".boot2"]
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
@@ -46,7 +46,7 @@ const SYSTICK_RELOAD: u32 = 0x00FF_FFFF;
 /// as soon as all global variables are initialised.
 ///
 /// The function configures the RP2040 peripherals, then writes to the UART in
-/// an inifinite loop.
+/// an infinite loop.
 #[entry]
 fn main() -> ! {
     // Grab our singleton objects
@@ -83,7 +83,7 @@ fn main() -> ! {
     let uart_pins = (
         // UART TX (characters sent from RP2040) on pin 1 (GPIO0)
         pins.gpio0.into_mode::<hal::gpio::FunctionUart>(),
-        // UART RX (characters reveived by RP2040) on pin 2 (GPIO1)
+        // UART RX (characters received by RP2040) on pin 2 (GPIO1)
         pins.gpio1.into_mode::<hal::gpio::FunctionUart>(),
     );
     let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
@@ -177,7 +177,7 @@ fn main() -> ! {
 /// ```
 /// assert_eq!(1, calc_delta(SYSTICK_RELOAD, SYSTICK_RELOAD - 1));
 /// assert_eq!(2, calc_delta(0, SYSTICK_RELOAD - 1));
-//// ```
+/// ```
 fn calc_delta(start: u32, end: u32) -> u32 {
     if start < end {
         (start.wrapping_sub(end)) & SYSTICK_RELOAD
