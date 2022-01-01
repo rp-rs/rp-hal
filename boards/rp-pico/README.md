@@ -60,7 +60,7 @@ Flashes the Pico's on-board LED on and off.
 
 ### [pico_gpio_in_out](./examples/pico_gpio_in_out.rs)
 
-Reads the 'Boot Select' pin and drives the on-board LED to match it (i.e. on when pressed, off when not pressed).
+Reads a push button attached to GPIO 15 and drives the on-board LED to match it (i.e. on when pressed, off when not pressed).
 
 ### [pico_rtic](./examples/pico_rtic.rs)
 
