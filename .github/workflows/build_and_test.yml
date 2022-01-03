@@ -14,11 +14,11 @@ jobs:
           profile: minimal
       - uses: actions-rs/cargo@v1
         with:
-          command: check
+          command: build
           args: --workspace --examples
       - uses: actions-rs/cargo@v1
         with:
-          command: check
+          command: build
           args: --workspace --examples --features eh1_0_alpha
       - uses: actions-rs/cargo@v1
         with:
