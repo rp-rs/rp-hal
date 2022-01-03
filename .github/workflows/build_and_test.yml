@@ -26,6 +26,14 @@ jobs:
           args: --workspace
       - uses: actions-rs/cargo@v1
         with:
+          command: build
+          args: --release --workspace --examples
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --workspace --examples --features eh1_0_alpha
+      - uses: actions-rs/cargo@v1
+        with:
           command: test
           args: --doc --target x86_64-unknown-linux-gnu
       - uses: actions-rs/cargo@v1
