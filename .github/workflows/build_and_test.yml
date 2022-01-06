@@ -4,8 +4,6 @@ jobs:
   check:
     name: cargo-check
     runs-on: ubuntu-20.04
-    env:
-      RUSTFLAGS: "-D warnings"
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -16,16 +14,32 @@ jobs:
           profile: minimal
       - uses: actions-rs/cargo@v1
         with:
-          command: check
-          args: --workspace --examples
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --workspace --examples --features eh1_0_alpha
+          command: build
+          args: --workspace
       - uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --workspace --all
+          args: --workspace --examples
+      - run: echo "Debug examples built:" && ls target/thumbv6m-none-eabi/debug/examples/ |grep -v '-' |grep -v '\.d'
+      - run: rm target/thumbv6m-none-eabi/debug/examples/ -rf
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --workspace --examples --features eh1_0_alpha
+      - run: echo "Debug eh1_0 examples built:" && ls target/thumbv6m-none-eabi/debug/examples/ |grep -v '-' |grep -v '\.d'
+      - run: rm target/thumbv6m-none-eabi/debug/examples/ -rf
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --workspace --examples
+      - run: echo "Release examples built:" && ls target/thumbv6m-none-eabi/release/examples/ |grep -v '-' |grep -v '\.d'
+      - run: rm target/thumbv6m-none-eabi/release/examples/ -rf
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --workspace --examples --features eh1_0_alpha
+      - run: echo "Release eh1_0 examples built:" && ls target/thumbv6m-none-eabi/release/examples/ |grep -v '-' |grep -v '\.d'
+      - run: rm target/thumbv6m-none-eabi/release/examples/ -rf
       - uses: actions-rs/cargo@v1
         with:
           command: test
