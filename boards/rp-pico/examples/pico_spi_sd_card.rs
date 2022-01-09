@@ -128,7 +128,7 @@ use rp_pico::hal;
 // Link in the embedded_sdmmc crate.
 // The `SdMmcSpi` is used for block level access to the card.
 // And the `Controller` gives access to the FAT filesystem functions.
-use embedded_sdmmc::{TimeSource, Timestamp, SdMmcSpi, VolumeIdx, Controller};
+use embedded_sdmmc::{Controller, SdMmcSpi, TimeSource, Timestamp, VolumeIdx};
 
 // Get the file open mode enum:
 use embedded_sdmmc::filesystem::Mode;
@@ -153,22 +153,20 @@ impl TimeSource for DummyTimesource {
 }
 
 // Setup some blinking codes:
-const BLINK_OK_LONG             : [u8; 1] = [8u8];
-const BLINK_OK_SHORT_LONG       : [u8; 4] = [1u8, 0u8, 6u8, 0u8];
-const BLINK_OK_SHORT_SHORT_LONG : [u8; 6] = [1u8, 0u8, 1u8, 0u8, 6u8, 0u8];
-const BLINK_ERR_2_SHORT         : [u8; 4] = [1u8, 0u8, 1u8, 0u8];
-const BLINK_ERR_3_SHORT         : [u8; 6] = [1u8, 0u8, 1u8, 0u8, 1u8, 0u8];
-const BLINK_ERR_4_SHORT         : [u8; 8] = [1u8, 0u8, 1u8, 0u8, 1u8, 0u8, 1u8, 0u8];
-const BLINK_ERR_5_SHORT         : [u8;10] = [1u8, 0u8, 1u8, 0u8, 1u8, 0u8, 1u8, 0u8, 1u8, 0u8];
-const BLINK_ERR_6_SHORT         : [u8;12] = [1u8, 0u8, 1u8, 0u8, 1u8, 0u8, 1u8, 0u8, 1u8, 0u8, 1u8, 0u8];
+const BLINK_OK_LONG: [u8; 1] = [8u8];
+const BLINK_OK_SHORT_LONG: [u8; 4] = [1u8, 0u8, 6u8, 0u8];
+const BLINK_OK_SHORT_SHORT_LONG: [u8; 6] = [1u8, 0u8, 1u8, 0u8, 6u8, 0u8];
+const BLINK_ERR_2_SHORT: [u8; 4] = [1u8, 0u8, 1u8, 0u8];
+const BLINK_ERR_3_SHORT: [u8; 6] = [1u8, 0u8, 1u8, 0u8, 1u8, 0u8];
+const BLINK_ERR_4_SHORT: [u8; 8] = [1u8, 0u8, 1u8, 0u8, 1u8, 0u8, 1u8, 0u8];
+const BLINK_ERR_5_SHORT: [u8; 10] = [1u8, 0u8, 1u8, 0u8, 1u8, 0u8, 1u8, 0u8, 1u8, 0u8];
+const BLINK_ERR_6_SHORT: [u8; 12] = [1u8, 0u8, 1u8, 0u8, 1u8, 0u8, 1u8, 0u8, 1u8, 0u8, 1u8, 0u8];
 
 fn blink_signals(
-    pin:
-        &mut dyn embedded_hal::digital::v2::OutputPin<
-            Error = core::convert::Infallible>,
+    pin: &mut dyn embedded_hal::digital::v2::OutputPin<Error = core::convert::Infallible>,
     delay: &mut cortex_m::delay::Delay,
-    sig: &[u8])
-{
+    sig: &[u8],
+) {
     for bit in sig {
         if *bit != 0 {
             pin.set_high().unwrap();
@@ -189,12 +187,10 @@ fn blink_signals(
 }
 
 fn blink_signals_loop(
-    pin:
-        &mut dyn embedded_hal::digital::v2::OutputPin<
-            Error = core::convert::Infallible>,
+    pin: &mut dyn embedded_hal::digital::v2::OutputPin<Error = core::convert::Infallible>,
     delay: &mut cortex_m::delay::Delay,
-    sig: &[u8])
-{
+    sig: &[u8],
+) {
     loop {
         blink_signals(pin, delay, sig);
         delay.delay_ms(1000);
@@ -207,7 +203,7 @@ fn main() -> ! {
 
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
-    let core    = pac::CorePeripherals::take().unwrap();
+    let core = pac::CorePeripherals::take().unwrap();
 
     // Set up the watchdog driver - needed by the clock setup code
     let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
@@ -242,16 +238,13 @@ fn main() -> ! {
     let mut led_pin = pins.led.into_push_pull_output();
 
     // Setup a delay for the LED blink signals:
-    let mut delay =
-        cortex_m::delay::Delay::new(
-            core.SYST,
-            clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
 
     // These are implicitly used by the spi driver if they are in the correct mode
     let _spi_sclk = pins.gpio2.into_mode::<gpio::FunctionSpi>();
     let _spi_mosi = pins.gpio3.into_mode::<gpio::FunctionSpi>();
     let _spi_miso = pins.gpio4.into_mode::<gpio::FunctionSpi>();
-    let spi_cs    = pins.gpio5.into_push_pull_output();
+    let spi_cs = pins.gpio5.into_push_pull_output();
 
     // Create an SPI driver instance for the SPI0 device
     let spi = spi::Spi::<_, _, 8>::new(pac.SPI0);
@@ -271,18 +264,14 @@ fn main() -> ! {
 
     // Next we need to aquire the block device and initialize the
     // communication with the SD card.
-    let block =
-        match sdspi.acquire() {
-            Ok(block) => block,
-            Err(e) => {
-                error!(
-                    "Error retrieving card size: {}",
-                    defmt::Debug2Format(&e));
-                blink_signals_loop(
-                    &mut led_pin, &mut delay, &BLINK_ERR_2_SHORT);
-                loop { }
-            },
-        };
+    let block = match sdspi.acquire() {
+        Ok(block) => block,
+        Err(e) => {
+            error!("Error retrieving card size: {}", defmt::Debug2Format(&e));
+            blink_signals_loop(&mut led_pin, &mut delay, &BLINK_ERR_2_SHORT);
+            loop {}
+        }
+    };
 
     blink_signals(&mut led_pin, &mut delay, &BLINK_OK_LONG);
 
@@ -295,40 +284,35 @@ fn main() -> ! {
     match cont.device().card_size_bytes() {
         Ok(size) => info!("card size is {} bytes", size),
         Err(e) => {
-            error!(
-                "Error retrieving card size: {}",
-                defmt::Debug2Format(&e));
-            blink_signals_loop(
-                &mut led_pin, &mut delay, &BLINK_ERR_3_SHORT);
-        },
+            error!("Error retrieving card size: {}", defmt::Debug2Format(&e));
+            blink_signals_loop(&mut led_pin, &mut delay, &BLINK_ERR_3_SHORT);
+        }
     }
 
     blink_signals(&mut led_pin, &mut delay, &BLINK_OK_LONG);
 
     info!("Getting Volume 0...");
-    let mut volume =
-        match cont.get_volume(VolumeIdx(0)) {
-            Ok(v) => { v },
-            Err(e) => {
-                error!("Error getting volume 0: {}", defmt::Debug2Format(&e));
-                blink_signals_loop(&mut led_pin, &mut delay, &BLINK_ERR_4_SHORT);
-                loop { }
-            }
-        };
+    let mut volume = match cont.get_volume(VolumeIdx(0)) {
+        Ok(v) => v,
+        Err(e) => {
+            error!("Error getting volume 0: {}", defmt::Debug2Format(&e));
+            blink_signals_loop(&mut led_pin, &mut delay, &BLINK_ERR_4_SHORT);
+            loop {}
+        }
+    };
 
     blink_signals(&mut led_pin, &mut delay, &BLINK_OK_LONG);
 
     // After we have the volume (partition) of the drive we got to open the
     // root directory:
-    let dir =
-        match cont.open_root_dir(&volume) {
-            Ok(dir) => { dir },
-            Err(e) => {
-                error!("Error opening root dir: {}", defmt::Debug2Format(&e));
-                blink_signals_loop(&mut led_pin, &mut delay, &BLINK_ERR_5_SHORT);
-                loop { }
-            },
-        };
+    let dir = match cont.open_root_dir(&volume) {
+        Ok(dir) => dir,
+        Err(e) => {
+            error!("Error opening root dir: {}", defmt::Debug2Format(&e));
+            blink_signals_loop(&mut led_pin, &mut delay, &BLINK_ERR_5_SHORT);
+            loop {}
+        }
+    };
 
     info!("Root directory opened!");
     blink_signals(&mut led_pin, &mut delay, &BLINK_OK_LONG);
@@ -336,10 +320,13 @@ fn main() -> ! {
     // This shows how to iterate through the directory and how
     // to get the file names (and print them in hope they are UTF-8 compatible):
     cont.iterate_dir(&volume, &dir, |ent| {
-        info!("/{}.{}",
+        info!(
+            "/{}.{}",
             core::str::from_utf8(ent.name.base_name()).unwrap(),
-            core::str::from_utf8(ent.name.extension()).unwrap());
-    }).unwrap();
+            core::str::from_utf8(ent.name.extension()).unwrap()
+        );
+    })
+    .unwrap();
 
     blink_signals(&mut led_pin, &mut delay, &BLINK_OK_LONG);
 
@@ -349,8 +336,7 @@ fn main() -> ! {
     match cont.open_file_in_dir(&mut volume, &dir, "O.TST", Mode::ReadOnly) {
         Ok(mut file) => {
             let mut buf = [0u8; 32];
-            let read_count =
-                cont.read(&mut volume, &mut file, &mut buf).unwrap();
+            let read_count = cont.read(&mut volume, &mut file, &mut buf).unwrap();
             cont.close_file(&volume, file).unwrap();
 
             if read_count >= 2 {
@@ -363,23 +349,21 @@ fn main() -> ! {
                     successful_read = true;
                 }
             }
-        },
-        Err(_) => { /* ok, could not open file! */ },
+        }
+        Err(_) => { /* ok, could not open file! */ }
     }
 
     blink_signals(&mut led_pin, &mut delay, &BLINK_OK_LONG);
 
-    match cont.open_file_in_dir(
-        &mut volume, &dir, "O.TST", Mode::ReadWriteCreateOrTruncate)
-    {
+    match cont.open_file_in_dir(&mut volume, &dir, "O.TST", Mode::ReadWriteCreateOrTruncate) {
         Ok(mut file) => {
             cont.write(&mut volume, &mut file, b"\x42\x1E").unwrap();
             cont.close_file(&volume, file).unwrap();
-        },
+        }
         Err(e) => {
-            error!("Error opening file 'O.TST': {}",  defmt::Debug2Format(&e));
+            error!("Error opening file 'O.TST': {}", defmt::Debug2Format(&e));
             blink_signals_loop(&mut led_pin, &mut delay, &BLINK_ERR_6_SHORT);
-        },
+        }
     }
 
     cont.free();
