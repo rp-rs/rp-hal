@@ -28,6 +28,10 @@ cortex-m-rtic = "0.6.0-rc.4"
 nb = "1.0"
 i2c-pio = { git = "https://github.com/ithinuel/i2c-pio-rs", rev = "df06e4ac94a5b2c985d6a9426dc4cc9be0d535c0" }
 heapless = "0.7.9"
+embedded-sdmmc = { git = "https://github.com/rust-embedded-community/embedded-sdmmc-rs.git" }
+
+defmt = "0.2.0"
+defmt-rtt = "0.2.0"
 
 [features]
 default = ["boot2", "rt"]

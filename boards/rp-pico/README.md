@@ -94,6 +94,12 @@ interrupts when USB data arrives.
 Demonstrates emulating a USB Human Input Device (HID) Mouse. The mouse
 cursor will jiggle up and down.
 
+### [pico_spi_sd_card](./examples/pico_spi_sd_card.rs)
+
+Example that shows how to use the
+[embedded_sdmmc crate](https://github.com/rust-embedded-community/embedded-sdmmc-rs)
+with the Raspberry Pi Pico.
+
 ## Contributing
 
 Contributions are what make the open source community such an amazing place to
