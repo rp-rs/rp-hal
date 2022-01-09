@@ -99,8 +99,6 @@ use cortex_m_rt::entry;
 use defmt::*;
 use defmt_rtt as _;
 
-use embedded_hal;
-
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
