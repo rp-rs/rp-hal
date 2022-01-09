@@ -9,7 +9,8 @@
 //!
 //! The example also comes with an utility function to calculate the colors
 //! from HSV color space. It also limits the brightness a bit to save a
-//! few amperes.
+//! few milliamperes - be careful if you increase the strip length you will
+//! quickly get into power consumption of multiple amperes.
 //!
 //! The example assumes you connected the data input to pin 6 of the
 //! Raspberry Pi Pico, which is GPIO4 of the rp2040. Here is a circuit
@@ -118,9 +119,7 @@ fn main() -> ! {
 
     // Import the `sin` function for a smooth hue animation from the
     // Pico rp2040 ROM:
-    let sin = unsafe {
-        core::mem::transmute::<_, fn(f32) -> f32>(rp_pico::hal::rom_data::float_funcs::fsin())
-    };
+    let sin = rp_pico::hal::rom_data::float_funcs::fsin();
 
     // Create a count down timer for the Ws2812 instance:
     let timer = Timer::new(pac.TIMER, &mut pac.RESETS);
@@ -143,10 +142,10 @@ fn main() -> ! {
     let mut leds: [RGB8; STRIP_LEN] = [(0, 0, 0).into(); STRIP_LEN];
     let mut t = 0.0;
 
-    // Bring down the overall brightness of the strip to save
-    // a few amperes (every LED draws ~60mA, RGB means 3 LEDs per
+    // Bring down the overall brightness of the strip to not blow
+    // the USB power supply: every LED draws ~60mA, RGB means 3 LEDs per
     // ws2812 LED, for 3 LEDs that would be: 3 * 3 * 60mA, which is
-    // already 540mA!
+    // already 540mA for just 3 white LEDs!
     let strip_brightness = 64u8; // Limit brightness to 64/256
 
     // Slow down timer by this factor (0.1 will result in 10 seconds):
@@ -196,21 +195,20 @@ pub fn hsv2rgb(hue: f32, sat: f32, val: f32) -> (f32, f32, f32) {
     let v = if v < 0.0 { -v } else { v };
     let x = c * (1.0 - v);
     let m = val - c;
-    let (r_, g_, b_) = if (0.0..60.0).contains(&hue) {
+    let (r, g, b) = if hue < 60.0 {
         (c, x, 0.0)
-    } else if (60.0..120.0).contains(&hue) {
+    } else if hue < 120.0 {
         (x, c, 0.0)
-    } else if (120.0..180.0).contains(&hue) {
+    } else if hue < 180.0 {
         (0.0, c, x)
-    } else if (180.0..240.0).contains(&hue) {
+    } else if hue < 240.0 {
         (0.0, x, c)
-    } else if (240.0..300.0).contains(&hue) {
+    } else if hue < 300.0 {
         (x, 0.0, c)
     } else {
-        // if hue >= 300.0 && hue < 360.0 {
         (c, 0.0, x)
     };
-    (r_ + m, g_ + m, b_ + m)
+    (r + m, g + m, b + m)
 }
 
 pub fn hsv2rgb_u8(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
