@@ -188,7 +188,7 @@ fn blink_signals_loop(
     pin: &mut dyn embedded_hal::digital::v2::OutputPin<Error = core::convert::Infallible>,
     delay: &mut cortex_m::delay::Delay,
     sig: &[u8],
-) {
+) -> ! {
     loop {
         blink_signals(pin, delay, sig);
         delay.delay_ms(1000);
@@ -267,7 +267,6 @@ fn main() -> ! {
         Err(e) => {
             error!("Error retrieving card size: {}", defmt::Debug2Format(&e));
             blink_signals_loop(&mut led_pin, &mut delay, &BLINK_ERR_2_SHORT);
-            loop {}
         }
     };
 
@@ -295,7 +294,6 @@ fn main() -> ! {
         Err(e) => {
             error!("Error getting volume 0: {}", defmt::Debug2Format(&e));
             blink_signals_loop(&mut led_pin, &mut delay, &BLINK_ERR_4_SHORT);
-            loop {}
         }
     };
 
@@ -308,7 +306,6 @@ fn main() -> ! {
         Err(e) => {
             error!("Error opening root dir: {}", defmt::Debug2Format(&e));
             blink_signals_loop(&mut led_pin, &mut delay, &BLINK_ERR_5_SHORT);
-            loop {}
         }
     };
 
@@ -331,24 +328,21 @@ fn main() -> ! {
     let mut successful_read = false;
 
     // Next we going to read a file from the SD card:
-    match cont.open_file_in_dir(&mut volume, &dir, "O.TST", Mode::ReadOnly) {
-        Ok(mut file) => {
-            let mut buf = [0u8; 32];
-            let read_count = cont.read(&mut volume, &mut file, &mut buf).unwrap();
-            cont.close_file(&volume, file).unwrap();
+    if let Ok(mut file) = cont.open_file_in_dir(&mut volume, &dir, "O.TST", Mode::ReadOnly) {
+        let mut buf = [0u8; 32];
+        let read_count = cont.read(&volume, &mut file, &mut buf).unwrap();
+        cont.close_file(&volume, file).unwrap();
 
-            if read_count >= 2 {
-                info!("READ {} bytes: {}", read_count, buf);
+        if read_count >= 2 {
+            info!("READ {} bytes: {}", read_count, buf);
 
-                // If we read what we wrote before the last reset,
-                // we set a flag so that the success blinking at the end
-                // changes it's pattern.
-                if buf[0] == 0x42 && buf[1] == 0x1E {
-                    successful_read = true;
-                }
+            // If we read what we wrote before the last reset,
+            // we set a flag so that the success blinking at the end
+            // changes it's pattern.
+            if buf[0] == 0x42 && buf[1] == 0x1E {
+                successful_read = true;
             }
         }
-        Err(_) => { /* ok, could not open file! */ }
     }
 
     blink_signals(&mut led_pin, &mut delay, &BLINK_OK_LONG);
