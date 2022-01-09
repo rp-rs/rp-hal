@@ -20,14 +20,14 @@ pub use hal::pac;
 hal::bsp_pins!(
     /// GPIO 0 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI0 RX` | [crate::Gp0Spi0Rx] |
-    /// | `UART0 TX` | [crate::Gp0Uart0Tx] |
-    /// | `I2C0 SDA` | [crate::Gp0I2C0Sda] |
-    /// | `PWM0 A` | [crate::Gp0Pwm0A] |
-    /// | `PIO0` | [crate::Gp0Pio0] |
-    /// | `PIO1` | [crate::Gp0Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI0 RX`    | [crate::Gp0Spi0Rx]          |
+    /// | `UART0 TX`   | [crate::Gp0Uart0Tx]         |
+    /// | `I2C0 SDA`   | [crate::Gp0I2C0Sda]         |
+    /// | `PWM0 A`     | [crate::Gp0Pwm0A]           |
+    /// | `PIO0`       | [crate::Gp0Pio0]            |
+    /// | `PIO1`       | [crate::Gp0Pio1]            |
     Gpio0 {
         name: gpio0,
         aliases: {
@@ -48,14 +48,14 @@ hal::bsp_pins!(
 
     /// GPIO 1 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI0 CSn` | [crate::Gp1Spi0Csn] |
-    /// | `UART0 RX` | [crate::Gp1Uart0Rx] |
-    /// | `I2C0 SCL` | [crate::Gp1I2C0Scl] |
-    /// | `PWM0 B` | [crate::Gp1Pwm0B] |
-    /// | `PIO0` | [crate::Gp1Pio0] |
-    /// | `PIO1` | [crate::Gp1Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI0 CSn`   | [crate::Gp1Spi0Csn]         |
+    /// | `UART0 RX`   | [crate::Gp1Uart0Rx]         |
+    /// | `I2C0 SCL`   | [crate::Gp1I2C0Scl]         |
+    /// | `PWM0 B`     | [crate::Gp1Pwm0B]           |
+    /// | `PIO0`       | [crate::Gp1Pio0]            |
+    /// | `PIO1`       | [crate::Gp1Pio1]            |
     Gpio1 {
         name: gpio1,
         aliases: {
@@ -76,14 +76,14 @@ hal::bsp_pins!(
 
     /// GPIO 2 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI0 SCK` | [crate::Gp2Spi0Sck] |
-    /// | `UART0 CTS` | [crate::Gp2Uart0Cts] |
-    /// | `I2C1 SDA` | [crate::Gp2I2C1Sda] |
-    /// | `PWM1 A` | [crate::Gp2Pwm1A] |
-    /// | `PIO0` | [crate::Gp2Pio0] |
-    /// | `PIO1` | [crate::Gp2Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI0 SCK`   | [crate::Gp2Spi0Sck]         |
+    /// | `UART0 CTS`  | [crate::Gp2Uart0Cts]        |
+    /// | `I2C1 SDA`   | [crate::Gp2I2C1Sda]         |
+    /// | `PWM1 A`     | [crate::Gp2Pwm1A]           |
+    /// | `PIO0`       | [crate::Gp2Pio0]            |
+    /// | `PIO1`       | [crate::Gp2Pio1]            |
     Gpio2 {
         name: gpio2,
         aliases: {
@@ -104,14 +104,14 @@ hal::bsp_pins!(
 
     /// GPIO 3 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI0 TX` | [crate::Gp3Spi0Tx] |
-    /// | `UART0 RTS` | [crate::Gp3Uart0Rts] |
-    /// | `I2C1 SCL` | [crate::Gp3I2C1Scl] |
-    /// | `PWM1 B` | [crate::Gp3Pwm1B] |
-    /// | `PIO0` | [crate::Gp3Pio0] |
-    /// | `PIO1` | [crate::Gp3Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI0 TX`    | [crate::Gp3Spi0Tx]          |
+    /// | `UART0 RTS`  | [crate::Gp3Uart0Rts]        |
+    /// | `I2C1 SCL`   | [crate::Gp3I2C1Scl]         |
+    /// | `PWM1 B`     | [crate::Gp3Pwm1B]           |
+    /// | `PIO0`       | [crate::Gp3Pio0]            |
+    /// | `PIO1`       | [crate::Gp3Pio1]            |
     Gpio3 {
         name: gpio3,
         aliases: {
@@ -132,14 +132,14 @@ hal::bsp_pins!(
 
     /// GPIO 4 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI0 RX` | [crate::Gp4Spi0Rx] |
-    /// | `UART1 TX` | [crate::Gp4Uart1Tx] |
-    /// | `I2C0 SDA` | [crate::Gp4I2C0Sda] |
-    /// | `PWM2 A` | [crate::Gp4Pwm2A] |
-    /// | `PIO0` | [crate::Gp4Pio0] |
-    /// | `PIO1` | [crate::Gp4Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI0 RX`    | [crate::Gp4Spi0Rx]          |
+    /// | `UART1 TX`   | [crate::Gp4Uart1Tx]         |
+    /// | `I2C0 SDA`   | [crate::Gp4I2C0Sda]         |
+    /// | `PWM2 A`     | [crate::Gp4Pwm2A]           |
+    /// | `PIO0`       | [crate::Gp4Pio0]            |
+    /// | `PIO1`       | [crate::Gp4Pio1]            |
     Gpio4 {
         name: gpio4,
         aliases: {
@@ -160,14 +160,14 @@ hal::bsp_pins!(
 
     /// GPIO 5 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI0 CSn` | [crate::Gp5Spi0Csn] |
-    /// | `UART1 RX` | [crate::Gp5Uart1Rx] |
-    /// | `I2C0 SCL` | [crate::Gp5I2C0Scl] |
-    /// | `PWM2 B` | [crate::Gp5Pwm2B] |
-    /// | `PIO0` | [crate::Gp5Pio0] |
-    /// | `PIO1` | [crate::Gp5Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI0 CSn`   | [crate::Gp5Spi0Csn]         |
+    /// | `UART1 RX`   | [crate::Gp5Uart1Rx]         |
+    /// | `I2C0 SCL`   | [crate::Gp5I2C0Scl]         |
+    /// | `PWM2 B`     | [crate::Gp5Pwm2B]           |
+    /// | `PIO0`       | [crate::Gp5Pio0]            |
+    /// | `PIO1`       | [crate::Gp5Pio1]            |
     Gpio5 {
         name: gpio5,
         aliases: {
@@ -188,14 +188,14 @@ hal::bsp_pins!(
 
     /// GPIO 6 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI0 SCK` | [crate::Gp6Spi0Sck] |
-    /// | `UART1 CTS` | [crate::Gp6Uart1Cts] |
-    /// | `I2C1 SDA` | [crate::Gp6I2C1Sda] |
-    /// | `PWM3 A` | [crate::Gp6Pwm3A] |
-    /// | `PIO0` | [crate::Gp6Pio0] |
-    /// | `PIO1` | [crate::Gp6Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI0 SCK`   | [crate::Gp6Spi0Sck]         |
+    /// | `UART1 CTS`  | [crate::Gp6Uart1Cts]        |
+    /// | `I2C1 SDA`   | [crate::Gp6I2C1Sda]         |
+    /// | `PWM3 A`     | [crate::Gp6Pwm3A]           |
+    /// | `PIO0`       | [crate::Gp6Pio0]            |
+    /// | `PIO1`       | [crate::Gp6Pio1]            |
     Gpio6 {
         name: gpio6,
         aliases: {
@@ -216,14 +216,14 @@ hal::bsp_pins!(
 
     /// GPIO 7 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI0 TX` | [crate::Gp7Spi0Tx] |
-    /// | `UART1 RTS` | [crate::Gp7Uart1Rts] |
-    /// | `I2C1 SCL` | [crate::Gp7I2C1Scl] |
-    /// | `PWM3 B` | [crate::Gp7Pwm3B] |
-    /// | `PIO0` | [crate::Gp7Pio0] |
-    /// | `PIO1` | [crate::Gp7Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI0 TX`    | [crate::Gp7Spi0Tx]          |
+    /// | `UART1 RTS`  | [crate::Gp7Uart1Rts]        |
+    /// | `I2C1 SCL`   | [crate::Gp7I2C1Scl]         |
+    /// | `PWM3 B`     | [crate::Gp7Pwm3B]           |
+    /// | `PIO0`       | [crate::Gp7Pio0]            |
+    /// | `PIO1`       | [crate::Gp7Pio1]            |
     Gpio7 {
         name: gpio7,
         aliases: {
@@ -244,14 +244,14 @@ hal::bsp_pins!(
 
     /// GPIO 8 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI1 RX` | [crate::Gp8Spi1Rx] |
-    /// | `UART1 TX` | [crate::Gp8Uart1Tx] |
-    /// | `I2C0 SDA` | [crate::Gp8I2C0Sda] |
-    /// | `PWM4 A` | [crate::Gp8Pwm4A] |
-    /// | `PIO0` | [crate::Gp8Pio0] |
-    /// | `PIO1` | [crate::Gp8Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI1 RX`    | [crate::Gp8Spi1Rx]          |
+    /// | `UART1 TX`   | [crate::Gp8Uart1Tx]         |
+    /// | `I2C0 SDA`   | [crate::Gp8I2C0Sda]         |
+    /// | `PWM4 A`     | [crate::Gp8Pwm4A]           |
+    /// | `PIO0`       | [crate::Gp8Pio0]            |
+    /// | `PIO1`       | [crate::Gp8Pio1]            |
     Gpio8 {
         name: gpio8,
         aliases: {
@@ -272,14 +272,14 @@ hal::bsp_pins!(
 
     /// GPIO 9 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI1 CSn` | [crate::Gp9Spi1Csn] |
-    /// | `UART1 RX` | [crate::Gp9Uart1Rx] |
-    /// | `I2C0 SCL` | [crate::Gp9I2C0Scl] |
-    /// | `PWM4 B` | [crate::Gp9Pwm4B] |
-    /// | `PIO0` | [crate::Gp9Pio0] |
-    /// | `PIO1` | [crate::Gp9Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI1 CSn`   | [crate::Gp9Spi1Csn]         |
+    /// | `UART1 RX`   | [crate::Gp9Uart1Rx]         |
+    /// | `I2C0 SCL`   | [crate::Gp9I2C0Scl]         |
+    /// | `PWM4 B`     | [crate::Gp9Pwm4B]           |
+    /// | `PIO0`       | [crate::Gp9Pio0]            |
+    /// | `PIO1`       | [crate::Gp9Pio1]            |
     Gpio9 {
         name: gpio9,
         aliases: {
@@ -300,14 +300,14 @@ hal::bsp_pins!(
 
     /// GPIO 10 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI1 SCK` | [crate::Gp10Spi1Sck] |
-    /// | `UART1 CTS` | [crate::Gp10Uart1Cts] |
-    /// | `I2C1 SDA` | [crate::Gp10I2C1Sda] |
-    /// | `PWM5 A` | [crate::Gp10Pwm5A] |
-    /// | `PIO0` | [crate::Gp10Pio0] |
-    /// | `PIO1` | [crate::Gp10Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI1 SCK`   | [crate::Gp10Spi1Sck]        |
+    /// | `UART1 CTS`  | [crate::Gp10Uart1Cts]       |
+    /// | `I2C1 SDA`   | [crate::Gp10I2C1Sda]        |
+    /// | `PWM5 A`     | [crate::Gp10Pwm5A]          |
+    /// | `PIO0`       | [crate::Gp10Pio0]           |
+    /// | `PIO1`       | [crate::Gp10Pio1]           |
     Gpio10 {
         name: gpio10,
         aliases: {
@@ -328,14 +328,14 @@ hal::bsp_pins!(
 
     /// GPIO 11 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI1 TX` | [crate::Gp11Spi1Tx] |
-    /// | `UART1 RTS` | [crate::Gp11Uart1Rts] |
-    /// | `I2C1 SCL` | [crate::Gp11I2C1Scl] |
-    /// | `PWM5 B` | [crate::Gp11Pwm5B] |
-    /// | `PIO0` | [crate::Gp11Pio0] |
-    /// | `PIO1` | [crate::Gp11Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI1 TX`    | [crate::Gp11Spi1Tx]         |
+    /// | `UART1 RTS`  | [crate::Gp11Uart1Rts]       |
+    /// | `I2C1 SCL`   | [crate::Gp11I2C1Scl]        |
+    /// | `PWM5 B`     | [crate::Gp11Pwm5B]          |
+    /// | `PIO0`       | [crate::Gp11Pio0]           |
+    /// | `PIO1`       | [crate::Gp11Pio1]           |
     Gpio11 {
         name: gpio11,
         aliases: {
@@ -356,14 +356,14 @@ hal::bsp_pins!(
 
     /// GPIO 12 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI1 RX` | [crate::Gp12Spi1Rx] |
-    /// | `UART0 TX` | [crate::Gp12Uart0Tx] |
-    /// | `I2C0 SDA` | [crate::Gp12I2C0Sda] |
-    /// | `PWM6 A` | [crate::Gp12Pwm6A] |
-    /// | `PIO0` | [crate::Gp12Pio0] |
-    /// | `PIO1` | [crate::Gp12Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI1 RX`    | [crate::Gp12Spi1Rx]         |
+    /// | `UART0 TX`   | [crate::Gp12Uart0Tx]        |
+    /// | `I2C0 SDA`   | [crate::Gp12I2C0Sda]        |
+    /// | `PWM6 A`     | [crate::Gp12Pwm6A]          |
+    /// | `PIO0`       | [crate::Gp12Pio0]           |
+    /// | `PIO1`       | [crate::Gp12Pio1]           |
     Gpio12 {
         name: gpio12,
         aliases: {
@@ -384,14 +384,14 @@ hal::bsp_pins!(
 
     /// GPIO 13 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI1 CSn` | [crate::Gp13Spi1Csn] |
-    /// | `UART0 RX` | [crate::Gp13Uart0Rx] |
-    /// | `I2C0 SCL` | [crate::Gp13I2C0Scl] |
-    /// | `PWM6 B` | [crate::Gp13Pwm6B] |
-    /// | `PIO0` | [crate::Gp13Pio0] |
-    /// | `PIO1` | [crate::Gp13Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI1 CSn`   | [crate::Gp13Spi1Csn]        |
+    /// | `UART0 RX`   | [crate::Gp13Uart0Rx]        |
+    /// | `I2C0 SCL`   | [crate::Gp13I2C0Scl]        |
+    /// | `PWM6 B`     | [crate::Gp13Pwm6B]          |
+    /// | `PIO0`       | [crate::Gp13Pio0]           |
+    /// | `PIO1`       | [crate::Gp13Pio1]           |
     Gpio13 {
         name: gpio13,
         aliases: {
@@ -412,14 +412,14 @@ hal::bsp_pins!(
 
     /// GPIO 14 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI1 SCK` | [crate::Gp14Spi1Sck] |
-    /// | `UART0 CTS` | [crate::Gp14Uart0Cts] |
-    /// | `I2C1 SDA` | [crate::Gp14I2C1Sda] |
-    /// | `PWM7 A` | [crate::Gp14Pwm7A] |
-    /// | `PIO0` | [crate::Gp14Pio0] |
-    /// | `PIO1` | [crate::Gp14Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI1 SCK`   | [crate::Gp14Spi1Sck]        |
+    /// | `UART0 CTS`  | [crate::Gp14Uart0Cts]       |
+    /// | `I2C1 SDA`   | [crate::Gp14I2C1Sda]        |
+    /// | `PWM7 A`     | [crate::Gp14Pwm7A]          |
+    /// | `PIO0`       | [crate::Gp14Pio0]           |
+    /// | `PIO1`       | [crate::Gp14Pio1]           |
     Gpio14 {
         name: gpio14,
         aliases: {
@@ -440,14 +440,14 @@ hal::bsp_pins!(
 
     /// GPIO 15 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI1 TX` | [crate::Gp15Spi1Tx] |
-    /// | `UART0 RTS` | [crate::Gp15Uart0Rts] |
-    /// | `I2C1 SCL` | [crate::Gp15I2C1Scl] |
-    /// | `PWM7 B` | [crate::Gp15Pwm7B] |
-    /// | `PIO0` | [crate::Gp15Pio0] |
-    /// | `PIO1` | [crate::Gp15Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI1 TX`    | [crate::Gp15Spi1Tx]         |
+    /// | `UART0 RTS`  | [crate::Gp15Uart0Rts]       |
+    /// | `I2C1 SCL`   | [crate::Gp15I2C1Scl]        |
+    /// | `PWM7 B`     | [crate::Gp15Pwm7B]          |
+    /// | `PIO0`       | [crate::Gp15Pio0]           |
+    /// | `PIO1`       | [crate::Gp15Pio1]           |
     Gpio15 {
         name: gpio15,
         aliases: {
@@ -468,14 +468,14 @@ hal::bsp_pins!(
 
     /// GPIO 16 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI0 RX` | [crate::Gp16Spi0Rx] |
-    /// | `UART0 TX` | [crate::Gp16Uart0Tx] |
-    /// | `I2C0 SDA` | [crate::Gp16I2C0Sda] |
-    /// | `PWM0 A` | [crate::Gp16Pwm0A] |
-    /// | `PIO0` | [crate::Gp16Pio0] |
-    /// | `PIO1` | [crate::Gp16Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI0 RX`    | [crate::Gp16Spi0Rx]         |
+    /// | `UART0 TX`   | [crate::Gp16Uart0Tx]        |
+    /// | `I2C0 SDA`   | [crate::Gp16I2C0Sda]        |
+    /// | `PWM0 A`     | [crate::Gp16Pwm0A]          |
+    /// | `PIO0`       | [crate::Gp16Pio0]           |
+    /// | `PIO1`       | [crate::Gp16Pio1]           |
     Gpio16 {
         name: gpio16,
         aliases: {
@@ -496,14 +496,14 @@ hal::bsp_pins!(
 
     /// GPIO 17 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI0 CSn` | [crate::Gp17Spi0Csn] |
-    /// | `UART0 RX` | [crate::Gp17Uart0Rx] |
-    /// | `I2C0 SCL` | [crate::Gp17I2C0Scl] |
-    /// | `PWM0 B` | [crate::Gp17Pwm0B] |
-    /// | `PIO0` | [crate::Gp17Pio0] |
-    /// | `PIO1` | [crate::Gp17Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI0 CSn`   | [crate::Gp17Spi0Csn]        |
+    /// | `UART0 RX`   | [crate::Gp17Uart0Rx]        |
+    /// | `I2C0 SCL`   | [crate::Gp17I2C0Scl]        |
+    /// | `PWM0 B`     | [crate::Gp17Pwm0B]          |
+    /// | `PIO0`       | [crate::Gp17Pio0]           |
+    /// | `PIO1`       | [crate::Gp17Pio1]           |
     Gpio17 {
         name: gpio17,
         aliases: {
@@ -524,14 +524,14 @@ hal::bsp_pins!(
 
     /// GPIO 18 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI0 SCK` | [crate::Gp18Spi0Sck] |
-    /// | `UART0 CTS` | [crate::Gp18Uart0Cts] |
-    /// | `I2C1 SDA` | [crate::Gp18I2C1Sda] |
-    /// | `PWM1 A` | [crate::Gp18Pwm1A] |
-    /// | `PIO0` | [crate::Gp18Pio0] |
-    /// | `PIO1` | [crate::Gp18Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI0 SCK`   | [crate::Gp18Spi0Sck]        |
+    /// | `UART0 CTS`  | [crate::Gp18Uart0Cts]       |
+    /// | `I2C1 SDA`   | [crate::Gp18I2C1Sda]        |
+    /// | `PWM1 A`     | [crate::Gp18Pwm1A]          |
+    /// | `PIO0`       | [crate::Gp18Pio0]           |
+    /// | `PIO1`       | [crate::Gp18Pio1]           |
     Gpio18 {
         name: gpio18,
         aliases: {
@@ -552,14 +552,14 @@ hal::bsp_pins!(
 
     /// GPIO 19 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI0 TX` | [crate::Gp19Spi0Tx] |
-    /// | `UART0 RTS` | [crate::Gp19Uart0Rts] |
-    /// | `I2C1 SCL` | [crate::Gp19I2C1Scl] |
-    /// | `PWM1 B` | [crate::Gp19Pwm1B] |
-    /// | `PIO0` | [crate::Gp19Pio0] |
-    /// | `PIO1` | [crate::Gp19Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI0 TX`    | [crate::Gp19Spi0Tx]         |
+    /// | `UART0 RTS`  | [crate::Gp19Uart0Rts]       |
+    /// | `I2C1 SCL`   | [crate::Gp19I2C1Scl]        |
+    /// | `PWM1 B`     | [crate::Gp19Pwm1B]          |
+    /// | `PIO0`       | [crate::Gp19Pio0]           |
+    /// | `PIO1`       | [crate::Gp19Pio1]           |
     Gpio19 {
         name: gpio19,
         aliases: {
@@ -580,14 +580,14 @@ hal::bsp_pins!(
 
     /// GPIO 20 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI0 RX` | [crate::Gp20Spi0Rx] |
-    /// | `UART1 TX` | [crate::Gp20Uart1Tx] |
-    /// | `I2C0 SDA` | [crate::Gp20I2C0Sda] |
-    /// | `PWM2 A` | [crate::Gp20Pwm2A] |
-    /// | `PIO0` | [crate::Gp20Pio0] |
-    /// | `PIO1` | [crate::Gp20Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI0 RX`    | [crate::Gp20Spi0Rx]         |
+    /// | `UART1 TX`   | [crate::Gp20Uart1Tx]        |
+    /// | `I2C0 SDA`   | [crate::Gp20I2C0Sda]        |
+    /// | `PWM2 A`     | [crate::Gp20Pwm2A]          |
+    /// | `PIO0`       | [crate::Gp20Pio0]           |
+    /// | `PIO1`       | [crate::Gp20Pio1]           |
     Gpio20 {
         name: gpio20,
         aliases: {
@@ -608,14 +608,14 @@ hal::bsp_pins!(
 
     /// GPIO 21 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI0 CSn` | [crate::Gp21Spi0Csn] |
-    /// | `UART1 RX` | [crate::Gp21Uart1Rx] |
-    /// | `I2C0 SCL` | [crate::Gp21I2C0Scl] |
-    /// | `PWM2 B` | [crate::Gp21Pwm2B] |
-    /// | `PIO0` | [crate::Gp21Pio0] |
-    /// | `PIO1` | [crate::Gp21Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI0 CSn`   | [crate::Gp21Spi0Csn]        |
+    /// | `UART1 RX`   | [crate::Gp21Uart1Rx]        |
+    /// | `I2C0 SCL`   | [crate::Gp21I2C0Scl]        |
+    /// | `PWM2 B`     | [crate::Gp21Pwm2B]          |
+    /// | `PIO0`       | [crate::Gp21Pio0]           |
+    /// | `PIO1`       | [crate::Gp21Pio1]           |
     Gpio21 {
         name: gpio21,
         aliases: {
@@ -636,14 +636,14 @@ hal::bsp_pins!(
 
     /// GPIO 22 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI0 SCK` | [crate::Gp22Spi0Sck] |
-    /// | `UART1 CTS` | [crate::Gp22Uart1Cts] |
-    /// | `I2C1 SDA` | [crate::Gp22I2C1Sda] |
-    /// | `PWM3 A` | [crate::Gp22Pwm3A] |
-    /// | `PIO0` | [crate::Gp22Pio0] |
-    /// | `PIO1` | [crate::Gp22Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI0 SCK`   | [crate::Gp22Spi0Sck]        |
+    /// | `UART1 CTS`  | [crate::Gp22Uart1Cts]       |
+    /// | `I2C1 SDA`   | [crate::Gp22I2C1Sda]        |
+    /// | `PWM3 A`     | [crate::Gp22Pwm3A]          |
+    /// | `PIO0`       | [crate::Gp22Pio0]           |
+    /// | `PIO1`       | [crate::Gp22Pio1]           |
     Gpio22 {
         name: gpio22,
         aliases: {
@@ -679,14 +679,14 @@ hal::bsp_pins!(
 
     /// GPIO 26 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI1 SCK` | [crate::Gp26Spi1Sck] |
-    /// | `UART1 CTS` | [crate::Gp26Uart1Cts] |
-    /// | `I2C1 SDA` | [crate::Gp26I2C1Sda] |
-    /// | `PWM5 A` | [crate::Gp26Pwm5A] |
-    /// | `PIO0` | [crate::Gp26Pio0] |
-    /// | `PIO1` | [crate::Gp26Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI1 SCK`   | [crate::Gp26Spi1Sck]        |
+    /// | `UART1 CTS`  | [crate::Gp26Uart1Cts]       |
+    /// | `I2C1 SDA`   | [crate::Gp26I2C1Sda]        |
+    /// | `PWM5 A`     | [crate::Gp26Pwm5A]          |
+    /// | `PIO0`       | [crate::Gp26Pio0]           |
+    /// | `PIO1`       | [crate::Gp26Pio1]           |
     Gpio26 {
         name: gpio26,
         aliases: {
@@ -707,14 +707,14 @@ hal::bsp_pins!(
 
     /// GPIO 27 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI1 TX` | [crate::Gp27Spi1Tx] |
-    /// | `UART1 RTS` | [crate::Gp27Uart1Rts] |
-    /// | `I2C1 SCL` | [crate::Gp27I2C1Scl] |
-    /// | `PWM5 B` | [crate::Gp27Pwm5B] |
-    /// | `PIO0` | [crate::Gp27Pio0] |
-    /// | `PIO1` | [crate::Gp27Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI1 TX`    | [crate::Gp27Spi1Tx]         |
+    /// | `UART1 RTS`  | [crate::Gp27Uart1Rts]       |
+    /// | `I2C1 SCL`   | [crate::Gp27I2C1Scl]        |
+    /// | `PWM5 B`     | [crate::Gp27Pwm5B]          |
+    /// | `PIO0`       | [crate::Gp27Pio0]           |
+    /// | `PIO1`       | [crate::Gp27Pio1]           |
     Gpio27 {
         name: gpio27,
         aliases: {
@@ -735,14 +735,14 @@ hal::bsp_pins!(
 
     /// GPIO 28 supports following functions:
     ///
-    /// | Function | Alias with applied function |
-    /// |-|-|
-    /// | `SPI1 RX` | [crate::Gp28Spi1Rx] |
-    /// | `UART0 TX` | [crate::Gp28Uart0Tx] |
-    /// | `I2C0 SDA` | [crate::Gp28I2C0Sda] |
-    /// | `PWM6 A` | [crate::Gp28Pwm6A] |
-    /// | `PIO0` | [crate::Gp28Pio0] |
-    /// | `PIO1` | [crate::Gp28Pio1] |
+    /// | Function     | Alias with applied function |
+    /// |--------------|-----------------------------|
+    /// | `SPI1 RX`    | [crate::Gp28Spi1Rx]         |
+    /// | `UART0 TX`   | [crate::Gp28Uart0Tx]        |
+    /// | `I2C0 SDA`   | [crate::Gp28I2C0Sda]        |
+    /// | `PWM6 A`     | [crate::Gp28Pwm6A]          |
+    /// | `PIO0`       | [crate::Gp28Pio0]           |
+    /// | `PIO1`       | [crate::Gp28Pio1]           |
     Gpio28 {
         name: gpio28,
         aliases: {
