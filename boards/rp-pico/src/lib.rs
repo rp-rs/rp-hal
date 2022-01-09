@@ -19,23 +19,23 @@ pub use hal::pac;
 
 hal::bsp_pins!(
     /// GPIO 0 supports following functions:
-    /// - `SPI0 RX  `
-    /// - `UART0 TX `
+    /// - `SPI0 RX`
+    /// - `UART0 TX`
     /// - `I2C0 SDA`
     /// - `PWM0 A`
     /// - `SIO`, `PIO0`, `PIO1`
     Gpio0 { name: gpio0 },
 
     /// GPIO 1 supports following functions:
-    /// - `SPI0 CSn `
-    /// - `UART0 RX `
+    /// - `SPI0 CSn`
+    /// - `UART0 RX`
     /// - `I2C0 SCL`
     /// - `PWM0 B`
     /// - `SIO`, `PIO0`, `PIO1`
     Gpio1 { name: gpio1 },
 
     /// GPIO 2 supports following functions:
-    /// - `SPI0 SCK `
+    /// - `SPI0 SCK`
     /// - `UART0 CTS`
     /// - `I2C1 SDA`
     /// - `PWM1 A`
@@ -43,7 +43,7 @@ hal::bsp_pins!(
     Gpio2 { name: gpio2 },
 
     /// GPIO 3 supports following functions:
-    /// - `SPI0 TX  `
+    /// - `SPI0 TX`
     /// - `UART0 RTS`
     /// - `I2C1 SCL`
     /// - `PWM1 B`
@@ -51,23 +51,23 @@ hal::bsp_pins!(
     Gpio3 { name: gpio3 },
 
     /// GPIO 4 supports following functions:
-    /// - `SPI0 RX  `
-    /// - `UART1 TX `
+    /// - `SPI0 RX`
+    /// - `UART1 TX`
     /// - `I2C0 SDA`
     /// - `PWM2 A`
     /// - `SIO`, `PIO0`, `PIO1`
     Gpio4 { name: gpio4 },
 
     /// GPIO 5 supports following functions:
-    /// - `SPI0 CSn `
-    /// - `UART1 RX `
+    /// - `SPI0 CSn`
+    /// - `UART1 RX`
     /// - `I2C0 SCL`
     /// - `PWM2 B`
     /// - `SIO`, `PIO0`, `PIO1`
     Gpio5 { name: gpio5 },
 
     /// GPIO 6 supports following functions:
-    /// - `SPI0 SCK `
+    /// - `SPI0 SCK`
     /// - `UART1 CTS`
     /// - `I2C1 SDA`
     /// - `PWM3 A`
@@ -75,7 +75,7 @@ hal::bsp_pins!(
     Gpio6 { name: gpio6 },
 
     /// GPIO 7 supports following functions:
-    /// - `SPI0 TX  `
+    /// - `SPI0 TX`
     /// - `UART1 RTS`
     /// - `I2C1 SCL`
     /// - `PWM3 B`
@@ -83,16 +83,16 @@ hal::bsp_pins!(
     Gpio7 { name: gpio7 },
 
     /// GPIO 8 supports following functions:
-    /// - `SPI1 RX  `
-    /// - `UART1 TX `
+    /// - `SPI1 RX`
+    /// - `UART1 TX`
     /// - `I2C0 SDA`
     /// - `PWM4 A`
     /// - `SIO`, `PIO0`, `PIO1`
     Gpio8 { name: gpio8 },
 
     /// GPIO 9 supports following functions:
-    /// - `SPI1 CSn `
-    /// - `UART1 RX `
+    /// - `SPI1 CSn`
+    /// - `UART1 RX`
     /// - `I2C0 SCL`
     /// - `PWM4 B`
     /// - `SIO`, `PIO0`, `PIO1`
@@ -107,7 +107,7 @@ hal::bsp_pins!(
     Gpio10 { name: gpio10 },
 
     /// GPIO 11 supports following functions:
-    /// - `SPI1 TX `
+    /// - `SPI1 TX`
     /// - `UART1 RTS`
     /// - `I2C1 SCL`
     /// - `PWM5 B`
@@ -115,8 +115,8 @@ hal::bsp_pins!(
     Gpio11 { name: gpio11 },
 
     /// GPIO 12 supports following functions:
-    /// - `SPI1 RX `
-    /// - `UART0 TX `
+    /// - `SPI1 RX`
+    /// - `UART0 TX`
     /// - `I2C0 SDA`
     /// - `PWM6 A`
     /// - `SIO`, `PIO0`, `PIO1`
@@ -124,7 +124,7 @@ hal::bsp_pins!(
 
     /// GPIO 13 supports following functions:
     /// - `SPI1 CSn`
-    /// - `UART0 RX `
+    /// - `UART0 RX`
     /// - `I2C0 SCL`
     /// - `PWM6 B`
     /// - `SIO`, `PIO0`, `PIO1`
@@ -139,7 +139,7 @@ hal::bsp_pins!(
     Gpio14 { name: gpio14 },
 
     /// GPIO 15 supports following functions:
-    /// - `SPI1 TX `
+    /// - `SPI1 TX`
     /// - `UART0 RTS`
     /// - `I2C1 SCL`
     /// - `PWM7 B`
@@ -147,8 +147,8 @@ hal::bsp_pins!(
     Gpio15 { name: gpio15 },
 
     /// GPIO 16 supports following functions:
-    /// - `SPI0 RX `
-    /// - `UART0 TX `
+    /// - `SPI0 RX`
+    /// - `UART0 TX`
     /// - `I2C0 SDA`
     /// - `PWM0 A`
     /// - `SIO`, `PIO0`, `PIO1`
@@ -156,7 +156,7 @@ hal::bsp_pins!(
 
     /// GPIO 17 supports following functions:
     /// - `SPI0 CSn`
-    /// - `UART0 RX `
+    /// - `UART0 RX`
     /// - `I2C0 SCL`
     /// - `PWM0 B`
     /// - `SIO`, `PIO0`, `PIO1`
@@ -171,7 +171,7 @@ hal::bsp_pins!(
     Gpio18 { name: gpio18 },
 
     /// GPIO 19 supports following functions:
-    /// - `SPI0 TX `
+    /// - `SPI0 TX`
     /// - `UART0 RTS`
     /// - `I2C1 SCL`
     /// - `PWM1 B`
@@ -179,8 +179,8 @@ hal::bsp_pins!(
     Gpio19 { name: gpio19 },
 
     /// GPIO 20 supports following functions:
-    /// - `SPI0 RX `
-    /// - `UART1 TX `
+    /// - `SPI0 RX`
+    /// - `UART1 TX`
     /// - `I2C0 SDA`
     /// - `PWM2 A`
     /// - `SIO`, `PIO0`, `PIO1`
@@ -188,7 +188,7 @@ hal::bsp_pins!(
 
     /// GPIO 21 supports following functions:
     /// - `SPI0 CSn`
-    /// - `UART1 RX `
+    /// - `UART1 RX`
     /// - `I2C0 SCL`
     /// - `PWM2 B`
     /// - `SIO`, `PIO0`, `PIO1`
@@ -220,7 +220,7 @@ hal::bsp_pins!(
     Gpio26 { name: gpio26 },
 
     /// GPIO 27 supports following functions:
-    /// - `SPI1 TX `
+    /// - `SPI1 TX`
     /// - `UART1 RTS`
     /// - `I2C1 SCL`
     /// - `PWM5 B`
@@ -228,8 +228,8 @@ hal::bsp_pins!(
     Gpio27 { name: gpio27 },
 
     /// GPIO 28 supports following functions:
-    /// - `SPI1 RX `
-    /// - `UART0 TX `
+    /// - `SPI1 RX`
+    /// - `UART0 TX`
     /// - `I2C0 SDA`
     /// - `PWM6 A`
     /// - `SIO`, `PIO0`, `PIO1`
