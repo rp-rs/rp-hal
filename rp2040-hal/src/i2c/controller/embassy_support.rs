@@ -7,7 +7,7 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
         &mut self,
         mut buffer: Peekable<U>,
     ) -> Result<(), Error> {
-        let first = true;
+        let mut first = true;
         while let Some(byte) = buffer.next() {
             let last = buffer.peek().is_none();
 
@@ -24,6 +24,7 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
             self.i2c.ic_data_cmd.write(|w| {
                 if first {
                     w.restart().enable();
+                    first = false;
                 } else {
                     w.restart().disable();
                 }
