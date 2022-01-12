@@ -1088,6 +1088,33 @@ macro_rules! bsp_pins {
             ///
             /// This type is intended to provide more meaningful names for the
             /// given pins.
+            ///
+            /// To enable specific functions of the pins you can use the
+            /// [rp2040_hal::gpio::pin::Pin::into_mode] function with
+            /// one of:
+            /// - [rp2040_hal::gpio::pin::FunctionI2C]
+            /// - [rp2040_hal::gpio::pin::FunctionPwm]
+            /// - [rp2040_hal::gpio::pin::FunctionSpi]
+            /// - [rp2040_hal::gpio::pin::FunctionXip]
+            /// - [rp2040_hal::gpio::pin::FunctionPio0]
+            /// - [rp2040_hal::gpio::pin::FunctionPio1]
+            /// - [rp2040_hal::gpio::pin::FunctionUart]
+            ///
+            /// like this:
+            ///```no_run
+            /// use rp2040_hal::{pac, gpio::{bank0::Gpio12, Pin, Pins, PushPullOutput}, sio::Sio};
+            ///
+            /// let mut peripherals = pac::Peripherals::take().unwrap();
+            /// let sio = Sio::new(peripherals.SIO);
+            /// let pins = Pins::new(peripherals.IO_BANK0,peripherals.PADS_BANK0,sio.gpio_bank0, &mut peripherals.RESETS);
+            ///
+            /// let _spi_sclk = pins.gpio2.into_mode::<rp2040_hal::gpio::FunctionSpi>();
+            /// let _spi_mosi = pins.gpio3.into_mode::<rp2040_hal::gpio::FunctionSpi>();
+            /// let _spi_miso = pins.gpio4.into_mode::<rp2040_hal::gpio::FunctionSpi>();
+            ///```
+            ///
+            /// **See also [rp2040_hal::gpio::pin] for more in depth information
+            /// about this**!
             pub struct Pins {
                 $(
                     $( #[$id_cfg] )*
