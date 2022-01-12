@@ -31,6 +31,8 @@ heapless = "0.7.9"
 embedded-sdmmc = { git = "https://github.com/rust-embedded-community/embedded-sdmmc-rs.git" }
 smart-leds = "0.3.0"
 ws2812-pio = { git = "https://github.com/ithinuel/ws2812-pio-rs", rev = "4f0d81e594ea9934f9c4c38ed9824ad0cce4ebb5" }
+ssd1306 = "0.7.0"
+embedded-graphics = "0.7.1"
 
 defmt = "0.2.0"
 defmt-rtt = "0.2.0"
