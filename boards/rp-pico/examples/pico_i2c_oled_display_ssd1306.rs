@@ -1,6 +1,6 @@
-//! # Pico (monochome) OLED Display with SSD1306 Driver Example
+//! # Raspberry Pi Pico (monochome) 128x64 OLED Display with SSD1306 Driver Example
 //!
-//! This example assumes you got an OLED Display with an SSD1306 driver
+//! This example assumes you got an 128x64 OLED Display with an SSD1306 driver
 //! connected to your Raspberry Pi Pico. The +3.3V voltage source of the
 //! Raspberry Pi Pico will be used, and the output pins 21 and 22 of the board
 //! (on the lower right).
@@ -19,13 +19,13 @@
 //!   _|USB|_         |    /-----\  |  |  /--------+--\
 //!  |1  R 40|        |   /    __|__|__|__|___     |  |
 //!  |2  P 39|        |  /    | ____________  |    |  |
-//!  |3    38|- GND --|-/     | |Hello worl|  |    |  |
+//!  |3    38|- GND --+-/     | |Hello worl|  |    |  |
 //!  |4  P 37|        |       | |Hello Rust|  |    |  |
 //!  |5  I 36|-+3.3V -/       | |counter: 1|  |    |  |
 //!  |6  C   |                | |          |  |    |  |
 //!  |7  O   |                | """"""""""""  |    |  |
 //!  |       |                 """""""""""""""     |  |
-//!  |       |              (SSD1306 OLED Display) |  |
+//!  |       |       (SSD1306 128x64 OLED Display) |  |
 //!  .........                                     /  /
 //!  |       |                                    /  /
 //!  |     22|-GP17 I2C0 SCL---------------------/  /
