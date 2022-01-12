@@ -1,5 +1,41 @@
 //! # Pico (monochome) OLED Display with SSD1306 Driver Example
 //!
+//! This example assumes you got an OLED Display with an SSD1306 driver
+//! connected to your Raspberry Pi Pico. The +3.3V voltage source of the
+//! Raspberry Pi Pico will be used, and the output pins 21 and 22 of the board
+//! (on the lower right).
+//!
+//! It will demonstrate how to get an I2C device and use it with the ssd1306 crate.
+//! Additionally you can also see how to format a number into a string using
+//! [core::fmt].
+//!
+//! The following diagram will show how things should be connected.
+//! These displays usually can take 3.3V up to 5V.
+//!
+//! ```text
+//!                              VCC   SCL
+//!                   /------------\    /----------\
+//!                   |        GND  \  /  SDA      |
+//!   _|USB|_         |    /-----\  |  |  /--------+--\
+//!  |1  R 40|        |   /    __|__|__|__|___     |  |
+//!  |2  P 39|        |  /    | ____________  |    |  |
+//!  |3    38|- GND --|-/     | |Hello worl|  |    |  |
+//!  |4  P 37|        |       | |Hello Rust|  |    |  |
+//!  |5  I 36|-+3.3V -/       | |counter: 1|  |    |  |
+//!  |6  C   |                | |          |  |    |  |
+//!  |7  O   |                | """"""""""""  |    |  |
+//!  |       |                 """""""""""""""     |  |
+//!  |       |              (SSD1306 OLED Display) |  |
+//!  .........                                     /  /
+//!  |       |                                    /  /
+//!  |     22|-GP17 I2C0 SCL---------------------/  /
+//!  |20   21|-GP16 I2C0 SDA-----------------------/
+//!   """""""
+//! Symbols:
+//!     - (+) crossing lines, not connected
+//!     - (o) connected lines
+//! ```
+//!
 //! See the `Cargo.toml` file for Copyright and licence details.
 
 #![no_std]
@@ -51,7 +87,7 @@ use ssd1306::{prelude::*, I2CDisplayInterface, Ssd1306};
 #[entry]
 fn main() -> ! {
     // Grab our singleton objects
-    let mut pac      = pac::Peripherals::take().unwrap();
+    let mut pac = pac::Peripherals::take().unwrap();
 
     // Set up the watchdog driver - needed by the clock setup code
     let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
@@ -59,17 +95,17 @@ fn main() -> ! {
     // Configure the clocks
     //
     // The default is to generate a 125 MHz system clock
-    let clocks =
-        hal::clocks::init_clocks_and_plls(
-            rp_pico::XOSC_CRYSTAL_FREQ,
-            pac.XOSC,
-            pac.CLOCKS,
-            pac.PLL_SYS,
-            pac.PLL_USB,
-            &mut pac.RESETS,
-            &mut watchdog)
-        .ok()
-        .unwrap();
+    let clocks = hal::clocks::init_clocks_and_plls(
+        rp_pico::XOSC_CRYSTAL_FREQ,
+        pac.XOSC,
+        pac.CLOCKS,
+        pac.PLL_SYS,
+        pac.PLL_USB,
+        &mut pac.RESETS,
+        &mut watchdog,
+    )
+    .ok()
+    .unwrap();
 
     // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);
@@ -102,8 +138,7 @@ fn main() -> ! {
     let interface = I2CDisplayInterface::new(i2c);
 
     // Create a driver instance and initialize:
-    let mut display =
-        Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
+    let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
         .into_buffered_graphics_mode();
     display.init().unwrap();
 
@@ -159,7 +194,7 @@ impl FmtBuf {
     fn new() -> Self {
         Self {
             buf: [0; 64],
-            ptr: 0
+            ptr: 0,
         }
     }
 
@@ -180,6 +215,5 @@ impl core::fmt::Write for FmtBuf {
         Ok(())
     }
 }
-
 
 // End of file
