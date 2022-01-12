@@ -249,17 +249,19 @@ macro_rules! impl_alarm {
                 if duration < MIN_MICROSECONDS {
                     return Err(ScheduleAlarmError::AlarmTooSoon);
                 } else {
-                    // safety: This is a read action and should not have any UB
-                    let target_time = unsafe { &*TIMER::ptr() }
-                        .timelr
-                        .read()
-                        .bits()
-                        .wrapping_add(duration);
+                    cortex_m::interrupt::free(|_| {
+                        // safety: This is a read action and should not have any UB
+                        let target_time = unsafe { &*TIMER::ptr() }
+                            .timelr
+                            .read()
+                            .bits()
+                            .wrapping_add(duration);
 
-                    // safety: This is the only code in the codebase that accesses memory address $timer_alarm
-                    unsafe { &*TIMER::ptr() }
-                        .$timer_alarm
-                        .write(|w| unsafe { w.bits(target_time) });
+                        // safety: This is the only code in the codebase that accesses memory address $timer_alarm
+                        unsafe { &*TIMER::ptr() }
+                            .$timer_alarm
+                            .write(|w| unsafe { w.bits(target_time) });
+                    });
                     Ok(())
                 }
             }
