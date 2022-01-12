@@ -41,6 +41,9 @@
 #![no_std]
 #![no_main]
 
+// For string formatting.
+use core::fmt::Write;
+
 // The macro for our start-up function
 use cortex_m_rt::entry;
 
@@ -73,7 +76,7 @@ use embedded_graphics::{
 };
 
 // The display driver:
-use ssd1306::{prelude::*, I2CDisplayInterface, Ssd1306};
+use ssd1306::{prelude::*, Ssd1306};
 
 /// Entry point to our bare-metal application.
 ///
@@ -122,7 +125,7 @@ fn main() -> ! {
     let sda_pin = pins.gpio16.into_mode::<hal::gpio::FunctionI2C>();
     let scl_pin = pins.gpio17.into_mode::<hal::gpio::FunctionI2C>();
 
-    // Create the I²C drive, using the two pre-configured pins. This will fail
+    // Create the I²C driver, using the two pre-configured pins. This will fail
     // at compile time if the pins are in the wrong mode, or if this I²C
     // peripheral isn't available on these pins!
     let i2c = hal::I2C::i2c0(
@@ -135,7 +138,7 @@ fn main() -> ! {
     );
 
     // Create the I²C display interface:
-    let interface = I2CDisplayInterface::new(i2c);
+    let interface = ssd1306::I2CDisplayInterface::new(i2c);
 
     // Create a driver instance and initialize:
     let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
@@ -157,7 +160,7 @@ fn main() -> ! {
     loop {
         buf.reset();
         // Format some text into a static buffer:
-        core::fmt::write(&mut buf, format_args!("counter: {}", count)).unwrap();
+        write!(&mut buf, "counter: {}", count).unwrap();
         count += 1;
 
         // Empty the display:
@@ -184,7 +187,8 @@ fn main() -> ! {
     }
 }
 
-/// This is a very simple buffer to pre format a short line of text.
+/// This is a very simple buffer to pre format a short line of text
+/// limited arbitrarily to 64 bytes.
 struct FmtBuf {
     buf: [u8; 64],
     ptr: usize,
@@ -209,8 +213,13 @@ impl FmtBuf {
 
 impl core::fmt::Write for FmtBuf {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        let len = s.len();
-        self.buf[self.ptr..(self.ptr + len)].copy_from_slice(s.as_bytes());
+        let rest_len = self.buf.len() - self.ptr;
+        let len = if rest_len < s.len() {
+            rest_len
+        } else {
+            s.len()
+        };
+        self.buf[self.ptr..(self.ptr + len)].copy_from_slice(&s.as_bytes()[0..len]);
         self.ptr += len;
         Ok(())
     }
