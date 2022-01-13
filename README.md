@@ -179,6 +179,17 @@ RP2040 chip according to how it is connected up on the Feather RP2040.
 [Adafruit QT Py RP2040]: https://www.adafruit.com/product/4900
 [adafruit-qt-py-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit-qt-py-rp2040
 
+### [adafruit-trinkey-qt2040] - Board Support for the [Adafruit Trinkey QT2040]
+
+You should include this crate if you are writing code that you want to run on
+an [Adafruit Trinkey QT2040] - a 3x4 keyboard and OLED combo board from Adafruit.
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the Trinkey.
+
+[Adafruit-Trinkey-QT2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit-trinkey-qt2040
+[adafruit trinkey qt2040]: https://www.adafruit.com/product/5056
+
 ### [pimoroni-pico-explorer] - Board Support for the [Pimoroni Pico Explorer]
 
 You should include this crate if you are writing code that you want to run on

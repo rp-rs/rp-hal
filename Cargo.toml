@@ -7,6 +7,7 @@ members = [
     "boards/adafruit-kb2040",
     "boards/adafruit-macropad",
     "boards/adafruit-qt-py-rp2040",
+    "boards/adafruit-trinkey-qt2040",
     "boards/pimoroni-pico-explorer",
     "boards/pimoroni-pico-lipo-16mb",
     "boards/rp-pico",
