@@ -64,7 +64,7 @@ pub enum Parity {
 /// ```ignore
 /// # // can't actually create this with the non_exhaustive attribute
 /// UartConfig {
-///    baudrate: Baud(0),
+///    baudrate: Baud(115_200),
 ///    data_bits: DataBits::Eight,
 ///    stop_bits: StopBits::One,
 ///    parity: None,
@@ -88,7 +88,7 @@ pub struct UartConfig {
 impl Default for UartConfig {
     fn default() -> Self {
         Self {
-            baudrate: Baud(0),
+            baudrate: Baud(115_200),
             data_bits: DataBits::Eight,
             stop_bits: StopBits::One,
             parity: None,
