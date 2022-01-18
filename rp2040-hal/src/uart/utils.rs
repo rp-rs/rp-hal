@@ -61,7 +61,8 @@ pub enum Parity {
 /// A struct holding the configuration for an UART device.
 ///
 /// The `Default` implementation implements the following values:
-/// ```
+/// ```ignore
+/// # // can't actually create this with the non_exhaustive attribute
 /// UartConfig {
 ///    baudrate: Baud(0),
 ///    data_bits: DataBits::Eight,
