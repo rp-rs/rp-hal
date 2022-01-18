@@ -59,6 +59,16 @@ pub enum Parity {
 }
 
 /// A struct holding the configuration for an UART device.
+///
+/// The `Default` implementation implements the following values:
+/// ```
+/// UartConfig {
+///    baudrate: Baud(0),
+///    data_bits: DataBits::Eight,
+///    stop_bits: StopBits::One,
+///    parity: None,
+///}
+/// ```
 #[non_exhaustive]
 pub struct UartConfig {
     /// The baudrate the uart will run at.
@@ -72,6 +82,17 @@ pub struct UartConfig {
 
     /// The parity that this uart should have
     pub parity: Option<Parity>,
+}
+
+impl Default for UartConfig {
+    fn default() -> Self {
+        Self {
+            baudrate: Baud(0),
+            data_bits: DataBits::Eight,
+            stop_bits: StopBits::One,
+            parity: None,
+        }
+    }
 }
 
 /// Same as core::convert::Infallible, but implementing serial::Error
