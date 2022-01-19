@@ -41,7 +41,7 @@ unsafe impl critical_section::Impl for RpSpinlockCs {
                 // Ensure the compiler doesn't re-order accesses and violate safety here
                 core::sync::atomic::compiler_fence(Ordering::SeqCst);
                 // Read the spinlock reserved for `critical_section`
-                if (*pac::SIO::ptr()).spinlock31.read().bits() != 0 {
+                if (*pac::SIO::ptr()).spinlock[31].read().bits() != 0 {
                     // We just acquired the lock.
                     // Store which core we are so we can tell if we're called recursively
                     LOCK_OWNER.store(core, Ordering::Relaxed);
@@ -67,7 +67,7 @@ unsafe impl critical_section::Impl for RpSpinlockCs {
             // Ensure the compiler doesn't re-order accesses and violate safety here
             core::sync::atomic::compiler_fence(Ordering::SeqCst);
             // Release the spinlock to allow others to enter critical_section again
-            (*pac::SIO::ptr()).spinlock31.write_with_zero(|w| w.bits(1));
+            (*pac::SIO::ptr()).spinlock[31].write_with_zero(|w| w.bits(1));
             // Re-enable interrupts if they were enabled when we first called acquire()
             // We only do this on the outermost `critical_section` to ensure interrupts stay disabled
             // for the whole time that we have the lock

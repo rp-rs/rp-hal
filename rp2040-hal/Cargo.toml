@@ -16,7 +16,8 @@ eh1_0_alpha = { version = "=1.0.0-alpha.6", package="embedded-hal", optional=tru
 embedded-time = "0.12.0"
 itertools = { version = "0.10.1", default-features = false }
 nb = "1.0"
-rp2040-pac = "0.2.0"
+# TODO: move to rp2040-pac > 0.2.0 before merging!
+rp2040-pac = { git="https://github.com/rp-rs/rp2040-pac" }
 paste = "1.0"
 pio = "0.1.0"
 usb-device = "0.2.8"
