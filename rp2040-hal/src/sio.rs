@@ -231,7 +231,7 @@ pub trait Spinlock: typelevel::Sealed + Sized {
 }
 
 macro_rules! impl_spinlock {
-    ($($spinlock_name:ident,$spinlock_num:literal)*) => {
+    ($($spinlock_name:ident => $spinlock_num:literal,)*) => {
         $(
             /// Hardware based spinlock.
             ///
@@ -284,38 +284,40 @@ macro_rules! impl_spinlock {
     }
 }
 
-impl_spinlock!(Spinlock0,0);
-impl_spinlock!(Spinlock1,1);
-impl_spinlock!(Spinlock2,2);
-impl_spinlock!(Spinlock3,3);
-impl_spinlock!(Spinlock4,4);
-impl_spinlock!(Spinlock5,5);
-impl_spinlock!(Spinlock6,6);
-impl_spinlock!(Spinlock7,7);
-impl_spinlock!(Spinlock8,8);
-impl_spinlock!(Spinlock9,9);
-impl_spinlock!(Spinlock10,10);
-impl_spinlock!(Spinlock11,11);
-impl_spinlock!(Spinlock12,12);
-impl_spinlock!(Spinlock13,13);
-impl_spinlock!(Spinlock14,14);
-impl_spinlock!(Spinlock15,15);
-impl_spinlock!(Spinlock16,16);
-impl_spinlock!(Spinlock17,17);
-impl_spinlock!(Spinlock18,18);
-impl_spinlock!(Spinlock19,19);
-impl_spinlock!(Spinlock20,20);
-impl_spinlock!(Spinlock21,21);
-impl_spinlock!(Spinlock22,22);
-impl_spinlock!(Spinlock23,23);
-impl_spinlock!(Spinlock24,24);
-impl_spinlock!(Spinlock25,25);
-impl_spinlock!(Spinlock26,26);
-impl_spinlock!(Spinlock27,27);
-impl_spinlock!(Spinlock28,28);
-impl_spinlock!(Spinlock29,29);
-impl_spinlock!(Spinlock30,30);
-impl_spinlock!(Spinlock31,31);
+impl_spinlock! {
+    Spinlock0 => 0,
+    Spinlock1 => 1,
+    Spinlock2 => 2,
+    Spinlock3 => 3,
+    Spinlock4 => 4,
+    Spinlock5 => 5,
+    Spinlock6 => 6,
+    Spinlock7 => 7,
+    Spinlock8 => 8,
+    Spinlock9 => 9,
+    Spinlock10 => 10,
+    Spinlock11 => 11,
+    Spinlock12 => 12,
+    Spinlock13 => 13,
+    Spinlock14 => 14,
+    Spinlock15 => 15,
+    Spinlock16 => 16,
+    Spinlock17 => 17,
+    Spinlock18 => 18,
+    Spinlock19 => 19,
+    Spinlock20 => 20,
+    Spinlock21 => 21,
+    Spinlock22 => 22,
+    Spinlock23 => 23,
+    Spinlock24 => 24,
+    Spinlock25 => 25,
+    Spinlock26 => 26,
+    Spinlock27 => 27,
+    Spinlock28 => 28,
+    Spinlock29 => 29,
+    Spinlock30 => 30,
+    Spinlock31 => 31,
+}
 
 /// Returns the current state of the spinlocks. Each index corresponds to the associated spinlock, e.g. if index `5` is set to `true`, it means that [`Spinlock5`] is currently locked.
 ///
