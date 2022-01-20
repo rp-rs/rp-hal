@@ -92,6 +92,21 @@ impl Watchdog {
     fn enable(&self, bit: bool) {
         self.watchdog.ctrl.write(|w| w.enable().bit(bit))
     }
+
+    /// Configure which hardware will be reset by the watchdog
+    /// the default is everything except ROSC, XOSC
+    ///
+    /// Safety: ensure no other device is writing to psm.wdsel
+    /// This is easy at the moment, since nothing else uses PSM
+    unsafe fn configure_wdog_reset_triggers(&self) {
+        let psm = &*pac::PSM::ptr();
+        psm.wdsel.write_with_zero(|w| {
+            w.bits(0x0001ffff);
+            w.xosc().clear_bit();
+            w.rosc().clear_bit();
+            w
+        });
+    }
 }
 
 impl watchdog::Watchdog for Watchdog {
@@ -124,6 +139,9 @@ impl watchdog::WatchdogEnable for Watchdog {
         }
 
         self.enable(false);
+        unsafe {
+            self.configure_wdog_reset_triggers();
+        }
         self.load_counter(self.delay_ms);
         self.enable(true);
     }
