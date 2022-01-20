@@ -17,8 +17,9 @@ cortex-m-rt = { version = "0.7.0", optional = true }
 embedded-hal = { version = "0.2.4", features = ["unproven"] }
 
 [features]
-default = ["rt"]
-rt = ["cortex-m-rt", "rp2040-hal/rt"]
+default = ["rt", "boot2"]
+boot2 = ["rp2040-boot2"]
+rt = ["cortex-m-rt","rp2040-hal/rt"]
 
 [dev-dependencies]
 panic-halt = "0.2.0"
