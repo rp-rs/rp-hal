@@ -215,6 +215,21 @@ where
     }
 }
 
+// Don't use cortex_m::asm::delay(8) because that ends up delaying 15 cycles
+// on Cortex-M0.  Each iteration of the inner loop is 3 cycles and it adds
+// one extra iteration.
+#[inline(always)]
+fn divider_delay() {
+    cortex_m::asm::nop();
+    cortex_m::asm::nop();
+    cortex_m::asm::nop();
+    cortex_m::asm::nop();
+    cortex_m::asm::nop();
+    cortex_m::asm::nop();
+    cortex_m::asm::nop();
+    cortex_m::asm::nop();
+}
+
 impl HwDivider {
     /// Perform hardware unsigned divide/modulo operation
     pub fn unsigned(&self, dividend: u32, divisor: u32) -> DivResult<u32> {
@@ -222,7 +237,7 @@ impl HwDivider {
             sio.div_udividend.write(|w| unsafe { w.bits(dividend) });
             sio.div_udivisor.write(|w| unsafe { w.bits(divisor) });
 
-            cortex_m::asm::delay(8);
+            divider_delay();
 
             // Note: quotient must be read last
             let remainder = sio.div_remainder.read().bits();
@@ -243,7 +258,7 @@ impl HwDivider {
             sio.div_sdivisor
                 .write(|w| unsafe { w.bits(divisor as u32) });
 
-            cortex_m::asm::delay(8);
+            divider_delay();
 
             // Note: quotient must be read last
             let remainder = sio.div_remainder.read().bits() as i32;
