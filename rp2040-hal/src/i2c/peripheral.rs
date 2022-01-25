@@ -24,9 +24,10 @@ pub enum I2CEvent {
     Stop,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum State {
     Idle,
+    Active,
     Read,
     Write,
 }
@@ -98,7 +99,7 @@ where
 }
 
 impl<T: Deref<Target = I2CBlock>, PINS> I2CPeripheralEventIterator<T, PINS> {
-    /// Pushs up to `usize::min(TX_FIFO_SIZE, buf.len())` bytes to the TX FIFO.
+    /// Push up to `usize::min(TX_FIFO_SIZE, buf.len())` bytes to the TX FIFO.
     /// Returns the number of bytes pushed to the FIFO. Note this does *not* reflect how many bytes
     /// are effectively received by the controller.
     pub fn write(&mut self, buf: &[u8]) -> usize {
@@ -122,7 +123,7 @@ impl<T: Deref<Target = I2CBlock>, PINS> I2CPeripheralEventIterator<T, PINS> {
         sent
     }
 
-    /// Pulls up to `usize::min(RX_FIFO_SIZE, buf.len())` bytes from the RX FIFO.
+    /// Pull up to `usize::min(RX_FIFO_SIZE, buf.len())` bytes from the RX FIFO.
     pub fn read(&mut self, buf: &mut [u8]) -> usize {
         let mut read = 0;
 
@@ -147,29 +148,30 @@ impl<T: Deref<Target = I2CBlock>, PINS> Iterator for I2CPeripheralEventIterator<
         match self.state {
             State::Idle if stat.start_det().bit_is_set() => {
                 self.i2c.i2c.ic_clr_start_det.read();
-                self.state = if stat.rd_req().bit_is_set() {
-                    State::Read
-                } else {
-                    State::Write
-                };
+                self.state = State::Active;
                 Some(I2CEvent::Start)
             }
-            State::Read if stat.rd_req().bit_is_set() => {
-                // `rd_req` is used by the hardware to detect when the I2C block can stop stretching
-                // the clock and start process the data pushed to the FIFO (if any).
+            State::Active if !self.i2c.rx_fifo_empty() => {
+                self.state = State::Write;
+                Some(I2CEvent::TransferWrite)
+            }
+            State::Active if stat.rd_req().bit_is_set() => {
+                // Clearing `rd_req` is used by the hardware to detect when the I2C block can stop
+                // stretching the clock and start process the data pushed to the FIFO (if any).
                 // This is done in `Self::write`.
-
+                self.state = State::Read;
                 Some(I2CEvent::TransferRead)
             }
+            State::Read if stat.rd_req().bit_is_set() => Some(I2CEvent::TransferRead),
             State::Read if stat.restart_det().bit_is_set() => {
                 self.i2c.i2c.ic_clr_restart_det.read();
-                self.state = State::Write;
+                self.state = State::Active;
                 Some(I2CEvent::Restart)
             }
             State::Write if !self.i2c.rx_fifo_empty() => Some(I2CEvent::TransferWrite),
             State::Write if stat.restart_det().bit_is_set() => {
                 self.i2c.i2c.ic_clr_restart_det.read();
-                self.state = State::Read;
+                self.state = State::Active;
                 Some(I2CEvent::Restart)
             }
             _ if stat.stop_det().bit_is_set() => {
