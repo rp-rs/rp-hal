@@ -230,45 +230,141 @@ fn divider_delay() {
     cortex_m::asm::nop();
 }
 
+fn divider_unsigned(dividend: u32, divisor: u32) -> DivResult<u32> {
+    save_divider(|sio| {
+        sio.div_udividend.write(|w| unsafe { w.bits(dividend) });
+        sio.div_udivisor.write(|w| unsafe { w.bits(divisor) });
+
+        divider_delay();
+
+        // Note: quotient must be read last
+        let remainder = sio.div_remainder.read().bits();
+        let quotient = sio.div_quotient.read().bits();
+
+        DivResult {
+            remainder,
+            quotient,
+        }
+    })
+}
+
+fn divider_signed(dividend: i32, divisor: i32) -> DivResult<i32> {
+    save_divider(|sio| {
+        sio.div_sdividend
+            .write(|w| unsafe { w.bits(dividend as u32) });
+        sio.div_sdivisor
+            .write(|w| unsafe { w.bits(divisor as u32) });
+
+        divider_delay();
+
+        // Note: quotient must be read last
+        let remainder = sio.div_remainder.read().bits() as i32;
+        let quotient = sio.div_quotient.read().bits() as i32;
+
+        DivResult {
+            remainder,
+            quotient,
+        }
+    })
+}
+
 impl HwDivider {
     /// Perform hardware unsigned divide/modulo operation
     pub fn unsigned(&self, dividend: u32, divisor: u32) -> DivResult<u32> {
-        save_divider(|sio| {
-            sio.div_udividend.write(|w| unsafe { w.bits(dividend) });
-            sio.div_udivisor.write(|w| unsafe { w.bits(divisor) });
-
-            divider_delay();
-
-            // Note: quotient must be read last
-            let remainder = sio.div_remainder.read().bits();
-            let quotient = sio.div_quotient.read().bits();
-
-            DivResult {
-                remainder,
-                quotient,
-            }
-        })
+        divider_unsigned(dividend, divisor)
     }
 
     /// Perform hardware signed divide/modulo operation
     pub fn signed(&self, dividend: i32, divisor: i32) -> DivResult<i32> {
-        save_divider(|sio| {
-            sio.div_sdividend
-                .write(|w| unsafe { w.bits(dividend as u32) });
-            sio.div_sdivisor
-                .write(|w| unsafe { w.bits(divisor as u32) });
+        divider_signed(dividend, divisor)
+    }
+}
 
-            divider_delay();
+macro_rules! divider_intrinsics {
+    () => ();
 
-            // Note: quotient must be read last
-            let remainder = sio.div_remainder.read().bits() as i32;
-            let quotient = sio.div_quotient.read().bits() as i32;
+    (
+        #[arm_aeabi_alias = $alias:ident]
+        pub extern $abi:tt fn $name:ident( $($argname:ident:  $ty:ty),* ) -> $ret:ty {
+            $($body:tt)*
+        }
 
-            DivResult {
-                remainder,
-                quotient,
+        $($rest:tt)*
+    ) => (
+        extern $abi fn $name( $($argname: $ty),* ) -> $ret {
+            $($body)*
+        }
+
+        mod $name {
+            #[no_mangle]
+            pub extern $abi fn $name( $($argname: $ty),* ) -> $ret {
+                super::$name($($argname),*)
             }
-        })
+        }
+
+        mod $alias {
+            #[no_mangle]
+            pub extern $abi fn $alias( $($argname: $ty),* ) -> $ret {
+                super::$name($($argname),*)
+            }
+        }
+
+        divider_intrinsics!($($rest)*);
+    );
+
+    (
+        pub extern $abi:tt fn $name:ident( $($argname:ident:  $ty:ty),* ) -> $ret:ty {
+            $($body:tt)*
+        }
+
+        $($rest:tt)*
+    ) => (
+        extern $abi fn $name( $($argname: $ty),* ) -> $ret {
+            $($body)*
+        }
+
+        mod $name {
+            #[no_mangle]
+            pub extern $abi fn $name( $($argname: $ty),* ) -> $ret {
+                super::$name($($argname),*)
+            }
+        }
+
+        divider_intrinsics!($($rest)*);
+    );
+}
+
+divider_intrinsics! {
+    #[arm_aeabi_alias = __aeabi_uidiv]
+    pub extern "C" fn __udivsi3(n: u32, d: u32) -> u32 {
+        divider_unsigned(n, d).quotient
+    }
+
+    pub extern "C" fn __umodsi3(n: u32, d: u32) -> u32 {
+        divider_unsigned(n, d).remainder
+    }
+
+    pub extern "C" fn __udivmodsi4(n: u32, d: u32, rem: Option<&mut u32>) -> u32 {
+        let quo_rem = divider_unsigned(n, d);
+        if let Some(rem) = rem {
+            *rem = quo_rem.remainder;
+        }
+        quo_rem.quotient
+    }
+
+    #[arm_aeabi_alias = __aeabi_idiv]
+    pub extern "C" fn __divsi3(n: i32, d: i32) -> i32 {
+        divider_signed(n, d).quotient
+    }
+
+    pub extern "C" fn __modsi3(n: i32, d: i32) -> i32 {
+        divider_signed(n, d).remainder
+    }
+
+    pub extern "C" fn __divmodsi4(n: i32, d: i32, rem: &mut i32) -> i32 {
+        let quo_rem = divider_signed(n, d);
+        *rem = quo_rem.remainder;
+        quo_rem.quotient
     }
 }
 
