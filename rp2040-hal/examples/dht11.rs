@@ -5,6 +5,8 @@
 //! It may need to be adapted to your particular board layout and/or pin assignment.
 //! In this example, the DHT11 data pin should be connected to GPIO28.
 //!
+//! NOTE: The DHT11 driver only works reliably when compiled in release mode.
+//!
 //! See the `Cargo.toml` file for Copyright and licence details.
 
 #![no_std]
