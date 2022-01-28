@@ -1,8 +1,9 @@
-//! # GPIO 'Blinky' Example
+//! # DHT11 Example
 //!
-//! This application demonstrates how to control a GPIO pin on the RP2040.
+//! This application demonstrates how to read a DHT11 sensor on the RP2040.
 //!
 //! It may need to be adapted to your particular board layout and/or pin assignment.
+//! In this example, the DHT11 data pin should be connected to GPIO28.
 //!
 //! See the `Cargo.toml` file for Copyright and licence details.
 
@@ -40,10 +41,19 @@ pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 /// if your board has a different frequency
 const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
-use dht11::Dht11;
+use dht_sensor::{dht11, DhtReading};
 
+/// A wrapper for DynPin, implementing both InputPin and OutputPin, to simulate
+/// an open-drain pin as needed by the wire protocol the DHT11 sensor speaks.
+/// https://how2electronics.com/interfacing-dht11-temperature-humidity-sensor-with-raspberry-pi-pico/
 struct InOutPin {
     inner: DynPin,
+}
+
+impl InOutPin {
+    fn new(inner: DynPin) -> Self {
+        Self { inner }
+    }
 }
 
 impl InputPin for InOutPin {
@@ -59,10 +69,17 @@ impl InputPin for InOutPin {
 impl OutputPin for InOutPin {
     type Error = rp2040_hal::gpio::Error;
     fn set_low(&mut self) -> Result<(), <Self as embedded_hal::digital::v2::OutputPin>::Error> {
+        // To actively pull the pin low, it must also be configured as a (readable) output pin
         self.inner.into_readable_output();
-        self.inner.set_low()
+        // In theory, we should set the pin to low first, to make sure we never actively
+        // pull it up. But if we try it on the input pin, we get Err(Gpio(InvalidPinType)).
+        self.inner.set_low()?;
+        Ok(())
     }
     fn set_high(&mut self) -> Result<(), <Self as embedded_hal::digital::v2::OutputPin>::Error> {
+        // To set the open-drain pin to high, just disable the output driver by changing the
+        // pin to input mode with pull-up. That way, the DHT11 can still pull the data line down
+        // to send its response.
         self.inner.into_pull_up_input();
         Ok(())
     }
@@ -73,8 +90,8 @@ impl OutputPin for InOutPin {
 /// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
 /// as soon as all global variables are initialised.
 ///
-/// The function configures the RP2040 peripherals, then toggles a GPIO pin in
-/// an infinite loop. If there is an LED connected to that pin, it will blink.
+/// The function configures the RP2040 peripherals, assigns GPIO 28 to the
+/// DHT11 driver, and takes a single measurement.
 #[entry]
 fn main() -> ! {
     // Grab our singleton objects
@@ -110,15 +127,15 @@ fn main() -> ! {
 
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
 
-    // Configure GPIO 25 as an output
-    let pin = pins.gpio0.into_push_pull_output();
-    let pin = InOutPin { inner: pin.into() };
-
-    // Create an instance of the DHT11 device
-    let mut dht11 = Dht11::new(pin);
+    // Use GPIO 28 as an InOutPin
+    let mut pin = InOutPin::new(pins.gpio28.into());
+    pin.set_high().ok();
 
     // Perform a sensor reading
-    let _measurement = dht11.perform_measurement(&mut delay).unwrap();
+    let _measurement = dht11::Reading::read(&mut delay, &mut pin);
+
+    // In this case, we just ignore the result. A real application
+    // would do something with the measurement.
 
     #[allow(clippy::empty_loop)]
     loop {

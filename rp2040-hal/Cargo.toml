@@ -45,7 +45,7 @@ panic-halt = "0.2.0"
 rp2040-boot2 = "0.2.0"
 hd44780-driver = "0.4.0"
 pio-proc = "0.1.0"
-dht11 = "0.1.0"
+dht-sensor = "0.2.1"
 
 [features]
 rt = ["rp2040-pac/rt"]
