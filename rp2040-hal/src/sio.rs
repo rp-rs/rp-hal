@@ -230,7 +230,7 @@ pub trait Spinlock: typelevel::Sealed + Sized {
     }
 }
 macro_rules! impl_spinlock {
-    ($($spinlock_name:ident => $register:ident,)*) => {
+    ($($spinlock_name:ident => $register:literal,)*) => {
         $(
             /// Hardware based spinlock.
             ///
@@ -258,7 +258,7 @@ macro_rules! impl_spinlock {
                 fn try_claim() -> Option<$spinlock_name> {
                     // Safety: We're only reading from this register
                     let sio = unsafe { &*pac::SIO::ptr() };
-                    let lock = sio.$register.read().bits();
+                    let lock = sio.spinlock[$register].read().bits();
                     if lock > 0 {
                         Some(Self(core::marker::PhantomData))
                     } else {
@@ -276,7 +276,7 @@ macro_rules! impl_spinlock {
                     let sio = unsafe { &*pac::SIO::ptr() };
 
                     // Write (any value): release the lock
-                    sio.$register.write(|b| unsafe { b.bits(1) });
+                    sio.spinlock[$register].write(|b| unsafe { b.bits(1) });
                 }
             }
         )*
@@ -284,38 +284,38 @@ macro_rules! impl_spinlock {
 }
 
 impl_spinlock! {
-    Spinlock0 => spinlock0,
-    Spinlock1 => spinlock1,
-    Spinlock2 => spinlock2,
-    Spinlock3 => spinlock3,
-    Spinlock4 => spinlock4,
-    Spinlock5 => spinlock5,
-    Spinlock6 => spinlock6,
-    Spinlock7 => spinlock7,
-    Spinlock8 => spinlock8,
-    Spinlock9 => spinlock9,
-    Spinlock10 => spinlock10,
-    Spinlock11 => spinlock11,
-    Spinlock12 => spinlock12,
-    Spinlock13 => spinlock13,
-    Spinlock14 => spinlock14,
-    Spinlock15 => spinlock15,
-    Spinlock16 => spinlock16,
-    Spinlock17 => spinlock17,
-    Spinlock18 => spinlock18,
-    Spinlock19 => spinlock19,
-    Spinlock20 => spinlock20,
-    Spinlock21 => spinlock21,
-    Spinlock22 => spinlock22,
-    Spinlock23 => spinlock23,
-    Spinlock24 => spinlock24,
-    Spinlock25 => spinlock25,
-    Spinlock26 => spinlock26,
-    Spinlock27 => spinlock27,
-    Spinlock28 => spinlock28,
-    Spinlock29 => spinlock29,
-    Spinlock30 => spinlock30,
-    Spinlock31 => spinlock31,
+    Spinlock0 => 0,
+    Spinlock1 => 1,
+    Spinlock2 => 2,
+    Spinlock3 => 3,
+    Spinlock4 => 4,
+    Spinlock5 => 5,
+    Spinlock6 => 6,
+    Spinlock7 => 7,
+    Spinlock8 => 8,
+    Spinlock9 => 9,
+    Spinlock10 => 10,
+    Spinlock11 => 11,
+    Spinlock12 => 12,
+    Spinlock13 => 13,
+    Spinlock14 => 14,
+    Spinlock15 => 15,
+    Spinlock16 => 16,
+    Spinlock17 => 17,
+    Spinlock18 => 18,
+    Spinlock19 => 19,
+    Spinlock20 => 20,
+    Spinlock21 => 21,
+    Spinlock22 => 22,
+    Spinlock23 => 23,
+    Spinlock24 => 24,
+    Spinlock25 => 25,
+    Spinlock26 => 26,
+    Spinlock27 => 27,
+    Spinlock28 => 28,
+    Spinlock29 => 29,
+    Spinlock30 => 30,
+    Spinlock31 => 31,
 }
 
 /// Returns the current state of the spinlocks. Each index corresponds to the associated spinlock, e.g. if index `5` is set to `true`, it means that [`Spinlock5`] is currently locked.
