@@ -76,6 +76,12 @@ impl Sio {
             hwdivider: HwDivider { _private: () },
         }
     }
+
+    /// Returns whether we are running on Core 0 (`0`) or Core 1 (`1`).
+    pub fn core() -> u8 {
+        // Safety: it is always safe to read this read-only register
+        unsafe { (*pac::SIO::ptr()).cpuid.read().bits() as u8 }
+    }
 }
 
 impl SioFifo {
@@ -270,6 +276,15 @@ where
     pub fn claim_async() -> nb::Result<Self, Infallible> {
         Self::try_claim().ok_or(nb::Error::WouldBlock)
     }
+
+    /// Clear a locked spin-lock.
+    ///
+    /// Safety: Only call this function if you hold the spin-lock.
+    pub unsafe fn release() {
+        let sio = &*pac::SIO::ptr();
+        // Write (any value): release the lock
+        sio.spinlock[N].write_with_zero(|b| b.bits(1));
+    }
 }
 
 impl<const N: usize> Drop for Spinlock<N>
@@ -277,12 +292,8 @@ where
     Spinlock<N>: SpinlockValid,
 {
     fn drop(&mut self) {
-        // Safety: At this point we should be the only one accessing this spinlock register
-        // so writing to this address is fine
-        let sio = unsafe { &*pac::SIO::ptr() };
-
-        // Write (any value): release the lock
-        sio.spinlock[N].write(|b| unsafe { b.bits(1) });
+        // This is safe because we own the object, and hence hold the lock.
+        unsafe { Self::release() }
     }
 }
 

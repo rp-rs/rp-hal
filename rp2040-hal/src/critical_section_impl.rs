@@ -26,7 +26,7 @@ unsafe impl critical_section::Impl for RpSpinlockCs {
         // Store the initial interrupt state and current core id in stack variables
         let interrupts_active = cortex_m::register::primask::read().is_active();
         // We reserved 0 as our `LOCK_UNOWNED` value, so add 1 to core_id so we get 1 for core0, 2 for core1.
-        let core = (*pac::SIO::ptr()).cpuid.read().bits() as u8 + 1_u8;
+        let core = crate::Sio::core() + 1_u8;
         // Do we already own the spinlock?
         if LOCK_OWNER.load(Ordering::Acquire) == core {
             // We already own the lock, so we must have called acquire within a critical_section.
@@ -41,9 +41,11 @@ unsafe impl critical_section::Impl for RpSpinlockCs {
                 // Ensure the compiler doesn't re-order accesses and violate safety here
                 core::sync::atomic::compiler_fence(Ordering::SeqCst);
                 // Read the spinlock reserved for `critical_section`
-                if (*pac::SIO::ptr()).spinlock[31].read().bits() != 0 {
+                if let Some(lock) = crate::sio::Spinlock31::try_claim() {
                     // We just acquired the lock.
-                    // Store which core we are so we can tell if we're called recursively
+                    // 1. Forget it, so we don't immediately unlock
+                    core::mem::forget(lock);
+                    // 2. Store which core we are so we can tell if we're called recursively
                     LOCK_OWNER.store(core, Ordering::Relaxed);
                     break;
                 }
@@ -67,7 +69,7 @@ unsafe impl critical_section::Impl for RpSpinlockCs {
             // Ensure the compiler doesn't re-order accesses and violate safety here
             core::sync::atomic::compiler_fence(Ordering::SeqCst);
             // Release the spinlock to allow others to enter critical_section again
-            (*pac::SIO::ptr()).spinlock[31].write_with_zero(|w| w.bits(1));
+            crate::sio::Spinlock31::release();
             // Re-enable interrupts if they were enabled when we first called acquire()
             // We only do this on the outermost `critical_section` to ensure interrupts stay disabled
             // for the whole time that we have the lock
