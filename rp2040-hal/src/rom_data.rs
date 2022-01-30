@@ -58,8 +58,35 @@ macro_rules! declare_rom_function {
         #[doc = r"` ROM function."]
         pub mod $name {
             /// Retrieve a function pointer.
+            #[cfg(not(feature = "rom-func-cache"))]
             pub fn ptr() -> extern "C" fn( $($argname: $ty),* ) -> $ret {
                 let p: *const u32 = $lookup;
+                unsafe {
+                    let func : extern "C" fn( $($argname: $ty),* ) -> $ret = core::mem::transmute(p);
+                    func
+                }
+            }
+
+            /// Retrieve a function pointer.
+            #[cfg(feature = "rom-func-cache")]
+            pub fn ptr() -> extern "C" fn( $($argname: $ty),* ) -> $ret {
+                use core::sync::atomic::{AtomicU16, Ordering};
+
+                // All pointers in the ROM fit in 16 bits, so we don't need a
+                // full width word to store the cached value.
+                static CACHED_PTR: AtomicU16 = AtomicU16::new(0);
+                // This is safe because the lookup will always resolve
+                // to the same value.  So even if an interrupt or another
+                // core starts at the same time, it just repeats some
+                // work and eventually writes back the correct value.
+                let p: *const u32 = match CACHED_PTR.load(Ordering::Relaxed) {
+                    0 => {
+                        let raw: *const u32 = $lookup;
+                        CACHED_PTR.store(raw as u16, Ordering::Relaxed);
+                        raw
+                    },
+                    val => val as *const u32,
+                };
                 unsafe {
                     let func : extern "C" fn( $($argname: $ty),* ) -> $ret = core::mem::transmute(p);
                     func
@@ -83,8 +110,35 @@ macro_rules! declare_rom_function {
         #[doc = r"` ROM function."]
         pub mod $name {
             /// Retrieve a function pointer.
+            #[cfg(not(feature = "rom-func-cache"))]
             pub fn ptr() -> unsafe extern "C" fn( $($argname: $ty),* ) -> $ret {
                 let p: *const u32 = $lookup;
+                unsafe {
+                    let func : unsafe extern "C" fn( $($argname: $ty),* ) -> $ret = core::mem::transmute(p);
+                    func
+                }
+            }
+
+            /// Retrieve a function pointer.
+            #[cfg(feature = "rom-func-cache")]
+            pub fn ptr() -> unsafe extern "C" fn( $($argname: $ty),* ) -> $ret {
+                use core::sync::atomic::{AtomicU16, Ordering};
+
+                // All pointers in the ROM fit in 16 bits, so we don't need a
+                // full width word to store the cached value.
+                static CACHED_PTR: AtomicU16 = AtomicU16::new(0);
+                // This is safe because the lookup will always resolve
+                // to the same value.  So even if an interrupt or another
+                // core starts at the same time, it just repeats some
+                // work and eventually writes back the correct value.
+                let p: *const u32 = match CACHED_PTR.load(Ordering::Relaxed) {
+                    0 => {
+                        let raw: *const u32 = $lookup;
+                        CACHED_PTR.store(raw as u16, Ordering::Relaxed);
+                        raw
+                    },
+                    val => val as *const u32,
+                };
                 unsafe {
                     let func : unsafe extern "C" fn( $($argname: $ty),* ) -> $ret = core::mem::transmute(p);
                     func
