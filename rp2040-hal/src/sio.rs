@@ -471,8 +471,8 @@ pub type Spinlock30 = Spinlock<30>;
 
 impl SpinlockValid for Spinlock<30> {}
 
-/// Spinlock number 31
-pub type Spinlock31 = Spinlock<31>;
+/// Spinlock number 31 - used by critical section implementation
+pub(crate) type Spinlock31 = Spinlock<31>;
 
 impl SpinlockValid for Spinlock<31> {}
 
