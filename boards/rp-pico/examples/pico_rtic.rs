@@ -54,7 +54,7 @@ mod app {
         let mut timer = hal::Timer::new(c.device.TIMER, &mut resets);
         let mut alarm = timer.alarm_0().unwrap();
         let _ = alarm.schedule(SCAN_TIME_US.microseconds());
-        alarm.enable_interrupt(&mut timer);
+        alarm.enable_interrupt();
 
         (Shared { timer, alarm, led }, Local {}, init::Monotonics())
     }
@@ -73,10 +73,9 @@ mod app {
         }
         *c.local.tog = !*c.local.tog;
 
-        let timer = c.shared.timer;
-        let alarm = c.shared.alarm;
-        (timer, alarm).lock(|t, a| {
-            a.clear_interrupt(t);
+        let mut alarm = c.shared.alarm;
+        (alarm).lock(|a| {
+            a.clear_interrupt();
             let _ = a.schedule(SCAN_TIME_US.microseconds());
         });
     }
