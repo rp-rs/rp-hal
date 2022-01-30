@@ -207,16 +207,58 @@ impl HwDivider {
     }
 }
 
-/// Trait for all the spinlock. See the documentation of e.g. [`Spinlock0`] for more information
-pub trait Spinlock: typelevel::Sealed + Sized {
+/// This type is just used to limit us to Spinlocks `0..=31`
+pub trait SpinlockValid {}
+
+/// Hardware based spinlock.
+///
+/// You can claim this lock by calling either [`claim`], [`try_claim`] or
+/// [`claim_async`]. These spin-locks are hardware backed, so if you lock
+/// `Spinlock<6>` any other part of your program using `Spinlock<6>` will
+/// suddenly find it to be locked.
+///
+/// When the obtained spinlock goes out of scope, it is automatically unlocked.
+///
+/// **warning**: These spinlocks are not re-entrant, meaning that the following code will cause a deadlock:
+///
+/// ```no_run
+/// use rp2040_hal::sio::Spinlock0;
+/// let lock_1 = Spinlock0::claim();
+/// let lock_2 = Spinlock0::claim(); // deadlock here
+/// ```
+///
+/// Use `try_claim` if you are not the only piece of code using any given
+/// spin-lock. Note also that the `critical-section` implementation uses
+/// Spinlock 31.
+///
+/// [`claim`]: #method.claim
+/// [`try_claim`]: #method.try_claim
+/// [`claim_async`]: #method.claim_asyncs
+pub struct Spinlock<const N: usize>(core::marker::PhantomData<()>)
+where
+    Spinlock<N>: SpinlockValid;
+
+impl<const N: usize> Spinlock<N>
+where
+    Spinlock<N>: SpinlockValid,
+{
     /// Try to claim the spinlock. Will return `Some(Self)` if the lock is obtained, and `None` if the lock is
     /// already in use somewhere else.
-    fn try_claim() -> Option<Self>;
+    pub fn try_claim() -> Option<Self> {
+        // Safety: We're only reading from this register
+        let sio = unsafe { &*pac::SIO::ptr() };
+        let lock = sio.spinlock[N].read().bits();
+        if lock > 0 {
+            Some(Self(core::marker::PhantomData))
+        } else {
+            None
+        }
+    }
 
     /// Claim the spinlock, will block the current thread until the lock is available.
     ///
     /// Note that calling this multiple times in a row will cause a deadlock
-    fn claim() -> Self {
+    pub fn claim() -> Self {
         loop {
             if let Some(result) = Self::try_claim() {
                 break result;
@@ -225,98 +267,184 @@ pub trait Spinlock: typelevel::Sealed + Sized {
     }
 
     /// Try to claim the spinlock. Will return `WouldBlock` until the spinlock is available.
-    fn claim_async() -> nb::Result<Self, Infallible> {
+    pub fn claim_async() -> nb::Result<Self, Infallible> {
         Self::try_claim().ok_or(nb::Error::WouldBlock)
     }
 }
-macro_rules! impl_spinlock {
-    ($($spinlock_name:ident => $register:literal,)*) => {
-        $(
-            /// Hardware based spinlock.
-            ///
-            /// You can claim this lock by calling either [`claim`], [`try_claim`] or [`claim_async`].
-            /// This will automatically lock ALL spinlocks of type `
-            #[doc = stringify!($spinlock_name)]
-            /// `.
-            ///
-            /// When the obtained spinlock goes out of scope, it is automatically unlocked.
-            ///
-            /// **warning**: These spinlocks are not re-entrant, meaning that the following code will cause a deadlock:
-            ///
-            /// ```no_run
-            /// use rp2040_hal::sio::{Spinlock0, Spinlock};
-            /// let lock_1 = Spinlock0::claim();
-            /// let lock_2 = Spinlock0::claim(); // deadlock here
-            /// ```
-            ///
-            /// [`claim`]: #method.claim
-            /// [`try_claim`]: #method.try_claim
-            /// [`claim_async`]: #method.claim_async
-            pub struct $spinlock_name(core::marker::PhantomData<()>);
 
-            impl Spinlock for $spinlock_name {
-                fn try_claim() -> Option<$spinlock_name> {
-                    // Safety: We're only reading from this register
-                    let sio = unsafe { &*pac::SIO::ptr() };
-                    let lock = sio.spinlock[$register].read().bits();
-                    if lock > 0 {
-                        Some(Self(core::marker::PhantomData))
-                    } else {
-                        None
-                    }
-                }
-            }
+impl<const N: usize> Drop for Spinlock<N>
+where
+    Spinlock<N>: SpinlockValid,
+{
+    fn drop(&mut self) {
+        // Safety: At this point we should be the only one accessing this spinlock register
+        // so writing to this address is fine
+        let sio = unsafe { &*pac::SIO::ptr() };
 
-            impl typelevel::Sealed for $spinlock_name {}
-
-            impl Drop for $spinlock_name {
-                fn drop(&mut self) {
-                    // Safety: At this point we should be the only one accessing this spinlock register
-                    // so writing to this address is fine
-                    let sio = unsafe { &*pac::SIO::ptr() };
-
-                    // Write (any value): release the lock
-                    sio.spinlock[$register].write(|b| unsafe { b.bits(1) });
-                }
-            }
-        )*
+        // Write (any value): release the lock
+        sio.spinlock[N].write(|b| unsafe { b.bits(1) });
     }
 }
 
-impl_spinlock! {
-    Spinlock0 => 0,
-    Spinlock1 => 1,
-    Spinlock2 => 2,
-    Spinlock3 => 3,
-    Spinlock4 => 4,
-    Spinlock5 => 5,
-    Spinlock6 => 6,
-    Spinlock7 => 7,
-    Spinlock8 => 8,
-    Spinlock9 => 9,
-    Spinlock10 => 10,
-    Spinlock11 => 11,
-    Spinlock12 => 12,
-    Spinlock13 => 13,
-    Spinlock14 => 14,
-    Spinlock15 => 15,
-    Spinlock16 => 16,
-    Spinlock17 => 17,
-    Spinlock18 => 18,
-    Spinlock19 => 19,
-    Spinlock20 => 20,
-    Spinlock21 => 21,
-    Spinlock22 => 22,
-    Spinlock23 => 23,
-    Spinlock24 => 24,
-    Spinlock25 => 25,
-    Spinlock26 => 26,
-    Spinlock27 => 27,
-    Spinlock28 => 28,
-    Spinlock29 => 29,
-    Spinlock30 => 30,
-    Spinlock31 => 31,
-}
+/// Spinlock number 0
+pub type Spinlock0 = Spinlock<0>;
+
+impl SpinlockValid for Spinlock<0> {}
+
+/// Spinlock number 1
+pub type Spinlock1 = Spinlock<1>;
+
+impl SpinlockValid for Spinlock<1> {}
+
+/// Spinlock number 2
+pub type Spinlock2 = Spinlock<2>;
+
+impl SpinlockValid for Spinlock<2> {}
+
+/// Spinlock number 3
+pub type Spinlock3 = Spinlock<3>;
+
+impl SpinlockValid for Spinlock<3> {}
+
+/// Spinlock number 4
+pub type Spinlock4 = Spinlock<4>;
+
+impl SpinlockValid for Spinlock<4> {}
+
+/// Spinlock number 5
+pub type Spinlock5 = Spinlock<5>;
+
+impl SpinlockValid for Spinlock<5> {}
+
+/// Spinlock number 6
+pub type Spinlock6 = Spinlock<6>;
+
+impl SpinlockValid for Spinlock<6> {}
+
+/// Spinlock number 7
+pub type Spinlock7 = Spinlock<7>;
+
+impl SpinlockValid for Spinlock<7> {}
+
+/// Spinlock number 8
+pub type Spinlock8 = Spinlock<8>;
+
+impl SpinlockValid for Spinlock<8> {}
+
+/// Spinlock number 9
+pub type Spinlock9 = Spinlock<9>;
+
+impl SpinlockValid for Spinlock<9> {}
+
+/// Spinlock number 10
+pub type Spinlock10 = Spinlock<10>;
+
+impl SpinlockValid for Spinlock<10> {}
+
+/// Spinlock number 11
+pub type Spinlock11 = Spinlock<11>;
+
+impl SpinlockValid for Spinlock<11> {}
+
+/// Spinlock number 12
+pub type Spinlock12 = Spinlock<12>;
+
+impl SpinlockValid for Spinlock<12> {}
+
+/// Spinlock number 13
+pub type Spinlock13 = Spinlock<13>;
+
+impl SpinlockValid for Spinlock<13> {}
+
+/// Spinlock number 14
+pub type Spinlock14 = Spinlock<14>;
+
+impl SpinlockValid for Spinlock<14> {}
+
+/// Spinlock number 15
+pub type Spinlock15 = Spinlock<15>;
+
+impl SpinlockValid for Spinlock<15> {}
+
+/// Spinlock number 16
+pub type Spinlock16 = Spinlock<16>;
+
+impl SpinlockValid for Spinlock<16> {}
+
+/// Spinlock number 17
+pub type Spinlock17 = Spinlock<17>;
+
+impl SpinlockValid for Spinlock<17> {}
+
+/// Spinlock number 18
+pub type Spinlock18 = Spinlock<18>;
+
+impl SpinlockValid for Spinlock<18> {}
+
+/// Spinlock number 19
+pub type Spinlock19 = Spinlock<19>;
+
+impl SpinlockValid for Spinlock<19> {}
+
+/// Spinlock number 20
+pub type Spinlock20 = Spinlock<20>;
+
+impl SpinlockValid for Spinlock<20> {}
+
+/// Spinlock number 21
+pub type Spinlock21 = Spinlock<21>;
+
+impl SpinlockValid for Spinlock<21> {}
+
+/// Spinlock number 22
+pub type Spinlock22 = Spinlock<22>;
+
+impl SpinlockValid for Spinlock<22> {}
+
+/// Spinlock number 23
+pub type Spinlock23 = Spinlock<23>;
+
+impl SpinlockValid for Spinlock<23> {}
+
+/// Spinlock number 24
+pub type Spinlock24 = Spinlock<24>;
+
+impl SpinlockValid for Spinlock<24> {}
+
+/// Spinlock number 25
+pub type Spinlock25 = Spinlock<25>;
+
+impl SpinlockValid for Spinlock<25> {}
+
+/// Spinlock number 26
+pub type Spinlock26 = Spinlock<26>;
+
+impl SpinlockValid for Spinlock<26> {}
+
+/// Spinlock number 27
+pub type Spinlock27 = Spinlock<27>;
+
+impl SpinlockValid for Spinlock<27> {}
+
+/// Spinlock number 28
+pub type Spinlock28 = Spinlock<28>;
+
+impl SpinlockValid for Spinlock<28> {}
+
+/// Spinlock number 29
+pub type Spinlock29 = Spinlock<29>;
+
+impl SpinlockValid for Spinlock<29> {}
+
+/// Spinlock number 30
+pub type Spinlock30 = Spinlock<30>;
+
+impl SpinlockValid for Spinlock<30> {}
+
+/// Spinlock number 31
+pub type Spinlock31 = Spinlock<31>;
+
+impl SpinlockValid for Spinlock<31> {}
 
 /// Returns the current state of the spinlocks. Each index corresponds to the associated spinlock, e.g. if index `5` is set to `true`, it means that [`Spinlock5`] is currently locked.
 ///
