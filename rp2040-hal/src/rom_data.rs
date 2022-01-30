@@ -215,24 +215,26 @@ rom_functions! {
     b"UB" fn reset_to_usb_boot(gpio_activity_pin_mask: u32, disable_interface_mask: u32) -> ();
 
     /// Sets n bytes start at ptr to the value c and returns ptr
-    b"MS" unsafe fn memset(ptr: *mut u8, c: u8, n: u8) -> *mut u8;
+    b"MS" unsafe fn memset(ptr: *mut u8, c: u8, n: u32) -> *mut u8;
 
     /// Sets n bytes start at ptr to the value c and returns ptr.
     ///
     /// Note this is a slightly more efficient variant of _memset that may only
     /// be used if ptr is word aligned.
-    b"M4" unsafe fn memset4(ptr: *mut u32, c: u8, n: u32) -> *mut u32;
+    // Note the datasheet does not match the actual ROM for the code here, see
+    // https://github.com/raspberrypi/pico-feedback/issues/217
+    b"S4" unsafe fn memset4(ptr: *mut u32, c: u8, n: u32) -> *mut u32;
 
     /// Copies n bytes starting at src to dest and returns dest. The results are undefined if the
     /// regions overlap.
-    b"MC" unsafe fn memcpy(dest: *mut u8, src: *mut u8, n: u32) -> u8;
+    b"MC" unsafe fn memcpy(dest: *mut u8, src: *const u8, n: u32) -> *mut u8;
 
     /// Copies n bytes starting at src to dest and returns dest. The results are undefined if the
     /// regions overlap.
     ///
     /// Note this is a slightly more efficient variant of _memcpy that may only be
     /// used if dest and src are word aligned.
-    b"C4" unsafe fn memcpy44(dest: *mut u32, src: *mut u32, n: u32) -> *mut u8;
+    b"C4" unsafe fn memcpy44(dest: *mut u32, src: *const u32, n: u32) -> *mut u8;
 
     /// Restore all QSPI pad controls to their default state, and connect the SSI to the QSPI pads.
     b"IF" unsafe fn connect_internal_flash() -> ();
