@@ -220,12 +220,31 @@ pub trait SpinlockValid {}
 ///
 /// You can claim this lock by calling either [`claim`], [`try_claim`] or
 /// [`claim_async`]. These spin-locks are hardware backed, so if you lock
-/// `Spinlock<6>` any other part of your program using `Spinlock<6>` will
-/// suddenly find it to be locked.
+/// e.g. `Spinlock<6>`, then any other part of your application using
+/// `Spinlock<6>` will contend for the same lock, without them needing to
+/// share a reference or otherwise communicate with each other.
 ///
 /// When the obtained spinlock goes out of scope, it is automatically unlocked.
 ///
-/// **warning**: These spinlocks are not re-entrant, meaning that the following code will cause a deadlock:
+///
+/// ```no_run
+/// use rp2040_hal::sio::Spinlock0;
+/// static mut SOME_GLOBAL_VAR: u32 = 0;
+///
+/// /// This function is safe to call from two different cores, but is not safe
+/// /// to call from an interrupt routine!
+/// fn update_global_var() {
+///     // Do not say `let _ = ` here - it will immediately unlock!
+///     let _lock = Spinlock0::claim();
+///     // Do your thing here that Core 0 and Core 1 might want to do at the
+///     // same time, like update this global variable:
+///     unsafe { SOME_GLOBAL_VAR += 1 };
+///     // The lock is dropped here.
+/// }
+/// ```
+///
+/// **Warning**: These spinlocks are not re-entrant, meaning that the
+///   following code will cause a deadlock:
 ///
 /// ```no_run
 /// use rp2040_hal::sio::Spinlock0;
@@ -233,9 +252,7 @@ pub trait SpinlockValid {}
 /// let lock_2 = Spinlock0::claim(); // deadlock here
 /// ```
 ///
-/// Use `try_claim` if you are not the only piece of code using any given
-/// spin-lock. Note also that the `critical-section` implementation uses
-/// Spinlock 31.
+/// **Note:** The `critical-section` implementation uses Spinlock 31.
 ///
 /// [`claim`]: #method.claim
 /// [`try_claim`]: #method.try_claim
