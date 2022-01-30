@@ -279,7 +279,9 @@ where
 
     /// Clear a locked spin-lock.
     ///
-    /// Safety: Only call this function if you hold the spin-lock.
+    /// # Safety
+    ///
+    /// Only call this function if you hold the spin-lock.
     pub unsafe fn release() {
         let sio = &*pac::SIO::ptr();
         // Write (any value): release the lock
