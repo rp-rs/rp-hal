@@ -279,6 +279,60 @@ rom_functions! {
     b"WV" unsafe fn wait_for_vector() -> !;
 }
 
+// Various C intrinsics in the ROM
+intrinsics! {
+    #[alias = __popcountdi2]
+    extern "C" fn __popcountsi2(x: u32) -> u32 {
+        popcount32(x)
+    }
+
+    #[alias = __clzdi2]
+    extern "C" fn __clzsi2(x: u32) -> u32 {
+        clz32(x)
+    }
+
+    #[alias = __ctzdi2]
+    extern "C" fn __ctzsi2(x: u32) -> u32 {
+        ctz32(x)
+    }
+
+    // __rbit is only unofficial, but it show up in the ARM documentation,
+    // so may as well hook it up.
+    #[alias = __rbitl]
+    extern "C" fn __rbit(x: u32) -> u32 {
+        reverse32(x)
+    }
+
+    unsafe extern "aapcs" fn __aeabi_memset(dest: *mut u8, n: usize, c: i32) -> () {
+        // Different argument order
+        memset(dest, c as u8, n as u32);
+    }
+
+    #[alias = __aeabi_memset8]
+    unsafe extern "aapcs" fn __aeabi_memset4(dest: *mut u8, n: usize, c: i32) -> () {
+        // Different argument order
+        memset4(dest as *mut u32, c as u8, n as u32);
+    }
+
+    unsafe extern "aapcs" fn __aeabi_memclr(dest: *mut u8, n: usize) -> () {
+        memset(dest, 0, n as u32);
+    }
+
+    #[alias = __aeabi_memclr8]
+    unsafe extern "aapcs" fn __aeabi_memclr4(dest: *mut u8, n: usize) -> () {
+        memset4(dest as *mut u32, 0, n as u32);
+    }
+
+    unsafe extern "aapcs" fn __aeabi_memcpy(dest: *mut u8, src: *const u8, n: usize) -> () {
+        memcpy(dest, src, n as u32);
+    }
+
+    #[alias = __aeabi_memcpy8]
+    unsafe extern "aapcs" fn __aeabi_memcpy4(dest: *mut u8, src: *const u8, n: usize) -> () {
+        memcpy44(dest as *mut u32, src as *const u32, n as u32);
+    }
+}
+
 unsafe fn convert_str(s: *const u8) -> &'static str {
     let mut end = s;
     while *end != 0 {

@@ -15,6 +15,9 @@ pub use paste;
 
 pub extern crate rp2040_pac as pac;
 
+#[macro_use]
+mod intrinsics;
+
 pub mod adc;
 pub(crate) mod atomic_register_access;
 pub mod clocks;
