@@ -171,7 +171,7 @@ impl SioFifo {
     }
 }
 
-fn save_divider<F, R>(f: F) -> R
+pub(crate) fn save_divider<F, R>(f: F) -> R
 where
     F: FnOnce(&pac::sio::RegisterBlock) -> R,
 {
