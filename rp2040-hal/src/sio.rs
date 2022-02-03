@@ -171,15 +171,77 @@ impl SioFifo {
     }
 }
 
-impl HwDivider {
-    /// Perform hardware unsigned divide/modulo operation
-    pub fn unsigned(&self, dividend: u32, divisor: u32) -> DivResult<u32> {
-        let sio = unsafe { &(*pac::SIO::ptr()) };
-        sio.div_udividend.write(|w| unsafe { w.bits(dividend) });
+fn save_divider<F, R>(f: F) -> R
+where
+    F: FnOnce(&pac::sio::RegisterBlock) -> R,
+{
+    let sio = unsafe { &(*pac::SIO::ptr()) };
+    if !sio.div_csr.read().dirty().bit() {
+        // Not dirty, so nothing is waiting for the calculation.  So we can just
+        // issue it directly without a save/restore.
+        f(sio)
+    } else {
+        // Since we can't save the signed-ness of the calculation, we have to make
+        // sure that there's at least an 8 cycle delay before we read the result.
+        // The Pico SDK ensures this by using a 6 cycle push and two 1 cycle reads.
+        // Since we can't be sure the Rust implementation will optimize to the same,
+        // just use an explicit wait.
+        while !sio.div_csr.read().ready().bit() {}
 
+        // Read the quotient last, since that's what clears the dirty flag
+        let dividend = sio.div_udividend.read().bits();
+        let divisor = sio.div_udivisor.read().bits();
+        let remainder = sio.div_remainder.read().bits();
+        let quotient = sio.div_quotient.read().bits();
+
+        // If we get interrupted here (before a write sets the DIRTY flag) its fine, since
+        // we have the full state, so the interruptor doesn't have to restore it.  Once the
+        // write happens and the DIRTY flag is set, the interruptor becomes responsible for
+        // restoring our state.
+        let result = f(sio);
+
+        // If we are interrupted here, then the interruptor will start an incorrect calculation
+        // using a wrong divisor, but we'll restore the divisor and result ourselves correctly.
+        // This sets DIRTY, so any interruptor will save the state.
+        sio.div_udividend.write(|w| unsafe { w.bits(dividend) });
+        // If we are interrupted here, the the interruptor may start the calculation using
+        // incorrectly signed inputs, but we'll restore the result ourselves.
+        // This sets DIRTY, so any interruptor will save the state.
+        sio.div_udivisor.write(|w| unsafe { w.bits(divisor) });
+        // If we are interrupted here, the interruptor will have restored everything but the
+        // quotient may be wrongly signed.  If the calculation started by the above writes is
+        // still ongoing it is stopped, so it won't replace the result we're restoring.
+        // DIRTY and READY set, but only DIRTY matters to make the interruptor save the state.
+        sio.div_remainder.write(|w| unsafe { w.bits(remainder) });
+        // State fully restored after the quotient write.  This sets both DIRTY and READY, so
+        // whatever we may have interrupted can read the result.
+        sio.div_quotient.write(|w| unsafe { w.bits(quotient) });
+
+        result
+    }
+}
+
+// Don't use cortex_m::asm::delay(8) because that ends up delaying 15 cycles
+// on Cortex-M0.  Each iteration of the inner loop is 3 cycles and it adds
+// one extra iteration.
+#[inline(always)]
+fn divider_delay() {
+    cortex_m::asm::nop();
+    cortex_m::asm::nop();
+    cortex_m::asm::nop();
+    cortex_m::asm::nop();
+    cortex_m::asm::nop();
+    cortex_m::asm::nop();
+    cortex_m::asm::nop();
+    cortex_m::asm::nop();
+}
+
+fn divider_unsigned(dividend: u32, divisor: u32) -> DivResult<u32> {
+    save_divider(|sio| {
+        sio.div_udividend.write(|w| unsafe { w.bits(dividend) });
         sio.div_udivisor.write(|w| unsafe { w.bits(divisor) });
 
-        cortex_m::asm::delay(8);
+        divider_delay();
 
         // Note: quotient must be read last
         let remainder = sio.div_remainder.read().bits();
@@ -189,18 +251,17 @@ impl HwDivider {
             remainder,
             quotient,
         }
-    }
+    })
+}
 
-    /// Perform hardware signed divide/modulo operation
-    pub fn signed(&self, dividend: i32, divisor: i32) -> DivResult<i32> {
-        let sio = unsafe { &(*pac::SIO::ptr()) };
+fn divider_signed(dividend: i32, divisor: i32) -> DivResult<i32> {
+    save_divider(|sio| {
         sio.div_sdividend
             .write(|w| unsafe { w.bits(dividend as u32) });
-
         sio.div_sdivisor
             .write(|w| unsafe { w.bits(divisor as u32) });
 
-        cortex_m::asm::delay(8);
+        divider_delay();
 
         // Note: quotient must be read last
         let remainder = sio.div_remainder.read().bits() as i32;
@@ -210,6 +271,106 @@ impl HwDivider {
             remainder,
             quotient,
         }
+    })
+}
+
+impl HwDivider {
+    /// Perform hardware unsigned divide/modulo operation
+    pub fn unsigned(&self, dividend: u32, divisor: u32) -> DivResult<u32> {
+        divider_unsigned(dividend, divisor)
+    }
+
+    /// Perform hardware signed divide/modulo operation
+    pub fn signed(&self, dividend: i32, divisor: i32) -> DivResult<i32> {
+        divider_signed(dividend, divisor)
+    }
+}
+
+macro_rules! divider_intrinsics {
+    () => ();
+
+    (
+        #[arm_aeabi_alias = $alias:ident]
+        pub extern $abi:tt fn $name:ident( $($argname:ident:  $ty:ty),* ) -> $ret:ty {
+            $($body:tt)*
+        }
+
+        $($rest:tt)*
+    ) => (
+        extern $abi fn $name( $($argname: $ty),* ) -> $ret {
+            $($body)*
+        }
+
+        mod $name {
+            #[no_mangle]
+            pub extern $abi fn $name( $($argname: $ty),* ) -> $ret {
+                super::$name($($argname),*)
+            }
+        }
+
+        mod $alias {
+            #[no_mangle]
+            pub extern $abi fn $alias( $($argname: $ty),* ) -> $ret {
+                super::$name($($argname),*)
+            }
+        }
+
+        divider_intrinsics!($($rest)*);
+    );
+
+    (
+        pub extern $abi:tt fn $name:ident( $($argname:ident:  $ty:ty),* ) -> $ret:ty {
+            $($body:tt)*
+        }
+
+        $($rest:tt)*
+    ) => (
+        extern $abi fn $name( $($argname: $ty),* ) -> $ret {
+            $($body)*
+        }
+
+        mod $name {
+            #[no_mangle]
+            pub extern $abi fn $name( $($argname: $ty),* ) -> $ret {
+                super::$name($($argname),*)
+            }
+        }
+
+        divider_intrinsics!($($rest)*);
+    );
+}
+
+divider_intrinsics! {
+    #[arm_aeabi_alias = __aeabi_uidiv]
+    pub extern "C" fn __udivsi3(n: u32, d: u32) -> u32 {
+        divider_unsigned(n, d).quotient
+    }
+
+    pub extern "C" fn __umodsi3(n: u32, d: u32) -> u32 {
+        divider_unsigned(n, d).remainder
+    }
+
+    pub extern "C" fn __udivmodsi4(n: u32, d: u32, rem: Option<&mut u32>) -> u32 {
+        let quo_rem = divider_unsigned(n, d);
+        if let Some(rem) = rem {
+            *rem = quo_rem.remainder;
+        }
+        quo_rem.quotient
+    }
+
+    #[arm_aeabi_alias = __aeabi_idiv]
+    pub extern "C" fn __divsi3(n: i32, d: i32) -> i32 {
+        divider_signed(n, d).quotient
+    }
+
+    pub extern "C" fn __modsi3(n: i32, d: i32) -> i32 {
+        divider_signed(n, d).remainder
+    }
+
+    pub extern "C" fn __divmodsi4(n: i32, d: i32, rem: &mut i32) -> i32 {
+        let quo_rem = divider_signed(n, d);
+        *rem = quo_rem.remainder;
+        quo_rem.quotient
     }
 }
 
