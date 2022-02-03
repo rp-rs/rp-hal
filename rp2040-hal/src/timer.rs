@@ -3,6 +3,7 @@
 
 use embedded_time::duration::Microseconds;
 
+use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
 use crate::pac::{RESETS, TIMER};
 use crate::resets::SubsystemReset;
 use core::marker::PhantomData;
@@ -200,12 +201,15 @@ macro_rules! impl_alarm {
             /// ` is called.
             ///
             /// The interrupt is unable to trigger a 2nd time until this interrupt is cleared.
-            pub fn clear_interrupt(&mut self, timer: &mut Timer) {
-                // safety: Because we have a mutable reference on `timer`, we have exclusive access to `TIMER::ptr()`
-                let _ = timer;
-                let timer = unsafe { &*TIMER::ptr() };
-
-                timer.intr.modify(|_, w| w.$int_alarm().set_bit());
+            pub fn clear_interrupt(&mut self) {
+                // safety: TIMER.intr is a write-clear register, so we can atomically clear our interrupt
+                // by writing its value to this field
+                // Only one instance of this alarm index can exist, and only this alarm interacts with this bit
+                // of the TIMER.inte register
+                unsafe {
+                    let timer = &(*pac::TIMER::ptr());
+                    timer.intr.write_with_zero(|w| w.$int_alarm().set_bit());
+                }
             }
 
             /// Enable this alarm to trigger an interrupt. This alarm will trigger `
@@ -215,21 +219,27 @@ macro_rules! impl_alarm {
             /// After this interrupt is triggered, make sure to clear the interrupt with [clear_interrupt].
             ///
             /// [clear_interrupt]: #method.clear_interrupt
-            pub fn enable_interrupt(&mut self, timer: &mut Timer) {
-                // safety: Because we have a mutable reference on `timer`, we have exclusive access to `TIMER::ptr()`
-                let _ = timer;
-                let timer = unsafe { &*TIMER::ptr() };
-
-                timer.inte.modify(|_, w| w.$int_alarm().set_bit());
+            pub fn enable_interrupt(&mut self) {
+                // safety: using the atomic set alias means we can atomically set our interrupt enable bit.
+                // Only one instance of this alarm can exist, and only this alarm interacts with this bit
+                // of the TIMER.inte register
+                unsafe {
+                    let timer = &(*pac::TIMER::ptr());
+                    let reg = (&timer.inte).as_ptr();
+                    write_bitmask_set(reg, $armed_bit_mask);
+                }
             }
 
             /// Disable this alarm, preventing it from triggering an interrupt.
-            pub fn disable_interrupt(&mut self, timer: &mut Timer) {
-                // safety: Because we have a mutable reference on `timer`, we have exclusive access to `TIMER::ptr()`
-                let _ = timer;
-                let timer = unsafe { &*TIMER::ptr() };
-
-                timer.inte.modify(|_, w| w.$int_alarm().clear_bit());
+            pub fn disable_interrupt(&mut self) {
+                // safety: using the atomic set alias means we can atomically clear our interrupt enable bit.
+                // Only one instance of this alarm can exist, and only this alarm interacts with this bit
+                // of the TIMER.inte register
+                unsafe {
+                    let timer = &(*pac::TIMER::ptr());
+                    let reg = (&timer.inte).as_ptr();
+                    write_bitmask_clear(reg, $armed_bit_mask);
+                }
             }
 
             /// Schedule the alarm to be finished after `countdown`. If [enable_interrupt] is called, this will trigger interrupt `
