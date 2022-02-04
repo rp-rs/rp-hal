@@ -53,3 +53,4 @@ rt = ["rp2040-pac/rt"]
 #
 # embassy-traits = ["embassy_traits", "futures"]
 alloc = []
+rom-func-cache = []
