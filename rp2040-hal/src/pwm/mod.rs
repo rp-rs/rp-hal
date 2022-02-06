@@ -67,7 +67,7 @@
 //! pwm.set_div_int(1u8); // To set integer part of clock divider
 //! pwm.set_div_frac(0u8); // To set fractional part of clock divider
 //!
-//! pwm.get_top(); // To set the TOP register
+//! pwm.get_top(); // To get the TOP register
 //! pwm.set_top(u16::MAX); // To set the TOP register
 //!
 //! ```
