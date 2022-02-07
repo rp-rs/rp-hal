@@ -24,6 +24,9 @@ const FUNC_TABLE: *const u16 = 0x0000_0014 as _;
 /// Pointer to the public data lookup table.
 const DATA_TABLE: *const u16 = 0x0000_0016 as _;
 
+/// Address of the version number of the ROM.
+const VERSION_NUMBER: *const u8 = 0x0000_0013 as _;
+
 /// Retrive rom content from a table using a code.
 fn rom_table_lookup<T>(table: *const u16, tag: RomFnTableCode) -> T {
     unsafe {
@@ -285,6 +288,11 @@ unsafe fn convert_str(s: *const u8) -> &'static str {
     core::str::from_utf8_unchecked(s)
 }
 
+/// The version number of the rom.
+pub fn rom_version_number() -> u8 {
+    unsafe { *VERSION_NUMBER }
+}
+
 /// The Raspberry Pi Trading Ltd copyright string.
 pub fn copyright_string() -> &'static str {
     let s: *const u8 = rom_table_lookup(DATA_TABLE, *b"CR");
@@ -318,6 +326,12 @@ pub fn fplib_end() -> *const u8 {
 
 /// This entry is only present in the V2 bootrom. See Table 182 in the RP2040 datasheet for the contents of this table.
 pub fn soft_double_table() -> *const usize {
+    if rom_version_number() < 2 {
+        panic!(
+            "Double precision operations require V2 bootrom (found: V{})",
+            rom_version_number()
+        );
+    }
     rom_table_lookup(DATA_TABLE, *b"SD")
 }
 
@@ -421,9 +435,44 @@ pub mod float_funcs {
         0x4c fexp(v: f32) -> f32;
         /// Calculates the natural logarithm of `v`. If `v <= 0` return -Infinity
         0x50 fln(v: f32) -> f32;
+    }
 
-        // These are only on BootROM v2 or higher
+    macro_rules! make_functions_v2 {
+        (
+            $(
+                $(#[$outer:meta])*
+                $offset:literal $name:ident (
+                    $( $aname:ident : $aty:ty ),*
+                ) -> $ret:ty;
+            )*
+        ) => {
+            $(
+                declare_rom_function! {
+                    $(#[$outer])*
+                    fn $name( $( $aname : $aty ),* ) -> $ret {
+                        if $crate::rom_data::rom_version_number() < 2 {
+                            panic!(
+                                "Floating point function requires V2 bootrom (found: V{})",
+                                $crate::rom_data::rom_version_number()
+                            );
+                        }
+                        let table: *const usize = $crate::rom_data::soft_float_table();
+                        unsafe {
+                            // This is the entry in the table. Our offset is given as a
+                            // byte offset, but we want the table index (each pointer in
+                            // the table is 4 bytes long)
+                            let entry: *const usize = table.offset($offset / 4);
+                            // Read the pointer from the table
+                            core::ptr::read(entry) as *const u32
+                        }
+                    }
+                }
+            )*
+        }
+    }
 
+    // These are only on BootROM v2 or higher
+    make_functions_v2! {
         /// Compares two floating point numbers, returning:
         ///     • 0 if a == b
         ///     • -1 if a < b
