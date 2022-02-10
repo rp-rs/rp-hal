@@ -70,10 +70,7 @@ use crate::{
     watchdog::Watchdog,
     xosc::{setup_xosc_blocking, CrystalOscillator, Error as XoscError, Stable},
 };
-use core::{
-    convert::{Infallible, TryInto},
-    marker::PhantomData,
-};
+use core::{convert::Infallible, marker::PhantomData};
 use embedded_time::rate::*;
 use pac::{CLOCKS, PLL_SYS, PLL_USB, RESETS, XOSC};
 
@@ -106,7 +103,9 @@ pub enum ClockError {
     /// The frequency desired is higher than the source frequency
     CantIncreaseFreq,
     /// The desired frequency is to high (would overflow an u32)
-    FrequencyToHigh,
+    FrequencyTooHigh,
+    /// The desired frequency is too low (divider can't reach the desired value)
+    FrequencyTooLow,
 }
 
 /// For clocks
@@ -353,4 +352,31 @@ pub fn init_clocks_and_plls(
         .init_default(&xosc, &pll_sys, &pll_usb)
         .map_err(InitError::ClockError)?;
     Ok(clocks)
+}
+
+// Calculates (numerator<<8)/denominator, avoiding 64bit division
+// Returns None if the result would not fit in 32 bit.
+fn fractional_div(numerator: u32, denominator: u32) -> Option<u32> {
+    if denominator.eq(&numerator) {
+        return Some(1 << 8);
+    }
+
+    let div_int = numerator / denominator;
+    if div_int >= 1 << 24 {
+        return None;
+    }
+
+    let div_rem = numerator - (div_int * denominator);
+
+    let div_frac = if div_rem < 1 << 24 {
+        // div_rem is small enough to shift it by 8 bits without overflow
+        (div_rem << 8) / denominator
+    } else {
+        // div_rem is too large. Shift denominator right, instead.
+        // As 1<<24 < div_rem < denominator, relative error caused by the
+        // lost lower 8 bits of denominator is smaller than 2^-16
+        (div_rem) / (denominator >> 8)
+    };
+
+    Some((div_int << 8) + div_frac)
 }
