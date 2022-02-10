@@ -99,6 +99,8 @@ impl ShareableClocks {
 }
 
 /// Something when wrong setting up the clock
+#[non_exhaustive]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ClockError {
     /// The frequency desired is higher than the source frequency
     CantIncreaseFreq,
