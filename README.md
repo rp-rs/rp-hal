@@ -93,7 +93,7 @@ to select one at build time.
 
 Each BSP includes some examples to show off the features of that particular board.
 
-[Cargo Workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html]
+[Cargo Workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html
 [Embedded HAL]: https://github.com/rust-embedded/embedded-hal
 [Cargo Features]: https://doc.rust-lang.org/cargo/reference/features.html
 
