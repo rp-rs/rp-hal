@@ -24,6 +24,9 @@ const FUNC_TABLE: *const u16 = 0x0000_0014 as _;
 /// Pointer to the public data lookup table.
 const DATA_TABLE: *const u16 = 0x0000_0016 as _;
 
+/// Address of the version number of the ROM.
+const VERSION_NUMBER: *const u8 = 0x0000_0013 as _;
+
 /// Retrive rom content from a table using a code.
 fn rom_table_lookup<T>(table: *const u16, tag: RomFnTableCode) -> T {
     unsafe {
@@ -215,24 +218,26 @@ rom_functions! {
     b"UB" fn reset_to_usb_boot(gpio_activity_pin_mask: u32, disable_interface_mask: u32) -> ();
 
     /// Sets n bytes start at ptr to the value c and returns ptr
-    b"MS" unsafe fn memset(ptr: *mut u8, c: u8, n: u8) -> *mut u8;
+    b"MS" unsafe fn memset(ptr: *mut u8, c: u8, n: u32) -> *mut u8;
 
     /// Sets n bytes start at ptr to the value c and returns ptr.
     ///
     /// Note this is a slightly more efficient variant of _memset that may only
     /// be used if ptr is word aligned.
-    b"M4" unsafe fn memset4(ptr: *mut u32, c: u8, n: u32) -> *mut u32;
+    // Note the datasheet does not match the actual ROM for the code here, see
+    // https://github.com/raspberrypi/pico-feedback/issues/217
+    b"S4" unsafe fn memset4(ptr: *mut u32, c: u8, n: u32) -> *mut u32;
 
     /// Copies n bytes starting at src to dest and returns dest. The results are undefined if the
     /// regions overlap.
-    b"MC" unsafe fn memcpy(dest: *mut u8, src: *mut u8, n: u32) -> u8;
+    b"MC" unsafe fn memcpy(dest: *mut u8, src: *const u8, n: u32) -> *mut u8;
 
     /// Copies n bytes starting at src to dest and returns dest. The results are undefined if the
     /// regions overlap.
     ///
     /// Note this is a slightly more efficient variant of _memcpy that may only be
     /// used if dest and src are word aligned.
-    b"C4" unsafe fn memcpy44(dest: *mut u32, src: *mut u32, n: u32) -> *mut u8;
+    b"C4" unsafe fn memcpy44(dest: *mut u32, src: *const u32, n: u32) -> *mut u8;
 
     /// Restore all QSPI pad controls to their default state, and connect the SSI to the QSPI pads.
     b"IF" unsafe fn connect_internal_flash() -> ();
@@ -274,6 +279,60 @@ rom_functions! {
     b"WV" unsafe fn wait_for_vector() -> !;
 }
 
+// Various C intrinsics in the ROM
+intrinsics! {
+    #[alias = __popcountdi2]
+    extern "C" fn __popcountsi2(x: u32) -> u32 {
+        popcount32(x)
+    }
+
+    #[alias = __clzdi2]
+    extern "C" fn __clzsi2(x: u32) -> u32 {
+        clz32(x)
+    }
+
+    #[alias = __ctzdi2]
+    extern "C" fn __ctzsi2(x: u32) -> u32 {
+        ctz32(x)
+    }
+
+    // __rbit is only unofficial, but it show up in the ARM documentation,
+    // so may as well hook it up.
+    #[alias = __rbitl]
+    extern "C" fn __rbit(x: u32) -> u32 {
+        reverse32(x)
+    }
+
+    unsafe extern "aapcs" fn __aeabi_memset(dest: *mut u8, n: usize, c: i32) -> () {
+        // Different argument order
+        memset(dest, c as u8, n as u32);
+    }
+
+    #[alias = __aeabi_memset8]
+    unsafe extern "aapcs" fn __aeabi_memset4(dest: *mut u8, n: usize, c: i32) -> () {
+        // Different argument order
+        memset4(dest as *mut u32, c as u8, n as u32);
+    }
+
+    unsafe extern "aapcs" fn __aeabi_memclr(dest: *mut u8, n: usize) -> () {
+        memset(dest, 0, n as u32);
+    }
+
+    #[alias = __aeabi_memclr8]
+    unsafe extern "aapcs" fn __aeabi_memclr4(dest: *mut u8, n: usize) -> () {
+        memset4(dest as *mut u32, 0, n as u32);
+    }
+
+    unsafe extern "aapcs" fn __aeabi_memcpy(dest: *mut u8, src: *const u8, n: usize) -> () {
+        memcpy(dest, src, n as u32);
+    }
+
+    #[alias = __aeabi_memcpy8]
+    unsafe extern "aapcs" fn __aeabi_memcpy4(dest: *mut u8, src: *const u8, n: usize) -> () {
+        memcpy44(dest as *mut u32, src as *const u32, n as u32);
+    }
+}
+
 unsafe fn convert_str(s: *const u8) -> &'static str {
     let mut end = s;
     while *end != 0 {
@@ -281,6 +340,11 @@ unsafe fn convert_str(s: *const u8) -> &'static str {
     }
     let s = core::slice::from_raw_parts(s, end.offset_from(s) as usize);
     core::str::from_utf8_unchecked(s)
+}
+
+/// The version number of the rom.
+pub fn rom_version_number() -> u8 {
+    unsafe { *VERSION_NUMBER }
 }
 
 /// The Raspberry Pi Trading Ltd copyright string.
@@ -316,6 +380,12 @@ pub fn fplib_end() -> *const u8 {
 
 /// This entry is only present in the V2 bootrom. See Table 182 in the RP2040 datasheet for the contents of this table.
 pub fn soft_double_table() -> *const usize {
+    if rom_version_number() < 2 {
+        panic!(
+            "Double precision operations require V2 bootrom (found: V{})",
+            rom_version_number()
+        );
+    }
     rom_table_lookup(DATA_TABLE, *b"SD")
 }
 
@@ -419,9 +489,44 @@ pub mod float_funcs {
         0x4c fexp(v: f32) -> f32;
         /// Calculates the natural logarithm of `v`. If `v <= 0` return -Infinity
         0x50 fln(v: f32) -> f32;
+    }
 
-        // These are only on BootROM v2 or higher
+    macro_rules! make_functions_v2 {
+        (
+            $(
+                $(#[$outer:meta])*
+                $offset:literal $name:ident (
+                    $( $aname:ident : $aty:ty ),*
+                ) -> $ret:ty;
+            )*
+        ) => {
+            $(
+                declare_rom_function! {
+                    $(#[$outer])*
+                    fn $name( $( $aname : $aty ),* ) -> $ret {
+                        if $crate::rom_data::rom_version_number() < 2 {
+                            panic!(
+                                "Floating point function requires V2 bootrom (found: V{})",
+                                $crate::rom_data::rom_version_number()
+                            );
+                        }
+                        let table: *const usize = $crate::rom_data::soft_float_table();
+                        unsafe {
+                            // This is the entry in the table. Our offset is given as a
+                            // byte offset, but we want the table index (each pointer in
+                            // the table is 4 bytes long)
+                            let entry: *const usize = table.offset($offset / 4);
+                            // Read the pointer from the table
+                            core::ptr::read(entry) as *const u32
+                        }
+                    }
+                }
+            )*
+        }
+    }
 
+    // These are only on BootROM v2 or higher
+    make_functions_v2! {
         /// Compares two floating point numbers, returning:
         ///     • 0 if a == b
         ///     • -1 if a < b

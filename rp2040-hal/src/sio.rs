@@ -171,7 +171,7 @@ impl SioFifo {
     }
 }
 
-fn save_divider<F, R>(f: F) -> R
+pub(crate) fn save_divider<F, R>(f: F) -> R
 where
     F: FnOnce(&pac::sio::RegisterBlock) -> R,
 {
@@ -286,71 +286,17 @@ impl HwDivider {
     }
 }
 
-macro_rules! divider_intrinsics {
-    () => ();
-
-    (
-        #[arm_aeabi_alias = $alias:ident]
-        pub extern $abi:tt fn $name:ident( $($argname:ident:  $ty:ty),* ) -> $ret:ty {
-            $($body:tt)*
-        }
-
-        $($rest:tt)*
-    ) => (
-        extern $abi fn $name( $($argname: $ty),* ) -> $ret {
-            $($body)*
-        }
-
-        mod $name {
-            #[no_mangle]
-            pub extern $abi fn $name( $($argname: $ty),* ) -> $ret {
-                super::$name($($argname),*)
-            }
-        }
-
-        mod $alias {
-            #[no_mangle]
-            pub extern $abi fn $alias( $($argname: $ty),* ) -> $ret {
-                super::$name($($argname),*)
-            }
-        }
-
-        divider_intrinsics!($($rest)*);
-    );
-
-    (
-        pub extern $abi:tt fn $name:ident( $($argname:ident:  $ty:ty),* ) -> $ret:ty {
-            $($body:tt)*
-        }
-
-        $($rest:tt)*
-    ) => (
-        extern $abi fn $name( $($argname: $ty),* ) -> $ret {
-            $($body)*
-        }
-
-        mod $name {
-            #[no_mangle]
-            pub extern $abi fn $name( $($argname: $ty),* ) -> $ret {
-                super::$name($($argname),*)
-            }
-        }
-
-        divider_intrinsics!($($rest)*);
-    );
-}
-
-divider_intrinsics! {
-    #[arm_aeabi_alias = __aeabi_uidiv]
-    pub extern "C" fn __udivsi3(n: u32, d: u32) -> u32 {
+intrinsics! {
+    #[aeabi = __aeabi_uidiv]
+    extern "C" fn __udivsi3(n: u32, d: u32) -> u32 {
         divider_unsigned(n, d).quotient
     }
 
-    pub extern "C" fn __umodsi3(n: u32, d: u32) -> u32 {
+    extern "C" fn __umodsi3(n: u32, d: u32) -> u32 {
         divider_unsigned(n, d).remainder
     }
 
-    pub extern "C" fn __udivmodsi4(n: u32, d: u32, rem: Option<&mut u32>) -> u32 {
+    extern "C" fn __udivmodsi4(n: u32, d: u32, rem: Option<&mut u32>) -> u32 {
         let quo_rem = divider_unsigned(n, d);
         if let Some(rem) = rem {
             *rem = quo_rem.remainder;
@@ -358,16 +304,16 @@ divider_intrinsics! {
         quo_rem.quotient
     }
 
-    #[arm_aeabi_alias = __aeabi_idiv]
-    pub extern "C" fn __divsi3(n: i32, d: i32) -> i32 {
+    #[aeabi = __aeabi_idiv]
+    extern "C" fn __divsi3(n: i32, d: i32) -> i32 {
         divider_signed(n, d).quotient
     }
 
-    pub extern "C" fn __modsi3(n: i32, d: i32) -> i32 {
+    extern "C" fn __modsi3(n: i32, d: i32) -> i32 {
         divider_signed(n, d).remainder
     }
 
-    pub extern "C" fn __divmodsi4(n: i32, d: i32, rem: &mut i32) -> i32 {
+    extern "C" fn __divmodsi4(n: i32, d: i32, rem: &mut i32) -> i32 {
         let quo_rem = divider_signed(n, d);
         *rem = quo_rem.remainder;
         quo_rem.quotient
