@@ -22,8 +22,6 @@
 #![no_std]
 #![no_main]
 
-use core::cell::RefCell;
-use cortex_m::interrupt::Mutex;
 // The macro for our start-up function
 use cortex_m_rt::entry;
 
@@ -44,27 +42,43 @@ use embedded_hal::digital::v2::ToggleableOutputPin;
 // Our interrupt macro
 use hal::pac::interrupt;
 
+// Some short-cuts to useful types
+use core::cell::RefCell;
+use cortex_m::interrupt::Mutex;
+use rp2040_hal::gpio;
+
+// The GPIO interrupt type we're going to generate
+use rp2040_hal::gpio::Interrupt::EdgeLow;
+
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
 #[link_section = ".boot2"]
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
-use rp2040_hal::gpio;
-use rp2040_hal::gpio::Interrupt::EdgeLow;
-
 /// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz. Adjust
 /// if your board has a different frequency
 const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
-// Pin types quickly become very long - make some type aliases using `type` to help with that
-// This also makes it super quick to change pin numbers!
+// Pin types quickly become very long!
+// We'll create some type aliases using `type` to help with that
+
+/// This pin will be our output - it will drive an LED if you run this on a Pico
 type LedPin = gpio::Pin<gpio::bank0::Gpio25, gpio::PushPullOutput>;
+
+/// This pin will be our interrupt source.
+/// It will trigger an interrupt if pulled to ground (via a switch or jumper wire)
 type ButtonPin = gpio::Pin<gpio::bank0::Gpio26, gpio::PullUpInput>;
 
-/// This how we transfer our Led and Button pins into the Interrupt Handler
-static GLOBAL_LED: Mutex<RefCell<Option<LedPin>>> = Mutex::new(RefCell::new(None));
-static GLOBAL_BUTTON: Mutex<RefCell<Option<ButtonPin>>> = Mutex::new(RefCell::new(None));
+/// Since we're always accessing these pins together we'll store them in a tuple.
+/// Giving this tuple a type alias means we won't need to use () when putting them
+/// inside an Option. That will be easier to read.
+type LedAndButton = (LedPin, ButtonPin);
+
+/// This how we transfer our Led and Button pins into the Interrupt Handler.
+/// We'll have the option hold both using the LedAndButton type.
+/// This will make it a bit easier to unpack them later.
+static GLOBAL_PINS: Mutex<RefCell<Option<LedAndButton>>> = Mutex::new(RefCell::new(None));
 
 /// Entry point to our bare-metal application.
 ///
@@ -110,21 +124,17 @@ fn main() -> ! {
     // since the variable we're pushing it into has that type
     let led = pins.gpio25.into_mode();
 
-    // Now we give away that GPIO pin, via the variable
-    // `GLOBAL_LED`. We can no longer access this pin from this main thread.
-    cortex_m::interrupt::free(|cs| {
-        GLOBAL_LED.borrow(cs).replace(Some(led));
-    });
-
     // Set up the GPIO pin that will be our input
     let in_pin = pins.gpio26.into_mode();
+
     // Trigger on the 'falling edge' of the input pin.
     // This will happen as the button is being pressed
     in_pin.set_interrupt_enabled(EdgeLow, true);
 
-    // Give away our button GPIO pin too
+    // Give away our pins by moving them into the `GLOBAL_PINS` variable.
+    // We won't need to access them in the main thread again
     cortex_m::interrupt::free(|cs| {
-        GLOBAL_BUTTON.borrow(cs).replace(Some(in_pin));
+        GLOBAL_PINS.borrow(cs).replace(Some((led, in_pin)));
     });
 
     // Unmask the IO_BANK0 IRQ so that the NVIC interrupt controller
@@ -138,8 +148,8 @@ fn main() -> ! {
     loop {
         // interrupts handle everything else in this example.
         // if we wanted low power we could go to sleep. to
-        // keep this example simple we'll just execute a nop.
-        // the nop (No Operation) instruction does nothing,
+        // keep this example simple we'll just execute a `nop`.
+        // the `nop` (No Operation) instruction does nothing,
         // but if we have no code here clippy would complain.
         cortex_m::asm::nop();
     }
@@ -147,31 +157,27 @@ fn main() -> ! {
 
 #[interrupt]
 fn IO_IRQ_BANK0() {
-    static mut LED: Option<LedPin> = None;
-    static mut BUTTON: Option<ButtonPin> = None;
+    static mut LED_AND_BUTTON: Option<LedAndButton> = None;
 
     // This is one-time lazy initialisation. We steal the variables given to us
-    // via `GLOBAL_LED` and `GLOBAL_BUTTON`.
-    if LED.is_none() {
+    // via `GLOBAL_PINS`.
+    if LED_AND_BUTTON.is_none() {
         cortex_m::interrupt::free(|cs| {
-            *LED = GLOBAL_LED.borrow(cs).take();
-        });
-    }
-    if BUTTON.is_none() {
-        cortex_m::interrupt::free(|cs| {
-            *BUTTON = GLOBAL_BUTTON.borrow(cs).take();
+            *LED_AND_BUTTON = GLOBAL_PINS.borrow(cs).take();
         });
     }
 
-    // Need to check if our Option<LedPin> contains our pin
-    if let Some(led) = LED {
+    // Need to check if our Option<LedAndButtonPins> contains our pins
+    if let Some(gpios) = LED_AND_BUTTON {
+        // borrow led and button by *destructuring* the tuple
+        // these will be of type `&mut LedPin` and `&mut ButtonPin`, so we don't have
+        // to move them back into the static after we use them
+        let (led, button) = gpios;
+
         // toggle can't fail, but the embedded-hal traits always allow for it
         // we can discard the return value by assigning it to an unnamed variable
         let _ = led.toggle();
-    }
 
-    // Need to check if our Option<ButtonPin> contains our pin
-    if let Some(button) = BUTTON {
         // Our interrupt doesn't clear itself.
         // Do that now so we don't immediately jump back to this interrupt handler.
         button.clear_interrupt(EdgeLow);
