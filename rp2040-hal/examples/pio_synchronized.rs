@@ -42,6 +42,7 @@ fn main() -> ! {
     let program = pio_proc::pio!(
         32,
         "
+    wait 1 irq 0
 .wrap_target
     set pins, 1 [31]
     set pins, 0 [31]
@@ -51,7 +52,11 @@ fn main() -> ! {
 
     // Initialize and start PIO
     let (mut pio, sm0, sm1, _, _) = pac.PIO0.split(&mut pac.RESETS);
-    let div = 0f32; // as slow as possible (0 is interpreted as 65536)
+    // I'm "measuring" the phase offset between the two pins by connecting
+    // then through a LED. If there is a clock offset, there will be a
+    // short time with a voltage between the pins, so the LED will flash up.
+    // With a slow clock this is not visible, so use a reasonably fast clock.
+    let div = 256f32;
 
     let installed = pio.install(&program.program).unwrap();
     let (mut sm0, _, _) = rp2040_hal::pio::PIOBuilder::from_program(installed)
@@ -71,7 +76,12 @@ fn main() -> ! {
     // The GPIO pin needs to be configured as an output.
     sm1.set_pindirs([(pin1, hal::pio::PinDir::Output)]);
 
-    sm0.synchronize_with(&mut sm1).start();
+    sm0.synchronize_with(&mut sm1);
+
+    sm0.start();
+    sm1.start();
+
+    pio.force_irq(1);
 
     // PIO runs in background, independently from CPU
     #[allow(clippy::empty_loop)]
