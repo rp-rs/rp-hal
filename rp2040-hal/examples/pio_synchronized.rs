@@ -42,7 +42,7 @@ fn main() -> ! {
     let program = pio_proc::pio!(
         32,
         "
-    wait 1 irq 0
+    irq wait 0
 .wrap_target
     set pins, 1 [31]
     set pins, 0 [31]
@@ -81,7 +81,7 @@ fn main() -> ! {
     sm0.start();
     sm1.start();
 
-    pio.force_irq(1);
+    pio.clear_irq(1);
 
     // PIO runs in background, independently from CPU
     #[allow(clippy::empty_loop)]
