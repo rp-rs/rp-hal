@@ -79,7 +79,7 @@ use super::reg::RegisterInterface;
 use core::convert::TryFrom;
 
 #[cfg(feature = "eh1_0_alpha")]
-use eh1_0_alpha::digital::blocking as eh1;
+use eh1_0_alpha::digital as eh1;
 use hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin};
 
 //==============================================================================
@@ -545,8 +545,12 @@ impl StatefulOutputPin for DynPin {
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl eh1::OutputPin for DynPin {
+impl eh1::ErrorType for DynPin {
     type Error = Error;
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1::blocking::OutputPin for DynPin {
     #[inline]
     fn set_high(&mut self) -> Result<(), Self::Error> {
         self._set_high()
@@ -558,8 +562,7 @@ impl eh1::OutputPin for DynPin {
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl eh1::InputPin for DynPin {
-    type Error = Error;
+impl eh1::blocking::InputPin for DynPin {
     #[inline]
     fn is_high(&self) -> Result<bool, Self::Error> {
         self._is_high()
@@ -571,8 +574,7 @@ impl eh1::InputPin for DynPin {
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl eh1::ToggleableOutputPin for DynPin {
-    type Error = Error;
+impl eh1::blocking::ToggleableOutputPin for DynPin {
     #[inline]
     fn toggle(&mut self) -> Result<(), Self::Error> {
         self._toggle()
@@ -580,7 +582,7 @@ impl eh1::ToggleableOutputPin for DynPin {
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl eh1::StatefulOutputPin for DynPin {
+impl eh1::blocking::StatefulOutputPin for DynPin {
     #[inline]
     fn is_set_high(&self) -> Result<bool, Self::Error> {
         self._is_set_high()

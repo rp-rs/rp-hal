@@ -243,9 +243,12 @@ macro_rules! impl_write {
         impl<D: SpiDevice> spi::write_iter::Default<$type> for Spi<Enabled, D, $nr> {}
 
         #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice> eh1::nb::FullDuplex<$type> for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice> eh1::ErrorType for Spi<Enabled, D, $nr> {
             type Error = SpiInfallible;
+        }
 
+        #[cfg(feature = "eh1_0_alpha")]
+        impl<D: SpiDevice> eh1::nb::FullDuplex<$type> for Spi<Enabled, D, $nr> {
             fn read(&mut self) -> Result<$type, nb::Error<SpiInfallible>> {
                 if !self.is_readable() {
                     return Err(nb::Error::WouldBlock);
