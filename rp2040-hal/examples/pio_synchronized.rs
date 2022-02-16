@@ -39,10 +39,8 @@ fn main() -> ! {
     let pin1 = 1;
 
     // Define some simple PIO program.
-    let program = pio_proc::pio!(
-        32,
+    let program = pio_proc::pio_asm!(
         "
-    irq wait 0
 .wrap_target
     set pins, 1 [31]
     set pins, 0 [31]
@@ -78,10 +76,11 @@ fn main() -> ! {
 
     sm0.synchronize_with(&mut sm1);
 
-    sm0.start();
-    sm1.start();
-
-    pio.clear_irq(1);
+    let mut joining = sm0.join();
+    let sm1 = joining.with(sm1);
+    let mut started = joining.start();
+    let _sm1 = started.take(sm1);
+    let _sm0 = started.free();
 
     // PIO runs in background, independently from CPU
     #[allow(clippy::empty_loop)]

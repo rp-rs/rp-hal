@@ -497,6 +497,8 @@ pub struct StateMachine<SM: ValidStateMachine, State> {
 pub struct Stopped;
 /// Marker for an initialized and running state machine.
 pub struct Running;
+/// Marker for an initialized state machine marked to be started.
+pub struct Starting;
 
 impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     /// Stops the state machine if it is still running and returns its program.
@@ -573,6 +575,16 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
         });
     }
 
+    /// Prepare state machine for stating it together with other state machines.
+    pub fn join(self) -> Joining<SM> {
+        let sm_mask = 1 << SM::id();
+
+        Joining {
+            sm: self,
+            sm_mask,
+        }
+    }
+
     /// Sets the pin state for the specified pins.
     ///
     /// The user has to make sure that they do not select any pins that are in use by any
@@ -629,6 +641,69 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
             .sm()
             .sm_pinctrl
             .write(|w| unsafe { w.bits(saved_ctrl.bits()) });
+    }
+}
+
+/// Collects state machines to be startet together
+pub struct Joining<SM: ValidStateMachine> {
+    sm: StateMachine<SM, Stopped>,
+    sm_mask: u32,
+}
+
+/// Contains state machines which have been startet together
+pub struct Started<SM: ValidStateMachine> {
+    sm: StateMachine<SM, Stopped>,
+    sm_mask: u32,
+}
+
+impl<SM: ValidStateMachine> Joining<SM> {
+    /// Adds another state machine to started together
+    pub fn with<SM2: ValidStateMachine>(
+        &mut self,
+        other_sm: StateMachine<SM2, Stopped>,
+    ) -> StateMachine<SM2, Starting> {
+        // Add another state machine index to the mask.
+        self.sm_mask |= 1 << SM2::id();
+        StateMachine {
+            sm: other_sm.sm,
+            program: other_sm.program,
+            _phantom: core::marker::PhantomData,
+        }
+    }
+
+    /// Start joined state machines
+    pub fn start(mut self) -> Started<SM> {
+        self.sm.sm.set_ctrl_bits(self.sm_mask);
+        Started {
+            sm: self.sm,
+            sm_mask: self.sm_mask,
+        }
+    }
+}
+impl<SM: ValidStateMachine> Started<SM> {
+    /// Retrieve started state machine
+    pub fn take<SM2: ValidStateMachine>(
+        &mut self,
+        other_sm: StateMachine<SM2, Starting>,
+    ) -> StateMachine<SM2, Running> {
+        if self.sm_mask | (1 << SM2::id()) == 0 {
+            panic!("Trying to take unavailable state machine");
+        }
+        self.sm_mask &= !(1 << SM2::id());
+        StateMachine {
+            sm: other_sm.sm,
+            program: other_sm.program,
+            _phantom: core::marker::PhantomData,
+        }
+    }
+
+    /// Retrieve started state machine
+    pub fn free(self) -> StateMachine<SM, Running> {
+        StateMachine {
+            sm: self.sm.sm,
+            program: self.sm.program,
+            _phantom: core::marker::PhantomData,
+        }
     }
 }
 
