@@ -157,6 +157,7 @@ fn main() -> ! {
 
 #[interrupt]
 fn IO_IRQ_BANK0() {
+    // The `#[interrupt]` attribute covertly converts this to `&'static mut Option<LedAndButton>`
     static mut LED_AND_BUTTON: Option<LedAndButton> = None;
 
     // This is one-time lazy initialisation. We steal the variables given to us
