@@ -74,15 +74,23 @@ fn main() -> ! {
     // The GPIO pin needs to be configured as an output.
     sm1.set_pindirs([(pin1, hal::pio::PinDir::Output)]);
 
-    sm0.synchronize_with(&mut sm1);
+    // Start both SMs at the same time
+    let group = sm0.with(sm1).sync().start();
+    cortex_m::asm::delay(10_000_000);
 
-    let mut joining = sm0.join();
-    let sm1 = joining.with(sm1);
-    let mut started = joining.start();
-    let _sm1 = started.take(sm1);
-    let _sm0 = started.free();
+    // Stop both SMs at the same time
+    let group = group.stop();
+    cortex_m::asm::delay(10_000_000);
 
-    // PIO runs in background, independently from CPU
+    // Start them again and extract the individual state machines
+    let (sm1, sm2) = group.start().free();
+    cortex_m::asm::delay(10_000_000);
+
+    // Stop the two state machines separately
+    let _sm1 = sm1.stop();
+    cortex_m::asm::delay(10_000_000);
+    let _sm2 = sm2.stop();
+
     #[allow(clippy::empty_loop)]
     loop {}
 }

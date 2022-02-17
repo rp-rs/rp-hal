@@ -497,8 +497,6 @@ pub struct StateMachine<SM: ValidStateMachine, State> {
 pub struct Stopped;
 /// Marker for an initialized and running state machine.
 pub struct Running;
-/// Marker for an initialized state machine marked to be started.
-pub struct Starting;
 
 impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     /// Stops the state machine if it is still running and returns its program.
@@ -575,16 +573,6 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
         });
     }
 
-    /// Prepare state machine for stating it together with other state machines.
-    pub fn join(self) -> Joining<SM> {
-        let sm_mask = 1 << SM::id();
-
-        Joining {
-            sm: self,
-            sm_mask,
-        }
-    }
-
     /// Sets the pin state for the specified pins.
     ///
     /// The user has to make sure that they do not select any pins that are in use by any
@@ -644,69 +632,6 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
     }
 }
 
-/// Collects state machines to be startet together
-pub struct Joining<SM: ValidStateMachine> {
-    sm: StateMachine<SM, Stopped>,
-    sm_mask: u32,
-}
-
-/// Contains state machines which have been startet together
-pub struct Started<SM: ValidStateMachine> {
-    sm: StateMachine<SM, Stopped>,
-    sm_mask: u32,
-}
-
-impl<SM: ValidStateMachine> Joining<SM> {
-    /// Adds another state machine to started together
-    pub fn with<SM2: ValidStateMachine>(
-        &mut self,
-        other_sm: StateMachine<SM2, Stopped>,
-    ) -> StateMachine<SM2, Starting> {
-        // Add another state machine index to the mask.
-        self.sm_mask |= 1 << SM2::id();
-        StateMachine {
-            sm: other_sm.sm,
-            program: other_sm.program,
-            _phantom: core::marker::PhantomData,
-        }
-    }
-
-    /// Start joined state machines
-    pub fn start(mut self) -> Started<SM> {
-        self.sm.sm.set_ctrl_bits(self.sm_mask);
-        Started {
-            sm: self.sm,
-            sm_mask: self.sm_mask,
-        }
-    }
-}
-impl<SM: ValidStateMachine> Started<SM> {
-    /// Retrieve started state machine
-    pub fn take<SM2: ValidStateMachine>(
-        &mut self,
-        other_sm: StateMachine<SM2, Starting>,
-    ) -> StateMachine<SM2, Running> {
-        if self.sm_mask | (1 << SM2::id()) == 0 {
-            panic!("Trying to take unavailable state machine");
-        }
-        self.sm_mask &= !(1 << SM2::id());
-        StateMachine {
-            sm: other_sm.sm,
-            program: other_sm.program,
-            _phantom: core::marker::PhantomData,
-        }
-    }
-
-    /// Retrieve started state machine
-    pub fn free(self) -> StateMachine<SM, Running> {
-        StateMachine {
-            sm: self.sm.sm,
-            program: self.sm.program,
-            _phantom: core::marker::PhantomData,
-        }
-    }
-}
-
 impl<P: PIOExt, SM: StateMachineIndex> StateMachine<(P, SM), Stopped> {
     /// Restarts the clock dividers for the specified state machines.
     ///
@@ -727,6 +652,352 @@ impl<P: PIOExt, SM: StateMachineIndex> StateMachine<(P, SM), Stopped> {
     ) -> Synchronize<'sm, (P, SM)> {
         let sm_mask = (1 << SM::id()) | (1 << SM2::id());
         Synchronize { sm: self, sm_mask }
+    }
+}
+
+impl<P: PIOExt, SM: StateMachineIndex, State> StateMachine<(P, SM), State> {
+    /// Create a group of state machines, which can be started/stopped synchonously
+    pub fn with<SM2: StateMachineIndex>(
+        self,
+        other_sm: StateMachine<(P, SM2), State>,
+    ) -> StateMachineGroup2<P, SM, SM2, State> {
+        StateMachineGroup2 {
+            sm1: self,
+            sm2: other_sm,
+        }
+    }
+}
+
+/// Group of 2 state machines, which can be started/stopped synchronously.
+pub struct StateMachineGroup2<
+    P: PIOExt,
+    SM1Idx: StateMachineIndex,
+    SM2Idx: StateMachineIndex,
+    State,
+> {
+    sm1: StateMachine<(P, SM1Idx), State>,
+    sm2: StateMachine<(P, SM2Idx), State>,
+}
+
+/// Group of 3 state machines, which can be started/stopped synchronously.
+pub struct StateMachineGroup3<
+    P: PIOExt,
+    SM1Idx: StateMachineIndex,
+    SM2Idx: StateMachineIndex,
+    SM3Idx: StateMachineIndex,
+    State,
+> {
+    sm1: StateMachine<(P, SM1Idx), State>,
+    sm2: StateMachine<(P, SM2Idx), State>,
+    sm3: StateMachine<(P, SM3Idx), State>,
+}
+
+/// Group of 4 state machines, which can be started/stopped synchronously.
+pub struct StateMachineGroup4<
+    P: PIOExt,
+    SM1Idx: StateMachineIndex,
+    SM2Idx: StateMachineIndex,
+    SM3Idx: StateMachineIndex,
+    SM4Idx: StateMachineIndex,
+    State,
+> {
+    sm1: StateMachine<(P, SM1Idx), State>,
+    sm2: StateMachine<(P, SM2Idx), State>,
+    sm3: StateMachine<(P, SM3Idx), State>,
+    sm4: StateMachine<(P, SM4Idx), State>,
+}
+
+impl<P: PIOExt, SM1Idx: StateMachineIndex, SM2Idx: StateMachineIndex, State>
+    StateMachineGroup2<P, SM1Idx, SM2Idx, State>
+{
+    /// Split the group, releasing the contained state machines
+    #[allow(clippy::type_complexity)]
+    pub fn free(
+        self,
+    ) -> (
+        StateMachine<(P, SM1Idx), State>,
+        StateMachine<(P, SM2Idx), State>,
+    ) {
+        (self.sm1, self.sm2)
+    }
+
+    /// Add another state machine to the group
+    pub fn with<SM3Idx: StateMachineIndex>(
+        self,
+        other_sm: StateMachine<(P, SM3Idx), State>,
+    ) -> StateMachineGroup3<P, SM1Idx, SM2Idx, SM3Idx, State> {
+        StateMachineGroup3 {
+            sm1: self.sm1,
+            sm2: self.sm2,
+            sm3: other_sm,
+        }
+    }
+
+    fn mask(&self) -> u32 {
+        (1 << SM1Idx::id()) | (1 << SM2Idx::id())
+    }
+}
+
+impl<
+        P: PIOExt,
+        SM1Idx: StateMachineIndex,
+        SM2Idx: StateMachineIndex,
+        SM3Idx: StateMachineIndex,
+        State,
+    > StateMachineGroup3<P, SM1Idx, SM2Idx, SM3Idx, State>
+{
+    /// Split the group, releasing the contained state machines
+    #[allow(clippy::type_complexity)]
+    pub fn free(
+        self,
+    ) -> (
+        StateMachine<(P, SM1Idx), State>,
+        StateMachine<(P, SM2Idx), State>,
+        StateMachine<(P, SM3Idx), State>,
+    ) {
+        (self.sm1, self.sm2, self.sm3)
+    }
+
+    /// Add another state machine to the group
+    pub fn with<SM4Idx: StateMachineIndex>(
+        self,
+        other_sm: StateMachine<(P, SM4Idx), State>,
+    ) -> StateMachineGroup4<P, SM1Idx, SM2Idx, SM3Idx, SM4Idx, State> {
+        StateMachineGroup4 {
+            sm1: self.sm1,
+            sm2: self.sm2,
+            sm3: self.sm3,
+            sm4: other_sm,
+        }
+    }
+
+    fn mask(&self) -> u32 {
+        (1 << SM1Idx::id()) | (1 << SM2Idx::id()) | (1 << SM3Idx::id())
+    }
+}
+
+impl<
+        P: PIOExt,
+        SM1Idx: StateMachineIndex,
+        SM2Idx: StateMachineIndex,
+        SM3Idx: StateMachineIndex,
+        SM4Idx: StateMachineIndex,
+        State,
+    > StateMachineGroup4<P, SM1Idx, SM2Idx, SM3Idx, SM4Idx, State>
+{
+    /// Split the group, releasing the contained state machines
+    #[allow(clippy::type_complexity)]
+    pub fn free(
+        self,
+    ) -> (
+        StateMachine<(P, SM1Idx), State>,
+        StateMachine<(P, SM2Idx), State>,
+        StateMachine<(P, SM3Idx), State>,
+        StateMachine<(P, SM4Idx), State>,
+    ) {
+        (self.sm1, self.sm2, self.sm3, self.sm4)
+    }
+
+    fn mask(&self) -> u32 {
+        (1 << SM1Idx::id()) | (1 << SM2Idx::id()) | (1 << SM3Idx::id()) | (1 << SM4Idx::id())
+    }
+}
+
+impl<P: PIOExt, SM1Idx: StateMachineIndex, SM2Idx: StateMachineIndex>
+    StateMachineGroup2<P, SM1Idx, SM2Idx, Stopped>
+{
+    /// Start grouped state machines
+    pub fn start(mut self) -> StateMachineGroup2<P, SM1Idx, SM2Idx, Running> {
+        self.sm1.sm.set_ctrl_bits(self.mask());
+        StateMachineGroup2 {
+            sm1: StateMachine {
+                sm: self.sm1.sm,
+                program: self.sm1.program,
+                _phantom: core::marker::PhantomData,
+            },
+            sm2: StateMachine {
+                sm: self.sm2.sm,
+                program: self.sm2.program,
+                _phantom: core::marker::PhantomData,
+            },
+        }
+    }
+
+    /// Sync grouped state machines
+    pub fn sync(mut self) -> Self {
+        self.sm1.sm.set_ctrl_bits(self.mask() << 8);
+        self
+    }
+}
+
+impl<
+        P: PIOExt,
+        SM1Idx: StateMachineIndex,
+        SM2Idx: StateMachineIndex,
+        SM3Idx: StateMachineIndex,
+    > StateMachineGroup3<P, SM1Idx, SM2Idx, SM3Idx, Stopped>
+{
+    /// Start grouped state machines
+    pub fn start(mut self) -> StateMachineGroup3<P, SM1Idx, SM2Idx, SM3Idx, Running> {
+        self.sm1.sm.set_ctrl_bits(self.mask());
+        StateMachineGroup3 {
+            sm1: StateMachine {
+                sm: self.sm1.sm,
+                program: self.sm1.program,
+                _phantom: core::marker::PhantomData,
+            },
+            sm2: StateMachine {
+                sm: self.sm2.sm,
+                program: self.sm2.program,
+                _phantom: core::marker::PhantomData,
+            },
+            sm3: StateMachine {
+                sm: self.sm3.sm,
+                program: self.sm3.program,
+                _phantom: core::marker::PhantomData,
+            },
+        }
+    }
+
+    /// Sync grouped state machines
+    pub fn sync(mut self) -> Self {
+        self.sm1.sm.set_ctrl_bits(self.mask() << 8);
+        self
+    }
+}
+
+impl<
+        P: PIOExt,
+        SM1Idx: StateMachineIndex,
+        SM2Idx: StateMachineIndex,
+        SM3Idx: StateMachineIndex,
+        SM4Idx: StateMachineIndex,
+    > StateMachineGroup4<P, SM1Idx, SM2Idx, SM3Idx, SM4Idx, Stopped>
+{
+    /// Start grouped state machines
+    pub fn start(mut self) -> StateMachineGroup4<P, SM1Idx, SM2Idx, SM3Idx, SM4Idx, Running> {
+        self.sm1.sm.set_ctrl_bits(self.mask());
+        StateMachineGroup4 {
+            sm1: StateMachine {
+                sm: self.sm1.sm,
+                program: self.sm1.program,
+                _phantom: core::marker::PhantomData,
+            },
+            sm2: StateMachine {
+                sm: self.sm2.sm,
+                program: self.sm2.program,
+                _phantom: core::marker::PhantomData,
+            },
+            sm3: StateMachine {
+                sm: self.sm3.sm,
+                program: self.sm3.program,
+                _phantom: core::marker::PhantomData,
+            },
+            sm4: StateMachine {
+                sm: self.sm4.sm,
+                program: self.sm4.program,
+                _phantom: core::marker::PhantomData,
+            },
+        }
+    }
+
+    /// Sync grouped state machines
+    pub fn sync(mut self) -> Self {
+        self.sm1.sm.set_ctrl_bits(self.mask() << 8);
+        self
+    }
+}
+
+impl<P: PIOExt, SM1Idx: StateMachineIndex, SM2Idx: StateMachineIndex>
+    StateMachineGroup2<P, SM1Idx, SM2Idx, Running>
+{
+    /// Stop grouped state machines
+    pub fn stop(mut self) -> StateMachineGroup2<P, SM1Idx, SM2Idx, Stopped> {
+        self.sm1.sm.clear_ctrl_bits(self.mask());
+        StateMachineGroup2 {
+            sm1: StateMachine {
+                sm: self.sm1.sm,
+                program: self.sm1.program,
+                _phantom: core::marker::PhantomData,
+            },
+            sm2: StateMachine {
+                sm: self.sm2.sm,
+                program: self.sm2.program,
+                _phantom: core::marker::PhantomData,
+            },
+        }
+    }
+}
+
+impl<
+        P: PIOExt,
+        SM1Idx: StateMachineIndex,
+        SM2Idx: StateMachineIndex,
+        SM3Idx: StateMachineIndex,
+    > StateMachineGroup3<P, SM1Idx, SM2Idx, SM3Idx, Running>
+{
+    /// Stop grouped state machines
+    pub fn stop(mut self) -> StateMachineGroup3<P, SM1Idx, SM2Idx, SM3Idx, Stopped> {
+        self.sm1.sm.clear_ctrl_bits(self.mask());
+        StateMachineGroup3 {
+            sm1: StateMachine {
+                sm: self.sm1.sm,
+                program: self.sm1.program,
+                _phantom: core::marker::PhantomData,
+            },
+            sm2: StateMachine {
+                sm: self.sm2.sm,
+                program: self.sm2.program,
+                _phantom: core::marker::PhantomData,
+            },
+            sm3: StateMachine {
+                sm: self.sm3.sm,
+                program: self.sm3.program,
+                _phantom: core::marker::PhantomData,
+            },
+        }
+    }
+}
+
+impl<
+        P: PIOExt,
+        SM1Idx: StateMachineIndex,
+        SM2Idx: StateMachineIndex,
+        SM3Idx: StateMachineIndex,
+        SM4Idx: StateMachineIndex,
+    > StateMachineGroup4<P, SM1Idx, SM2Idx, SM3Idx, SM4Idx, Running>
+{
+    /// Stop grouped state machines
+    pub fn stop(mut self) -> StateMachineGroup4<P, SM1Idx, SM2Idx, SM3Idx, SM4Idx, Stopped> {
+        self.sm1.sm.clear_ctrl_bits(self.mask());
+        StateMachineGroup4 {
+            sm1: StateMachine {
+                sm: self.sm1.sm,
+                program: self.sm1.program,
+                _phantom: core::marker::PhantomData,
+            },
+            sm2: StateMachine {
+                sm: self.sm2.sm,
+                program: self.sm2.program,
+                _phantom: core::marker::PhantomData,
+            },
+            sm3: StateMachine {
+                sm: self.sm3.sm,
+                program: self.sm3.program,
+                _phantom: core::marker::PhantomData,
+            },
+            sm4: StateMachine {
+                sm: self.sm4.sm,
+                program: self.sm4.program,
+                _phantom: core::marker::PhantomData,
+            },
+        }
+    }
+
+    /// Sync grouped state machines
+    pub fn sync(mut self) -> Self {
+        self.sm1.sm.set_ctrl_bits(self.mask() << 8);
+        self
     }
 }
 
