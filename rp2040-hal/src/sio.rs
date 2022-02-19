@@ -43,10 +43,10 @@ pub struct HwDivider {
 
 /// Result of divide/modulo operation
 pub struct DivResult<T> {
-    /// The remainder of divide/modulo operation
-    pub remainder: T,
     /// The quotient of divide/modulo operation
     pub quotient: T,
+    /// The remainder of divide/modulo operation
+    pub remainder: T,
 }
 
 /// Struct containing ownership markers for managing ownership of the SIO registers.
