@@ -9,11 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- None
+- ROM function caching
+- ROM version lookup function
+- Compiler intrinsics for ROM functions
+- Compiler intrinsics for hardware divider
+- Document bsp_pins! macro
+- UART IRQ examples
+- PIO side-set example
 
 ### Changed
 
-- None
+- Rewrite UART driver to own its pins
+- Improve UART defaults
+- Fix repeated-read in i2c embassy driver
+- Fix bug in i2c peripheral state machine
+- Fix race condition in alarm
+- Fix safety bugs in hardware divider
+- Enable watchdog reset trigger bits when watchdog enabled
+- Update spinlocks to use new PAC API
+- Use generics to improve spinlock implementation
+- Update critical_section to use new spinlock implementation
 
 ## [0.3.0] - 2021-12-19
 
