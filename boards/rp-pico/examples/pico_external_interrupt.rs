@@ -43,7 +43,7 @@ use rp_pico::hal::{
     gpio::{
         self,
         bank0::{Gpio8, Gpio9},
-        Floating, Input, Pin, Pins,
+        Floating, Input, Pin,
     },
     pac::{self, interrupt},
     Sio, Watchdog,
@@ -155,7 +155,7 @@ fn main() -> ! {
             if let Some(count) = G_COUNT.borrow(cs).borrow_mut().deref_mut() {
                 if old != *count {
                     old = *count;
-                    channel.set_duty((old % 100) as u16 * 250 as u16);
+                    channel.set_duty((old % 100) as u16 * 250);
                 }
             };
         });
@@ -171,7 +171,7 @@ fn IO_IRQ_BANK0() {
     static mut DIRPIN: Option<DirPinType> = None;
     if DIRPIN.is_none() {
         free(|cs| {
-            *DIRPIN = G_DIRPIN.borrow(&cs).take();
+            *DIRPIN = G_DIRPIN.borrow(cs).take();
         });
     }
 
