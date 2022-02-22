@@ -382,3 +382,43 @@ fn fractional_div(numerator: u32, denominator: u32) -> Option<u32> {
 
     Some((div_int << 8) + div_frac)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_fractional_div() {
+        // easy values
+        assert_eq!(fractional_div(1, 1), Some(1 << 8));
+
+        // typical values
+        assert_eq!(fractional_div(125_000_000, 48_000_000), Some(666));
+        assert_eq!(fractional_div(48_000_000, 46875), Some(1024 << 8));
+
+        // resulting frequencies
+        assert_eq!(
+            fractional_div(
+                125_000_000,
+                fractional_div(125_000_000, 48_000_000).unwrap()
+            ),
+            Some(48_048_048)
+        );
+        assert_eq!(
+            fractional_div(48_000_000, fractional_div(48_000_000, 46875).unwrap()),
+            Some(46875)
+        );
+
+        // not allowed in src/clocks/mod.rs, but should still deliver correct results
+        assert_eq!(fractional_div(1, 2), Some(128));
+        assert_eq!(fractional_div(1, 256), Some(1));
+        assert_eq!(fractional_div(1, 257), Some(0));
+
+        // borderline cases
+        assert_eq!(fractional_div((1 << 24) - 1, 1), Some(((1 << 24) - 1) << 8));
+        assert_eq!(fractional_div(1 << 24, 1), None);
+        assert_eq!(fractional_div(1 << 24, 2), Some(1 << (23 + 8)));
+        assert_eq!(fractional_div(1 << 24, (1 << 24) + 1), Some(1 << 8));
+        assert_eq!(fractional_div(u32::MAX, u32::MAX), Some(1 << 8));
+    }
+}
