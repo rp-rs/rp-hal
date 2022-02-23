@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "rp2040-hal",
+    "rp2040-hal-macros",
     "boards/adafruit-feather-rp2040",
     "boards/adafruit-itsy-bitsy-rp2040",
     "boards/adafruit-kb2040",

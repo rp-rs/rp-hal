@@ -49,6 +49,15 @@ pub mod xosc;
 pub use adc::Adc;
 pub use clocks::Clock;
 pub use i2c::I2C;
+/// Attribute to declare the entry point of the program
+///
+/// This is based on and can be used like the [entry attribute from
+/// cortex-m-rt](https://docs.rs/cortex-m-rt/latest/cortex_m_rt/attr.entry.html).
+///
+/// It extends that macro with code to unlock all spinlocks at the beginning
+/// of `main`. As spinlocks are not automatically unlocked on software resets,
+/// this can prevent unexpected deadlocks when running from a debugger.
+pub use rp2040_hal_macros::entry;
 pub use sio::Sio;
 pub use spi::Spi;
 pub use timer::Timer;
