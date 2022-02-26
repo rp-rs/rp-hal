@@ -10,7 +10,7 @@ use embedded_time::rate::Baud;
 use nb::Error::*;
 
 #[cfg(feature = "eh1_0_alpha")]
-use eh1_0_alpha::serial::nb as eh1;
+use eh1_0_alpha::serial as eh1;
 
 /// When there's a read error.
 pub struct ReadError<'err> {
@@ -217,9 +217,12 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Read<u8> for Reader<D, P> {
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1::Read<u8> for Reader<D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> eh1::ErrorType for Reader<D, P> {
     type Error = ReadErrorType;
+}
 
+#[cfg(feature = "eh1_0_alpha")]
+impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Read<u8> for Reader<D, P> {
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
         let byte: &mut [u8] = &mut [0; 1];
 

@@ -10,7 +10,7 @@ use hal::blocking::i2c::{Read, Write, WriteRead};
 use pac::{i2c0::RegisterBlock as Block, RESETS};
 
 #[cfg(feature = "eh1_0_alpha")]
-use eh1_0_alpha::i2c::blocking as eh1;
+use eh1_0_alpha::i2c as eh1;
 
 use super::{i2c_reserved_addr, Controller, Error, SclPin, SdaPin, I2C};
 
@@ -160,7 +160,12 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
         }
     }
 
-    fn read_internal(&mut self, buffer: &mut [u8]) -> Result<(), Error> {
+    fn read_internal(
+        &mut self,
+        buffer: &mut [u8],
+        force_restart: bool,
+        do_stop: bool,
+    ) -> Result<(), Error> {
         let lastindex = buffer.len() - 1;
         for (i, byte) in buffer.iter_mut().enumerate() {
             let first = i == 0;
@@ -170,13 +175,13 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
             while self.tx_fifo_full() {}
 
             self.i2c.ic_data_cmd.write(|w| {
-                if first {
+                if force_restart && first {
                     w.restart().enable();
                 } else {
                     w.restart().disable();
                 }
 
-                if last {
+                if do_stop && last {
                     w.stop().enable();
                 } else {
                     w.stop().disable();
@@ -246,7 +251,7 @@ impl<T: Deref<Target = Block>, PINS> Read for I2C<T, PINS, Controller> {
         Self::validate(addr, None, Some(buffer.is_empty()))?;
 
         self.setup(addr);
-        self.read_internal(buffer)
+        self.read_internal(buffer, true, true)
     }
 }
 impl<T: Deref<Target = Block>, PINS> WriteRead for I2C<T, PINS, Controller> {
@@ -259,7 +264,7 @@ impl<T: Deref<Target = Block>, PINS> WriteRead for I2C<T, PINS, Controller> {
         self.setup(addr);
 
         self.write_internal(tx, false)?;
-        self.read_internal(rx)
+        self.read_internal(rx, true, true)
     }
 }
 impl<T: Deref<Target = Block>, PINS> Write for I2C<T, PINS, Controller> {
@@ -275,26 +280,90 @@ impl<T: Deref<Target = Block>, PINS> Write for I2C<T, PINS, Controller> {
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<T: Deref<Target = Block>, PINS> eh1::Write for I2C<T, PINS, Controller> {
+impl<T: Deref<Target = Block>, PINS> eh1::ErrorType for I2C<T, PINS, Controller> {
     type Error = Error;
+}
 
+#[cfg(feature = "eh1_0_alpha")]
+impl<T: Deref<Target = Block>, PINS> eh1::blocking::I2c for I2C<T, PINS, Controller> {
     fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Self::Error> {
         Write::write(self, addr, bytes)
     }
-}
-#[cfg(feature = "eh1_0_alpha")]
-impl<T: Deref<Target = Block>, PINS> eh1::WriteRead for I2C<T, PINS, Controller> {
-    type Error = Error;
+
+    fn write_iter<B>(&mut self, address: u8, bytes: B) -> Result<(), Self::Error>
+    where
+        B: IntoIterator<Item = u8>,
+    {
+        let mut peekable = bytes.into_iter().peekable();
+        let addr: u16 = address.into();
+        Self::validate(addr, Some(peekable.peek().is_none()), None)?;
+        self.setup(addr);
+
+        while let Some(tx) = peekable.next() {
+            self.write_internal(&[tx], peekable.peek().is_none())?
+        }
+        Ok(())
+    }
 
     fn write_read(&mut self, addr: u8, bytes: &[u8], buffer: &mut [u8]) -> Result<(), Error> {
         WriteRead::write_read(self, addr, bytes, buffer)
     }
-}
-#[cfg(feature = "eh1_0_alpha")]
-impl<T: Deref<Target = Block>, PINS> eh1::Read for I2C<T, PINS, Controller> {
-    type Error = Error;
+
+    fn write_iter_read<B>(
+        &mut self,
+        address: u8,
+        bytes: B,
+        buffer: &mut [u8],
+    ) -> Result<(), Self::Error>
+    where
+        B: IntoIterator<Item = u8>,
+    {
+        let mut peekable = bytes.into_iter().peekable();
+        let addr: u16 = address.into();
+        Self::validate(addr, Some(peekable.peek().is_none()), None)?;
+        self.setup(addr);
+
+        for tx in peekable {
+            self.write_internal(&[tx], false)?
+        }
+        self.read_internal(buffer, true, true)
+    }
 
     fn read(&mut self, addr: u8, buffer: &mut [u8]) -> Result<(), Error> {
         Read::read(self, addr, buffer)
+    }
+
+    fn transaction<'a>(
+        &mut self,
+        address: u8,
+        operations: &mut [eh1::blocking::Operation<'a>],
+    ) -> Result<(), Self::Error> {
+        let addr: u16 = address.into();
+        self.setup(addr);
+        for i in 0..operations.len() {
+            let last = i == operations.len() - 1;
+            match &mut operations[i] {
+                eh1::blocking::Operation::Read(buf) => self.read_internal(buf, false, last)?,
+                eh1::blocking::Operation::Write(buf) => self.write_internal(buf, last)?,
+            }
+        }
+        Ok(())
+    }
+
+    fn transaction_iter<'a, O>(&mut self, address: u8, operations: O) -> Result<(), Self::Error>
+    where
+        O: IntoIterator<Item = eh1::blocking::Operation<'a>>,
+    {
+        let addr: u16 = address.into();
+        self.setup(addr);
+        let mut peekable = operations.into_iter().peekable();
+        while let Some(operation) = peekable.next() {
+            let last = peekable.peek().is_none();
+            match operation {
+                eh1::blocking::Operation::Read(buf) => self.read_internal(buf, false, last)?,
+                eh1::blocking::Operation::Write(buf) => self.write_internal(buf, last)?,
+            }
+        }
+        Ok(())
     }
 }
