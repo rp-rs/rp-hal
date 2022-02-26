@@ -13,7 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Updated embedded-hal alpha support to version 1.0.0-alpha.7
+- Update embedded-hal alpha support to version 1.0.0-alpha.7
+- Avoid 64-bit division in clock calculations
 
 ## [0.3.0] - 2021-12-19
 
