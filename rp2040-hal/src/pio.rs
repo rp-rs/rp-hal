@@ -559,6 +559,22 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
         }
     }
 
+    /// Change the clock divider of a stopped state machine.
+    pub fn set_clock_divisor(&mut self, divisor: f32) {
+        // sm frequency = clock freq / (CLKDIV_INT + CLKDIV_FRAC / 256)
+        let int = divisor as u16;
+        let frac = ((divisor - int as f32) * 256.0) as u8;
+
+        self.sm.sm().sm_clkdiv.write(|w| {
+            unsafe {
+                w.int().bits(int);
+                w.frac().bits(frac);
+            }
+
+            w
+        });
+    }
+
     /// Sets the pin state for the specified pins.
     ///
     /// The user has to make sure that they do not select any pins that are in use by any
