@@ -259,8 +259,7 @@ impl Inner {
         let ep = self
             .in_endpoints
             .get_mut(index)
-            .map(Option::as_mut)
-            .flatten()
+            .and_then(Option::as_mut)
             .ok_or(UsbError::InvalidEndpoint)?;
 
         let buf_control = &self.ctrl_dpram.ep_buffer_control[index * 2];
@@ -289,8 +288,7 @@ impl Inner {
         let ep = self
             .out_endpoints
             .get_mut(index)
-            .map(Option::as_mut)
-            .flatten()
+            .and_then(Option::as_mut)
             .ok_or(UsbError::InvalidEndpoint)?;
 
         let buf_control = &self.ctrl_dpram.ep_buffer_control[index * 2 + 1];
