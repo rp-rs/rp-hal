@@ -15,7 +15,7 @@ use nb::Error::{Other, WouldBlock};
 use rp2040_pac::{UART0, UART1};
 
 #[cfg(feature = "eh1_0_alpha")]
-use eh1_0_alpha::serial::nb as eh1;
+use eh1_0_alpha::serial as eh1;
 
 /// An UART Peripheral based on an underlying UART device.
 pub struct UartPeripheral<S: State, D: UartDevice, P: ValidUartPinout<D>> {
@@ -345,9 +345,12 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Read<u8> for UartPeripheral<Enabled, 
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1::Read<u8> for UartPeripheral<Enabled, D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> eh1::ErrorType for UartPeripheral<Enabled, D, P> {
     type Error = ReadErrorType;
+}
 
+#[cfg(feature = "eh1_0_alpha")]
+impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Read<u8> for UartPeripheral<Enabled, D, P> {
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
         let byte: &mut [u8] = &mut [0; 1];
 
@@ -377,9 +380,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for UartPeripheral<Enabled,
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1::Write<u8> for UartPeripheral<Enabled, D, P> {
-    type Error = SerialInfallible;
-
+impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Write<u8> for UartPeripheral<Enabled, D, P> {
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
         if self.write_raw(&[word]).is_err() {
             Err(WouldBlock)

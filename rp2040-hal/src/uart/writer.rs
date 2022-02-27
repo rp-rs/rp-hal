@@ -10,7 +10,7 @@ use nb::Error::*;
 use rp2040_pac::uart0::RegisterBlock;
 
 #[cfg(feature = "eh1_0_alpha")]
-use eh1_0_alpha::serial::nb as eh1;
+use eh1_0_alpha::serial as eh1;
 
 /// Returns `Err(WouldBlock)` if the UART TX FIFO still has data in it or
 /// `Ok(())` if the FIFO is empty.
@@ -169,9 +169,12 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for Writer<D, P> {
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1::Write<u8> for Writer<D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> eh1::ErrorType for Writer<D, P> {
     type Error = super::utils::SerialInfallible;
+}
 
+#[cfg(feature = "eh1_0_alpha")]
+impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Write<u8> for Writer<D, P> {
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
         if self.write_raw(&[word]).is_err() {
             Err(WouldBlock)

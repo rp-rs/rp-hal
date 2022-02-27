@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Document bsp_pins! macro
 - UART IRQ examples
 - PIO side-set example
+- Stopped PIO state machines can change their clock divider
 
 ### Changed
 
@@ -29,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update spinlocks to use new PAC API
 - Use generics to improve spinlock implementation
 - Update critical_section to use new spinlock implementation
+- Update embedded-hal alpha support to version 1.0.0-alpha.7
+- Avoid 64-bit division in clock calculations
 
 ## [0.3.0] - 2021-12-19
 

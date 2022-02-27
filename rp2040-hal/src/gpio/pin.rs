@@ -104,7 +104,7 @@ use core::marker::PhantomData;
 
 use crate::gpio::dynpin::DynFunction;
 #[cfg(feature = "eh1_0_alpha")]
-use eh1_0_alpha::digital::blocking as eh1;
+use eh1_0_alpha::digital as eh1;
 use hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin};
 
 use core::mem::transmute;
@@ -845,12 +845,20 @@ where
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<I, C> eh1::OutputPin for Pin<I, Output<C>>
+impl<I, C> eh1::ErrorType for Pin<I, Output<C>>
 where
     I: PinId,
     C: OutputConfig,
 {
     type Error = Infallible;
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl<I, C> eh1::blocking::OutputPin for Pin<I, Output<C>>
+where
+    I: PinId,
+    C: OutputConfig,
+{
     #[inline]
     fn set_high(&mut self) -> Result<(), Self::Error> {
         self._set_high();
@@ -864,11 +872,10 @@ where
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<I> eh1::InputPin for Pin<I, ReadableOutput>
+impl<I> eh1::blocking::InputPin for Pin<I, ReadableOutput>
 where
     I: PinId,
 {
-    type Error = Infallible;
     #[inline]
     fn is_high(&self) -> Result<bool, Self::Error> {
         Ok(self._is_high())
@@ -880,12 +887,20 @@ where
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<I, C> eh1::InputPin for Pin<I, Input<C>>
+impl<I, C> eh1::ErrorType for Pin<I, Input<C>>
 where
     I: PinId,
     C: InputConfig,
 {
     type Error = Infallible;
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl<I, C> eh1::blocking::InputPin for Pin<I, Input<C>>
+where
+    I: PinId,
+    C: InputConfig,
+{
     #[inline]
     fn is_high(&self) -> Result<bool, Self::Error> {
         Ok(self._is_high())
@@ -897,12 +912,11 @@ where
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<I, C> eh1::ToggleableOutputPin for Pin<I, Output<C>>
+impl<I, C> eh1::blocking::ToggleableOutputPin for Pin<I, Output<C>>
 where
     I: PinId,
     C: OutputConfig,
 {
-    type Error = Infallible;
     #[inline]
     fn toggle(&mut self) -> Result<(), Self::Error> {
         self._toggle();
@@ -911,7 +925,7 @@ where
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<I, C> eh1::StatefulOutputPin for Pin<I, Output<C>>
+impl<I, C> eh1::blocking::StatefulOutputPin for Pin<I, Output<C>>
 where
     I: PinId,
     C: OutputConfig,

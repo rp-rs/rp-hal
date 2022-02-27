@@ -180,19 +180,13 @@ macro_rules! clock {
 
                 #[doc = "Configure `"$name"`"]
                 fn configure_clock<S: ValidSrc<$name>>(&mut self, src: &S, freq: Hertz) -> Result<(), ClockError>{
-                    let src_freq: Hertz<u64> = src.get_freq().into();
+                    let src_freq: Hertz<u32> = src.get_freq().into();
 
                     if freq.gt(&src_freq){
                         return Err(ClockError::CantIncreaseFreq);
                     }
 
-                    // Div register is 24.8) int.frac divider so multiply by 2^8 (left shift by 8)
-                    let shifted_src_freq = src_freq * (1 << 8);
-                    let div = if freq.eq(&src_freq) {
-                        1 << 8
-                    } else {
-                        (shifted_src_freq / freq.integer() as u64).integer() as u32
-                    };
+                    let div = fractional_div(src_freq.integer(), freq.integer()).ok_or(ClockError::FrequencyTooLow)?;
 
                     // If increasing divisor, set divisor before source. Otherwise set source
                     // before divisor. This avoids a momentary overspeed when e.g. switching
@@ -223,8 +217,7 @@ macro_rules! clock {
                     self.set_div(div);
 
                     // Store the configured frequency
-                    // div contains both the integer part and the fractional part so we need to shift the src_freq equally
-                    self.frequency = (shifted_src_freq / div as u64).try_into().map_err(|_| ClockError::FrequencyToHigh)?;
+                    self.frequency = fractional_div(src_freq.integer(), div).ok_or(ClockError::FrequencyTooHigh)?.Hz();
 
                     Ok(())
                 }
@@ -337,19 +330,13 @@ macro_rules! stoppable_clock {
 
                 #[doc = "Configure `"$name"`"]
                 fn configure_clock<S: ValidSrc<$name>>(&mut self, src: &S, freq: Hertz) -> Result<(), ClockError>{
-                    let src_freq: Hertz<u64> = src.get_freq().into();
+                    let src_freq: Hertz<u32> = src.get_freq().into();
 
                     if freq.gt(&src_freq){
                         return Err(ClockError::CantIncreaseFreq);
                     }
 
-                    // Div register is 24.8) int.frac divider so multiply by 2^8 (left shift by 8)
-                    let shifted_src_freq = src_freq * (1 << 8);
-                    let div = if freq.eq(&src_freq) {
-                        1 << 8
-                    } else {
-                        (shifted_src_freq / freq.integer() as u64).integer() as u32
-                    };
+                    let div = fractional_div(src_freq.integer(), freq.integer()).ok_or(ClockError::FrequencyTooLow)?;
 
                     // If increasing divisor, set divisor before source. Otherwise set source
                     // before divisor. This avoids a momentary overspeed when e.g. switching
@@ -386,7 +373,7 @@ macro_rules! stoppable_clock {
                     self.set_div(div);
 
                     // Store the configured frequency
-                    self.frequency = (shifted_src_freq / div as u64).try_into().map_err(|_| ClockError::FrequencyToHigh)?;
+                    self.frequency = fractional_div(src_freq.integer(), div).ok_or(ClockError::FrequencyTooHigh)?.Hz();
 
                     Ok(())
                 }
