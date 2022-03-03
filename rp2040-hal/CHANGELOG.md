@@ -9,10 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- ROM function caching
+- ROM version lookup function
+- Compiler intrinsics for ROM functions
+- Compiler intrinsics for hardware divider
+- Document bsp_pins! macro
+- UART IRQ examples
+- PIO side-set example
 - Stopped PIO state machines can change their clock divider
 
 ### Changed
 
+- Rewrite UART driver to own its pins
+- Improve UART defaults
+- Fix repeated-read in i2c embassy driver
+- Fix bug in i2c peripheral state machine
+- Fix race condition in alarm
+- Fix safety bugs in hardware divider
+- Enable watchdog reset trigger bits when watchdog enabled
+- Update spinlocks to use new PAC API
+- Use generics to improve spinlock implementation
+- Update critical_section to use new spinlock implementation
 - Update embedded-hal alpha support to version 1.0.0-alpha.7
 - Avoid 64-bit division in clock calculations
 
