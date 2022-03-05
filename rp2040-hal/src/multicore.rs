@@ -146,7 +146,7 @@ impl<'p> Core<'p> {
     fn inner_spawn(
         &mut self,
         wrapper: *mut (),
-        entry: u64,
+        entry: [usize; 2],
         stack: &'static mut [usize],
     ) -> Result<(), Error> {
         if let Some((psm, ppb, sio)) = self.inner.as_mut() {
@@ -167,8 +167,8 @@ impl<'p> Core<'p> {
 
             push(wrapper as usize);
             push(stack.as_mut_ptr() as usize);
-            push((entry >> 32) as usize);
-            push(entry as usize);
+            push(entry[1]);
+            push(entry[0]);
 
             let vector_table = ppb.vtor.read().bits();
 
@@ -241,9 +241,9 @@ impl<'p> Core<'p> {
             }
         }
 
-        extern "C" fn core1(entry: u64, stack_bottom: *mut usize) -> ! {
+        extern "C" fn core1(entry0: usize, entry1: usize, stack_bottom: *mut usize) -> ! {
             core1_setup(stack_bottom);
-            let main: *mut dyn Core1Main = unsafe { mem::transmute(entry) };
+            let main: *mut dyn Core1Main = unsafe { mem::transmute([entry0, entry1]) };
             unsafe { (*main).run() }
         }
 
