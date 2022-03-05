@@ -33,10 +33,13 @@
 //!
 //! For a detailed example, see [examples/multicore_fifo_blink.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/multicore_fifo_blink.rs)
 
-use crate::pac;
+use core::mem;
+use core::mem::ManuallyDrop;
 
-#[cfg(feature = "alloc")]
-extern crate alloc;
+use pac::Peripherals;
+
+use crate::pac;
+use crate::Sio;
 
 /// Errors for multicore operations.
 #[derive(Debug)]
@@ -52,7 +55,7 @@ pub enum Error {
 // rust can read here. Ideally this would be a
 // #[naked] function but that is not stable yet.
 static MULTICORE_TRAMPOLINE: [u16; 2] = [
-    0xbd03, // pop {r0, r1, pc} - call wrapper (pc) with r0 and r1
+    0xbd07, // pop {r0, r1, r2, pc} - call wrapper (pc) with r0, r1 and r2
     0x46c0, // nop - pad this out to 32 bits long
 ];
 
@@ -143,7 +146,7 @@ impl<'p> Core<'p> {
     fn inner_spawn(
         &mut self,
         wrapper: *mut (),
-        entry: *mut (),
+        entry: u64,
         stack: &'static mut [usize],
     ) -> Result<(), Error> {
         if let Some((psm, ppb, sio)) = self.inner.as_mut() {
@@ -164,6 +167,7 @@ impl<'p> Core<'p> {
 
             push(wrapper as usize);
             push(stack.as_mut_ptr() as usize);
+            push((entry >> 32) as usize);
             push(entry as usize);
 
             let vector_table = ppb.vtor.read().bits();
@@ -210,41 +214,59 @@ impl<'p> Core<'p> {
     }
 
     /// Spawn a function on this core.
-    #[cfg(not(feature = "alloc"))]
-    pub fn spawn(&mut self, entry: fn() -> !, stack: &'static mut [usize]) -> Result<(), Error> {
-        #[allow(improper_ctypes_definitions)]
-        extern "C" fn core1_no_alloc(entry: fn() -> !, stack_bottom: *mut usize) -> ! {
-            core1_setup(stack_bottom);
-            entry();
-        }
-
-        self.inner_spawn(core1_no_alloc as _, entry as _, stack)
-    }
-
-    /// Spawn a function on this core.
-    #[cfg(feature = "alloc")]
     pub fn spawn<F>(&mut self, entry: F, stack: &'static mut [usize]) -> Result<(), Error>
     where
         F: FnOnce() -> bad::Never,
         F: Send + 'static,
     {
-        use alloc::boxed::Box;
-
-        let main: Box<dyn FnOnce() -> bad::Never> = Box::new(move || entry());
-        let p = Box::into_raw(Box::new(main));
-
-        extern "C" fn core1_alloc(entry: *mut (), stack_bottom: *mut usize) -> ! {
-            core1_setup(stack_bottom);
-            let main = unsafe { Box::from_raw(entry as *mut Box<dyn FnOnce() -> bad::Never>) };
-            main();
+        // idea stolen from https://users.rust-lang.org/t/invoke-mut-dyn-fnonce/59356/4
+        trait Core1Main {
+            /// # Safety
+            ///
+            /// Must only be called once.
+            unsafe fn run(&mut self) -> !;
         }
 
-        self.inner_spawn(core1_alloc as _, p as _, stack)
+        impl<T: FnOnce() -> bad::Never> Core1Main for T {
+            unsafe fn run(&mut self) -> ! {
+                let f = (self as *mut Self).read();
+
+                // Signal that it's safe for the other core to get rid of the original value now
+                let peripherals = Peripherals::steal();
+                let sio = Sio::new(peripherals.SIO);
+                let mut fifo = sio.fifo;
+                fifo.write_blocking(1);
+
+                f()
+            }
+        }
+
+        extern "C" fn core1(entry: u64, stack_bottom: *mut usize) -> ! {
+            core1_setup(stack_bottom);
+            let main: *mut dyn Core1Main = unsafe { mem::transmute(entry) };
+            unsafe { (*main).run() }
+        }
+
+        // We don't want to drop this, since it's getting moved to the other core.
+        let mut entry = ManuallyDrop::new(entry);
+
+        let ptr = &mut *entry as &mut dyn Core1Main;
+        let ptr = unsafe { mem::transmute(ptr) };
+
+        self.inner_spawn(core1 as _, ptr, stack)?;
+
+        // If `inner_spawn` succeeded, this must not have been `None`,
+        // so it's fine to unwrap it.
+        let (_, _, sio) = self.inner.as_mut().unwrap();
+
+        // Wait until the other core has copied `entry` before dropping it.
+        sio.fifo.read_blocking();
+
+        Ok(())
     }
 }
 
 // https://github.com/nvzqz/bad-rs/blob/master/src/never.rs
-#[cfg(feature = "alloc")]
 mod bad {
     pub(crate) type Never = <F as HasOutput>::Output;
 
