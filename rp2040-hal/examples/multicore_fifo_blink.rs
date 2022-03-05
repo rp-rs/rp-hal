@@ -118,7 +118,9 @@ fn main() -> ! {
     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio);
     let cores = mc.cores();
     let core1 = &mut cores[1];
-    let _test = core1.spawn(move || core1_task(sys_freq), unsafe { &mut CORE1_STACK.mem });
+    let _test = core1.spawn(move || core1_task(sys_freq), unsafe {
+        &mut CORE1_STACK.mem
+    });
 
     /// How much we adjust the LED period every cycle
     const LED_PERIOD_INCREMENT: i32 = 2;
