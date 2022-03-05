@@ -16,6 +16,7 @@ use rp2040_pac::{UART0, UART1};
 
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::serial as eh1;
+use pac::Peripherals;
 
 /// An UART Peripheral based on an underlying UART device.
 pub struct UartPeripheral<S: State, D: UartDevice, P: ValidUartPinout<D>> {
@@ -208,7 +209,7 @@ impl<P: ValidUartPinout<UART0>> UartPeripheral<Enabled, UART0, P> {
             effective_baudrate: self.effective_baudrate,
         };
         // Safety: reader and writer will never write to the same address
-        let device_copy = unsafe { &*UART0::ptr() };
+        let device_copy = unsafe { Peripherals::steal().UART0 };
         let writer = Writer {
             device: device_copy,
             device_marker: core::marker::PhantomData,
@@ -228,7 +229,7 @@ impl<P: ValidUartPinout<UART1>> UartPeripheral<Enabled, UART1, P> {
             effective_baudrate: self.effective_baudrate,
         };
         // Safety: reader and writer will never write to the same address
-        let device_copy = unsafe { &*UART1::ptr() };
+        let device_copy = unsafe { Peripherals::steal().UART1 };
         let writer = Writer {
             device: device_copy,
             device_marker: core::marker::PhantomData,
