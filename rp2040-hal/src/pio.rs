@@ -245,11 +245,10 @@ impl<P: PIOExt> PIO<P> {
 /// let (mut pio, sm0, _, _, _) = peripherals.PIO0.split(&mut peripherals.RESETS);
 /// // Install a program in instruction memory.
 /// let program = pio_proc::pio_asm!(
-///     ".wrap_target
-///     set pins, 1 [31]
-///     set pins, 0 [31]
-/// .wrap
-///     "
+///     ".wrap_target",
+///     "set pins, 1 [31]",
+///     "set pins, 0 [31]",
+///     ".wrap"
 /// ).program;
 /// let installed = pio.install(&program).unwrap();
 /// // Configure a state machine to use the program.
