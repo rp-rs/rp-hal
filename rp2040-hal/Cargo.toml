@@ -56,3 +56,8 @@ alloc = []
 rom-func-cache = []
 disable-intrinsics = []
 rom-v2-intrinsics = []
+
+[[example]]
+# irq example uses cortex-m-rt::interrupt, need rt feature for that
+name = "gpio_irq_example"
+required-features = ["rt"]
