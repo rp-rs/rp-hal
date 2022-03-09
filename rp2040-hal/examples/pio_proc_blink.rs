@@ -34,14 +34,11 @@ fn main() -> ! {
     let led_pin_id = 25;
 
     // Define some simple PIO program.
-    let program = pio_proc::pio!(
-        32,
-        "
-.wrap_target
-    set pins, 1 [31]
-    set pins, 0 [31]
-.wrap
-        "
+    let program = pio_proc::pio_asm!(
+        ".wrap_target",
+        "set pins, 1 [31]",
+        "set pins, 0 [31]",
+        ".wrap"
     );
 
     // Initialize and start PIO

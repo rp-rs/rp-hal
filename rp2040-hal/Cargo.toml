@@ -18,7 +18,7 @@ itertools = { version = "0.10.1", default-features = false }
 nb = "1.0"
 rp2040-pac = "0.3.0"
 paste = "1.0"
-pio = "0.1.0"
+pio = "0.2.0"
 usb-device = "0.2.8"
 vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
@@ -44,7 +44,7 @@ cortex-m-rt = "0.7"
 panic-halt = "0.2.0"
 rp2040-boot2 = "0.2.0"
 hd44780-driver = "0.4.0"
-pio-proc = "0.1.0"
+pio-proc = "0.2.0"
 dht-sensor = "0.2.1"
 
 [features]
