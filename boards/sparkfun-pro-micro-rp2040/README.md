@@ -17,7 +17,7 @@ RP2040 chip according to how it is connected up on the Pro Micro RP2040.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-sparkfun-pro-micro-rp2040 = "0.1.0"
+sparkfun-pro-micro-rp2040 = "0.2.0"
 ```
 
 In your program, you will need to call `sparkfun_pro_micro_rp2040::Pins::new` to create
