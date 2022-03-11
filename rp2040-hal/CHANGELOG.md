@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2022-03-09
+
 ### Added
 
 - ROM function caching
@@ -17,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UART IRQ examples
 - PIO side-set example
 - Stopped PIO state machines can change their clock divider
+- Added HAL IRQ example
 
 ### Changed
 
@@ -32,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update critical_section to use new spinlock implementation
 - Update embedded-hal alpha support to version 1.0.0-alpha.7
 - Avoid 64-bit division in clock calculations
+- Update pio and pio-proc to 0.2.0
 
 ## [0.3.0] - 2021-12-19
 
@@ -90,7 +94,8 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.54.
 
 - Initial release
 
-[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/rp-rs/rp-hal/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rp-rs/rp-hal/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rp-rs/rp-hal/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rp-rs/rp-hal/releases/tag/v0.1.0

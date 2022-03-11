@@ -23,7 +23,7 @@ smart-leds = "0.3.0"
 embedded-time = "0.12.0"
 nb = "1.0.0"
 pio = "0.1.0"
-ws2812-pio = { git = "https://github.com/ithinuel/ws2812-pio-rs", rev = "4f0d81e594ea9934f9c4c38ed9824ad0cce4ebb5" }
+ws2812-pio = { git = "https://github.com/ithinuel/ws2812-pio-rs", rev = "fd6b6604d65a66242b52ccf7f24a95ca325991dd" }
 
 [features]
 default = ["boot2", "rt"]
