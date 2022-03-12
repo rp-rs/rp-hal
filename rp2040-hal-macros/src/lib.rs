@@ -17,10 +17,10 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let clear_locks: TokenStream = quote!(unsafe {
         const SIO_BASE: u32 = 0xd0000000;
-        const SPINLOCK0: u32 = SIO_BASE + 0x100;
-        const SPINLOCK_COUNT: u32 = 32;
+        const SPINLOCK0_PTR: *mut u32 = (SIO_BASE + 0x100) as *mut u32;
+        const SPINLOCK_COUNT: usize = 32;
         for i in 0..SPINLOCK_COUNT {
-            ::core::ptr::write_volatile((SPINLOCK0 + 4 * i) as *mut u32, 1);
+            SPINLOCK0_PTR.wrapping_add(i).write_volatile(1);
         }
     })
     .into();
