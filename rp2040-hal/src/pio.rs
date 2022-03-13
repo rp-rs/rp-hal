@@ -4,6 +4,7 @@ use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
     resets::SubsystemReset,
 };
+use funty::{AtMost32, Integral};
 use pio::{Program, SideSet, Wrap};
 use rp2040_pac::{PIO0, PIO1};
 
@@ -825,7 +826,10 @@ impl<SM: ValidStateMachine> Tx<SM> {
     /// Write an element to TX FIFO.
     ///
     /// Returns `true` if the value was written to FIFO, `false` otherwise.
-    pub fn write<T>(&mut self, value: T) -> bool {
+    pub fn write<T>(&mut self, value: T) -> bool
+    where
+        T: Integral + AtMost32,
+    {
         // Safety: The register is never written by software.
         let is_full = self.is_full();
 
@@ -835,7 +839,7 @@ impl<SM: ValidStateMachine> Tx<SM> {
 
         unsafe {
             let reg_ptr = self.register_block().txf[SM::id()].as_ptr() as *mut T;
-            core::ptr::write_volatile(reg_ptr, value);
+            reg_ptr.write_volatile(value);
         }
 
         true
