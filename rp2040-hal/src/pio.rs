@@ -841,6 +841,73 @@ impl<SM: ValidStateMachine> Tx<SM> {
         true
     }
 
+    /// Write a replicated u8 value to TX FIFO.
+    ///
+    /// Memory mapped register writes that are smaller than 32bits will trigger
+    /// "Narrow IO Register Write" behaviour in RP2040 - the value written will
+    /// be replicated to the rest of the register as described in
+    /// [RP2040 Datasheet: 2.1.4. - Narrow IO Register Writes][section_2_1_4]
+    ///
+    ///
+    /// This 8bit write will set all 4 bytes of the FIFO to `value`
+    /// Eg: if you write `0xBA` the value written to the the FIFO will be
+    /// `0xBABABABA`
+    ///
+    /// If you wish to write an 8bit number without replication,
+    /// use `write(my_u8 as u32)` instead.
+    ///
+    /// Returns `true` if the value was written to FIFO, `false` otherwise.
+    ///
+    /// [section_2_1_4]: https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf#_narrow_io_register_writes
+    pub fn write_u8_replicated(&mut self, value: u8) -> bool {
+        // Safety: The register is never written by software.
+        let is_full = self.is_full();
+
+        if is_full {
+            return false;
+        }
+
+        unsafe {
+            let reg_ptr = self.register_block().txf[SM::id()].as_ptr() as *mut u8;
+            reg_ptr.write_volatile(value);
+        }
+
+        true
+    }
+
+    /// Write a replicated 16bit value to TX FIFO.
+    ///
+    /// Memory mapped register writes that are smaller than 32bits will trigger
+    /// "Narrow IO Register Write" behaviour in RP2040 - the value written will
+    /// be replicated to the rest of the register as described in
+    /// [RP2040 Datasheet: 2.1.4. - Narrow IO Register Writes][section_2_1_4]
+    ///
+    /// This 16bit write will set both the upper and lower half of the FIFO entry to `value`.
+    ///
+    /// For example, if you write `0xC0DA` the value written to the FIFO will be
+    /// `0xC0DAC0DA`
+    ///
+    /// If you wish to write a 16bit number without replication,
+    /// use `write(my_u16 as u32)` instead.
+    ///
+    /// Returns `true` if the value was written to FIFO, `false` otherwise.
+    /// [section_2_1_4]: https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf#_narrow_io_register_writes
+    pub fn write_u16_replicated(&mut self, value: u16) -> bool {
+        // Safety: The register is never written by software.
+        let is_full = self.is_full();
+
+        if is_full {
+            return false;
+        }
+
+        unsafe {
+            let reg_ptr = self.register_block().txf[SM::id()].as_ptr() as *mut u16;
+            reg_ptr.write_volatile(value);
+        }
+
+        true
+    }
+
     /// Checks if the state machine has stalled on empty TX FIFO during a blocking PULL, or an OUT
     /// with autopull enabled.
     ///
