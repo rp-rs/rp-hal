@@ -822,10 +822,10 @@ impl<SM: ValidStateMachine> Tx<SM> {
         }
     }
 
-    /// Write an element to TX FIFO.
+    /// Write a u32 value to TX FIFO.
     ///
     /// Returns `true` if the value was written to FIFO, `false` otherwise.
-    pub fn write<T>(&mut self, value: T) -> bool {
+    pub fn write(&mut self, value: u32) -> bool {
         // Safety: The register is never written by software.
         let is_full = self.is_full();
 
@@ -834,8 +834,8 @@ impl<SM: ValidStateMachine> Tx<SM> {
         }
 
         unsafe {
-            let reg_ptr = self.register_block().txf[SM::id()].as_ptr() as *mut T;
-            core::ptr::write_volatile(reg_ptr, value);
+            let reg_ptr = self.register_block().txf[SM::id()].as_ptr() as *mut u32;
+            reg_ptr.write_volatile(value);
         }
 
         true
