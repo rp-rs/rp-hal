@@ -214,8 +214,8 @@ impl<'p> Core<'p> {
 
             self.inner_bootstrap(
                 vector_table as usize,
-                MULTICORE_TRAMPOLINE.as_ptr() as usize + 1,
                 stack_ptr as usize,
+                MULTICORE_TRAMPOLINE.as_ptr() as usize + 1,
             )
         } else {
             Err(Error::InvalidCore)
@@ -253,6 +253,28 @@ impl<'p> Core<'p> {
         }
 
         self.inner_spawn(core1_alloc as _, p as _, stack)
+    }
+
+    /// Bootload a Rust program at address `core1_prog_addr` on this core
+    ///
+    /// Reads the initial stack pointer value and reset vector from
+    /// the provided vector table address, then bootstraps core1 using
+    /// this information
+    ///
+    /// # Safety
+    /// - You need to compile your program to have prog_addr as start of
+    /// flash, so that the vector table is at prog_addr + 0x0
+    /// - The provided `vector_table` must point to a valid vector
+    /// table, with a valid stack pointer as the first word and
+    /// a valid reset vector as the second word.
+    pub unsafe fn bootload(&mut self, prog_addr: usize) -> Result<(), Error> {
+        let prog = prog_addr as *const usize;
+        // Stack pointer is u32 at offset 0
+        let stack_ptr = prog.read_volatile();
+        // Reset vector is u32 at offset 1
+        let reset_vector = prog.offset(1).read_volatile();
+        // The entry point of a Rust cortex-m program is the reset vector
+        self.inner_bootstrap(prog_addr, stack_ptr, reset_vector)
     }
 }
 
