@@ -140,20 +140,64 @@ impl<'p> Core<'p> {
         }
     }
 
-    fn inner_spawn(
+    fn inner_bootstrap(
         &mut self,
-        wrapper: *mut (),
-        entry: *mut (),
-        stack: &'static mut [usize],
+        vector_table: usize,
+        stack_ptr: usize,
+        entry: usize,
     ) -> Result<(), Error> {
-        if let Some((psm, ppb, sio)) = self.inner.as_mut() {
+        if let Some((psm, _ppb, sio)) = self.inner.as_mut() {
             // Reset the core
             psm.frce_off.modify(|_, w| w.proc1().set_bit());
             while !psm.frce_off.read().proc1().bit_is_set() {
                 cortex_m::asm::nop();
             }
             psm.frce_off.modify(|_, w| w.proc1().clear_bit());
+            // After reset, core 1 is waiting to receive commands over FIFO.
+            // This is the sequence to have it jump to some code.
+            let cmd_seq = [0, 0, 1, vector_table, stack_ptr, entry];
 
+            let mut seq = 0;
+            let mut fails = 0;
+            loop {
+                let cmd = cmd_seq[seq] as u32;
+                // Always drain the READ FIFO (from core 1) before sending a 0
+                if cmd == 0 {
+                    sio.fifo.drain();
+                    // Execute a SEV as core 1 may be waiting for FIFO space via WFE
+                    cortex_m::asm::sev();
+                }
+                sio.fifo.write_blocking(cmd);
+                let response = sio.fifo.read_blocking();
+                if cmd == response {
+                    // Move to next state on correct response (core1 replied with cmd value)
+                    seq += 1;
+                } else {
+                    // otherwise start over
+                    seq = 0;
+                    fails += 1;
+                    if fails > 16 {
+                        return Err(Error::Unresponsive);
+                    }
+                }
+                if seq >= cmd_seq.len() {
+                    break;
+                }
+            }
+
+            Ok(())
+        } else {
+            Err(Error::InvalidCore)
+        }
+    }
+
+    fn inner_spawn(
+        &mut self,
+        wrapper: *mut (),
+        entry: *mut (),
+        stack: &'static mut [usize],
+    ) -> Result<(), Error> {
+        if let Some((_psm, ppb, _sio)) = self.inner.as_mut() {
             // Set up the stack
             let mut stack_ptr = unsafe { stack.as_mut_ptr().add(stack.len()) };
 
@@ -168,42 +212,11 @@ impl<'p> Core<'p> {
 
             let vector_table = ppb.vtor.read().bits();
 
-            // After reset, core 1 is waiting to receive commands over FIFO.
-            // This is the sequence to have it jump to some code.
-            let cmd_seq = [
-                0,
-                0,
-                1,
+            self.inner_bootstrap(
                 vector_table as usize,
-                stack_ptr as usize,
                 MULTICORE_TRAMPOLINE.as_ptr() as usize + 1,
-            ];
-
-            let mut seq = 0;
-            let mut fails = 0;
-            loop {
-                let cmd = cmd_seq[seq] as u32;
-                if cmd == 0 {
-                    sio.fifo.drain();
-                    cortex_m::asm::sev();
-                }
-                sio.fifo.write_blocking(cmd);
-                let response = sio.fifo.read_blocking();
-                if cmd == response {
-                    seq += 1;
-                } else {
-                    seq = 0;
-                    fails += 1;
-                    if fails > 16 {
-                        return Err(Error::Unresponsive);
-                    }
-                }
-                if seq >= cmd_seq.len() {
-                    break;
-                }
-            }
-
-            Ok(())
+                stack_ptr as usize,
+            )
         } else {
             Err(Error::InvalidCore)
         }
