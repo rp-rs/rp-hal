@@ -23,8 +23,6 @@ pub struct UartPeripheral<S: State, D: UartDevice, P: ValidUartPinout<D>> {
     device: D,
     _state: S,
     pins: P,
-    config: UartConfig,
-    effective_baudrate: Baud,
 }
 
 impl<S: State, D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<S, D, P> {
@@ -32,8 +30,6 @@ impl<S: State, D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<S, D, P> {
         UartPeripheral {
             device: self.device,
             pins: self.pins,
-            config: self.config,
-            effective_baudrate: self.effective_baudrate,
             _state: state,
         }
     }
@@ -54,8 +50,6 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
             device,
             _state: Disabled,
             pins,
-            config: common_configs::_9600_8_N_1, // placeholder
-            effective_baudrate: Baud(0),
         }
     }
 
@@ -66,7 +60,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
         frequency: Hertz,
     ) -> Result<UartPeripheral<Enabled, D, P>, Error> {
         let (mut device, pins) = self.free();
-        let effective_baudrate = configure_baudrate(&mut device, &config.baudrate, &frequency)?;
+        configure_baudrate(&mut device, &config.baudrate, &frequency)?;
 
         device.uartlcr_h.write(|w| {
             // FIFOs are enabled
@@ -94,9 +88,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
 
         Ok(UartPeripheral {
             device,
-            config,
             pins,
-            effective_baudrate,
             _state: Enabled,
         })
     }
@@ -193,8 +185,6 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
             device: reader.device,
             _state: Enabled,
             pins: reader.pins,
-            config: reader.config,
-            effective_baudrate: reader.effective_baudrate,
         }
     }
 }
@@ -205,8 +195,6 @@ impl<P: ValidUartPinout<UART0>> UartPeripheral<Enabled, UART0, P> {
         let reader = Reader {
             device: self.device,
             pins: self.pins,
-            config: self.config,
-            effective_baudrate: self.effective_baudrate,
         };
         // Safety: reader and writer will never write to the same address
         let device_copy = unsafe { Peripherals::steal().UART0 };
@@ -225,8 +213,6 @@ impl<P: ValidUartPinout<UART1>> UartPeripheral<Enabled, UART1, P> {
         let reader = Reader {
             device: self.device,
             pins: self.pins,
-            config: self.config,
-            effective_baudrate: self.effective_baudrate,
         };
         // Safety: reader and writer will never write to the same address
         let device_copy = unsafe { Peripherals::steal().UART1 };
