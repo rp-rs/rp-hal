@@ -50,8 +50,10 @@ pub enum Error {
     InvalidVectorTableAlignment,
     /// Vector table is not in SRAM, XIP SRAM or Flash
     InvalidProgramLocation,
-    /// Invalid stack pointer
-    InvalidStackPointer,
+    /// Invalid stack pointer alignment
+    InvalidStackPointerAlignment,
+    /// Stack pointer address is not inside of RAM
+    InvalidStackPointerAddress,
     /// Invalid program entry address - is before the start of the program
     InvalidEntryAddressBelow,
     /// Invalid program entry address - program in SRAM but entry point is not
@@ -318,7 +320,7 @@ impl<'p> Core<'p> {
         }
         if stack_addr & 0x4 != 0 {
             // Stack pointer must be 4 byte aligned - invalid vector table?
-            return Err(Error::InvalidStackPointer);
+            return Err(Error::InvalidStackPointerAlignment);
         }
         if entry_addr <= vector_table_addr {
             // Reset vector pointed to before program to bootload
@@ -333,13 +335,13 @@ impl<'p> Core<'p> {
                 // Reset vector pointed off the end of RAM
                 return Err(Error::InvalidEntryAddressAboveRAM);
             }
-        } else if vector_table_addr & 0x15000000 == 0x15000000 {
+        } else if vector_table_addr & 0x1500_0000 == 0x1500_0000 {
             // Program is in XIP RAM
             if entry_addr >= 0x15004000 {
                 // Reset vector pointed off the end of XIP RAM
                 return Err(Error::InvalidEntryAddressAboveXIPRAM);
             }
-        } else if vector_table_addr & 0x1000_0000 == 0x10000000 {
+        } else if vector_table_addr & 0x1000_0000 == 0x1000_0000 {
             // Program is in Flash
             if entry_addr >= 0x1100_0000 {
                 // Reset vector pointed off the end of Flash
@@ -349,6 +351,10 @@ impl<'p> Core<'p> {
             return Err(Error::InvalidProgramLocation);
         }
 
+        // Verify stack pointer is in RAM
+        if !(0x2000_0000..=0x2003_F000).contains(&stack_addr) {
+            return Err(Error::InvalidStackPointerAddress);
+        }
         // If we haven't hit any of the previous guard clauses,
         // we have validated successfully
         Ok(())
