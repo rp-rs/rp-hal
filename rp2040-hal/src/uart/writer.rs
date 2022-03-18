@@ -114,7 +114,7 @@ pub(crate) fn disable_tx_interrupt(rb: &RegisterBlock) {
 /// [`UartPeripheral`]: struct.UartPeripheral.html
 /// [`UartPeripheral::split()`]: struct.UartPeripheral.html#method.split
 pub struct Writer<D: UartDevice, P: ValidUartPinout<D>> {
-    pub(super) device: &'static RegisterBlock,
+    pub(super) device: D,
     pub(super) device_marker: PhantomData<D>,
     pub(super) pins: PhantomData<P>,
 }
@@ -129,26 +129,26 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Writer<D, P> {
     ///
     /// Upon success, the remaining (unwritten) slice is returned.
     pub fn write_raw<'d>(&self, data: &'d [u8]) -> nb::Result<&'d [u8], Infallible> {
-        write_raw(self.device, data)
+        write_raw(&self.device, data)
     }
 
     /// Writes bytes to the UART.
     ///
     /// This function blocks until the full buffer has been sent.
     pub fn write_full_blocking(&self, data: &[u8]) {
-        write_full_blocking(self.device, data);
+        write_full_blocking(&self.device, data);
     }
 
     /// Enables the Transmit Interrupt.
     ///
     /// The relevant UARTx IRQ will fire when there is space in the transmit FIFO.
     pub fn enable_tx_interrupt(&mut self) {
-        enable_tx_interrupt(self.device)
+        enable_tx_interrupt(&self.device)
     }
 
     /// Disables the Transmit Interrupt.
     pub fn disable_tx_interrupt(&mut self) {
-        disable_tx_interrupt(self.device)
+        disable_tx_interrupt(&self.device)
     }
 }
 
@@ -164,7 +164,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for Writer<D, P> {
     }
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
-        transmit_flushed(self.device)
+        transmit_flushed(&self.device)
     }
 }
 
@@ -184,7 +184,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Write<u8> for Writer<D, P> {
     }
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
-        transmit_flushed(self.device).map_err(|e| match e {
+        transmit_flushed(&self.device).map_err(|e| match e {
             WouldBlock => WouldBlock,
             Other(v) => match v {},
         })
