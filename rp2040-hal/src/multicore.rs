@@ -105,6 +105,65 @@ fn core1_setup(stack_bottom: *mut usize) {
     // TODO: irq priorities
 }
 
+/// Perform some basic validation of the program payload
+///
+/// Validation performed:
+/// - Check `vector_table_addr` is correctly aligned
+/// - Check that `vector_table_addr` is in a valid memory type (SRAM, XIP_SRAM, Flash)
+/// - Check `entry_addr` is after `vector_table_addr`
+/// - Check that `entry_addr` is not beyond the end of the memory type
+/// (SRAM, XIP_SRAM, Flash) that the `vector_table_addr` is in
+fn validate_bootstrap_payload(
+    vector_table_addr: usize,
+    stack_addr: usize,
+    entry_addr: usize,
+) -> Result<(), Error> {
+    if vector_table_addr & 0x80 != 0 {
+        // Vector table was not 32 word (128 byte) aligned
+        return Err(Error::InvalidVectorTableAlignment);
+    }
+    if stack_addr & 0x4 != 0 {
+        // Stack pointer must be 4 byte aligned - invalid vector table?
+        return Err(Error::InvalidStackPointerAlignment);
+    }
+    if entry_addr <= vector_table_addr {
+        // Reset vector pointed to before program to bootload
+        return Err(Error::InvalidEntryAddressBelow);
+    }
+
+    // Since we didn't pass in the size of the program we don't really know where it ends
+    // We can still check that we're within the memory segment the program is loaded into
+    if vector_table_addr & 0x2000_0000 == 0x2000_0000 {
+        // Program is in RAM
+        if entry_addr >= 0x2003_F000 {
+            // Reset vector pointed off the end of RAM
+            return Err(Error::InvalidEntryAddressAboveRAM);
+        }
+    } else if vector_table_addr & 0x1500_0000 == 0x1500_0000 {
+        // Program is in XIP RAM
+        if entry_addr >= 0x15004000 {
+            // Reset vector pointed off the end of XIP RAM
+            return Err(Error::InvalidEntryAddressAboveXIPRAM);
+        }
+    } else if vector_table_addr & 0x1000_0000 == 0x1000_0000 {
+        // Program is in Flash
+        if entry_addr >= 0x1100_0000 {
+            // Reset vector pointed off the end of Flash
+            return Err(Error::InvalidEntryAddressAboveFLASH);
+        }
+    } else {
+        return Err(Error::InvalidProgramLocation);
+    }
+
+    // Verify stack pointer is in RAM
+    if !(0x2000_0000..=0x2003_F000).contains(&stack_addr) {
+        return Err(Error::InvalidStackPointerAddress);
+    }
+    // If we haven't hit any of the previous guard clauses,
+    // we have validated successfully
+    Ok(())
+}
+
 /// Multicore execution management.
 pub struct Multicore<'p> {
     cores: [Core<'p>; 2],
@@ -290,7 +349,7 @@ impl<'p> Core<'p> {
         // Reset vector is u32 at offset 1 of the vector table
         let reset_vector = prog.offset(1).read_volatile();
         // Check if our program's addresses make sense
-        let validated = self.validate_bootstrap_payload(prog_addr, stack_ptr, reset_vector);
+        let validated = validate_bootstrap_payload(prog_addr, stack_ptr, reset_vector);
 
         // The entry point of a Rust cortex-m program is the reset vector
         if validated.is_ok() {
@@ -298,66 +357,6 @@ impl<'p> Core<'p> {
         } else {
             validated
         }
-    }
-
-    /// Perform some basic validation of the program payload
-    ///
-    /// Validation performed:
-    /// - Check `vector_table_addr` is correctly aligned
-    /// - Check that `vector_table_addr` is in a valid memory type (SRAM, XIP_SRAM, Flash)
-    /// - Check `entry_addr` is after `vector_table_addr`
-    /// - Check that `entry_addr` is not beyond the end of the memory type
-    /// (SRAM, XIP_SRAM, Flash) that the `vector_table_addr` is in
-    fn validate_bootstrap_payload(
-        &mut self,
-        vector_table_addr: usize,
-        stack_addr: usize,
-        entry_addr: usize,
-    ) -> Result<(), Error> {
-        if vector_table_addr & 0x80 != 0 {
-            // Vector table was not 32 word (128 byte) aligned
-            return Err(Error::InvalidVectorTableAlignment);
-        }
-        if stack_addr & 0x4 != 0 {
-            // Stack pointer must be 4 byte aligned - invalid vector table?
-            return Err(Error::InvalidStackPointerAlignment);
-        }
-        if entry_addr <= vector_table_addr {
-            // Reset vector pointed to before program to bootload
-            return Err(Error::InvalidEntryAddressBelow);
-        }
-
-        // Since we didn't pass in the size of the program we don't really know where it ends
-        // We can still check that we're within the memory segment the program is loaded into
-        if vector_table_addr & 0x2000_0000 == 0x2000_0000 {
-            // Program is in RAM
-            if entry_addr >= 0x2003_F000 {
-                // Reset vector pointed off the end of RAM
-                return Err(Error::InvalidEntryAddressAboveRAM);
-            }
-        } else if vector_table_addr & 0x1500_0000 == 0x1500_0000 {
-            // Program is in XIP RAM
-            if entry_addr >= 0x15004000 {
-                // Reset vector pointed off the end of XIP RAM
-                return Err(Error::InvalidEntryAddressAboveXIPRAM);
-            }
-        } else if vector_table_addr & 0x1000_0000 == 0x1000_0000 {
-            // Program is in Flash
-            if entry_addr >= 0x1100_0000 {
-                // Reset vector pointed off the end of Flash
-                return Err(Error::InvalidEntryAddressAboveFLASH);
-            }
-        } else {
-            return Err(Error::InvalidProgramLocation);
-        }
-
-        // Verify stack pointer is in RAM
-        if !(0x2000_0000..=0x2003_F000).contains(&stack_addr) {
-            return Err(Error::InvalidStackPointerAddress);
-        }
-        // If we haven't hit any of the previous guard clauses,
-        // we have validated successfully
-        Ok(())
     }
 }
 
