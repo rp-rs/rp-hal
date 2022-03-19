@@ -135,7 +135,7 @@ fn validate_bootstrap_payload(
     // We can still check that we're within the memory segment the program is loaded into
     if vector_table_addr & 0x2000_0000 == 0x2000_0000 {
         // Program is in RAM
-        if entry_addr >= 0x2003_F000 {
+        if entry_addr >= 0x2004_2000 {
             // Reset vector pointed off the end of RAM
             return Err(Error::InvalidEntryAddressAboveRAM);
         }
@@ -156,7 +156,7 @@ fn validate_bootstrap_payload(
     }
 
     // Verify stack pointer is in RAM
-    if !(0x2000_0000..=0x2003_F000).contains(&stack_addr) {
+    if !(0x2000_0000..=0x2004_2000).contains(&stack_addr) {
         return Err(Error::InvalidStackPointerAddress);
     }
     // If we haven't hit any of the previous guard clauses,
