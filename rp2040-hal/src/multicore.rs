@@ -108,18 +108,20 @@ fn core1_setup(stack_bottom: *mut usize) {
 /// Perform some basic validation of the program payload
 ///
 /// Validation performed:
-/// - Check `vector_table_addr` is correctly aligned
+/// - Check `vector_table_addr` is correctly aligned. See
+/// [CM0+ user guide](https://developer.arm.com/documentation/dui0662/b/The-Cortex-M0--Processor/Exception-model/Vector-table)
+/// for reference
 /// - Check that `vector_table_addr` is in a valid memory type (SRAM, XIP_SRAM, Flash)
 /// - Check `entry_addr` is after `vector_table_addr`
 /// - Check that `entry_addr` is not beyond the end of the memory type
-/// (SRAM, XIP_SRAM, Flash) that the `vector_table_addr` is in
+/// (SRAM, XIP_SRAM, Flash) that the `vector_table_addr` is in.
 fn validate_bootstrap_payload(
     vector_table_addr: usize,
     stack_addr: usize,
     entry_addr: usize,
 ) -> Result<(), Error> {
-    if vector_table_addr & 0x80 != 0 {
-        // Vector table was not 32 word (128 byte) aligned
+    if vector_table_addr & 0x100 != 0 {
+        // Vector table was not 64 word (256 byte) aligned
         return Err(Error::InvalidVectorTableAlignment);
     }
     if stack_addr & 0x4 != 0 {
