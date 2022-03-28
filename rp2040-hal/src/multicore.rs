@@ -120,11 +120,11 @@ fn validate_bootstrap_payload(
     stack_addr: usize,
     entry_addr: usize,
 ) -> Result<(), Error> {
-    if vector_table_addr & 0x100 != 0 {
+    if vector_table_addr & (0x100 - 1) != 0 {
         // Vector table was not 64 word (256 byte) aligned
         return Err(Error::InvalidVectorTableAlignment);
     }
-    if stack_addr & 0x4 != 0 {
+    if stack_addr & (0x4 - 1) != 0 {
         // Stack pointer must be 4 byte aligned - invalid vector table?
         return Err(Error::InvalidStackPointerAlignment);
     }
