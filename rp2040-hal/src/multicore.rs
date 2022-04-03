@@ -108,14 +108,15 @@ fn core1_setup(stack_bottom: *mut usize) {
 /// Perform some basic validation of the program payload
 ///
 /// Validation performed:
-/// - Check `vector_table_addr` is correctly aligned. See
+/// - Check address `vector_table` points to is correctly aligned. See
 /// [CM0+ user guide](https://developer.arm.com/documentation/dui0662/b/The-Cortex-M0--Processor/Exception-model/Vector-table)
 /// for reference
 /// - Check `stack_addr` is correctly aligned
 fn validate_bootstrap_payload_alignment(
-    vector_table_addr: usize,
-    stack_addr: usize,
+    vector_table: *const u32,
+    stack_addr: u32,
 ) -> Result<(), Error> {
+    let vector_table_addr = vector_table as u32;
     if vector_table_addr & (0x100 - 1) != 0 {
         // Vector table was not 64 word (256 byte) aligned
         return Err(Error::InvalidVectorTableAlignment);
@@ -133,7 +134,7 @@ fn validate_bootstrap_payload_alignment(
 /// Perform extended validation of the program payload
 ///
 /// Validation performed:
-/// - Check `vector_table_addr` is correctly aligned. See
+/// - Check address `vector_table` points to is correctly aligned. See
 /// [CM0+ user guide](https://developer.arm.com/documentation/dui0662/b/The-Cortex-M0--Processor/Exception-model/Vector-table)
 /// for reference
 /// - Check that `stack_addr` is correctly aligned.
@@ -142,10 +143,11 @@ fn validate_bootstrap_payload_alignment(
 /// - Check that `entry_addr` is not beyond the end of the memory type
 /// (SRAM, XIP_SRAM, Flash) that the `vector_table_addr` is in.
 fn validate_bootstrap_payload(
-    vector_table_addr: usize,
-    stack_addr: usize,
-    entry_addr: usize,
+    vector_table: *const u32,
+    stack_addr: u32,
+    entry_addr: u32,
 ) -> Result<(), Error> {
+    let vector_table_addr = vector_table as u32;
     if entry_addr <= vector_table_addr {
         // Reset vector pointed to before program to bootload
         return Err(Error::InvalidEntryAddressBelow);
@@ -182,7 +184,7 @@ fn validate_bootstrap_payload(
         return Err(Error::InvalidStackPointerAddress);
     }
 
-    validate_bootstrap_payload_alignment(vector_table_addr, stack_addr)
+    validate_bootstrap_payload_alignment(vector_table, stack_addr)
 }
 
 /// Multicore execution management.
@@ -352,7 +354,7 @@ impl<'p> Core<'p> {
         self.inner_spawn(core1_alloc as _, p as _, stack)
     }
 
-    /// Bootload a Rust program using the vector table at address `vector_table_addr` on this core
+    /// Bootload a Rust program using the vector table at address `vector_table` points to on this core
     ///
     /// Reads the initial stack pointer value and reset vector from
     /// the provided vector table address, then bootstraps core1 using
@@ -363,24 +365,27 @@ impl<'p> Core<'p> {
     /// flash, so that the vector table is at prog_addr + 0x0
     /// - The vector table must be valid, with a valid stack pointer as the first word and
     /// a valid reset vector as the second word.
-    pub unsafe fn bootload(&mut self, vector_table_addr: usize) -> Result<(), Error> {
-        let prog = vector_table_addr as *const usize;
+    pub unsafe fn bootload(&mut self, vector_table: *const u32) -> Result<(), Error> {
         // Stack pointer is u32 at offset 0 of the vector table
-        let stack_ptr = prog.read_volatile();
+        let stack_ptr = vector_table.read_volatile();
         // Reset vector is u32 at offset 1 of the vector table
-        let reset_vector = prog.offset(1).read_volatile();
+        let reset_vector = vector_table.offset(1).read_volatile();
         // Check if our program's addresses make sense
-        let validated = validate_bootstrap_payload(vector_table_addr, stack_ptr, reset_vector);
+        let validated = validate_bootstrap_payload(vector_table, stack_ptr, reset_vector);
 
         // The entry point of a Rust cortex-m program is the reset vector
         if validated.is_ok() {
-            self.inner_bootstrap(vector_table_addr, stack_ptr, reset_vector)
+            self.inner_bootstrap(
+                vector_table as usize,
+                stack_ptr as usize,
+                reset_vector as usize,
+            )
         } else {
             validated
         }
     }
 
-    /// Bootload a Rust program using the vector table at address `vector_table_addr` on this core
+    /// Bootload a Rust program using the vector table at address `vector_table` points to on this core
     ///
     /// Reads the initial stack pointer value and reset vector from
     /// the provided vector table address, then bootstraps core1 using
@@ -397,19 +402,22 @@ impl<'p> Core<'p> {
     /// a valid reset vector as the second word.
     pub unsafe fn bootload_address_ranges_unchecked(
         &mut self,
-        vector_table_addr: usize,
+        vector_table: *const u32,
     ) -> Result<(), Error> {
-        let vector_table = vector_table_addr as *const usize;
         // Stack pointer is u32 at offset 0 of the vector table
         let stack_ptr = vector_table.read_volatile();
         // Reset vector is u32 at offset 1 of the vector table
         let reset_vector = vector_table.offset(1).read_volatile();
         // Check if the vector table address and stack pointer are correctly aligned
-        let validated = validate_bootstrap_payload_alignment(vector_table_addr, stack_ptr);
+        let validated = validate_bootstrap_payload_alignment(vector_table, stack_ptr);
 
         // The entry point of a Rust cortex-m program is the reset vector
         if validated.is_ok() {
-            self.inner_bootstrap(vector_table_addr, stack_ptr, reset_vector)
+            self.inner_bootstrap(
+                vector_table as usize,
+                stack_ptr as usize,
+                reset_vector as usize,
+            )
         } else {
             validated
         }
