@@ -45,7 +45,7 @@
 use core::fmt::Write;
 
 // The macro for our start-up function
-use cortex_m_rt::entry;
+use rp_pico::entry;
 
 // Time handling traits:
 use embedded_time::duration::*;

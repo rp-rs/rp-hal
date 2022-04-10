@@ -10,7 +10,7 @@
 #![no_main]
 
 // The macro for our start-up function
-use cortex_m_rt::entry;
+use adafruit_itsy_bitsy_rp2040::entry;
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)

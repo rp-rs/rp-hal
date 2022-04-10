@@ -9,10 +9,10 @@
 #![no_main]
 
 use core::iter::once;
-use cortex_m_rt::entry;
 use embedded_hal::timer::CountDown;
 use embedded_time::duration::Extensions;
 use panic_halt as _;
+use sparkfun_pro_micro_rp2040::entry;
 
 use smart_leds::{brightness, SmartLedsWrite, RGB8};
 use sparkfun_pro_micro_rp2040::{

@@ -11,7 +11,7 @@
 #![no_main]
 
 // The macro for our start-up function
-use cortex_m_rt::entry;
+use rp_pico::entry;
 
 use cortex_m::prelude::*;
 

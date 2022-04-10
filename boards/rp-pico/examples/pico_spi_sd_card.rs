@@ -93,7 +93,7 @@
 #![no_main]
 
 // The macro for our start-up function
-use cortex_m_rt::entry;
+use rp_pico::entry;
 
 // info!() and error!() macros for printing information to the debug output
 use defmt::*;

@@ -8,8 +8,8 @@
 #![no_std]
 #![no_main]
 
+use adafruit_kb2040::entry;
 use core::iter::once;
-use cortex_m_rt::entry;
 use embedded_hal::timer::CountDown;
 use embedded_time::duration::Extensions;
 use panic_halt as _;
