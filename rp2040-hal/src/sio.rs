@@ -648,3 +648,22 @@ pub fn spinlock_state() -> [bool; 32] {
     }
     result
 }
+
+/// Free all spinlocks, regardless of their current status
+///
+/// RP2040 does not release all spinlocks on reset.
+/// The C SDK clears these all during entry, and so do we if you call hal::entry!
+/// But if someone is using the default cortex-m entry they risk hitting deadlocks so provide *something* to help out
+///
+/// # Safety
+/// Where possible, you should use the hal::entry macro attribute on main instead of this.
+/// You should call this as soon as possible after reset - preferably as the first entry in fn main(), before *ANY* use of spinlocks, atomics, or critical_section
+pub unsafe fn spinlock_reset() {
+    // Using raw pointers to avoid taking peripherals accidently at startup
+    const SIO_BASE: u32 = 0xd0000000;
+    const SPINLOCK0_PTR: *mut u32 = (SIO_BASE + 0x100) as *mut u32;
+    const SPINLOCK_COUNT: usize = 32;
+    for i in 0..SPINLOCK_COUNT {
+        SPINLOCK0_PTR.wrapping_add(i).write_volatile(1);
+    }
+}
