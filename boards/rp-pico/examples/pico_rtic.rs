@@ -27,6 +27,11 @@ mod app {
 
     #[init]
     fn init(c: init::Context) -> (Shared, Local, init::Monotonics) {
+        // Soft-reset does not release the hardware spinlocks
+        // Release them now to avoid a deadlock after debug or watchdog reset
+        unsafe {
+            hal::sio::spinlock_reset();
+        }
         let mut resets = c.device.RESETS;
         let mut watchdog = Watchdog::new(c.device.WATCHDOG);
         let _clocks = init_clocks_and_plls(
