@@ -74,3 +74,8 @@ required-features = ["rt", "critical-section-impl"]
 # vector_table example uses cortex-m-rt::interrupt, need rt feature for that
 name = "vector_table"
 required-features = ["rt", "critical-section-impl"]
+
+[[example]]
+# irq example uses cortex-m-rt::interrupt, need rt feature for that
+name = "adc_fifo"
+required-features = ["rt", "critical-section-impl"]
