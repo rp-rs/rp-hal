@@ -121,19 +121,10 @@ fn main() -> ! {
     loop {
         cortex_m::interrupt::free(|cs| {
             if let Some(adc) = ADC_OBJ.borrow(cs).borrow_mut().as_mut() {
-                if adc.interrupt_pending(){
-                    writeln!(
-                        uart,
-                        "Interrupt pending\r\n"
-                    )
-                    .unwrap();
+                if adc.interrupt_pending() {
+                    writeln!(uart, "Interrupt pending\r\n").unwrap();
                 }
-                writeln!(
-                    uart,
-                    "fifo len {:?}\r\n",
-                    adc.fifo_len()
-                )
-                .unwrap();
+                writeln!(uart, "fifo len {:?}\r\n", adc.fifo_len()).unwrap();
                 // adc.enable_fifo_interrupt(1);
             }
         });
