@@ -143,6 +143,31 @@ impl Adc {
         self.device.ints.read().fifo().bit_is_set()
     }
 
+    /// Return the index of the first channel to be sampled in round-robin mode
+    pub fn first_channel(&mut self) -> u8 {
+        self.device.cs.read().rrobin().bits().trailing_zeros() as u8
+    }
+
+    /// Return the index of the last channel to be sampled in round-robin mode
+    pub fn last_channel(&mut self) -> u8 {
+        self.device.cs.read().rrobin().bits().leading_zeros() as u8
+    }
+
+    /// Return the channel that is currently being captured
+    pub fn current_channel(&mut self) -> u8 {
+        self.device.cs.read().ainsel().bits()
+    }
+
+    /// Return the current state of the ADC::FCS register
+    pub fn fcs(&self) -> u32 {
+        self.device.fcs.read().bits()
+    }
+
+    /// Return the current state of the ADC::CS register
+    pub fn cs(&self) -> u32 {
+        self.device.cs.read().bits()
+    }
+
     /// Set up FIFO interrupt generation and enable the interrupt
     pub fn enable_fifo_interrupt(&self, threshold: u8) {
         self.device.fcs.modify(|_, w| unsafe {
