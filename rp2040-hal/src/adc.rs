@@ -124,11 +124,14 @@ impl Adc {
     /// Read an ADC value value from the FIFO
     pub fn read_fifo(&mut self) -> Option<u16> {
         if self.device.fcs.read().empty().bit_is_clear() {
-            if self.device.fifo.read().err().bit_is_set() {
-                // TODO: return an error instead.
+            // if we read fifo.read().err() that consumes the fifo entry
+            // so fifo.read().val() is n*2 what we expect.
+            // that means we need to manually mask out the bits, unfortunately
+            let read = self.device.fifo.read().bits();
+            if read & 1u32 << 15 != 0 {
                 None
             } else {
-                Some(self.device.fifo.read().val().bits())
+                Some((read & 0b11_1111_1111) as u16)
             }
         } else {
             None
