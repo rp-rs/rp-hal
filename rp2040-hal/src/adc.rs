@@ -97,11 +97,13 @@ impl Adc {
         while self.device.fcs.read().empty().bit_is_clear() {
             let _ = self.device.fifo.read();
         }
+        // Run ADC with back-to-back captures
         self.device
             .div
-            .modify(|_, w| unsafe { w.int().bits(32).frac().bits(0) });
+            .modify(|_, w| unsafe { w.int().bits(0).frac().bits(0) });
         // Set up our interrupts before enabling the ADC
         self.enable_fifo_interrupt(number_of_channels);
+        // Configure for round-robin sampling, start at the first channel
         self.device.cs.modify(|_, w| unsafe {
             // Set the first sampled channel to the lowest one
             w.ainsel().bits(first_channel.try_into().unwrap());
@@ -110,7 +112,10 @@ impl Adc {
             // Clear sticky error bit
             w.err_sticky().set_bit();
             // Continously perform conversions
-            w.start_many().set_bit()
+            w.start_many().set_bit();
+            // Enable the ADC
+            w.en().set_bit();
+            w
         });
     }
 
