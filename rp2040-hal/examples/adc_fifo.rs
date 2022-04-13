@@ -113,7 +113,8 @@ fn main() -> ! {
     // Configure GPIO26 as an ADC input
     let _adc_pin_0 = pins.gpio26.into_floating_input();
     cortex_m::interrupt::free(|cs| {
-        adc.start_many_round_robin(0b1);
+        // Start our ADC in round-robin mode, sampling 1000 times per second
+        adc.start_many_round_robin(0b1, 47999, 0);
         ADC_OBJ.borrow(cs).replace(Some(adc));
     });
     loop {

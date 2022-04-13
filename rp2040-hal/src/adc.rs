@@ -85,7 +85,9 @@ impl Adc {
     }
 
     /// Start the ADC in Round Robin mode - read samples from the interrupt
-    pub fn start_many_round_robin(&self, channel_bitfield: u8) {
+    /// if divider and divider_frac are 0, the ADC will sample back-to-back
+    /// otherwise, it will trigger every at the frequency of (48MHz) / divider.
+    pub fn start_many_round_robin(&self, channel_bitfield: u8, divider: u16, divider_frac: u8) {
         // The first ADC channel is the least significant bit
         let first_channel = channel_bitfield.trailing_zeros();
         let number_of_channels = channel_bitfield.count_ones().try_into().unwrap();
@@ -97,10 +99,10 @@ impl Adc {
         while self.device.fcs.read().empty().bit_is_clear() {
             let _ = self.device.fifo.read();
         }
-        // Run ADC with back-to-back captures
+        // Set the ADC sample frequency
         self.device
             .div
-            .modify(|_, w| unsafe { w.int().bits(0).frac().bits(0) });
+            .modify(|_, w| unsafe { w.int().bits(divider).frac().bits(divider_frac) });
         // Set up our interrupts before enabling the ADC
         self.enable_fifo_interrupt(number_of_channels);
         // Configure for round-robin sampling, start at the first channel
