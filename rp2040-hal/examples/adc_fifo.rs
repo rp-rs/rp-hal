@@ -22,13 +22,12 @@ use rp2040_hal as hal;
 
 // Some traits we need
 use core::fmt::Write;
-use embedded_hal::adc::OneShot;
 use embedded_time::fixed_point::FixedPoint;
 use pac::interrupt;
 use rp2040_hal::Clock;
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
-use hal::{pac, Adc};
+use hal::pac;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -44,6 +43,8 @@ use core::cell::RefCell;
 use cortex_m::interrupt::Mutex;
 use rp2040_hal::Adc as RpAdc;
 static ADC_OBJ: Mutex<RefCell<Option<RpAdc>>> = Mutex::new(RefCell::new(None));
+static mut ADC_READING: u16 = 0;
+static mut ADC_READING_GOOD: bool = false;
 
 /// Entry point to our bare-metal application.
 ///
@@ -104,70 +105,59 @@ fn main() -> ! {
         .unwrap();
 
     // Write to the UART
-    uart.write_full_blocking(b"ADC example\r\n");
+    uart.write_full_blocking(b"ADC FIFO example\r\n");
 
     // Enable ADC
-    let mut adc = hal::Adc::new(pac.ADC, &mut pac.RESETS);
-
-    // Enable the temperature sense channel
-    let mut temperature_sensor = adc.enable_temp_sensor();
+    let adc = hal::Adc::new(pac.ADC, &mut pac.RESETS);
 
     // Configure GPIO26 as an ADC input
-    let mut adc_pin_0 = pins.gpio26.into_floating_input();
+    let _adc_pin_0 = pins.gpio26.into_floating_input();
     cortex_m::interrupt::free(|cs| {
         adc.start_many_round_robin(0b1);
         ADC_OBJ.borrow(cs).replace(Some(adc));
     });
     loop {
-        cortex_m::interrupt::free(|cs| {
-            if let Some(adc) = ADC_OBJ.borrow(cs).borrow_mut().as_mut() {
-                if adc.interrupt_pending() {
-                    writeln!(uart, "Interrupt pending\r\n").unwrap();
-                }
-                writeln!(uart, "fifo len {:?}\r\n", adc.fifo_len()).unwrap();
-                // adc.enable_fifo_interrupt(1);
+        unsafe {
+            if ADC_READING_GOOD {
+                // Print our ADC value, discarding any error from writeln
+                let _ = writeln!(uart, "adc value {:?}\r\n", ADC_READING);
+                ADC_READING_GOOD = false;
             }
-        });
+        }
         delay.delay_ms(1000);
     }
 }
 
 #[interrupt]
 fn ADC_IRQ_FIFO() {
-    unsafe {
-        let (mut adc0, mut adc1, mut adc2, mut adc3) = (0, 0, 0, 0);
-        cortex_m::interrupt::free(|cs| {
-            let adc = ADC_OBJ.borrow(cs).take();
-
-            if let Some(mut adc) = adc {
-                if adc.fifo_len() < 4 {
-                    //info!("fifo was not full enough");
-                    while adc.fifo_len() > 0 {
-                        let a = adc.read_fifo();
-                        //info!("fifo contained {:?}", a);
-                    }
+    cortex_m::interrupt::free(|cs| {
+        let adc = ADC_OBJ.borrow(cs).take();
+        if let Some(mut adc) = adc {
+            // If we got less samples than we expected
+            if adc.fifo_len() < 1 {
+                // Flush the fifo so we're ready for next time
+                while adc.fifo_len() > 0 {
+                    let _ = adc.read_fifo();
                 }
-                if let Some(a) = adc.read_fifo() {
-                    adc0 = a;
+                // Set the flag so we can print that the value is bad
+                unsafe {
+                    ADC_READING_GOOD = false;
                 }
-                if let Some(a) = adc.read_fifo() {
-                    adc1 = a;
-                }
-                if let Some(a) = adc.read_fifo() {
-                    adc2 = a;
-                }
-                if let Some(a) = adc.read_fifo() {
-                    adc3 = a;
-                }
-            } else {
-                //info!("no adc?");
+                return;
             }
-        });
-        // info!(
-        //     "ADC readings: Pin: {:02}, pin1 {:02}, pin2 {:02}, pin3 {:02}\r\n",
-        //     adc0, adc1, adc2, adc3
-        // );
-    }
+            // Grab our value from the fifo
+            if let Some(a) = adc.read_fifo() {
+                unsafe {
+                    // Store it in our static variable
+                    ADC_READING = a;
+                    // Let the main loop know the value is good
+                    ADC_READING_GOOD = true;
+                }
+            }
+        } else {
+            panic!("Interrupt fired while refcell didn't contain an Adc instance");
+        }
+    });
 }
 
 // End of file
