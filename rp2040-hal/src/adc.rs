@@ -39,6 +39,7 @@
 
 use core::convert::TryInto;
 use hal::adc::{Channel, OneShot};
+use num_traits::float::FloatCore;
 use pac::{ADC, RESETS};
 
 use crate::{
@@ -85,12 +86,20 @@ impl Adc {
     }
 
     /// Start the ADC in Round Robin mode - read samples from the interrupt
-    /// if divider and divider_frac are 0, the ADC will sample back-to-back
-    /// otherwise, it will trigger every at the frequency of (48MHz) / divider.
-    pub fn start_many_round_robin(&self, channel_bitfield: u8, divider: u16, divider_frac: u8) {
+    /// Conversion always takes 96 cycles regardless of ADC sample frequency
+    /// If the sample frequency is greater than 500 kilosamples/s, conversion will be back-to-back with no gap
+    /// otherwise, each conversion is scheduled on this interval.
+    /// Note: divisor is *at most* 65536, so the minimum sampling frequency is 732.42 hz.
+    /// if you're going to do low frequency sampling, one-shot is probably easier.
+    pub fn start_many_round_robin(&self, channel_bitfield: u8, conversion_frequency_hz: u32) {
         // The first ADC channel is the least significant bit
         let first_channel = channel_bitfield.trailing_zeros();
         let number_of_channels = channel_bitfield.count_ones().try_into().unwrap();
+        // The clock divider specifies how regularly *one* sample will be taken.
+        // Since the user specified a number of channels and a frequency, they will expect that number
+        // of samples per channel per second.
+        // Scale up our conversion rate so that it makes sense.
+        let conversion_frequency_hz = conversion_frequency_hz * number_of_channels as u32;
         assert!(first_channel < 4);
         assert!(number_of_channels < 5);
         // Stop any sampling that is currently happening
@@ -99,10 +108,36 @@ impl Adc {
         while self.device.fcs.read().empty().bit_is_clear() {
             let _ = self.device.fifo.read();
         }
-        // Set the ADC sample frequency
-        self.device
-            .div
-            .modify(|_, w| unsafe { w.int().bits(divider).frac().bits(divider_frac) });
+        // According to the docs, ADC clock *must* be 48MHz to be in spec - so we'll assume that frequency.
+        let adc_clock_frequency_hz = 48_000_000 as f32;
+        // TODO: expose sio::divider_unsigned (if we can safely do so) so we can calculate this without resorting to floats.
+        // Can't easily do this with fixed-point u32 math since 48M * 256 will exceed the range of u32.
+        // let denom = 48_000_000 / conversion_frequency_hz;
+        let clock_divider = adc_clock_frequency_hz / (conversion_frequency_hz as f32);
+        // Division is actually performed on denominator + 1
+        // so if requested freq == 48MHz, clock_divider would be 1 but we need
+        // to subtract 1 for the HW to do what we want
+        let clock_divider_int = clock_divider.trunc() as i32 - 1;
+        // if we wrapped around due to subtraction, use 0 instead
+        let clock_divider_int = clock_divider_int.max(0);
+        // get the fractional parts out of the divider, scale them so 1.0 == 255
+        let clock_divider_frac = (u8::MAX as f32 * clock_divider.fract()).trunc() as u32;
+        // clamp clock_divider_int to u16::MAX before casting into u16
+        let mut clock_divider_int = clock_divider_int.min(u16::MAX as i32) as u16;
+        // clamp max fractional value to u16::MAX
+        let mut clock_divider_frac = clock_divider_frac.min(u8::MAX as u32) as u8;
+        // Don't use the divider if it would fire while still sampling - back-to-back makes more sense there
+        if clock_divider_int <= 96 {
+            clock_divider_int = 0;
+            clock_divider_frac = 0;
+        }
+        // Finally configure for the sample frequency that we just calculated
+        self.device.div.modify(|_, w| unsafe {
+            w.int()
+                .bits(clock_divider_int)
+                .frac()
+                .bits(clock_divider_frac)
+        });
         // Set up our interrupts before enabling the ADC
         self.enable_fifo_interrupt(number_of_channels);
         // Configure for round-robin sampling, start at the first channel

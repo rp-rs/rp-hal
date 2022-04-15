@@ -21,6 +21,7 @@ embedded-dma = "0.2.0"
 fugit = "0.3.6"
 itertools = { version = "0.10.1", default-features = false }
 nb = "1.0"
+num-traits = { version = "0.2.0", default-features = false }
 rp2040-pac = "0.4.0"
 paste = "1.0"
 pio = "0.2.0"
