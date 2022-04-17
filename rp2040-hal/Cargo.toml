@@ -30,6 +30,8 @@ critical-section = { version = "0.2.4", features = ["custom-impl"] }
 futures = { version = "0.3", default-features = false, optional = true }
 chrono = { version = "0.4", default-features = false, optional = true }
 
+defmt = { version = "0.2.0", optional = true }
+
 # namespaced features will let us use "dep:embassy-traits" in the features rather than using this
 # trick of renaming the crate.
 #
