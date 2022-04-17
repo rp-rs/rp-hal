@@ -9,7 +9,7 @@ mod app {
     use embedded_hal::digital::v2::OutputPin;
     use embedded_time::duration::Extensions;
     use rp_pico::{
-        hal::{self, clocks::init_clocks_and_plls, watchdog::Watchdog, Sio},
+        hal::{self, clocks::init_clocks_and_plls, timer::Alarm, watchdog::Watchdog, Sio},
         XOSC_CRYSTAL_FREQ,
     };
 
