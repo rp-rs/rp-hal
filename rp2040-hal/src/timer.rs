@@ -148,18 +148,51 @@ impl embedded_hal::timer::Cancel for CountDown<'_> {
     }
 }
 
+/// Alarm abstraction.
+pub trait Alarm {
+    /// Clear the interrupt flag.
+    ///
+    /// The interrupt is unable to trigger a 2nd time until this interrupt is cleared.
+    fn clear_interrupt(&mut self);
+
+    /// Enable this alarm to trigger an interrupt.
+    ///
+    /// After this interrupt is triggered, make sure to clear the interrupt with [clear_interrupt].
+    ///
+    /// [clear_interrupt]: #method.clear_interrupt
+    fn enable_interrupt(&mut self);
+
+    /// Disable this alarm, preventing it from triggering an interrupt.
+    fn disable_interrupt(&mut self);
+
+    /// Schedule the alarm to be finished after `countdown`. If [enable_interrupt] is called,
+    /// this will trigger interrupt whenever this time elapses.
+    ///
+    /// The RP2040 has been observed to take a little while to schedule an alarm. For this
+    /// reason, the minimum time that this function accepts is `10.microseconds()`
+    ///
+    /// [enable_interrupt]: #method.enable_interrupt
+    fn schedule<TIME: Into<Microseconds>>(
+        &mut self,
+        countdown: TIME,
+    ) -> Result<(), ScheduleAlarmError>;
+
+    /// Return true if this alarm is finished.
+    fn finished(&self) -> bool;
+}
+
 macro_rules! impl_alarm {
     ($name:ident  { rb: $timer_alarm:ident, int: $int_alarm:ident, int_name: $int_name:tt, armed_bit_mask: $armed_bit_mask: expr }) => {
         /// An alarm that can be used to schedule events in the future. Alarms can also be configured to trigger interrupts.
         pub struct $name(PhantomData<()>);
 
-        impl $name {
+        impl Alarm for $name {
             /// Clear the interrupt flag. This should be called after interrupt `
             #[doc = $int_name]
             /// ` is called.
             ///
             /// The interrupt is unable to trigger a 2nd time until this interrupt is cleared.
-            pub fn clear_interrupt(&mut self) {
+            fn clear_interrupt(&mut self) {
                 // safety: TIMER.intr is a write-clear register, so we can atomically clear our interrupt
                 // by writing its value to this field
                 // Only one instance of this alarm index can exist, and only this alarm interacts with this bit
@@ -177,7 +210,7 @@ macro_rules! impl_alarm {
             /// After this interrupt is triggered, make sure to clear the interrupt with [clear_interrupt].
             ///
             /// [clear_interrupt]: #method.clear_interrupt
-            pub fn enable_interrupt(&mut self) {
+            fn enable_interrupt(&mut self) {
                 // safety: using the atomic set alias means we can atomically set our interrupt enable bit.
                 // Only one instance of this alarm can exist, and only this alarm interacts with this bit
                 // of the TIMER.inte register
@@ -189,7 +222,7 @@ macro_rules! impl_alarm {
             }
 
             /// Disable this alarm, preventing it from triggering an interrupt.
-            pub fn disable_interrupt(&mut self) {
+            fn disable_interrupt(&mut self) {
                 // safety: using the atomic set alias means we can atomically clear our interrupt enable bit.
                 // Only one instance of this alarm can exist, and only this alarm interacts with this bit
                 // of the TIMER.inte register
@@ -207,7 +240,7 @@ macro_rules! impl_alarm {
             /// The RP2040 has been observed to take a little while to schedule an alarm. For this reason, the minimum time that this function accepts is `10.microseconds()`
             ///
             /// [enable_interrupt]: #method.enable_interrupt
-            pub fn schedule<TIME: Into<Microseconds>>(
+            fn schedule<TIME: Into<Microseconds>>(
                 &mut self,
                 countdown: TIME,
             ) -> Result<(), ScheduleAlarmError> {
@@ -235,7 +268,7 @@ macro_rules! impl_alarm {
             }
 
             /// Return true if this alarm is finished.
-            pub fn finished(&self) -> bool {
+            fn finished(&self) -> bool {
                 // safety: This is a read action and should not have any UB
                 let bits: u32 = unsafe { &*TIMER::ptr() }.armed.read().bits();
                 (bits & $armed_bit_mask) == 0
