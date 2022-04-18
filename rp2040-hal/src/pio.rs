@@ -656,7 +656,7 @@ impl<P: PIOExt, SM: StateMachineIndex> StateMachine<(P, SM), Stopped> {
 }
 
 impl<P: PIOExt, SM: StateMachineIndex, State> StateMachine<(P, SM), State> {
-    /// Create a group of state machines, which can be started/stopped synchonously
+    /// Create a group of state machines, which can be started/stopped synchronously
     pub fn with<SM2: StateMachineIndex>(
         self,
         other_sm: StateMachine<(P, SM2), State>,

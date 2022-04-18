@@ -6,7 +6,7 @@
 //! using the PIO peripheral as an I2C bus controller.
 //! The pins used for the I2C can be remapped to any other pin available to the PIO0 peripheral.
 //!
-//! See the `Cargo.toml` file for Copyright and licence details.
+//! See the `Cargo.toml` file for Copyright and license details.
 
 #![no_std]
 #![no_main]

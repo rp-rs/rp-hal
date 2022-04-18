@@ -35,7 +35,7 @@
 //!     - (o) connected lines
 //! ```
 //!
-//! See the `Cargo.toml` file for Copyright and licence details.
+//! See the `Cargo.toml` file for Copyright and license details.
 
 #![no_std]
 #![no_main]

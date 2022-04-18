@@ -6,7 +6,7 @@
 //! It generates movement reports which will twitch the cursor up and down by a
 //! few pixels, several times a second.
 //!
-//! See the `Cargo.toml` file for Copyright and licence details.
+//! See the `Cargo.toml` file for Copyright and license details.
 //!
 //! This is a port of
 //! https://github.com/atsamd-rs/atsamd/blob/master/boards/itsybitsy_m0/examples/twitching_usb_mouse.rs

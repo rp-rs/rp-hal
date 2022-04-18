@@ -7,7 +7,7 @@
 //! internally by this example. When the button is pressed, the LED will turn
 //! off.
 //!
-//! See the `Cargo.toml` file for Copyright and licence details.
+//! See the `Cargo.toml` file for Copyright and license details.
 
 #![no_std]
 #![no_main]
