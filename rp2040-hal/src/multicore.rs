@@ -33,10 +33,7 @@
 //!
 //! For a detailed example, see [examples/multicore_fifo_blink.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/multicore_fifo_blink.rs)
 
-use core::mem;
 use core::mem::ManuallyDrop;
-
-use pac::Peripherals;
 
 use crate::pac;
 use crate::Sio;
@@ -49,15 +46,6 @@ pub enum Error {
     /// Core was unresposive to commands.
     Unresponsive,
 }
-
-// We pass data to cores via the stack, so we read
-// the data off the stack and into parameters that
-// rust can read here. Ideally this would be a
-// #[naked] function but that is not stable yet.
-static MULTICORE_TRAMPOLINE: [u16; 2] = [
-    0xbd07, // pop {r0, r1, r2, pc} - call wrapper (pc) with r0, r1 and r2
-    0x46c0, // nop - pad this out to 32 bits long
-];
 
 #[inline(always)]
 fn install_stack_guard(stack_bottom: *mut usize) {
@@ -143,13 +131,36 @@ impl<'p> Core<'p> {
         }
     }
 
-    fn inner_spawn(
-        &mut self,
-        wrapper: *mut (),
-        entry: [usize; 2],
-        stack: &'static mut [usize],
-    ) -> Result<(), Error> {
+    /// Spawn a function on this core.
+    pub fn spawn<F>(&mut self, entry: F, stack: &'static mut [usize]) -> Result<(), Error>
+    where
+        F: FnOnce() -> bad::Never + Send + 'static,
+    {
         if let Some((psm, ppb, sio)) = self.inner.as_mut() {
+            // The first two ignored `u64` parameters are there to take up all of the registers,
+            // which means that the rest of the arguments are taken from the stack,
+            // where we're able to put them from core 0.
+            extern "C" fn core1_startup<F: FnOnce() -> bad::Never>(
+                _: u64,
+                _: u64,
+                entry: &mut ManuallyDrop<F>,
+                stack_bottom: *mut usize,
+            ) -> ! {
+                core1_setup(stack_bottom);
+
+                let entry = unsafe { ManuallyDrop::take(entry) };
+
+                // Signal that it's safe for core 0 to get rid of the original value now.
+                //
+                // We don't have any way to get at core 1's SIO without using `Peripherals::steal` right now,
+                // since svd2rust doesn't really support multiple cores properly.
+                let peripherals = unsafe { pac::Peripherals::steal() };
+                let mut sio = Sio::new(peripherals.SIO);
+                sio.fifo.write_blocking(1);
+
+                entry()
+            }
+
             // Reset the core
             psm.frce_off.modify(|_, w| w.proc1().set_bit());
             while !psm.frce_off.read().proc1().bit_is_set() {
@@ -165,10 +176,12 @@ impl<'p> Core<'p> {
                 stack_ptr.write(v);
             };
 
-            push(wrapper as usize);
+            // We don't want to drop this, since it's getting moved to the other core.
+            let mut entry = ManuallyDrop::new(entry);
+
+            // Push the arguments to `core1_startup` onto the stack.
             push(stack.as_mut_ptr() as usize);
-            push(entry[1]);
-            push(entry[0]);
+            push(&mut entry as *mut _ as usize);
 
             let vector_table = ppb.vtor.read().bits();
 
@@ -180,7 +193,7 @@ impl<'p> Core<'p> {
                 1,
                 vector_table as usize,
                 stack_ptr as usize,
-                MULTICORE_TRAMPOLINE.as_ptr() as usize + 1,
+                core1_startup::<F> as usize,
             ];
 
             let mut seq = 0;
@@ -207,62 +220,13 @@ impl<'p> Core<'p> {
                 }
             }
 
+            // Wait until the other core has copied `entry` before returning.
+            sio.fifo.read_blocking();
+
             Ok(())
         } else {
             Err(Error::InvalidCore)
         }
-    }
-
-    /// Spawn a function on this core.
-    pub fn spawn<F>(&mut self, entry: F, stack: &'static mut [usize]) -> Result<(), Error>
-    where
-        F: FnOnce() -> bad::Never,
-        F: Send + 'static,
-    {
-        // idea stolen from https://users.rust-lang.org/t/invoke-mut-dyn-fnonce/59356/4
-        trait Core1Main {
-            /// # Safety
-            ///
-            /// Must only be called once.
-            unsafe fn run(&mut self) -> !;
-        }
-
-        impl<T: FnOnce() -> bad::Never> Core1Main for T {
-            unsafe fn run(&mut self) -> ! {
-                let f = (self as *mut Self).read();
-
-                // Signal that it's safe for the other core to get rid of the original value now
-                let peripherals = Peripherals::steal();
-                let sio = Sio::new(peripherals.SIO);
-                let mut fifo = sio.fifo;
-                fifo.write_blocking(1);
-
-                f()
-            }
-        }
-
-        extern "C" fn core1(entry0: usize, entry1: usize, stack_bottom: *mut usize) -> ! {
-            core1_setup(stack_bottom);
-            let main: *mut dyn Core1Main = unsafe { mem::transmute([entry0, entry1]) };
-            unsafe { (*main).run() }
-        }
-
-        // We don't want to drop this, since it's getting moved to the other core.
-        let mut entry = ManuallyDrop::new(entry);
-
-        let ptr = &mut *entry as &mut dyn Core1Main;
-        let ptr = unsafe { mem::transmute(ptr) };
-
-        self.inner_spawn(core1 as _, ptr, stack)?;
-
-        // If `inner_spawn` succeeded, this must not have been `None`,
-        // so it's fine to unwrap it.
-        let (_, _, sio) = self.inner.as_mut().unwrap();
-
-        // Wait until the other core has copied `entry` before dropping it.
-        sio.fifo.read_blocking();
-
-        Ok(())
     }
 }
 
