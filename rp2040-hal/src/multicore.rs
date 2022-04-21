@@ -3,20 +3,20 @@
 //! This module handles setup of the 2nd cpu core on the rp2040, which we refer to as core1.
 //! It provides functionality for setting up the stack, and starting core1.
 //!
-//! The options for an entrypoint for core1 are
-//! - a function that never returns - eg
-//! `fn core1_task() -> ! { loop{} }; `
-//! - a lambda (note: This requires a global allocator which requires a nightly compiler. Not recommended for beginners)
+//! The entrypoint for core1 can be any function that never returns, including closures.
 //!
 //! # Usage
 //!
 //! ```no_run
+//! use rp2040_hal::{pac, gpio::Pins, sio::Sio, multicore::{Multicore, Stack}};
+//!
 //! static mut CORE1_STACK: Stack<4096> = Stack::new();
+//!
 //! fn core1_task() -> ! {
-//!     loop{}
+//!     loop {}
 //! }
-//! // fn main() -> ! {
-//!     use rp2040_hal::{pac, gpio::Pins, sio::Sio, multicore::{Multicore, Stack}};
+//!
+//! fn main() -> ! {
 //!     let mut pac = pac::Peripherals::take().unwrap();
 //!     let mut sio = Sio::new(pac.SIO);
 //!     // Other init code above this line
@@ -25,7 +25,8 @@
 //!     let core1 = &mut cores[1];
 //!     let _test = core1.spawn(core1_task, unsafe { &mut CORE1_STACK.mem });
 //!     // The rest of your application below this line
-//! //}
+//!     # loop {}
+//! }
 //!
 //! ```
 //!
@@ -212,6 +213,9 @@ impl<'p> Core<'p> {
                     seq = 0;
                     fails += 1;
                     if fails > 16 {
+                        // The second core isn't responding, and isn't going to take the entrypoint,
+                        // so we have to drop it ourselves.
+                        drop(ManuallyDrop::into_inner(entry));
                         return Err(Error::Unresponsive);
                     }
                 }
