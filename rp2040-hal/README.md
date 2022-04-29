@@ -57,7 +57,7 @@ hardware-abstraction interfaces defined in the Rust Embedded Working Group's
 
 We also provide a series of *Board Support Package* (BSP) crates, which take
 this HAL crate and pre-configure the pins according to a specific PCB design. If
-you are using on of the supported boards, you should use one of those crates in
+you are using one of the supported boards, you should use one of those crates in
 preference, and return here to see documentation about specific peripherals on
 the RP2040 and how to use them. See the `boards` folder in
 https://github.com/rp-rs/rp-hal/ for more details.
