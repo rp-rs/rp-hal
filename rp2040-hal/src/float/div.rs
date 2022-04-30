@@ -1,6 +1,71 @@
 use super::Float;
 use crate::rom_data;
-use crate::sio::save_divider;
+
+// Make sure this stays as a separate call, because when it's inlined the
+// compiler will move the save of the registers used to contain the divider
+// state into the function prologue.  That save and restore (push/pop) takes
+// longer than the actual division, so doing it in the common case where
+// they are not required wastes a lot of time.
+#[inline(never)]
+#[cold]
+fn save_divider_and_call<F, R>(f: F) -> R
+where
+    F: FnOnce() -> R,
+{
+    let sio = unsafe { &(*pac::SIO::ptr()) };
+
+    // Since we can't save the signed-ness of the calculation, we have to make
+    // sure that there's at least an 8 cycle delay before we read the result.
+    // The Pico SDK ensures this by using a 6 cycle push and two 1 cycle reads.
+    // Since we can't be sure the Rust implementation will optimize to the same,
+    // just use an explicit wait.
+    while !sio.div_csr.read().ready().bit() {}
+
+    // Read the quotient last, since that's what clears the dirty flag
+    let dividend = sio.div_udividend.read().bits();
+    let divisor = sio.div_udivisor.read().bits();
+    let remainder = sio.div_remainder.read().bits();
+    let quotient = sio.div_quotient.read().bits();
+
+    // If we get interrupted here (before a write sets the DIRTY flag) its fine, since
+    // we have the full state, so the interruptor doesn't have to restore it.  Once the
+    // write happens and the DIRTY flag is set, the interruptor becomes responsible for
+    // restoring our state.
+    let result = f();
+
+    // If we are interrupted here, then the interruptor will start an incorrect calculation
+    // using a wrong divisor, but we'll restore the divisor and result ourselves correctly.
+    // This sets DIRTY, so any interruptor will save the state.
+    sio.div_udividend.write(|w| unsafe { w.bits(dividend) });
+    // If we are interrupted here, the the interruptor may start the calculation using
+    // incorrectly signed inputs, but we'll restore the result ourselves.
+    // This sets DIRTY, so any interruptor will save the state.
+    sio.div_udivisor.write(|w| unsafe { w.bits(divisor) });
+    // If we are interrupted here, the interruptor will have restored everything but the
+    // quotient may be wrongly signed.  If the calculation started by the above writes is
+    // still ongoing it is stopped, so it won't replace the result we're restoring.
+    // DIRTY and READY set, but only DIRTY matters to make the interruptor save the state.
+    sio.div_remainder.write(|w| unsafe { w.bits(remainder) });
+    // State fully restored after the quotient write.  This sets both DIRTY and READY, so
+    // whatever we may have interrupted can read the result.
+    sio.div_quotient.write(|w| unsafe { w.bits(quotient) });
+
+    result
+}
+
+fn save_divider<F, R>(f: F) -> R
+where
+    F: FnOnce() -> R,
+{
+    let sio = unsafe { &(*pac::SIO::ptr()) };
+    if !sio.div_csr.read().dirty().bit() {
+        // Not dirty, so nothing is waiting for the calculation.  So we can just
+        // issue it directly without a save/restore.
+        f()
+    } else {
+        save_divider_and_call(f)
+    }
+}
 
 trait ROMDiv {
     fn rom_div(self, b: Self) -> Self;
@@ -9,14 +74,14 @@ trait ROMDiv {
 impl ROMDiv for f32 {
     fn rom_div(self, b: Self) -> Self {
         // ROM implementation uses the hardware divider, so we have to save it
-        save_divider(|_sio| rom_data::float_funcs::fdiv(self, b))
+        save_divider(|| rom_data::float_funcs::fdiv(self, b))
     }
 }
 
 impl ROMDiv for f64 {
     fn rom_div(self, b: Self) -> Self {
         // ROM implementation uses the hardware divider, so we have to save it
-        save_divider(|_sio| rom_data::double_funcs::ddiv(self, b))
+        save_divider(|| rom_data::double_funcs::ddiv(self, b))
     }
 }
 

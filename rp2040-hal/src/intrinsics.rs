@@ -13,9 +13,10 @@ macro_rules! intrinsics_aliases {
         $($rest:ident)*
     ) => {
         #[cfg(all(target_arch = "arm", not(feature = "disable-intrinsics")))]
-        intrinsics! {
-            extern $abi fn $alias( $($argname: $ty),* ) -> $ret {
-                $name($($argname),*)
+        mod $alias {
+            #[no_mangle]
+            pub extern $abi fn $alias( $($argname: $ty),* ) -> $ret {
+                super::$name($($argname),*)
             }
         }
 
@@ -31,9 +32,10 @@ macro_rules! intrinsics_aliases {
         $($rest:ident)*
     ) => {
         #[cfg(all(target_arch = "arm", not(feature = "disable-intrinsics")))]
-        intrinsics! {
+        mod $alias {
+            #[no_mangle]
             unsafe extern $abi fn $alias( $($argname: $ty),* ) -> $ret {
-                $name($($argname),*)
+                super::$name($($argname),*)
             }
         }
 

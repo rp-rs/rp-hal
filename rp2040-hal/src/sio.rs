@@ -43,10 +43,10 @@ pub struct HwDivider {
 
 /// Result of divide/modulo operation
 pub struct DivResult<T> {
-    /// The remainder of divide/modulo operation
-    pub remainder: T,
     /// The quotient of divide/modulo operation
     pub quotient: T,
+    /// The remainder of divide/modulo operation
+    pub remainder: T,
 }
 
 /// Struct containing ownership markers for managing ownership of the SIO registers.
@@ -171,107 +171,159 @@ impl SioFifo {
     }
 }
 
-pub(crate) fn save_divider<F, R>(f: F) -> R
-where
-    F: FnOnce(&pac::sio::RegisterBlock) -> R,
-{
-    let sio = unsafe { &(*pac::SIO::ptr()) };
-    if !sio.div_csr.read().dirty().bit() {
-        // Not dirty, so nothing is waiting for the calculation.  So we can just
-        // issue it directly without a save/restore.
-        f(sio)
-    } else {
-        // Since we can't save the signed-ness of the calculation, we have to make
-        // sure that there's at least an 8 cycle delay before we read the result.
-        // The Pico SDK ensures this by using a 6 cycle push and two 1 cycle reads.
-        // Since we can't be sure the Rust implementation will optimize to the same,
-        // just use an explicit wait.
-        while !sio.div_csr.read().ready().bit() {}
+// This takes advantage of how AAPCS defines a 64-bit return on 32-bit registers
+// by packing it into r0[0:31] and r1[32:63].  So all we need to do is put
+// the remainder in the high order 32 bits of a 64 bit result.   We can also
+// alias the division operators to these for a similar reason r0 is the
+// result either way and r1 a scratch register, so the caller can't assume it
+// retains the argument value.
+#[cfg(target_arch = "arm")]
+core::arch::global_asm!(
+    ".macro hwdivider_head",
+    "ldr    r2, =(0xd0000000)", // SIO_BASE
+    // Check the DIRTY state of the divider by shifting it into the C
+    // status bit.
+    "ldr    r3, [r2, #0x078]", // DIV_CSR
+    "lsrs   r3, #2",           // DIRTY = 1, so shift 2 down
+    // We only need to save the state when DIRTY, otherwise we can just do the
+    // division directly.
+    "bcs    2f",
+    "1:",
+    // Do the actual division now, we're either not DIRTY, or we've saved the
+    // state and branched back here so it's safe now.
+    ".endm",
+    ".macro hwdivider_tail",
+    // 8 cycle delay to wait for the result.  Each branch takes two cycles
+    // and fits into a 2-byte Thumb instruction, so this is smaller than
+    // 8 NOPs.
+    "b      3f",
+    "3: b   3f",
+    "3: b   3f",
+    "3: b   3f",
+    "3:",
+    // Read the quotient last, since that's what clears the dirty flag.
+    "ldr    r1, [r2, #0x074]", // DIV_REMAINDER
+    "ldr    r0, [r2, #0x070]", // DIV_QUOTIENT
+    // Either return to the caller or back to the state restore.
+    "bx     lr",
+    "2:",
+    // Since we can't save the signed-ness of the calculation, we have to make
+    // sure that there's at least an 8 cycle delay before we read the result.
+    // The push takes 5 cycles, and we've already spent at least 7 checking
+    // the DIRTY state to get here.
+    "push   {{r4-r6, lr}}",
+    // Read the quotient last, since that's what clears the dirty flag.
+    "ldr    r3, [r2, #0x060]", // DIV_UDIVIDEND
+    "ldr    r4, [r2, #0x064]", // DIV_UDIVISOR
+    "ldr    r5, [r2, #0x074]", // DIV_REMAINDER
+    "ldr    r6, [r2, #0x070]", // DIV_QUOTIENT
+    // If we get interrupted here (before a write sets the DIRTY flag) it's
+    // fine, since we have the full state, so the interruptor doesn't have to
+    // restore it.  Once the write happens and the DIRTY flag is set, the
+    // interruptor becomes responsible for restoring our state.
+    "bl     1b",
+    // If we are interrupted here, then the interruptor will start an incorrect
+    // calculation using a wrong divisor, but we'll restore the divisor and
+    // result ourselves correctly. This sets DIRTY, so any interruptor will
+    // save the state.
+    "str    r3, [r2, #0x060]", // DIV_UDIVIDEND
+    // If we are interrupted here, the the interruptor may start the
+    // calculation using incorrectly signed inputs, but we'll restore the
+    // result ourselves. This sets DIRTY, so any interruptor will save the
+    // state.
+    "str    r4, [r2, #0x064]", // DIV_UDIVISOR
+    // If we are interrupted here, the interruptor will have restored
+    // everything but the quotient may be wrongly signed.  If the calculation
+    // started by the above writes is still ongoing it is stopped, so it won't
+    // replace the result we're restoring.  DIRTY and READY set, but only
+    // DIRTY matters to make the interruptor save the state.
+    "str    r5, [r2, #0x074]", // DIV_REMAINDER
+    // State fully restored after the quotient write.  This sets both DIRTY
+    // and READY, so whatever we may have interrupted can read the result.
+    "str    r6, [r2, #0x070]", // DIV_QUOTIENT
+    "pop    {{r4-r6, pc}}",
+    ".endm",
+);
 
-        // Read the quotient last, since that's what clears the dirty flag
-        let dividend = sio.div_udividend.read().bits();
-        let divisor = sio.div_udivisor.read().bits();
-        let remainder = sio.div_remainder.read().bits();
-        let quotient = sio.div_quotient.read().bits();
+macro_rules! division_function {
+    (
+        $name:ident $($intrinsic:ident)* ( $argty:ty ) {
+            $($begin:literal),+
+        }
+    ) => {
+        #[cfg(all(target_arch = "arm", not(feature = "disable-intrinsics")))]
+        core::arch::global_asm!(
+            // Mangle the name slightly, since this is a global symbol.
+            concat!(".global _rphal_", stringify!($name)),
+            concat!(".type _rphal_", stringify!($name), ", %function"),
+            ".align 2",
+            concat!("_rphal_", stringify!($name), ":"),
+            $(
+                concat!(".global ", stringify!($intrinsic)),
+                concat!(".type ", stringify!($intrinsic), ", %function"),
+                concat!(stringify!($intrinsic), ":"),
+            )*
 
-        // If we get interrupted here (before a write sets the DIRTY flag) its fine, since
-        // we have the full state, so the interruptor doesn't have to restore it.  Once the
-        // write happens and the DIRTY flag is set, the interruptor becomes responsible for
-        // restoring our state.
-        let result = f(sio);
+            "hwdivider_head",
+            $($begin),+ ,
+            "hwdivider_tail",
+        );
 
-        // If we are interrupted here, then the interruptor will start an incorrect calculation
-        // using a wrong divisor, but we'll restore the divisor and result ourselves correctly.
-        // This sets DIRTY, so any interruptor will save the state.
-        sio.div_udividend.write(|w| unsafe { w.bits(dividend) });
-        // If we are interrupted here, the the interruptor may start the calculation using
-        // incorrectly signed inputs, but we'll restore the result ourselves.
-        // This sets DIRTY, so any interruptor will save the state.
-        sio.div_udivisor.write(|w| unsafe { w.bits(divisor) });
-        // If we are interrupted here, the interruptor will have restored everything but the
-        // quotient may be wrongly signed.  If the calculation started by the above writes is
-        // still ongoing it is stopped, so it won't replace the result we're restoring.
-        // DIRTY and READY set, but only DIRTY matters to make the interruptor save the state.
-        sio.div_remainder.write(|w| unsafe { w.bits(remainder) });
-        // State fully restored after the quotient write.  This sets both DIRTY and READY, so
-        // whatever we may have interrupted can read the result.
-        sio.div_quotient.write(|w| unsafe { w.bits(quotient) });
+        #[cfg(all(target_arch = "arm", feature = "disable-intrinsics"))]
+        core::arch::global_asm!(
+            // Mangle the name slightly, since this is a global symbol.
+            concat!(".global _rphal_", stringify!($name)),
+            concat!(".type _rphal_", stringify!($name), ", %function"),
+            ".align 2",
+            concat!("_rphal_", stringify!($name), ":"),
 
-        result
+            "hwdivider_head",
+            $($begin),+ ,
+            "hwdivider_tail",
+        );
+
+        #[cfg(target_arch = "arm")]
+        extern "aapcs" {
+            // Connect a local name to global symbol above through FFI.
+            #[link_name = concat!("_rphal_", stringify!($name)) ]
+            fn $name(n: $argty, d: $argty) -> u64;
+        }
+
+        #[cfg(not(target_arch = "arm"))]
+        #[allow(unused_variables)]
+        unsafe fn $name(n: $argty, d: $argty) -> u64 { 0 }
+    };
+}
+
+division_function! {
+    unsigned_divmod __aeabi_uidivmod __aeabi_uidiv ( u32 ) {
+        "str    r0, [r2, #0x060]", // DIV_UDIVIDEND
+        "str    r1, [r2, #0x064]"  // DIV_UDIVISOR
     }
 }
 
-// Don't use cortex_m::asm::delay(8) because that ends up delaying 15 cycles
-// on Cortex-M0.  Each iteration of the inner loop is 3 cycles and it adds
-// one extra iteration.
-#[inline(always)]
-fn divider_delay() {
-    cortex_m::asm::nop();
-    cortex_m::asm::nop();
-    cortex_m::asm::nop();
-    cortex_m::asm::nop();
-    cortex_m::asm::nop();
-    cortex_m::asm::nop();
-    cortex_m::asm::nop();
-    cortex_m::asm::nop();
+division_function! {
+    signed_divmod __aeabi_idivmod __aeabi_idiv ( i32 ) {
+        "str    r0, [r2, #0x068]", // DIV_SDIVIDEND
+        "str    r1, [r2, #0x06c]"  // DIV_SDIVISOR
+    }
 }
 
-fn divider_unsigned(dividend: u32, divisor: u32) -> DivResult<u32> {
-    save_divider(|sio| {
-        sio.div_udividend.write(|w| unsafe { w.bits(dividend) });
-        sio.div_udivisor.write(|w| unsafe { w.bits(divisor) });
-
-        divider_delay();
-
-        // Note: quotient must be read last
-        let remainder = sio.div_remainder.read().bits();
-        let quotient = sio.div_quotient.read().bits();
-
-        DivResult {
-            remainder,
-            quotient,
-        }
-    })
+fn divider_unsigned(n: u32, d: u32) -> DivResult<u32> {
+    let packed = unsafe { unsigned_divmod(n, d) };
+    DivResult {
+        quotient: packed as u32,
+        remainder: (packed >> 32) as u32,
+    }
 }
 
-fn divider_signed(dividend: i32, divisor: i32) -> DivResult<i32> {
-    save_divider(|sio| {
-        sio.div_sdividend
-            .write(|w| unsafe { w.bits(dividend as u32) });
-        sio.div_sdivisor
-            .write(|w| unsafe { w.bits(divisor as u32) });
-
-        divider_delay();
-
-        // Note: quotient must be read last
-        let remainder = sio.div_remainder.read().bits() as i32;
-        let quotient = sio.div_quotient.read().bits() as i32;
-
-        DivResult {
-            remainder,
-            quotient,
-        }
-    })
+fn divider_signed(n: i32, d: i32) -> DivResult<i32> {
+    let packed = unsafe { signed_divmod(n, d) };
+    // Double casts to avoid sign extension
+    DivResult {
+        quotient: packed as u32 as i32,
+        remainder: (packed >> 32) as u32 as i32,
+    }
 }
 
 impl HwDivider {
@@ -287,7 +339,6 @@ impl HwDivider {
 }
 
 intrinsics! {
-    #[aeabi = __aeabi_uidiv]
     extern "C" fn __udivsi3(n: u32, d: u32) -> u32 {
         divider_unsigned(n, d).quotient
     }
@@ -304,7 +355,6 @@ intrinsics! {
         quo_rem.quotient
     }
 
-    #[aeabi = __aeabi_idiv]
     extern "C" fn __divsi3(n: i32, d: i32) -> i32 {
         divider_signed(n, d).quotient
     }
