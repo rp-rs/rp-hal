@@ -5,8 +5,6 @@
 
 #![warn(missing_docs)]
 #![no_std]
-#![cfg_attr(feature = "embassy-traits", feature(generic_associated_types))]
-#![cfg_attr(feature = "embassy-traits", feature(type_alias_impl_trait))]
 
 extern crate cortex_m;
 extern crate embedded_hal as hal;

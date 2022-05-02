@@ -14,9 +14,6 @@ use eh1_0_alpha::i2c as eh1;
 
 use super::{i2c_reserved_addr, Controller, Error, SclPin, SdaPin, I2C};
 
-#[cfg(feature = "embassy-traits")]
-mod embassy_support;
-
 impl<T: SubsystemReset + Deref<Target = Block>, Sda: PinId + BankPinId, Scl: PinId + BankPinId>
     I2C<T, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>), Controller>
 {

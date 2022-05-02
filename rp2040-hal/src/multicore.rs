@@ -43,7 +43,7 @@ extern crate alloc;
 pub enum Error {
     /// Operation is invalid on this core.
     InvalidCore,
-    /// Core was unresposive to commands.
+    /// Core was unresponsive to commands.
     Unresponsive,
 }
 

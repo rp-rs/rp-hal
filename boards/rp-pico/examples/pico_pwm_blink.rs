@@ -5,7 +5,7 @@
 //! This will fade in/out the LED attached to GP25, which is the pin the Pico
 //! uses for the on-board LED.
 //!
-//! See the `Cargo.toml` file for Copyright and licence details.
+//! See the `Cargo.toml` file for Copyright and license details.
 
 #![no_std]
 #![no_main]
