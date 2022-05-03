@@ -36,15 +36,12 @@ fn main() -> ! {
     let led_pin_id = 25;
 
     // Define some simple PIO program.
-    let program = pio_proc::pio!(
-        32,
-        "
-        .side_set 1 ; each instruction may set 1 bit
-        .wrap_target
-            nop side 1
-            nop side 0
-        .wrap
-        "
+    let program = pio_proc::pio_asm!(
+        ".side_set 1", // each instruction may set 1 bit
+        ".wrap_target",
+        "    nop side 1",
+        "    nop side 0",
+        ".wrap",
     );
 
     // Initialize and start PIO

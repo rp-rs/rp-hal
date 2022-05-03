@@ -2,11 +2,10 @@
 //!
 //! This module is for receiving data with a UART.
 
-use super::{UartConfig, UartDevice, ValidUartPinout};
+use super::{UartDevice, ValidUartPinout};
 use rp2040_pac::uart0::RegisterBlock;
 
 use embedded_hal::serial::Read;
-use embedded_time::rate::Baud;
 use nb::Error::*;
 
 #[cfg(feature = "eh1_0_alpha")]
@@ -167,8 +166,6 @@ pub(crate) fn read_full_blocking<D: UartDevice>(
 pub struct Reader<D: UartDevice, P: ValidUartPinout<D>> {
     pub(super) device: D,
     pub(super) pins: P,
-    pub(super) config: UartConfig,
-    pub(super) effective_baudrate: Baud,
 }
 
 impl<D: UartDevice, P: ValidUartPinout<D>> Reader<D, P> {

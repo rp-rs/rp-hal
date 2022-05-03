@@ -7,7 +7,7 @@
 //! ASCII characters are converted to upercase, so you can tell it is working
 //! and not just local-echo!
 //!
-//! See the `Cargo.toml` file for Copyright and licence details.
+//! See the `Cargo.toml` file for Copyright and license details.
 
 #![no_std]
 #![no_main]

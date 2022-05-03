@@ -17,7 +17,7 @@ RP2040 chip according to how it is connected up on the Pico Explorer.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-pimoroni-pico-explorer = "0.1.0"
+pimoroni-pico-explorer = "0.2.0"
 ```
 
 In your program, you will need to call `pimoroni_pico_explorer::Pins::new` to create
@@ -87,9 +87,9 @@ to intervene to uphold that code of conduct.
 ## License
 
 The contents of this repository are dual-licensed under the _MIT OR Apache
-2.0_ License. That means you can chose either the MIT licence or the
-Apache-2.0 licence when you re-use this code. See `MIT` or `APACHE2.0` for more
-information on each specific licence.
+2.0_ License. That means you can chose either the MIT license or the
+Apache-2.0 license when you re-use this code. See `MIT` or `APACHE2.0` for more
+information on each specific license.
 
 Any submissions to this project (e.g. as Pull Requests) must be made available
 under these terms.

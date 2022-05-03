@@ -10,7 +10,7 @@
 //! * GPIO 1 - UART RX (in to the RP2040)
 //! * GPIO 25 - An LED we can blink (active high)
 //!
-//! See the `Cargo.toml` file for Copyright and licence details.
+//! See the `Cargo.toml` file for Copyright and license details.
 
 #![no_std]
 #![no_main]

@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - None
 
+## [0.3.0] - 2022-03-11
+
+### Changed
+
+- Update to rp-hal 0.4.0
+
 ## [0.2.0] - 2021-12-23
 
 ### Added
@@ -31,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [@jannic]: https://github.com/jannic
 [rp-rs]: https://github.com/rp-rs
-[Unreleased]: https://github.com/rp-rs/rp-hal/compare/rp-pico-v0.1.0...HEAD
+[Unreleased]: https://github.com/rp-rs/rp-hal/compare/rp-pico-v0.3.0...HEAD
+[0.3.0]: https://github.com/rp-rs/rp-hal/releases/tag/rp-pico-v0.3.0
 [0.2.0]: https://github.com/rp-rs/rp-hal/releases/tag/rp-pico-v0.2.0
 [0.1.3]: https://github.com/jannic/rp-microcontroller-rs/tree/rp-pico-0.1.3

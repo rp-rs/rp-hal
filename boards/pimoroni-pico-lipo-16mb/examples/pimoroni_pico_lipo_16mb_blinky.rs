@@ -5,7 +5,7 @@
 //! This will blink an LED attached to GPIO25, which is the pin the Pico Lipo uses
 //! for the on-board LED.
 //!
-//! See the `Cargo.toml` file for Copyright and licence details.
+//! See the `Cargo.toml` file for Copyright and license details.
 
 #![no_std]
 #![no_main]

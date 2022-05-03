@@ -7,7 +7,7 @@
 //! It drives the LCD by pushing data out of six GPIO pins. It may need to be
 //! adapted to your particular board layout and/or pin assignment.
 //!
-//! See the `Cargo.toml` file for Copyright and licence details.
+//! See the `Cargo.toml` file for Copyright and license details.
 
 #![no_std]
 #![no_main]

@@ -1,0 +1,20 @@
+[package]
+description = "Macros used by rp2040-hal"
+license = "MIT OR Apache-2.0"
+name = "rp2040-hal-macros"
+readme = "README.md"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "1.0"
+proc-macro2 = "1.0"
+cortex-m-rt = "0.7.0"
+
+[dependencies.syn]
+features = ["extra-traits", "full"]
+version = "1.0"
+

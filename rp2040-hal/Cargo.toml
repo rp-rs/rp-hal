@@ -11,6 +11,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 cortex-m = "0.7.2"
+cortex-m-rt = ">=0.6.15,<0.8"
 embedded-hal = { version = "0.2.5", features = ["unproven"] }
 eh1_0_alpha = { version = "=1.0.0-alpha.7", package="embedded-hal", optional=true }
 embedded-time = "0.12.0"
@@ -18,7 +19,8 @@ itertools = { version = "0.10.1", default-features = false }
 nb = "1.0"
 rp2040-pac = "0.3.0"
 paste = "1.0"
-pio = "0.1.0"
+pio = "0.2.0"
+rp2040-hal-macros = { version = "0.1.0", path = "../rp2040-hal-macros" }
 usb-device = "0.2.8"
 vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
@@ -28,30 +30,21 @@ critical-section = { version = "0.2.4", features = ["custom-impl"] }
 futures = { version = "0.3", default-features = false, optional = true }
 chrono = { version = "0.4", default-features = false, optional = true }
 
-# namespaced features will let us use "dep:embassy-traits" in the features rather than using this
-# trick of renaming the crate.
-#
-# This is commented out so that we can publish to crates.io
-#
-# [dependencies.embassy_traits]
-# git = "https://github.com/embassy-rs/embassy"
-# rev = "6d6e6f55b8a9ecd38b5a6d3bb11f74b2654afdeb"
-# package = "embassy-traits"
-# optional = true
-
 [dev-dependencies]
 cortex-m-rt = "0.7"
 panic-halt = "0.2.0"
 rp2040-boot2 = "0.2.0"
 hd44780-driver = "0.4.0"
-pio-proc = "0.1.0"
+pio-proc = "0.2.0"
 dht-sensor = "0.2.1"
 
 [features]
 rt = ["rp2040-pac/rt"]
-# This is commented out so that we can publish to crates.io
-#
-# embassy-traits = ["embassy_traits", "futures"]
 rom-func-cache = []
 disable-intrinsics = []
 rom-v2-intrinsics = []
+
+[[example]]
+# irq example uses cortex-m-rt::interrupt, need rt feature for that
+name = "gpio_irq_example"
+required-features = ["rt"]

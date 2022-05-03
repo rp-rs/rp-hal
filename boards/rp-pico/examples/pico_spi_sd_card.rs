@@ -80,14 +80,14 @@
 //!
 //! If there are 5 different error patterns, all with short blinking pulses:
 //!
-//! - **2 short blink (in a loop)**: Block device could not be aquired, either
+//! - **2 short blink (in a loop)**: Block device could not be acquired, either
 //!   no SD card is present or some electrical problem.
 //! - **3 short blink (in a loop)**: Card size could not be retrieved.
 //! - **4 short blink (in a loop)**: Error getting volume/partition 0.
 //! - **5 short blink (in a loop)**: Error opening root directory.
 //! - **6 short blink (in a loop)**: Could not open file 'O.TST'.
 //!
-//! See the `Cargo.toml` file for Copyright and licence details.
+//! See the `Cargo.toml` file for Copyright and license details.
 
 #![no_std]
 #![no_main]
