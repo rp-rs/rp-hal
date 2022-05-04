@@ -10,6 +10,7 @@ members = [
     "boards/adafruit-qt-py-rp2040",
     "boards/adafruit-trinkey-qt2040",
     "boards/arduino_nano_connect",
+    "boards/pimoroni-badger2040",
     "boards/pimoroni-pico-explorer",
     "boards/pimoroni-pico-lipo-16mb",
     "boards/pimoroni-plasma-2040",

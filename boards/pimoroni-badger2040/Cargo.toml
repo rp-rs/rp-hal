@@ -1,0 +1,32 @@
+[package]
+name = "pimoroni_badger2040"
+version = "0.1.0"
+authors = ["9names", "The rp-rs Developers"]
+edition = "2018"
+homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-badger2040"
+description = "Board Support Package for the Pimoroni Badger2040"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/rp-rs/rp-hal.git"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cortex-m = "0.7.2"
+rp2040-boot2 = { version = "0.2.0", optional = true }
+rp2040-hal = { path = "../../rp2040-hal", version = "0.5.0"}
+cortex-m-rt = { version = "0.7", optional = true }
+embedded-time = "0.12.0"
+embedded-hal ="0.2.5"
+
+[dev-dependencies]
+panic-halt= "0.2.0"
+nb = "1.0"
+embedded-graphics = "0.7.1"
+
+defmt = "0.2.0"
+defmt-rtt = "0.2.0"
+
+[features]
+default = ["boot2", "rt"]
+boot2 = ["rp2040-boot2"]
+rt = ["cortex-m-rt","rp2040-hal/rt"]
