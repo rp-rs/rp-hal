@@ -11,12 +11,12 @@ use adafruit_macropad::{
         gpio, pac,
         pio::PIOExt,
         watchdog::Watchdog,
-        Sio, Spi, Timer, I2C,
+        Sio, Spi, Timer,
     },
     Pins, XOSC_CRYSTAL_FREQ,
 };
 use cortex_m_rt::entry;
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::digital::v2::ToggleableOutputPin;
 use embedded_time::rate::*;
 use panic_halt as _;
 
@@ -42,8 +42,8 @@ use embedded_graphics::{
 };
 
 // The display driver:
-use ssd1306::size::DisplaySize128x64;
-use ssd1306::{mode::DisplayConfig, prelude::SPIInterfaceNoCS, Ssd1306};
+use display_interface_spi;
+use ssd1306::{prelude::*, Ssd1306};
 #[entry]
 fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
@@ -109,8 +109,8 @@ fn main() -> ! {
     let animation_speed = 0.1;
 
     // Configure two pins as being I²C for the qwiic port
-    let sda_pin = pins.sda.into_mode::<hal::gpio::FunctionI2C>();
-    let scl_pin = pins.scl.into_mode::<hal::gpio::FunctionI2C>();
+    let _sda_pin = pins.sda.into_mode::<hal::gpio::FunctionI2C>();
+    let _scl_pin = pins.scl.into_mode::<hal::gpio::FunctionI2C>();
 
     // These are implicitly used by the spi driver if they are in the correct mode
     let _spi_sclk = pins.sclk.into_mode::<gpio::FunctionSpi>();
@@ -119,54 +119,54 @@ fn main() -> ! {
     // let spi_cs = pins.gpio5.into_push_pull_output();
 
     let dc = pins.oled_dc.into_push_pull_output();
-    let oled_reset = pins.oled_reset.into_push_pull_output();
+    let mut oled_reset = pins.oled_reset.into_push_pull_output();
     // Create an SPI driver instance for the SPI0 device
     let spi = Spi::<_, _, 8>::new(pac.SPI1);
     // Exchange the uninitialised SPI driver for an initialised one
     let spi = spi.init(
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
-        16_000_000u32.Hz(),
+        8_000_000u32.Hz(),
         &embedded_hal::spi::MODE_0,
     );
 
     let interface = display_interface_spi::SPIInterfaceNoCS::new(spi, dc);
     let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
         .into_buffered_graphics_mode();
-        // reset<RST, DELAY, PinE>
-    display.reset(&mut rst, &mut delay).unwrap();
-    display.init().unwrap();
+    // reset<RST, DELAY, PinE>
+    display.reset(&mut oled_reset, &mut delay).unwrap();
     display.init().unwrap();
 
     // // Create a text style for drawing the font:
-    // let text_style = MonoTextStyleBuilder::new()
-    //     .font(&FONT_9X18_BOLD)
-    //     .text_color(BinaryColor::On)
-    //     .build();
+    let text_style = MonoTextStyleBuilder::new()
+        .font(&FONT_9X18_BOLD)
+        .text_color(BinaryColor::On)
+        .build();
 
     let mut count = 0;
     let mut buf = FmtBuf::new();
     loop {
+        led_pin.toggle().unwrap();
         buf.reset();
         // Format some text into a static buffer:
         write!(&mut buf, "counter: {}", count).unwrap();
         count += 1;
 
-        // // Empty the display:
-        // display.clear();
+        // Empty the display:
+        display.clear();
 
-        // // Draw 3 lines of text:
-        // Text::with_baseline("Hello world!", Point::zero(), text_style, Baseline::Top)
-        //     .draw(&mut display)
-        //     .unwrap();
+        // Draw 3 lines of text:
+        Text::with_baseline("Hello world!", Point::zero(), text_style, Baseline::Top)
+            .draw(&mut display)
+            .unwrap();
 
-        // Text::with_baseline("Hello Rust!", Point::new(0, 16), text_style, Baseline::Top)
-        //     .draw(&mut display)
-        //     .unwrap();
+        Text::with_baseline("Hello Rust!", Point::new(0, 16), text_style, Baseline::Top)
+            .draw(&mut display)
+            .unwrap();
 
-        // Text::with_baseline(buf.as_str(), Point::new(0, 32), text_style, Baseline::Top)
-        //     .draw(&mut display)
-        //     .unwrap();
+        Text::with_baseline(buf.as_str(), Point::new(0, 32), text_style, Baseline::Top)
+            .draw(&mut display)
+            .unwrap();
 
         // display.flush().unwrap();
         for (i, led) in leds.iter_mut().enumerate() {
