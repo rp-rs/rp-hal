@@ -63,10 +63,8 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
     // Setup a delay for the LED blink signals:
-    // let mut frame_delay =
-    // cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
     // Create a count down timer for the Ws2812 instance:
     let timer = Timer::new(pac.TIMER, &mut pac.RESETS);
     // Import the `sin` function for a smooth hue animation from the
@@ -120,20 +118,20 @@ fn main() -> ! {
 
     let dc = pins.oled_dc.into_push_pull_output();
     let mut oled_reset = pins.oled_reset.into_push_pull_output();
+    let cs = pins.oled_cs.into_push_pull_output();
     // Create an SPI driver instance for the SPI0 device
     let spi = Spi::<_, _, 8>::new(pac.SPI1);
     // Exchange the uninitialised SPI driver for an initialised one
     let spi = spi.init(
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
-        8_000_000u32.Hz(),
+        16_000_000u32.Hz(),
         &embedded_hal::spi::MODE_0,
     );
 
-    let interface = display_interface_spi::SPIInterfaceNoCS::new(spi, dc);
+    let interface = display_interface_spi::SPIInterface::new(spi, dc, cs);
     let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
         .into_buffered_graphics_mode();
-    // reset<RST, DELAY, PinE>
     display.reset(&mut oled_reset, &mut delay).unwrap();
     display.init().unwrap();
 
@@ -143,32 +141,17 @@ fn main() -> ! {
         .text_color(BinaryColor::On)
         .build();
 
-    let mut count = 0;
-    let mut buf = FmtBuf::new();
+    // TODO: get display clear working before trying to print anything.
+    // it currently prints garbage to the screen
+    display.clear();
+    display.flush();
+    // Text::with_baseline("Hello Rust!", Point::new(0, 16), text_style, Baseline::Top)
+    // .draw(&mut display)
+    // .unwrap();
+    // display.flush().unwrap();
     loop {
         led_pin.toggle().unwrap();
-        buf.reset();
-        // Format some text into a static buffer:
-        write!(&mut buf, "counter: {}", count).unwrap();
-        count += 1;
 
-        // Empty the display:
-        display.clear();
-
-        // Draw 3 lines of text:
-        Text::with_baseline("Hello world!", Point::zero(), text_style, Baseline::Top)
-            .draw(&mut display)
-            .unwrap();
-
-        Text::with_baseline("Hello Rust!", Point::new(0, 16), text_style, Baseline::Top)
-            .draw(&mut display)
-            .unwrap();
-
-        Text::with_baseline(buf.as_str(), Point::new(0, 32), text_style, Baseline::Top)
-            .draw(&mut display)
-            .unwrap();
-
-        // display.flush().unwrap();
         for (i, led) in leds.iter_mut().enumerate() {
             // An offset to give each LED:
             let hue_offs = i as f32 / 12.0;
