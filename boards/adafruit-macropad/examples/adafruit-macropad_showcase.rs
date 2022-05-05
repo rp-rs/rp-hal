@@ -130,13 +130,13 @@ fn main() -> ! {
         &embedded_hal::spi::MODE_0,
     );
 
-    // let interface = display_interface_spi::SPIInterfaceNoCS::new(spi, dc);
-    // let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
-    //     .into_buffered_graphics_mode();
-    //     // reset<RST, DELAY, PinE>
-    // display.reset(&mut rst, &mut delay).unwrap();
-    // display.init().unwrap();
-    // display.init().unwrap();
+    let interface = display_interface_spi::SPIInterfaceNoCS::new(spi, dc);
+    let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
+        .into_buffered_graphics_mode();
+        // reset<RST, DELAY, PinE>
+    display.reset(&mut rst, &mut delay).unwrap();
+    display.init().unwrap();
+    display.init().unwrap();
 
     // // Create a text style for drawing the font:
     // let text_style = MonoTextStyleBuilder::new()
