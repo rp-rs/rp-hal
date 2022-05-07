@@ -239,6 +239,17 @@ RP2040 chip according to how it is connected up on the Pro Micro RP2040.
 [Sparkfun Pro Micro RP2040]: https://www.sparkfun.com/products/18288
 [sparkfun-pro-micro-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/sparkfun-pro-micro-rp2040
 
+### [sparkfun-thing-plus-rp2040] - Board Support for the [Sparkfun Thing Plus RP2040]
+
+You should include this crate if you are writing code that you want to run on
+a [Sparkfun Thing Plus RP2040] - an RP2040 board with a Feather form factor, USB-C, and a WS2812B addressable LED.
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the Thing Plus RP2040.
+
+[Sparkfun Thing Plus RP2040]: https://www.sparkfun.com/products/17745
+[sparkfun-thing-plus-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/sparkfun-pro-micro-rp2040
+
 <!-- PROGRAMMING -->
 ## Programming
 
