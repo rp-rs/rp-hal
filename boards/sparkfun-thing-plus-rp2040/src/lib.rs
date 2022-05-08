@@ -32,7 +32,7 @@ hal::bsp_pins!(
     Gpio20 { name: gpio20 },
     Gpio21 { name: gpio21 },
     Gpio22 { name: gpio22 },
-    Gpio25 { name: led_builtin },
+    Gpio25 { name: led },
     Gpio26 { name: adc0 },
     Gpio27 { name: adc1 },
     Gpio28 { name: adc2 },
