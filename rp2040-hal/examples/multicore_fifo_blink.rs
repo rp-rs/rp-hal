@@ -115,11 +115,11 @@ fn main() -> ! {
     // The single-cycle I/O block controls our GPIO pins
     let mut sio = hal::sio::Sio::new(pac.SIO);
 
-    let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio);
+    let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
     let cores = mc.cores();
     let core1 = &mut cores[1];
-    let _test = core1.spawn(move || core1_task(sys_freq), unsafe {
-        &mut CORE1_STACK.mem
+    let _test = core1.spawn(unsafe { &mut CORE1_STACK.mem }, move || {
+        core1_task(sys_freq)
     });
 
     /// How much we adjust the LED period every cycle

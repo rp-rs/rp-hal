@@ -101,7 +101,11 @@ impl<const SIZE: usize> Stack<SIZE> {
 
 impl<'p> Multicore<'p> {
     /// Create a new |Multicore| instance.
-    pub fn new(psm: &'p mut pac::PSM, ppb: &'p mut pac::PPB, sio: &'p mut crate::Sio) -> Self {
+    pub fn new(
+        psm: &'p mut pac::PSM,
+        ppb: &'p mut pac::PPB,
+        sio: &'p mut crate::sio::SioFifo,
+    ) -> Self {
         Self {
             cores: [
                 Core { inner: None },
@@ -120,7 +124,11 @@ impl<'p> Multicore<'p> {
 
 /// A handle for controlling a logical core.
 pub struct Core<'p> {
-    inner: Option<(&'p mut pac::PSM, &'p mut pac::PPB, &'p mut crate::Sio)>,
+    inner: Option<(
+        &'p mut pac::PSM,
+        &'p mut pac::PPB,
+        &'p mut crate::sio::SioFifo,
+    )>,
 }
 
 impl<'p> Core<'p> {
@@ -133,11 +141,11 @@ impl<'p> Core<'p> {
     }
 
     /// Spawn a function on this core.
-    pub fn spawn<F>(&mut self, entry: F, stack: &'static mut [usize]) -> Result<(), Error>
+    pub fn spawn<F>(&mut self, stack: &'static mut [usize], entry: F) -> Result<(), Error>
     where
         F: FnOnce() -> bad::Never + Send + 'static,
     {
-        if let Some((psm, ppb, sio)) = self.inner.as_mut() {
+        if let Some((psm, ppb, fifo)) = self.inner.as_mut() {
             // The first two ignored `u64` parameters are there to take up all of the registers,
             // which means that the rest of the arguments are taken from the stack,
             // where we're able to put them from core 0.
@@ -202,11 +210,11 @@ impl<'p> Core<'p> {
             loop {
                 let cmd = cmd_seq[seq] as u32;
                 if cmd == 0 {
-                    sio.fifo.drain();
+                    fifo.drain();
                     cortex_m::asm::sev();
                 }
-                sio.fifo.write_blocking(cmd);
-                let response = sio.fifo.read_blocking();
+                fifo.write_blocking(cmd);
+                let response = fifo.read_blocking();
                 if cmd == response {
                     seq += 1;
                 } else {
@@ -225,7 +233,7 @@ impl<'p> Core<'p> {
             }
 
             // Wait until the other core has copied `entry` before returning.
-            sio.fifo.read_blocking();
+            fifo.read_blocking();
 
             Ok(())
         } else {
