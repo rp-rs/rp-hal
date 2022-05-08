@@ -20,10 +20,10 @@
 //!     let mut pac = pac::Peripherals::take().unwrap();
 //!     let mut sio = Sio::new(pac.SIO);
 //!     // Other init code above this line
-//!     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio);
+//!     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
 //!     let cores = mc.cores();
 //!     let core1 = &mut cores[1];
-//!     let _test = core1.spawn(core1_task, unsafe { &mut CORE1_STACK.mem });
+//!     let _test = core1.spawn(unsafe { &mut CORE1_STACK.mem }, core1_task);
 //!     // The rest of your application below this line
 //!     # loop {}
 //! }
