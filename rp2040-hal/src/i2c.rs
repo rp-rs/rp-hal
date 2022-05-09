@@ -66,6 +66,7 @@ pub mod peripheral;
 /// I2C error
 #[non_exhaustive]
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {
     /// I2C abort with error
     Abort(u32),
