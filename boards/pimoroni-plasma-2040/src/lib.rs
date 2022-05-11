@@ -36,7 +36,7 @@ hal::bsp_pins!(
     /// GPIO 14 is connected to CLK for APA102 only
     Gpio14 { name: clk },
     /// GPIO 15 is connected to DAT for Apa102 and Ws2812
-    Gpio15 { name: dat },
+    Gpio15 { name: data },
     /// GPIO 16 is red LED, active low
     Gpio16 { name: led_red },
     /// GPIO 17 is green LED, active low
