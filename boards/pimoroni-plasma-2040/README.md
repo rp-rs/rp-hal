@@ -59,6 +59,10 @@ then try repeating the `cargo run` command above.
 
 Flashes the Plasma 2040's three on-board LEDs in sequence.
 
+### [pimoroni_plasma_2040_ws2812_led](./examples/pimoroni_plasma_2040_ws2812_led.rs)
+
+Drives 3 WS2812 LEDs connected directly to the Pimoroni Plasma 2040 via its onboard terminal block.
+
 ## Contributing
 
 Contributions are what make the open source community such an amazing place to
