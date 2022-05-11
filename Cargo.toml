@@ -11,6 +11,7 @@ members = [
     "boards/adafruit-trinkey-qt2040",
     "boards/pimoroni-pico-explorer",
     "boards/pimoroni-pico-lipo-16mb",
+    "boards/pimoroni-plasma-2040",
     "boards/pimoroni-tiny2040",
     "boards/rp-pico",
     "boards/solderparty-rp2040-stamp",
