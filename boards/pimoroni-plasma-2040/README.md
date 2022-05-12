@@ -7,6 +7,7 @@ This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the Pimoroni Plasma 2040.
 
 [Pimoroni Plasma 2040]: https://shop.pimoroni.com/products/plasma-2040
+[pimoroni-plasma-2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-plasma-2040
 [rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
 [Raspberry Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
 
