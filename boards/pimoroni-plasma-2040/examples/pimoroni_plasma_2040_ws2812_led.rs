@@ -1,41 +1,7 @@
-//! # Pico WS2812 RGB LED Example
+//! # Pimoroni Plasma 2040 WS2812 RGB LED Example
 //!
-//! Drives 3 WS2812 LEDs connected directly to the Raspberry Pi Pico.
-//! This assumes you drive the Raspberry Pi Pico via USB power, so that VBUS
-//! delivers the 5V and at least enough amperes to drive the LEDs.
-//!
-//! For a more large scale and longer strips you should use an extra power
-//! supply for the LED strip (or know what you are doing ;-) ).
-//!
-//! The example also comes with an utility function to calculate the colors
-//! from HSV color space. It also limits the brightness a bit to save a
-//! few milliamperes - be careful if you increase the strip length you will
-//! quickly get into power consumption of multiple amperes.
-//!
-//! The example assumes you connected the data input to pin 6 of the
-//! Raspberry Pi Pico, which is GPIO4 of the rp2040. Here is a circuit
-//! diagram that shows the assumed setup:
-//!
-//! ```text
-//!  _______________      /----------------------\
-//! |+5V  /---\  +5V|----/         _|USB|_       |
-//! |DO <-|LED|<- DI|-\           |1  R 40|-VBUS-/
-//! |GND  \---/  GND|--+---\      |2  P 39|
-//!  """""""""""""""   |    \-GND-|3    38|
-//!                    |          |4  P 37|
-//!                    |          |5  I 36|
-//!                    \------GP4-|6  C   |
-//!                               |7  O   |
-//!                               |       |
-//!                               .........
-//!                               |20   21|
-//!                                """""""
-//! Symbols:
-//!     - (+) crossing lines, not connected
-//!     - (o) connected lines
-//! ```
-//!
-//! See the `Cargo.toml` file for Copyright and license details.
+//! Drives 3 WS2812 LEDs connected directly to the Pimoroni Plasma 2040 via its terminal block.
+//! Derived from the [pico_ws2812_led](../../rp-pico/examples/pico_ws2812_led.rs) example for the Raspberry Pi Pico.
 
 #![no_std]
 #![no_main]
@@ -48,25 +14,25 @@ use cortex_m_rt::entry;
 use panic_halt as _;
 
 // Pull in any important traits
-use rp_pico::hal::prelude::*;
+use pimoroni_plasma_2040::hal::prelude::*;
 
 // Embed the `Hz` function/trait:
 use embedded_time::rate::*;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
-use rp_pico::hal::pac;
+use pimoroni_plasma_2040::hal::pac;
 
 // Import the Timer for Ws2812:
-use rp_pico::hal::timer::Timer;
+use pimoroni_plasma_2040::hal::timer::Timer;
 
 // A shorter alias for the Hardware Abstraction Layer, which provides
 // higher-level drivers.
-use rp_pico::hal;
+use pimoroni_plasma_2040::hal;
 
 // PIOExt for the split() method that is needed to bring
 // PIO0 into useable form for Ws2812:
-use rp_pico::hal::pio::PIOExt;
+use pimoroni_plasma_2040::hal::pio::PIOExt;
 
 // Import useful traits to handle the ws2812 LEDs:
 use smart_leds::{brightness, SmartLedsWrite, RGB8};
@@ -91,7 +57,7 @@ fn main() -> ! {
     //
     // The default is to generate a 125 MHz system clock
     let clocks = hal::clocks::init_clocks_and_plls(
-        rp_pico::XOSC_CRYSTAL_FREQ,
+        pimoroni_plasma_2040::XOSC_CRYSTAL_FREQ,
         pac.XOSC,
         pac.CLOCKS,
         pac.PLL_SYS,
@@ -106,7 +72,7 @@ fn main() -> ! {
     let sio = hal::Sio::new(pac.SIO);
 
     // Set the pins up according to their function on this particular board
-    let pins = rp_pico::Pins::new(
+    let pins = pimoroni_plasma_2040::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,
@@ -128,11 +94,9 @@ fn main() -> ! {
     // Ws2812 can use it:
     let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
 
-    // Instanciate a Ws2812 LED strip:
+    // Instantiate a Ws2812 LED strip:
     let mut ws = Ws2812::new(
-        // Use pin 6 on the Raspberry Pi Pico (which is GPIO4 of the rp2040 chip)
-        // for the LED data output:
-        pins.gpio4.into_mode(),
+        pins.data.into_mode(),
         &mut pio,
         sm0,
         clocks.peripheral_clock.freq(),

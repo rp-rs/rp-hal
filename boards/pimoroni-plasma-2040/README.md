@@ -1,13 +1,13 @@
-# [pimoroni-tiny2040] - Board Support for the [Pimoroni Tiny2040]
+# [pimoroni-plasma-2040] - Board Support for the [Pimoroni Plasma 2040]
 
 You should include this crate if you are writing code that you want to run on
-a [Pimoroni Tiny2040] - one of the first third party RP2040 boards available, with 8MB flash and a 3 colour LED.
+a [Pimoroni Plasma 2040] - Swathe everything in rainbows with this all-in-one, USB-C powered controller for WS2812/Neopixel and APA102/Dotstar addressable LED strip.
 
 This crate includes the [rp2040-hal], but also configures each pin of the
-RP2040 chip according to how it is connected up on the Tiny2040.
+RP2040 chip according to how it is connected up on the Pimoroni Plasma 2040.
 
-[Pimoroni Tiny2040]: https://shop.pimoroni.com/products/tiny-2040
-[pimoroni-tiny2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-tiny2040
+[Pimoroni Plasma 2040]: https://shop.pimoroni.com/products/plasma-2040
+[pimoroni-plasma-2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-plasma-2040
 [rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
 [Raspberry Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
 
@@ -16,10 +16,10 @@ RP2040 chip according to how it is connected up on the Tiny2040.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-pimoroni-tiny2040 = "0.1.0"
+pimoroni-plasma-2040 = "0.1.0"
 ```
 
-In your program, you will need to call `pimoroni_tiny2040::Pins::new` to create
+In your program, you will need to call `pimoroni_plasma_2040::Pins::new` to create
 a new `Pins` structure. This will set up all the GPIOs for any on-board
 devices. See the [examples](./examples) folder for more details.
 
@@ -30,7 +30,7 @@ devices. See the [examples](./examples) folder for more details.
 To compile an example, clone the _rp-hal_ repository and run:
 
 ```console
-rp-hal/boards/pimoroni-tiny2040 $ cargo build --release --example <name>
+rp-hal/boards/pimoroni-plasma-2040 $ cargo build --release --example <name>
 ```
 
 You will get an ELF file called
@@ -44,7 +44,7 @@ USB drive exported by the RP2040 bootloader, simply boot your board into
 bootloader mode and run:
 
 ```console
-rp-hal/boards/pimoroni-tiny2040 $ cargo run --release --example <name>
+rp-hal/boards/pimoroni-plasma-2040 $ cargo run --release --example <name>
 ```
 
 If you get an error about not being able to find `elf2uf2-rs`, try:
@@ -52,11 +52,16 @@ If you get an error about not being able to find `elf2uf2-rs`, try:
 ```console
 $ cargo install elf2uf2-rs
 ```
+
 then try repeating the `cargo run` command above.
 
-### [tiny2040_blinky](./examples/tiny2040_blinky.rs)
+### [pimoroni_plasma_2040_blinky](./examples/pimoroni_plasma_2040_blinky.rs)
 
-Flashes the Tiny2040's three on-board LEDs in sequence.
+Flashes the Plasma 2040's three on-board LEDs in sequence.
+
+### [pimoroni_plasma_2040_ws2812_led](./examples/pimoroni_plasma_2040_ws2812_led.rs)
+
+Drives 3 WS2812 LEDs connected directly to the Pimoroni Plasma 2040 via its onboard terminal block.
 
 ## Contributing
 

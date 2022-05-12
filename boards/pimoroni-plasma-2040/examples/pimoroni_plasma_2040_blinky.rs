@@ -1,4 +1,4 @@
-//! Blinks the 3 colour LEDs on a Tiny2040 in sequence
+//! Blinks the 3 colour LEDs on a Pimoroni Plasma 2040 in sequence
 #![no_std]
 #![no_main]
 
@@ -9,7 +9,7 @@ use embedded_hal::digital::v2::OutputPin;
 use embedded_time::fixed_point::FixedPoint;
 use panic_halt as _;
 
-use pimoroni_tiny2040 as bsp;
+use pimoroni_plasma_2040 as bsp;
 
 use bsp::hal::{
     clocks::{init_clocks_and_plls, Clock},
