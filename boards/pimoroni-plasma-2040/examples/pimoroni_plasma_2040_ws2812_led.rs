@@ -85,7 +85,7 @@ fn main() -> ! {
 
     // Import the `sin` function for a smooth hue animation from the
     // Pico rp2040 ROM:
-    let sin = pimoroni_plasma_2040::hal::rom_data::float_funcs::fsin::ptr();
+    let sin = hal::rom_data::float_funcs::fsin::ptr();
 
     // Create a count down timer for the Ws2812 instance:
     let timer = Timer::new(pac.TIMER, &mut pac.RESETS);
