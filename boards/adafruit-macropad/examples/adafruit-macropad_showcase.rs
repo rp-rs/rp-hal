@@ -24,12 +24,12 @@ use panic_halt as _;
 use smart_leds::{brightness, SmartLedsWrite, RGB, RGB8};
 
 // Import the actual crate to handle the Ws2812 protocol:
+use embedded_hal::digital::v2::OutputPin;
 use ws2812_pio::Ws2812;
 
 // Currently 3 consecutive LEDs are driven by this example
 // to keep the power draw compatible with USB:
 const STRIP_LEN: usize = 12;
-
 // For in the graphics drawing utilities like the font
 // and the drawing routines:
 use embedded_graphics::{
@@ -140,6 +140,11 @@ fn main() -> ! {
     // it currently prints garbage to the screen
     display.clear();
     display.flush().unwrap();
+    // Set up the buzzer pins
+    let mut speaker = pins.speaker.into_push_pull_output();
+    let mut speaker_shutdown = pins.speaker_shutdown.into_push_pull_output();
+    // Enable buzzer output
+    speaker_shutdown.set_high().unwrap();
     loop {
         Text::with_baseline("Hello Rust!", Point::new(0, 16), text_style, Baseline::Top)
             .draw(&mut display)
@@ -164,6 +169,8 @@ fn main() -> ! {
         while t > 1.0 {
             t -= 1.0;
         }
+        // Generate an annoying 30hz buzz
+        speaker.toggle().unwrap();
     }
 }
 
