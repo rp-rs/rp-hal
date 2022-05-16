@@ -113,7 +113,7 @@ fn main() -> ! {
         .manufacturer("Fake company")
         .product("Twitchy Mousey")
         .serial_number("TEST")
-        .device_class(0xEF) // misc
+        .device_class(0)
         .build();
     unsafe {
         // Note (safety): This is safe as interrupts haven't been started yet
