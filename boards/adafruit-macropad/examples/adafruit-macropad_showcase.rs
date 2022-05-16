@@ -21,7 +21,7 @@ use embedded_time::rate::*;
 use panic_halt as _;
 
 // Import useful traits to handle the ws2812 LEDs:
-use smart_leds::{brightness, SmartLedsWrite, RGB8};
+use smart_leds::{brightness, SmartLedsWrite, RGB, RGB8};
 
 // Import the actual crate to handle the Ws2812 protocol:
 use ws2812_pio::Ws2812;
@@ -30,8 +30,6 @@ use ws2812_pio::Ws2812;
 // to keep the power draw compatible with USB:
 const STRIP_LEN: usize = 12;
 
-// For string formatting.
-use core::fmt::Write;
 // For in the graphics drawing utilities like the font
 // and the drawing routines:
 use embedded_graphics::{
@@ -42,7 +40,7 @@ use embedded_graphics::{
 };
 
 // The display driver:
-use display_interface_spi;
+use display_interface_spi as _;
 use ssd1306::{prelude::*, Ssd1306};
 #[entry]
 fn main() -> ! {
@@ -67,9 +65,6 @@ fn main() -> ! {
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
     // Create a count down timer for the Ws2812 instance:
     let timer = Timer::new(pac.TIMER, &mut pac.RESETS);
-    // Import the `sin` function for a smooth hue animation from the
-    // Pico rp2040 ROM:
-    let sin = adafruit_macropad::hal::rom_data::float_funcs::fsin::ptr();
 
     let sio = Sio::new(pac.SIO);
     let pins = Pins::new(
@@ -144,29 +139,16 @@ fn main() -> ! {
     // TODO: get display clear working before trying to print anything.
     // it currently prints garbage to the screen
     display.clear();
-    display.flush();
-    // Text::with_baseline("Hello Rust!", Point::new(0, 16), text_style, Baseline::Top)
-    // .draw(&mut display)
-    // .unwrap();
-    // display.flush().unwrap();
+    display.flush().unwrap();
     loop {
+        Text::with_baseline("Hello Rust!", Point::new(0, 16), text_style, Baseline::Top)
+            .draw(&mut display)
+            .unwrap();
+        display.flush().unwrap();
         led_pin.toggle().unwrap();
 
-        for (i, led) in leds.iter_mut().enumerate() {
-            // An offset to give each LED:
-            let hue_offs = i as f32 / 12.0;
-
-            let sin_11 = sin((t + hue_offs) * 2.0 * core::f32::consts::PI);
-            // Bring -1..1 sine range to 0..1 range:
-            let sin_01 = (sin_11 + 1.0) * 0.5;
-
-            let hue = 360.0 * sin_01;
-            let sat = 1.0;
-            let val = 1.0;
-
-            let rgb = hsv2rgb_u8(hue, sat, val);
-            *led = rgb.into();
-        }
+        // Update the rainbow effect of the key backlight LEDS
+        update_leds(t, &mut leds);
 
         // Here the magic happens and the `leds` buffer is written to the
         // ws2812 LEDs:
@@ -182,6 +164,25 @@ fn main() -> ! {
         while t > 1.0 {
             t -= 1.0;
         }
+    }
+}
+
+fn update_leds(t: f32, leds: &mut [RGB<u8>; 12]) {
+    let sin = adafruit_macropad::hal::rom_data::float_funcs::fsin::ptr();
+    for (i, led) in leds.iter_mut().enumerate() {
+        // An offset to give each LED:
+        let hue_offs = i as f32 / 12.0;
+
+        let sin_11 = sin((t + hue_offs) * 2.0 * core::f32::consts::PI);
+        // Bring -1..1 sine range to 0..1 range:
+        let sin_01 = (sin_11 + 1.0) * 0.5;
+
+        let hue = 360.0 * sin_01;
+        let sat = 1.0;
+        let val = 1.0;
+
+        let rgb = hsv2rgb_u8(hue, sat, val);
+        *led = rgb.into();
     }
 }
 
@@ -215,42 +216,4 @@ pub fn hsv2rgb_u8(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
         (r.1 * 255.0) as u8,
         (r.2 * 255.0) as u8,
     )
-}
-
-/// This is a very simple buffer to pre format a short line of text
-/// limited arbitrarily to 64 bytes.
-struct FmtBuf {
-    buf: [u8; 64],
-    ptr: usize,
-}
-
-impl FmtBuf {
-    fn new() -> Self {
-        Self {
-            buf: [0; 64],
-            ptr: 0,
-        }
-    }
-
-    fn reset(&mut self) {
-        self.ptr = 0;
-    }
-
-    fn as_str(&self) -> &str {
-        core::str::from_utf8(&self.buf[0..self.ptr]).unwrap()
-    }
-}
-
-impl core::fmt::Write for FmtBuf {
-    fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        let rest_len = self.buf.len() - self.ptr;
-        let len = if rest_len < s.len() {
-            rest_len
-        } else {
-            s.len()
-        };
-        self.buf[self.ptr..(self.ptr + len)].copy_from_slice(&s.as_bytes()[0..len]);
-        self.ptr += len;
-        Ok(())
-    }
 }
