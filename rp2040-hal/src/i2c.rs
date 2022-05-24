@@ -48,8 +48,8 @@ use core::{marker::PhantomData, ops::Deref};
 use crate::{
     gpio::pin::bank0::{
         BankPinId, Gpio0, Gpio1, Gpio10, Gpio11, Gpio12, Gpio13, Gpio14, Gpio15, Gpio16, Gpio17,
-        Gpio18, Gpio19, Gpio2, Gpio20, Gpio21, Gpio26, Gpio27, Gpio3, Gpio4, Gpio5, Gpio6, Gpio7,
-        Gpio8, Gpio9,
+        Gpio18, Gpio19, Gpio2, Gpio20, Gpio21, Gpio22, Gpio23, Gpio24, Gpio25, Gpio26, Gpio27,
+        Gpio28, Gpio29, Gpio3, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8, Gpio9,
     },
     gpio::pin::{FunctionI2C, Pin, PinId},
     resets::SubsystemReset,
@@ -144,8 +144,17 @@ impl SclPin<I2C1> for Gpio19 {}
 impl SdaPin<I2C0> for Gpio20 {}
 impl SclPin<I2C0> for Gpio21 {}
 
+impl SdaPin<I2C1> for Gpio22 {}
+impl SclPin<I2C1> for Gpio23 {}
+
+impl SdaPin<I2C0> for Gpio24 {}
+impl SclPin<I2C0> for Gpio25 {}
+
 impl SdaPin<I2C1> for Gpio26 {}
 impl SclPin<I2C1> for Gpio27 {}
+
+impl SdaPin<I2C0> for Gpio28 {}
+impl SclPin<I2C0> for Gpio29 {}
 
 /// Operational mode of the I2C peripheral.
 pub trait I2CMode: Sealed {
