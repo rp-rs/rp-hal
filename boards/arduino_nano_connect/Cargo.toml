@@ -1,0 +1,50 @@
+[package]
+name = "arduino_nano_connect"
+version = "0.1.0"
+authors = ["splicedbread <dxbunrated@gmail.com>", "The rp-rs Developers"]
+edition = "2018"
+homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/arduino_nano_connect"
+description = "Board Support Package for the Ardunio Nano RP2040 Connect"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/rp-rs/rp-hal.git"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cortex-m = "0.7.3"
+rp2040-boot2 = { version = "0.2.0", optional = true }
+rp2040-hal = { path = "../../rp2040-hal", version = "0.4.0" }
+cortex-m-rt = { version = "0.7.0", optional = true }
+embedded-hal = { version = "0.2.4", features = ["unproven"] }
+panic-probe = { version = "0.2.0", features = ["print-defmt"] }
+embedded-time = "0.12.0"
+# usb-device= "0.2.8"
+# usbd-serial = "0.1.1"
+# usbd-hid = "0.5.1"
+futures = { version = "0.3", default-features = false, optional = true }
+
+[dependencies.embassy]
+git = "https://github.com/embassy-rs/embassy"
+rev = "6d6e6f55b8a9ecd38b5a6d3bb11f74b2654afdeb"
+optional = true
+
+# namespaced features will let use use "dep:embassy-traits" in the features rather than using this
+# trick of renaming the crate.
+[dependencies.embassy_traits]
+git = "https://github.com/embassy-rs/embassy"
+rev = "6d6e6f55b8a9ecd38b5a6d3bb11f74b2654afdeb"
+package = "embassy-traits"
+optional = true
+
+[dev-dependencies]
+panic-halt= "0.2.0"
+embedded-hal ="0.2.5"
+cortex-m-rtic = "0.6.0-alpha.5"
+nb = "1.0"
+# i2c-pio = { git = "https://github.com/ithinuel/i2c-pio-rs", rev = "afc2dad0e955da2b712d7f7cd78c7af88ddc6a45" }
+
+[features]
+default = ["boot2", "rt"]
+boot2 = ["rp2040-boot2"]
+rt = ["cortex-m-rt","rp2040-hal/rt"]
+embassy-traits = ["futures", "embassy", "embassy_traits"]

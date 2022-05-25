@@ -16,6 +16,7 @@ members = [
     "boards/rp-pico",
     "boards/solderparty-rp2040-stamp",
     "boards/sparkfun-pro-micro-rp2040",
+    "boards/arduino_nano_connect",
     "boards/sparkfun-thing-plus-rp2040",
 ]
 
