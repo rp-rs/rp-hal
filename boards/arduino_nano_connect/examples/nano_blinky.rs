@@ -10,19 +10,13 @@
 #![no_std]
 #![no_main]
 
-use arduino_nano_connect;
-
 // The macro for our start-up function
 use cortex_m_rt::entry;
-
-// // GPIO traits
-// use embedded_hal::digital::v2::OutputPin;
 
 use embedded_hal::digital::v2::OutputPin;
 // // Time handling traits
 use embedded_time::rate::*;
 
-use hal::Sio;
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
@@ -39,8 +33,6 @@ use bsp::hal::pac;
 // A shorter alias for the Hardware Abstraction Layer, which provides
 // higher-level drivers.
 use bsp::hal;
-
-use bsp::hal::watchdog::Watchdog;
 
 /// Entry point to our bare-metal application.
 ///
