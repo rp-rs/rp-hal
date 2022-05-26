@@ -12,18 +12,17 @@
 // The macro for our start-up function
 use cortex_m_rt::entry;
 
+use cortex_m::prelude::*;
+
 // GPIO traits
 use embedded_hal::PwmPin;
 
-// Time handling traits
-use embedded_time::rate::*;
+// Traits for converting integers to amounts of time
+use embedded_time::duration::Extensions;
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
-
-// Pull in any important traits
-use rp_pico::hal::prelude::*;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
@@ -44,7 +43,6 @@ use rp_pico::hal;
 fn main() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
-    let core = pac::CorePeripherals::take().unwrap();
 
     // Set up the watchdog driver - needed by the clock setup code
     let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
@@ -52,7 +50,7 @@ fn main() -> ! {
     // Configure the clocks
     //
     // The default is to generate a 125 MHz system clock
-    let clocks = hal::clocks::init_clocks_and_plls(
+    let _clocks = hal::clocks::init_clocks_and_plls(
         rp_pico::XOSC_CRYSTAL_FREQ,
         pac.XOSC,
         pac.CLOCKS,
@@ -64,6 +62,10 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
+    // Configure the Timer peripheral in count-down mode
+    let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS);
+    let mut count_down = timer.count_down();
+
     // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);
 
@@ -74,10 +76,6 @@ fn main() -> ! {
         sio.gpio_bank0,
         &mut pac.RESETS,
     );
-
-    // The delay object lets us wait for specified amounts of time (in
-    // milliseconds)
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
 
     // Init PWMs
     let mut pwm_slices = hal::pwm::Slices::new(pac.PWM, &mut pac.RESETS);
@@ -98,19 +96,23 @@ fn main() -> ! {
     loop {
         // move to 0°
         channel.set_duty(2500);
-        delay.delay_ms(400);
+        count_down.start(400.milliseconds());
+        let _ = nb::block!(count_down.wait());
 
         // 0° to 90°
         channel.set_duty(3930);
-        delay.delay_ms(400);
+        count_down.start(400.milliseconds());
+        let _ = nb::block!(count_down.wait());
 
         // 90° to 180°
         channel.set_duty(7860);
-        delay.delay_ms(400);
+        count_down.start(400.milliseconds());
+        let _ = nb::block!(count_down.wait());
 
         // 180° to 90°
         channel.set_duty(3930);
-        delay.delay_ms(400);
+        count_down.start(400.milliseconds());
+        let _ = nb::block!(count_down.wait());
     }
 }
 
