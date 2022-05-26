@@ -40,8 +40,8 @@ use embedded_graphics::{
 };
 
 // The display driver:
-use display_interface_spi as _;
-use ssd1306::{prelude::*, Ssd1306};
+use sh1106::{prelude::*, Builder};
+
 #[entry]
 fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
@@ -61,9 +61,9 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    // Setup a delay for the LED blink signals:
+    // Setup a delay for the LED blink signals
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
-    // Create a count down timer for the Ws2812 instance:
+    // Create a count down timer for the Ws2812 instance
     let timer = Timer::new(pac.TIMER, &mut pac.RESETS);
 
     let sio = Sio::new(pac.SIO);
@@ -75,14 +75,12 @@ fn main() -> ! {
     );
     let mut led_pin = pins.led.into_push_pull_output();
 
-    // Split the PIO state machine 0 into individual objects, so that
-    // Ws2812 can use it:
+    // Split PIO state machine 0 into individual objects, so that Ws2812 can use it
     let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
 
-    // Instanciate a Ws2812 LED strip:
+    // Instantiate a Ws2812 LED strip
     let mut ws = Ws2812::new(
-        // Use neopixel pin (19) on the Adafruit macropad (which is GPIO19 of the rp2040 chip)
-        // for the LED data output:
+        // Use neopixel pin (19) on the Adafruit macropad for the LED data output
         pins.neopixel.into_mode(),
         &mut pio,
         sm0,
@@ -98,7 +96,7 @@ fn main() -> ! {
     // my measurements show around 300ma for 12 LEDs at full brightness. we should be good.
     let strip_brightness = 64u8; // Limit brightness to 64/256
 
-    // Slow down timer by this factor (0.1 will result in 10 seconds):
+    // Slow down timer by this factor (0.1 will result in 10 seconds)
     let animation_speed = 0.1;
 
     // Configure two pins as being I²C for the qwiic port
@@ -106,14 +104,14 @@ fn main() -> ! {
     let _scl_pin = pins.scl.into_mode::<hal::gpio::FunctionI2C>();
 
     // These are implicitly used by the spi driver if they are in the correct mode
+    // Don't need miso for the screen, it isn't connected
     let _spi_sclk = pins.sclk.into_mode::<gpio::FunctionSpi>();
     let _spi_mosi = pins.mosi.into_mode::<gpio::FunctionSpi>();
-    let _spi_miso = pins.miso.into_mode::<gpio::FunctionSpi>();
-    // let spi_cs = pins.gpio5.into_push_pull_output();
 
     let dc = pins.oled_dc.into_push_pull_output();
     let mut oled_reset = pins.oled_reset.into_push_pull_output();
     let cs = pins.oled_cs.into_push_pull_output();
+
     // Create an SPI driver instance for the SPI0 device
     let spi = Spi::<_, _, 8>::new(pac.SPI1);
     // Exchange the uninitialised SPI driver for an initialised one
@@ -124,27 +122,27 @@ fn main() -> ! {
         &embedded_hal::spi::MODE_0,
     );
 
-    let interface = display_interface_spi::SPIInterface::new(spi, dc, cs);
-    let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
-        .into_buffered_graphics_mode();
+    let mut display: GraphicsMode<_> = Builder::new().connect_spi(spi, dc, cs).into();
     display.reset(&mut oled_reset, &mut delay).unwrap();
     display.init().unwrap();
 
-    // // Create a text style for drawing the font:
+    // Create a text style for drawing the font
     let text_style = MonoTextStyleBuilder::new()
         .font(&FONT_9X18_BOLD)
         .text_color(BinaryColor::On)
         .build();
 
-    // TODO: get display clear working before trying to print anything.
-    // it currently prints garbage to the screen
+    // Clear display before trying to print anything
     display.clear();
     display.flush().unwrap();
+
     // Set up the buzzer pins
     let mut speaker = pins.speaker.into_push_pull_output();
     let mut speaker_shutdown = pins.speaker_shutdown.into_push_pull_output();
+
     // Enable buzzer output
     speaker_shutdown.set_high().unwrap();
+
     loop {
         Text::with_baseline("Hello Rust!", Point::new(0, 16), text_style, Baseline::Top)
             .draw(&mut display)
