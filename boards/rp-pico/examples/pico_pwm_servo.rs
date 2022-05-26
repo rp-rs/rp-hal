@@ -92,7 +92,9 @@ fn main() -> ! {
     let channel = &mut pwm.channel_b;
     channel.output_to(pins.gpio1);
 
-    // Infinite loop, moving micro servo from one position to another
+    // Infinite loop, moving micro servo from one position to another.
+    // You may need to adjust the pulse width since several servos from
+    // different manufacturers respond differently.
     loop {
         // move to 0°
         channel.set_duty(2500);
