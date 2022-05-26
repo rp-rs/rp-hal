@@ -76,6 +76,10 @@ Another LED blinking example, but using a Timer in count-down mode.
 
 Puts out an analog 'triangle wave' on GPIO 25, using the PWM hardware.
 
+### [pico_pwm_servo](./examples/pico_pwm_servo.rs)
+
+Demonstrates handling a micro servo, using the PWM hardware.
+
 ### [pico_usb_serial](./examples/pico_usb_serial.rs)
 
 Creates a USB Serial device on a Pico board.
