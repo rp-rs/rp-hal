@@ -253,7 +253,7 @@ RP2040 chip according to how it is connected up on the Thing Plus RP2040.
 ### [arduino_nano_connect] - Board Support for the [Ardunio Nano RP2040 Connect]
 
 You should include this crate if you are writing code that you want to run on
-an [Arduino Nano Connect] - a development pcb with shortwave communication, IMU, and BLE package.
+an [Arduino Nano RP2040 Connect] - a development pcb with shortwave communication, IMU, and BLE package.
 
 This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the nano connect.
