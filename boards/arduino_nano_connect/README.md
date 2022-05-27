@@ -58,7 +58,7 @@ then try repeating the `cargo run` command above.
 
 ### [nano_blinky](./examples/nano_blinky.rs)
 
-Flashes the Pico's on-board LED on and off.
+Flashes the Arduino Nano Connect's on-board LED on and off.
 
 
 ## Contributing

@@ -9,6 +9,7 @@ members = [
     "boards/adafruit-macropad",
     "boards/adafruit-qt-py-rp2040",
     "boards/adafruit-trinkey-qt2040",
+    "boards/arduino_nano_connect",
     "boards/pimoroni-pico-explorer",
     "boards/pimoroni-pico-lipo-16mb",
     "boards/pimoroni-plasma-2040",
@@ -16,7 +17,6 @@ members = [
     "boards/rp-pico",
     "boards/solderparty-rp2040-stamp",
     "boards/sparkfun-pro-micro-rp2040",
-    "boards/arduino_nano_connect",
     "boards/sparkfun-thing-plus-rp2040",
 ]
 
