@@ -33,6 +33,7 @@ smart-leds = "0.3.0"
 ws2812-pio = { git = "https://github.com/ithinuel/ws2812-pio-rs", rev = "fd6b6604d65a66242b52ccf7f24a95ca325991dd" }
 ssd1306 = "0.7.0"
 embedded-graphics = "0.7.1"
+hd44780-driver = "0.4.0"
 
 defmt = "0.2.0"
 defmt-rtt = "0.2.0"
