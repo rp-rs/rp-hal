@@ -11,7 +11,7 @@
 //!
 //! ```text              /--------------------------------------\
 //!  ____________        |        /-------------------------\   |
-//! | 1       GND|-------+---\    |           _|USB|_       |   | 
+//! | 1       GND|-------+---\    |           _|USB|_       |   |
 //! | 2       VDD|-------/   |    |          |1  R 40|-VBUS-o   v
 //! | 3        VS|-----------+----/          |2  P 39|       ||POT||
 //! | 4        RS|--\        o-----------GND-|3    38|-GND----------o
@@ -92,10 +92,7 @@ fn main() -> ! {
     let mut led_pin = pins.led.into_push_pull_output();
 
     // The delay object lets us wait for specified amounts of time
-    let mut delay = cortex_m::delay::Delay::new(
-        core.SYST,
-        clocks.system_clock.freq().integer()
-    );
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
 
     // Init pins
     let rs = pins.gpio7.into_push_pull_output();
@@ -106,20 +103,19 @@ fn main() -> ! {
     let d7 = pins.gpio2.into_push_pull_output();
 
     // LCD Init
-    let mut lcd = HD44780::new_4bit(rs, en, d4, d5, d6, d7, &mut delay)
-        .unwrap();
+    let mut lcd = HD44780::new_4bit(rs, en, d4, d5, d6, d7, &mut delay).unwrap();
 
     loop {
         // Clear the screen
         lcd.reset(&mut delay).unwrap();
         lcd.clear(&mut delay).unwrap();
-    
+
         // Write to the top line
         lcd.write_str("rp-hal on", &mut delay).unwrap();
-    
+
         // Move the cursor
         lcd.set_cursor_pos(40, &mut delay).unwrap();
-    
+
         // Write more more text
         lcd.write_str("HD44780! ", &mut delay).unwrap();
         let mut char_count = 9;
