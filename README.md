@@ -250,7 +250,7 @@ RP2040 chip according to how it is connected up on the Thing Plus RP2040.
 [Sparkfun Thing Plus RP2040]: https://www.sparkfun.com/products/17745
 [sparkfun-thing-plus-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/sparkfun-thing-plus-rp2040
 
-### [arduino_nano_connect] - Board Support for the [Ardunio Nano RP2040 Connect]
+### [arduino_nano_connect] - Board Support for the [Arduino Nano RP2040 Connect]
 
 You should include this crate if you are writing code that you want to run on
 an [Arduino Nano RP2040 Connect] - a development pcb with shortwave communication, IMU, and BLE package.

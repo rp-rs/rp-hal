@@ -1,4 +1,4 @@
-# [arduino_nano_connect] - Board Support for the [Ardunio Nano RP2040 Connect]
+# [arduino_nano_connect] - Board Support for the [Arduino Nano RP2040 Connect]
 
 You should include this crate if you are writing code that you want to run on
 an [Arduino Nano Connect] - a development pcb with shortwave communication, IMU, and BLE package.
@@ -6,7 +6,7 @@ an [Arduino Nano Connect] - a development pcb with shortwave communication, IMU,
 This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the nano connect.
 
-[Ardunio Nano RP2040 Connect]: https://store-usa.arduino.cc/collections/boards/products/arduino-nano-rp2040-connect
+[Arduino Nano RP2040 Connect]: https://store-usa.arduino.cc/collections/boards/products/arduino-nano-rp2040-connect
 [arduino_nano_connect]: https://github.com/rp-rs/rp-hal/tree/main/boards/arduino_nano_connect
 [rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
 [Raspberry Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
@@ -90,9 +90,9 @@ to intervene to uphold that code of conduct.
 ## License
 
 The contents of this repository are dual-licensed under the _MIT OR Apache
-2.0_ License. That means you can chose either the MIT licence or the
-Apache-2.0 licence when you re-use this code. See `MIT` or `APACHE2.0` for more
-information on each specific licence.
+2.0_ License. That means you can chose either the MIT license or the
+Apache-2.0 license when you re-use this code. See `MIT` or `APACHE2.0` for more
+information on each specific license.
 
 Any submissions to this project (e.g. as Pull Requests) must be made available
 under these terms.
