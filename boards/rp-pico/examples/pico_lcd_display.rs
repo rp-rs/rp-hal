@@ -53,7 +53,7 @@ use embedded_hal::digital::v2::OutputPin;
 use embedded_time::rate::*;
 
 // For LCD display
-use hd44780_driver;
+use hd44780_driver::HD44780;
 
 #[entry]
 fn main() -> ! {
@@ -106,7 +106,7 @@ fn main() -> ! {
     let d7 = pins.gpio2.into_push_pull_output();
 
     // LCD Init
-    let mut lcd = hd44780_driver::HD44780::new_4bit(rs, en, d4, d5, d6, d7, &mut delay)
+    let mut lcd = HD44780::new_4bit(rs, en, d4, d5, d6, d7, &mut delay)
         .unwrap();
 
     loop {
