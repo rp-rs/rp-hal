@@ -4,8 +4,9 @@
 //! alphanumeric LCD using the
 //! [HD44780](https://crates.io/crates/hd44780-driver) driver.
 //!
-//! It drives the LCD by pushing data out of six GPIO pins. It may need to be
-//! adapted to your particular board layout and/or pin assignment.
+//! It drives the LCD by pushing data out of six GPIO pins. This version has
+//! been adapted from rp-hal/pr2040-hal/examples/lcd_display.rs for 
+//! the rp-pico board layout and pin assignment.
 //!
 //! See the `Cargo.toml` file for Copyright and license details.
 //!
