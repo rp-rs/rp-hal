@@ -180,17 +180,19 @@ impl<'p> Core<'p> {
             // Set up the stack
             let mut stack_ptr = unsafe { stack.as_mut_ptr().add(stack.len()) };
 
-            let mut push = |v: usize| unsafe {
-                stack_ptr = stack_ptr.sub(1);
-                stack_ptr.write(v);
-            };
-
             // We don't want to drop this, since it's getting moved to the other core.
             let mut entry = ManuallyDrop::new(entry);
 
             // Push the arguments to `core1_startup` onto the stack.
-            push(stack.as_mut_ptr() as usize);
-            push(&mut entry as *mut _ as usize);
+            unsafe {
+                // Push `stack_bottom`.
+                stack_ptr = stack_ptr.sub(1);
+                stack_ptr.cast::<*mut usize>().write(stack.as_mut_ptr());
+
+                // Push `entry`.
+                stack_ptr = stack_ptr.sub(1);
+                stack_ptr.cast::<&mut ManuallyDrop<F>>().write(&mut entry);
+            }
 
             let vector_table = ppb.vtor.read().bits();
 
