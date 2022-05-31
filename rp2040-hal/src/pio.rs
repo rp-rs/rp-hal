@@ -858,7 +858,7 @@ impl<SM: ValidStateMachine> Tx<SM> {
     ///
     /// Returns `true` if the value was written to FIFO, `false` otherwise.
     ///
-    /// [section_2_1_4]: https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf#_narrow_io_register_writes
+    /// [section_2_1_4]: <https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf#_narrow_io_register_writes>
     pub fn write_u8_replicated(&mut self, value: u8) -> bool {
         // Safety: The register is never written by software.
         let is_full = self.is_full();
@@ -891,7 +891,8 @@ impl<SM: ValidStateMachine> Tx<SM> {
     /// use `write(my_u16 as u32)` instead.
     ///
     /// Returns `true` if the value was written to FIFO, `false` otherwise.
-    /// [section_2_1_4]: https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf#_narrow_io_register_writes
+    ///
+    /// [section_2_1_4]: <https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf#_narrow_io_register_writes>
     pub fn write_u16_replicated(&mut self, value: u16) -> bool {
         // Safety: The register is never written by software.
         let is_full = self.is_full();
