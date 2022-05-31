@@ -2,7 +2,7 @@
 #![no_std]
 #![no_main]
 
-use cortex_m_rt::entry;
+use bsp::entry;
 use defmt::*;
 use defmt_rtt as _;
 use embedded_hal::digital::v2::OutputPin;

@@ -2,8 +2,8 @@
 #![no_std]
 #![no_main]
 
+use adafruit_qt_py_rp2040::entry;
 use core::iter::once;
-use cortex_m_rt::entry;
 use embedded_hal::digital::v2::OutputPin;
 use embedded_hal::timer::CountDown;
 use embedded_time::duration::Extensions;

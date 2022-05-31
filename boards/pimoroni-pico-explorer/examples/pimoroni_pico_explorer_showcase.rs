@@ -3,7 +3,6 @@
 
 use arrayvec::ArrayString;
 use core::fmt::Write;
-use cortex_m_rt::entry;
 use embedded_graphics::{
     mono_font::{ascii::FONT_10X20, MonoTextStyleBuilder},
     pixelcolor::Rgb565,
@@ -14,6 +13,7 @@ use embedded_hal::digital::v2::OutputPin;
 use embedded_time::rate::*;
 use hal::{adc::Adc, clocks::*, watchdog::Watchdog, Sio};
 use panic_halt as _;
+use pimoroni_pico_explorer::entry;
 use pimoroni_pico_explorer::{hal, pac, Button, PicoExplorer, XOSC_CRYSTAL_FREQ};
 
 // See 4.9.5 from RP2040 datasheet

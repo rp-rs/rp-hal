@@ -13,7 +13,7 @@
 #![no_main]
 
 // The macro for our start-up function
-use cortex_m_rt::entry;
+use rp_pico::entry;
 
 // The macro for marking our interrupt functions
 use rp_pico::hal::pac::interrupt;

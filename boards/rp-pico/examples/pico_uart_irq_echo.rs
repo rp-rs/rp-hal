@@ -29,7 +29,7 @@ use embedded_time::fixed_point::FixedPoint;
 use rp2040_hal::Clock;
 
 // The macro for our start-up function
-use cortex_m_rt::entry;
+use rp_pico::entry;
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)

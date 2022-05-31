@@ -13,7 +13,7 @@
 #![no_main]
 
 // The macro for our start-up function
-use cortex_m_rt::entry;
+use rp_pico::entry;
 
 // GPIO traits
 use embedded_hal::digital::v2::{InputPin, OutputPin};

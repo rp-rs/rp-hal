@@ -7,11 +7,11 @@
 #![no_main]
 
 use core::iter::once;
-use cortex_m_rt::entry;
 use embedded_hal::timer::CountDown;
 use embedded_time::duration::Extensions;
 use panic_halt as _;
 use smart_leds::{brightness, SmartLedsWrite, RGB8};
+use solderparty_rp2040_stamp::entry;
 use solderparty_rp2040_stamp::{
     hal::{
         clocks::{init_clocks_and_plls, Clock},
