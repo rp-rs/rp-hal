@@ -104,7 +104,6 @@ impl<const SIZE: usize> Stack<SIZE> {
 /// Entry for a Vector in the Interrupt Vector Table.
 ///
 /// Each entry in the Vector table is a union with usize to allow it to be 0 initialized via const initializer
-/// This union also allows for updating the stack pointer or
 ///
 /// Implementation borrowed from https://docs.rs/cortex-m-rt/0.7.1/cortex_m_rt/index.html#__interrupts
 #[derive(Clone, Copy)]
