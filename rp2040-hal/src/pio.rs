@@ -148,11 +148,21 @@ impl<P: PIOExt> PIO<P> {
             .write(|w| unsafe { w.irq_force().bits(flags) });
     }
 
+    /// Calculates a mask with the `len` right-most bits set.
+    fn instruction_mask(len: usize) -> u32 {
+        if len < 32 {
+            (1 << len) - 1
+        } else {
+            0xffffffff
+        }
+    }
+
+    /// Tries to find an appropriate offset for the instructions, in range 0..=31.
     fn find_offset_for_instructions(&self, i: &[u16], origin: Option<u8>) -> Option<usize> {
-        if i.len() > PIO_INSTRUCTION_COUNT {
+        if i.len() > PIO_INSTRUCTION_COUNT || i.is_empty() {
             None
         } else {
-            let mask = (1 << i.len()) - 1;
+            let mask = Self::instruction_mask(i.len());
             if let Some(origin) = origin {
                 if origin as usize > PIO_INSTRUCTION_COUNT - i.len()
                     || self.used_instruction_space & (mask << origin) != 0
@@ -208,7 +218,7 @@ impl<P: PIOExt> PIO<P> {
             {
                 self.pio.instr_mem[i + offset].write(|w| unsafe { w.bits(instr as u32) })
             }
-            self.used_instruction_space |= ((1 << p.code.len()) - 1) << offset;
+            self.used_instruction_space |= Self::instruction_mask(p.code.len()) << offset;
             Ok(InstalledProgram {
                 offset: offset as u8,
                 length: p.code.len() as u8,
@@ -223,7 +233,7 @@ impl<P: PIOExt> PIO<P> {
 
     /// Removes the specified program from instruction memory, freeing the allocated space.
     pub fn uninstall(&mut self, p: InstalledProgram<P>) {
-        let instr_mask = ((1 << p.length as u32) - 1) << p.offset as u32;
+        let instr_mask = Self::instruction_mask(p.length as usize) << p.offset as u32;
         self.used_instruction_space &= !instr_mask;
     }
 }
