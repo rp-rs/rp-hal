@@ -3,29 +3,30 @@
 //! This module handles setup of the 2nd cpu core on the rp2040, which we refer to as core1.
 //! It provides functionality for setting up the stack, and starting core1.
 //!
-//! The options for an entrypoint for core1 are
-//! - a function that never returns - eg
-//! `fn core1_task() -> ! { loop{} }; `
-//! - a lambda (note: This requires a global allocator which requires a nightly compiler. Not recommended for beginners)
+//! The entrypoint for core1 can be any function that never returns, including closures.
 //!
 //! # Usage
 //!
 //! ```no_run
+//! use rp2040_hal::{pac, gpio::Pins, sio::Sio, multicore::{Multicore, Stack}};
+//!
 //! static mut CORE1_STACK: Stack<4096> = Stack::new();
+//!
 //! fn core1_task() -> ! {
-//!     loop{}
+//!     loop {}
 //! }
-//! // fn main() -> ! {
-//!     use rp2040_hal::{pac, gpio::Pins, sio::Sio, multicore::{Multicore, Stack}};
+//!
+//! fn main() -> ! {
 //!     let mut pac = pac::Peripherals::take().unwrap();
 //!     let mut sio = Sio::new(pac.SIO);
 //!     // Other init code above this line
-//!     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio);
+//!     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
 //!     let cores = mc.cores();
 //!     let core1 = &mut cores[1];
-//!     let _test = core1.spawn(core1_task, unsafe { &mut CORE1_STACK.mem });
+//!     let _test = core1.spawn(unsafe { &mut CORE1_STACK.mem }, core1_task);
 //!     // The rest of your application below this line
-//! //}
+//!     # loop {}
+//! }
 //!
 //! ```
 //!
@@ -33,10 +34,12 @@
 //!
 //! For a detailed example, see [examples/multicore_fifo_blink.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/multicore_fifo_blink.rs)
 
-use crate::pac;
+use core::mem::ManuallyDrop;
+use core::sync::atomic::compiler_fence;
+use core::sync::atomic::Ordering;
 
-#[cfg(feature = "alloc")]
-extern crate alloc;
+use crate::pac;
+use crate::Sio;
 
 /// Errors for multicore operations.
 #[derive(Debug)]
@@ -46,15 +49,6 @@ pub enum Error {
     /// Core was unresponsive to commands.
     Unresponsive,
 }
-
-// We pass data to cores via the stack, so we read
-// the data off the stack and into parameters that
-// rust can read here. Ideally this would be a
-// #[naked] function but that is not stable yet.
-static MULTICORE_TRAMPOLINE: [u16; 2] = [
-    0xbd03, // pop {r0, r1, pc} - call wrapper (pc) with r0 and r1
-    0x46c0, // nop - pad this out to 32 bits long
-];
 
 #[inline(always)]
 fn install_stack_guard(stack_bottom: *mut usize) {
@@ -109,7 +103,11 @@ impl<const SIZE: usize> Stack<SIZE> {
 
 impl<'p> Multicore<'p> {
     /// Create a new |Multicore| instance.
-    pub fn new(psm: &'p mut pac::PSM, ppb: &'p mut pac::PPB, sio: &'p mut crate::Sio) -> Self {
+    pub fn new(
+        psm: &'p mut pac::PSM,
+        ppb: &'p mut pac::PPB,
+        sio: &'p mut crate::sio::SioFifo,
+    ) -> Self {
         Self {
             cores: [
                 Core { inner: None },
@@ -128,7 +126,11 @@ impl<'p> Multicore<'p> {
 
 /// A handle for controlling a logical core.
 pub struct Core<'p> {
-    inner: Option<(&'p mut pac::PSM, &'p mut pac::PPB, &'p mut crate::Sio)>,
+    inner: Option<(
+        &'p mut pac::PSM,
+        &'p mut pac::PPB,
+        &'p mut crate::sio::SioFifo,
+    )>,
 }
 
 impl<'p> Core<'p> {
@@ -140,13 +142,36 @@ impl<'p> Core<'p> {
         }
     }
 
-    fn inner_spawn(
-        &mut self,
-        wrapper: *mut (),
-        entry: *mut (),
-        stack: &'static mut [usize],
-    ) -> Result<(), Error> {
-        if let Some((psm, ppb, sio)) = self.inner.as_mut() {
+    /// Spawn a function on this core.
+    pub fn spawn<F>(&mut self, stack: &'static mut [usize], entry: F) -> Result<(), Error>
+    where
+        F: FnOnce() -> bad::Never + Send + 'static,
+    {
+        if let Some((psm, ppb, fifo)) = self.inner.as_mut() {
+            // The first two ignored `u64` parameters are there to take up all of the registers,
+            // which means that the rest of the arguments are taken from the stack,
+            // where we're able to put them from core 0.
+            extern "C" fn core1_startup<F: FnOnce() -> bad::Never>(
+                _: u64,
+                _: u64,
+                entry: &mut ManuallyDrop<F>,
+                stack_bottom: *mut usize,
+            ) -> ! {
+                core1_setup(stack_bottom);
+
+                let entry = unsafe { ManuallyDrop::take(entry) };
+
+                // Signal that it's safe for core 0 to get rid of the original value now.
+                //
+                // We don't have any way to get at core 1's SIO without using `Peripherals::steal` right now,
+                // since svd2rust doesn't really support multiple cores properly.
+                let peripherals = unsafe { pac::Peripherals::steal() };
+                let mut sio = Sio::new(peripherals.SIO);
+                sio.fifo.write_blocking(1);
+
+                entry()
+            }
+
             // Reset the core
             psm.frce_off.modify(|_, w| w.proc1().set_bit());
             while !psm.frce_off.read().proc1().bit_is_set() {
@@ -157,14 +182,28 @@ impl<'p> Core<'p> {
             // Set up the stack
             let mut stack_ptr = unsafe { stack.as_mut_ptr().add(stack.len()) };
 
-            let mut push = |v: usize| unsafe {
-                stack_ptr = stack_ptr.sub(1);
-                stack_ptr.write(v);
-            };
+            // We don't want to drop this, since it's getting moved to the other core.
+            let mut entry = ManuallyDrop::new(entry);
 
-            push(wrapper as usize);
-            push(stack.as_mut_ptr() as usize);
-            push(entry as usize);
+            // Push the arguments to `core1_startup` onto the stack.
+            unsafe {
+                // Push `stack_bottom`.
+                stack_ptr = stack_ptr.sub(1);
+                stack_ptr.cast::<*mut usize>().write(stack.as_mut_ptr());
+
+                // Push `entry`.
+                stack_ptr = stack_ptr.sub(1);
+                stack_ptr.cast::<&mut ManuallyDrop<F>>().write(&mut entry);
+            }
+
+            // Make sure the compiler does not reorder the stack writes after to after the
+            // below FIFO writes, which would result in them not being seen by the second
+            // core.
+            //
+            // From the compiler perspective, this doesn't guarantee that the second core
+            // actually sees those writes. However, we know that the RP2040 doesn't have
+            // memory caches, and writes happen in-order.
+            compiler_fence(Ordering::Release);
 
             let vector_table = ppb.vtor.read().bits();
 
@@ -176,7 +215,7 @@ impl<'p> Core<'p> {
                 1,
                 vector_table as usize,
                 stack_ptr as usize,
-                MULTICORE_TRAMPOLINE.as_ptr() as usize + 1,
+                core1_startup::<F> as usize,
             ];
 
             let mut seq = 0;
@@ -184,17 +223,20 @@ impl<'p> Core<'p> {
             loop {
                 let cmd = cmd_seq[seq] as u32;
                 if cmd == 0 {
-                    sio.fifo.drain();
+                    fifo.drain();
                     cortex_m::asm::sev();
                 }
-                sio.fifo.write_blocking(cmd);
-                let response = sio.fifo.read_blocking();
+                fifo.write_blocking(cmd);
+                let response = fifo.read_blocking();
                 if cmd == response {
                     seq += 1;
                 } else {
                     seq = 0;
                     fails += 1;
                     if fails > 16 {
+                        // The second core isn't responding, and isn't going to take the entrypoint,
+                        // so we have to drop it ourselves.
+                        drop(ManuallyDrop::into_inner(entry));
                         return Err(Error::Unresponsive);
                     }
                 }
@@ -203,48 +245,17 @@ impl<'p> Core<'p> {
                 }
             }
 
+            // Wait until the other core has copied `entry` before returning.
+            fifo.read_blocking();
+
             Ok(())
         } else {
             Err(Error::InvalidCore)
         }
     }
-
-    /// Spawn a function on this core.
-    #[cfg(not(feature = "alloc"))]
-    pub fn spawn(&mut self, entry: fn() -> !, stack: &'static mut [usize]) -> Result<(), Error> {
-        #[allow(improper_ctypes_definitions)]
-        extern "C" fn core1_no_alloc(entry: fn() -> !, stack_bottom: *mut usize) -> ! {
-            core1_setup(stack_bottom);
-            entry();
-        }
-
-        self.inner_spawn(core1_no_alloc as _, entry as _, stack)
-    }
-
-    /// Spawn a function on this core.
-    #[cfg(feature = "alloc")]
-    pub fn spawn<F>(&mut self, entry: F, stack: &'static mut [usize]) -> Result<(), Error>
-    where
-        F: FnOnce() -> bad::Never,
-        F: Send + 'static,
-    {
-        use alloc::boxed::Box;
-
-        let main: Box<dyn FnOnce() -> bad::Never> = Box::new(move || entry());
-        let p = Box::into_raw(Box::new(main));
-
-        extern "C" fn core1_alloc(entry: *mut (), stack_bottom: *mut usize) -> ! {
-            core1_setup(stack_bottom);
-            let main = unsafe { Box::from_raw(entry as *mut Box<dyn FnOnce() -> bad::Never>) };
-            main();
-        }
-
-        self.inner_spawn(core1_alloc as _, p as _, stack)
-    }
 }
 
 // https://github.com/nvzqz/bad-rs/blob/master/src/never.rs
-#[cfg(feature = "alloc")]
 mod bad {
     pub(crate) type Never = <F as HasOutput>::Output;
 

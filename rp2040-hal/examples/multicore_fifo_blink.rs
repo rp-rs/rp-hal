@@ -57,7 +57,7 @@ const CORE1_TASK_COMPLETE: u32 = 0xEE;
 /// the stack guard to take up the least amount of usable RAM.
 static mut CORE1_STACK: Stack<4096> = Stack::new();
 
-fn core1_task() -> ! {
+fn core1_task(sys_freq: u32) -> ! {
     let mut pac = unsafe { pac::Peripherals::steal() };
     let core = unsafe { pac::CorePeripherals::steal() };
 
@@ -70,10 +70,6 @@ fn core1_task() -> ! {
     );
 
     let mut led_pin = pins.gpio25.into_push_pull_output();
-    // The first thing core0 sends us is the system bus frequency.
-    // The systick is based on this frequency, so we need that to
-    // be accurate when sleeping via cortex_m::delay::Delay
-    let sys_freq = sio.fifo.read_blocking();
     let mut delay = cortex_m::delay::Delay::new(core.SYST, sys_freq);
     loop {
         let input = sio.fifo.read();
@@ -114,17 +110,18 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
+    let sys_freq = clocks.system_clock.freq().integer();
+
     // The single-cycle I/O block controls our GPIO pins
     let mut sio = hal::sio::Sio::new(pac.SIO);
 
-    let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio);
+    let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
     let cores = mc.cores();
     let core1 = &mut cores[1];
-    let _test = core1.spawn(core1_task, unsafe { &mut CORE1_STACK.mem });
+    let _test = core1.spawn(unsafe { &mut CORE1_STACK.mem }, move || {
+        core1_task(sys_freq)
+    });
 
-    // Let core1 know how fast the system clock is running
-    let sys_freq = clocks.system_clock.freq().integer();
-    sio.fifo.write_blocking(sys_freq);
     /// How much we adjust the LED period every cycle
     const LED_PERIOD_INCREMENT: i32 = 2;
 
