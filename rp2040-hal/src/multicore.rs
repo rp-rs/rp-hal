@@ -35,6 +35,8 @@
 //! For a detailed example, see [examples/multicore_fifo_blink.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/multicore_fifo_blink.rs)
 
 use core::mem::ManuallyDrop;
+use core::sync::atomic::compiler_fence;
+use core::sync::atomic::Ordering;
 
 use crate::pac;
 use crate::Sio;
@@ -193,6 +195,15 @@ impl<'p> Core<'p> {
                 stack_ptr = stack_ptr.sub(1);
                 stack_ptr.cast::<&mut ManuallyDrop<F>>().write(&mut entry);
             }
+
+            // Make sure the compiler does not reorder the stack writes after to after the
+            // below FIFO writes, which would result in them not being seen by the second
+            // core.
+            //
+            // From the compiler perspective, this doesn't guarantee that the second core
+            // actually sees those writes. However, we know that the RP2040 doesn't have
+            // memory caches, and writes happen in-order.
+            compiler_fence(Ordering::Release);
 
             let vector_table = ppb.vtor.read().bits();
 
