@@ -1,0 +1,19 @@
+[package]
+name = "ws2812-pio"
+version = "0.2.0"
+edition = "2018"
+license = "Apache-2.0"
+description = "Driver implementation for the WS2812 smart LED using the RP2040's PIO peripheral."
+documentation =  "https://docs.rs/ws2812-pio"
+repository = "https://github.com/ithinuel/ws2812-pio-rs/"
+
+[dependencies]
+embedded-hal = "0.2.5"
+embedded-time = "0.12.0"
+rp2040-hal = { path = "../../rp2040-hal" }
+pio = "0.2.0"
+smart-leds-trait = "0.2.1"
+nb = "1.0.0"
+cortex-m = "0.7.3"
+
+[workspace]

@@ -25,3 +25,6 @@ rp2040-hal = { path ="./rp2040-hal" }
 
 [patch.crates-io]
 rp2040-hal = { path ="./rp2040-hal" }
+
+[patch.'https://github.com/ithinuel/ws2812-pio-rs.git']
+ws2812-pio = { path ="./vendor/ws2812-pio" }
