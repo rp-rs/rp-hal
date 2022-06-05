@@ -301,6 +301,11 @@ impl<P: PIOExt> InstalledProgram<P> {
         self.offset + self.wrap.target
     }
 
+    /// Get the offset the program is installed at.
+    pub fn offset(&self) -> u8 {
+        self.offset
+    }
+
     /// Clones this program handle so that it can be executed by two state machines at the same
     /// time.
     ///
