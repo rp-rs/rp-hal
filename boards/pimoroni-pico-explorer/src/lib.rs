@@ -48,7 +48,7 @@ use hal::{
 };
 use st7789::ST7789;
 
-mod internal_pins {
+pub mod all_pins {
     hal::bsp_pins!(
         Gpio0 { name: gpio0 },
         Gpio1 { name: gpio1 },
@@ -164,10 +164,10 @@ pub type Screen = ST7789<
 >;
 
 pub struct PicoExplorer {
-    a: Pin<Gpio12, PullUpInput>,
-    b: Pin<Gpio13, PullUpInput>,
-    x: Pin<Gpio14, PullUpInput>,
-    y: Pin<Gpio15, PullUpInput>,
+    pub a: Pin<Gpio12, PullUpInput>,
+    pub b: Pin<Gpio13, PullUpInput>,
+    pub x: Pin<Gpio14, PullUpInput>,
+    pub y: Pin<Gpio15, PullUpInput>,
     adc: Adc,
     pub screen: Screen,
 }
@@ -194,7 +194,7 @@ impl PicoExplorer {
         resets: &mut RESETS,
         delay: &mut impl DelayUs<u32>,
     ) -> (Self, Pins) {
-        let internal_pins = internal_pins::Pins::new(io, pads, sio, resets);
+        let internal_pins = all_pins::Pins::new(io, pads, sio, resets);
 
         let a = internal_pins.switch_a.into_pull_up_input();
         let b = internal_pins.switch_b.into_pull_up_input();
