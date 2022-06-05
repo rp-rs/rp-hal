@@ -10,6 +10,9 @@ pub use hal::entry;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
+///
+/// This currently assumes an rp-pico or pimoroni-pico-lipo is used as the brains.
+/// Currently those are the only boards that have the right pin out to be able to be used
 #[cfg(feature = "boot2")]
 #[link_section = ".boot2"]
 #[no_mangle]
@@ -112,6 +115,7 @@ mod internal_pins {
     );
 }
 
+// Can't use `hal::bsp_pins!` here because some pins are not set to their reset state
 pub struct Pins {
     pub gpio0: Pin<Gpio0, <Gpio0 as PinId>::Reset>,
     pub gpio1: Pin<Gpio1, <Gpio1 as PinId>::Reset>,
