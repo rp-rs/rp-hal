@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.5.0] - 2022-06-22
+## [0.5.0] - 2022-06-13
 
 ### MSRV
 
@@ -19,6 +19,7 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.61
 - Start multiple state machines in sync with each other - @astraw
 - Unsafe fn for freeing all spinlocks when you can't use the RP2040 entry macro (eg RTIC) - @9names
 - Optional feature for enabling defmt formatting for i2c errors - @ithinuel
+- Accessor for getting the offset of an installed PIO program - @fenax
 
 ### Changed
 
@@ -28,7 +29,9 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.61
 - Update Multicore::spawn to be able to take a closure without requiring alloc.
   Improve Multicore ergonomics and add example for how to use new API - @Liamolucko
 - Allow PIO program to be 32 instructions long, was previously limited to 31 - @jannic
-- Fix Typos - @mqy
+- Fix Typos - @mqy, @danbev
+- Replace generic pio::Tx::write<T> with write_u8_replicated, write_u16_replicated, and update
+  write to take a u32. The generic version was too easy to misuse. - @9names
 
 ### Removed
 
