@@ -1,6 +1,6 @@
 [package]
 name = "pimoroni-tiny2040"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Mike Bell <mdb036@gmail.com>", "The rp-rs Developers"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-tiny2040"

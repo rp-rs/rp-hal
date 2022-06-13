@@ -1,6 +1,6 @@
 [package]
 name = "sparkfun-thing-plus-rp2040"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Tyler Pottenger <tyler.pottenger@gmail.com>", "Wilfried Chauveau <wilfried.chauveau@ithinuel.me>", "The rp-rs Developers"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/sparkfun-thing-plus-rp2040"

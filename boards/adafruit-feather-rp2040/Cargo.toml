@@ -1,6 +1,6 @@
 [package]
 name = "adafruit-feather-rp2040"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Andrea Nall <anall@andreanal.com>", "The rp-rs Developers"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit-feather-rp2040"

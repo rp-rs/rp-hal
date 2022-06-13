@@ -1,6 +1,6 @@
 [package]
 name = "arduino_nano_connect"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["splicedbread <dxbunrated@gmail.com>", "The rp-rs Developers"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/arduino_nano_connect"
