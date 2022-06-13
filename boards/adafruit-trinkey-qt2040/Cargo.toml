@@ -21,7 +21,7 @@ embedded-hal ="0.2.5"
 embedded-time = "0.12.0"
 smart-leds = "0.3"
 nb = "1.0.0"
-ws2812-pio = { git = "https://github.com/ithinuel/ws2812-pio-rs", rev = "fd6b6604d65a66242b52ccf7f24a95ca325991dd" }
+ws2812-pio = { git = "https://github.com/rp-rs/ws2812-pio-rs", branch = "hal_0.5.0" }
 
 [features]
 default = ["boot2", "rt"]
