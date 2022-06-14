@@ -1,6 +1,6 @@
 [package]
 name = "pimoroni-pico-explorer"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Hmvp <hmvp@users.noreply.github.com>", "The rp-rs Developers"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-pico-explorer"

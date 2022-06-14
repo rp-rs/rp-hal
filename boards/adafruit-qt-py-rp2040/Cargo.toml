@@ -1,6 +1,6 @@
 [package]
 name = "adafruit-qt-py-rp2040"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Stephen Onnen <stephen.onnen@gmail.com>", "The rp-rs Developers"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit-qt-py-rp2040"

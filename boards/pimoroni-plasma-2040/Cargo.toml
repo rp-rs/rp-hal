@@ -1,6 +1,6 @@
 [package]
 name = "pimoroni-plasma-2040"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Jordan Williams <jordan@jwillikers.com>", "The rp-rs Developers"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-plasma-2040"
