@@ -24,7 +24,7 @@ futures = { version = "0.3", default-features = false, optional = true }
 [dev-dependencies]
 panic-halt= "0.2.0"
 embedded-hal ="0.2.5"
-cortex-m-rtic = "0.6.0-rc.4"
+cortex-m-rtic = "1.1.2"
 nb = "1.0"
 i2c-pio = { git = "https://github.com/rp-rs/i2c-pio-rs", branch = "hal_0.5.0" }
 heapless = "0.7.9"
