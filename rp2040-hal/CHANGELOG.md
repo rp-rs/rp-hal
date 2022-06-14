@@ -7,9 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2022-06-13
+
+### MSRV
+
+The Minimum-Supported Rust Version (MSRV) for this release is 1.61
+
+### Added
+
+- RP2040 specific #[entry] macro that releases spinlocks - @jannic
+- Start multiple state machines in sync with each other - @astraw
+- Unsafe fn for freeing all spinlocks when you can't use the RP2040 entry macro (eg RTIC) - @9names
+- Optional feature for enabling defmt formatting for i2c errors - @ithinuel
+- Accessor for getting the offset of an installed PIO program - @fenax
+
+### Changed
+
+- Use thread send safe UART* marker when splitting, improves UART ergonmics - @marius-meissner
+- Improve performance for hardware division instrinsics. Internal intrinsics cleanup - @Sizurka
+- Provide a better alarm abstraction - @ithinuel
+- Update Multicore::spawn to be able to take a closure without requiring alloc.
+  Improve Multicore ergonomics and add example for how to use new API - @Liamolucko
+- Allow PIO program to be 32 instructions long, was previously limited to 31 - @jannic
+- Fix Typos - @mqy, @danbev
+- Replace generic pio::Tx::write<T> with write_u8_replicated, write_u16_replicated, and update
+  write to take a u32. The generic version was too easy to misuse. - @9names
+
 ### Removed
 
-- removed i2c embassy driver prototype
+- I2c async driver. Use new one at https://github.com/ithinuel/rp2040-async-i2c/ - @ithinuel
+- Unused fields from UartPeripheral and Reader - @jannic
 
 ## [0.4.0] - 2022-03-09
 
@@ -98,7 +125,8 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.54.
 
 - Initial release
 
-[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/rp-rs/rp-hal/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/rp-rs/rp-hal/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rp-rs/rp-hal/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rp-rs/rp-hal/compare/v0.1.0...v0.2.0

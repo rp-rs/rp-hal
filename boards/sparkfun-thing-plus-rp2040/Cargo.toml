@@ -12,7 +12,7 @@ repository = "https://github.com/rp-rs/rp-hal.git"
 
 [dependencies]
 cortex-m = "0.7.2"
-rp2040-hal = { path = "../../rp2040-hal", version = "0.4.0" }
+rp2040-hal = { path = "../../rp2040-hal", version = "0.5.0" }
 cortex-m-rt = { version = "0.7.0", optional = true }
 embedded-hal = { version = "0.2.4", features = ["unproven"] }
 rp2040-boot2 = { version = "0.2.0", optional = true }
@@ -23,7 +23,7 @@ smart-leds = "0.3.0"
 embedded-time = "0.12.0"
 nb = "1.0.0"
 pio = "0.1.0"
-ws2812-pio = { git = "https://github.com/ithinuel/ws2812-pio-rs", rev = "fd6b6604d65a66242b52ccf7f24a95ca325991dd" }
+ws2812-pio = { git = "https://github.com/rp-rs/ws2812-pio-rs", branch = "hal_0.5.0" }
 
 [features]
 default = ["boot2", "rt"]
