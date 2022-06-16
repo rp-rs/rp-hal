@@ -32,7 +32,7 @@
 //! // Use the usb_bus as usual.
 //! ```
 //!
-//! See [pico_usb_serial.rs](https://github.com/rp-rs/rp-hal/tree/main/boards/pico/examples/pico_usb_serial.rs) for more complete examples
+//! See [pico_usb_serial.rs](https://github.com/rp-rs/pico/examples/pico_usb_serial.rs) for more complete examples
 //!
 //!
 //! ## Enumeration issue with small EP0 max packet size

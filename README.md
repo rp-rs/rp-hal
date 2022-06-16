@@ -13,7 +13,7 @@
     <a href="https://docs.rs/rp2040-hal"><strong>Explore the API docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/rp-rs/rp-hal/tree/main/boards/rp-pico/examples">View Demos</a>
+    <a href="https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples">View Demos</a>
     ·
     <a href="https://github.com/rp-rs/rp-hal/issues">Report a Bug</a>
     ·
@@ -124,7 +124,7 @@ This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the Pico.
 
 [Raspberry Pi Pico]: https://www.raspberrypi.org/products/raspberry-pi-pico/
-[rp-pico]: https://github.com/rp-rs/rp-hal/tree/main/boards/rp-pico
+[rp-pico]: https://github.com/rp-rs/rp-pico
 
 ### [adafruit-feather-rp2040] - Board Support for the [Adafruit Feather RP2040]
 
@@ -135,7 +135,7 @@ This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the Feather RP2040.
 
 [Adafruit Feather RP2040]: https://www.adafruit.com/product/4884
-[adafruit-feather-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit-feather-rp2040
+[adafruit-feather-rp2040]: https://github.com/rp-rs/adafruit-feather-rp2040
 
 ### [adafruit-itsy-bitsy-rp2040] - Board Support for the [Adafruit ItsyBitsy RP2040]
 You should include this crate if you are writing code that you want to run on
@@ -145,7 +145,7 @@ This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the ItsyBitsy RP2040.
 
 [Adafruit ItsyBitsy RP2040]: https://www.adafruit.com/product/4888
-[adafruit-itsy-bitsy-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit-itsy-bitsy-rp2040
+[adafruit-itsy-bitsy-rp2040]: https://github.com/rp-rs/adafruit-itsy-bitsy-rp2040
 
 ### [adafruit-kb2040] - Board Support for the [Adafruit KB2040]
 You should include this crate if you are writing code that you want to run on
@@ -155,7 +155,7 @@ This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the KB2040.
 
 [Adafruit KB2040]: https://www.adafruit.com/product/5302
-[adafruit-kb2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit-kb2040
+[adafruit-kb2040]: https://github.com/rp-rs/adafruit-kb2040
 
 ### [adafruit-macropad] - Board Support for the [Adafruit Macropad]
 
@@ -165,7 +165,7 @@ an [Adafruit Macropad] - a 3x4 keyboard and OLED combo board from Adafruit.
 This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the Macropad.
 
-[adafruit-macropad]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit-macropad
+[adafruit-macropad]: https://github.com/rp-rs/adafruit-macropad
 [Adafruit Macropad]: https://www.adafruit.com/product/5128
 
 ### [adafruit-qt-py-rp2040] - Board Support for the [Adafruit QT Py RP2040]
@@ -177,7 +177,7 @@ This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the Feather RP2040.
 
 [Adafruit QT Py RP2040]: https://www.adafruit.com/product/4900
-[adafruit-qt-py-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit-qt-py-rp2040
+[adafruit-qt-py-rp2040]: https://github.com/rp-rs/adafruit-qt-py-rp2040
 
 ### [adafruit-trinkey-qt2040] - Board Support for the [Adafruit Trinkey QT2040]
 
@@ -187,7 +187,7 @@ an [Adafruit Trinkey QT2040] - a 3x4 keyboard and OLED combo board from Adafruit
 This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the Trinkey.
 
-[Adafruit-Trinkey-QT2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit-trinkey-qt2040
+[Adafruit-Trinkey-QT2040]: https://github.com/rp-rs/adafruit-trinkey-qt2040
 [adafruit trinkey qt2040]: https://www.adafruit.com/product/5056
 
 ### [pimoroni-pico-explorer] - Board Support for the [Pimoroni Pico Explorer]
@@ -200,7 +200,7 @@ This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the Pico Explorer.
 
 [Pimoroni Pico Explorer]: https://shop.pimoroni.com/products/pimoroni-pico-explorer-base
-[pimoroni-pico-explorer]: https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-pico-explorer
+[pimoroni-pico-explorer]: https://github.com/rp-rs/pimoroni-pico-explorer
 
 ### [pimoroni-pico-lipo-16mb] - Board Support for the [Pimoroni Pico Lipo 16MB]
 
@@ -215,7 +215,7 @@ Note that if you use this crate the compiler will expect the full 16MB flash
 space, and so it may not work if you only have the 4MB variant. 
 
 [Pimoroni Pico Lipo 16MB]: https://shop.pimoroni.com/products/pimoroni-pico-lipo?variant=39335427080275
-[pimoroni-pico-lipo-16mb]: https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-pico-lipo-16mb
+[pimoroni-pico-lipo-16mb]: https://github.com/rp-rs/pimoroni-pico-lipo-16mb
 
 ### [solderparty-rp2040-stamp] - Board Support for the [SolderParty RP2040 Stamp]
 
@@ -226,7 +226,7 @@ This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the Stamp.
 
 [SolderParty RP2040 Stamp]: https://www.solder.party/docs/rp2040-stamp/
-[solderparty-rp2040-stamp]: https://github.com/rp-rs/rp-hal/tree/main/boards/solderparty-rp2040-stamp
+[solderparty-rp2040-stamp]: https://github.com/rp-rs/solderparty-rp2040-stamp
 
 ### [sparkfun-pro-micro-rp2040] - Board Support for the [Sparkfun Pro Micro RP2040]
 
@@ -237,7 +237,7 @@ This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the Pro Micro RP2040.
 
 [Sparkfun Pro Micro RP2040]: https://www.sparkfun.com/products/18288
-[sparkfun-pro-micro-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/sparkfun-pro-micro-rp2040
+[sparkfun-pro-micro-rp2040]: https://github.com/rp-rs/sparkfun-pro-micro-rp2040
 
 ### [sparkfun-thing-plus-rp2040] - Board Support for the [Sparkfun Thing Plus RP2040]
 
@@ -248,7 +248,7 @@ This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the Thing Plus RP2040.
 
 [Sparkfun Thing Plus RP2040]: https://www.sparkfun.com/products/17745
-[sparkfun-thing-plus-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/sparkfun-thing-plus-rp2040
+[sparkfun-thing-plus-rp2040]: https://github.com/rp-rs/sparkfun-thing-plus-rp2040
 
 ### [arduino_nano_connect] - Board Support for the [Arduino Nano RP2040 Connect]
 
@@ -259,7 +259,7 @@ This crate includes the [rp2040-hal], but also configures each pin of the
 RP2040 chip according to how it is connected up on the nano connect.
 
 [Arduino Nano RP2040 Connect]: https://store-usa.arduino.cc/collections/boards/products/arduino-nano-rp2040-connect
-[arduino_nano_connect]: https://github.com/rp-rs/rp-hal/tree/main/boards/arduino_nano_connect
+[arduino_nano_connect]: https://github.com/rp-rs/arduino_nano_connect
 
 <!-- PROGRAMMING -->
 ## Programming
