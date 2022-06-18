@@ -43,12 +43,11 @@ use rp_pico::hal::pac;
 // higher-level drivers.
 use rp_pico::hal;
 
-/// Signed 8-bit raw PCM samples
+/// Unsigned 8-bit PCM samples (in a WAV container)
 ///
 /// If you want to create your own, use Audacity to create a recording with a
-/// sample rate of 32,000 Hz and then export it as raw 8-bit signed PCM with no
-/// file header.
-const AUDIO: &[u8] = include_bytes!("pico_pwm_audio.raw");
+/// sample rate of 32,000 Hz and then export it as WAV 8-bit unsigned PCM.
+const AUDIO: &[u8] = include_bytes!("pico_pwm_audio.wav");
 
 /// The hardware PWM driver that is shared with the interrupt routine.
 static mut PWM: Option<hal::pwm::Slice<Pwm0, FreeRunning>> = None;
@@ -207,12 +206,13 @@ fn main() -> ! {
     loop {
         let _ = led_pin.set_high();
 
-        for i in AUDIO {
-            // Rescale from signed i8 numbers to 0..4096 (the TOP register we specified earlier)
+        // N.B: Skip the WAV header here. We're going to assume the format is what we expect.
+        for i in &AUDIO[0x2C..] {
+            // Rescale from unsigned u8 numbers to 0..4096 (the TOP register we specified earlier)
             //
             // The PWM channel will increment an internal counter register, and if the counter is
             // above or equal to this number, the PWM will output a logic high signal.
-            let i = ((*i as u16) << 4).wrapping_add(2048) & 0xFFF;
+            let i = ((*i as u16) << 4) & 0xFFF;
 
             cortex_m::interrupt::free(|_| {
                 // SAFETY: Interrupt cannot currently use this while we're in a critical section.
@@ -228,7 +228,7 @@ fn main() -> ! {
 
         // Flash the LED to let the user know that the audio is looping.
         let _ = led_pin.set_low();
-        delay.delay_ms(50);
+        delay.delay_ms(200);
     }
 }
 
