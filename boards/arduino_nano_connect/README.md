@@ -16,7 +16,7 @@ RP2040 chip according to how it is connected up on the nano connect.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-arduino_nano_connect = { git = "https://github.com/rp-rs/rp-hal.git" }
+arduino_nano_connect = "0.2.0"
 ```
 # TODO - down and out
 In your program, you will need to call `arduino_nano_connect::Pins::new` to create
