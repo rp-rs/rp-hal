@@ -1,6 +1,6 @@
 [package]
 name = "adafruit-itsy-bitsy-rp2040"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Andrew Christiansen <andrewtaylorchristiansen@gmail.com>", "The rp-rs Developers"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit_itsy_bitsy_rp2040"
@@ -22,7 +22,7 @@ panic-halt= "0.2.0"
 embedded-hal ="0.2.5"
 smart-leds = "0.3"
 nb = "1.0.0"
-ws2812-pio = { git = "https://github.com/rp-rs/ws2812-pio-rs", branch = "hal_0.5.0" }
+ws2812-pio = "0.3.0"
 
 [features]
 default = ["rt", "boot2"]

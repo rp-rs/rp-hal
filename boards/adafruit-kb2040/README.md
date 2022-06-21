@@ -16,7 +16,7 @@ RP2040 chip according to how it is connected up on the KB2040.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-adafruit-kb2040 = "0.2.0"
+adafruit-kb2040 = "0.3.0"
 ```
 
 In your program, you will need to call `adafruit-kb2040::Pins::new` to create
