@@ -103,15 +103,6 @@ macro_rules! channel {
                 $channel
             }
         }
-
-        #[cfg(feature = "eh1_0_alpha")]
-        impl eh1_0_alpha::adc::nb::Channel<Adc> for Pin<$pin, FloatingInput> {
-            type ID = u8; // ADC channels are identified numerically
-
-            fn channel(&self) -> u8 {
-                $channel
-            }
-        }
     };
 }
 
@@ -133,15 +124,6 @@ impl Channel<Adc> for TempSense {
     }
 }
 
-#[cfg(feature = "eh1_0_alpha")]
-impl eh1_0_alpha::adc::nb::Channel<Adc> for TempSense {
-    type ID = u8; // ADC channels are identified numerically
-
-    fn channel(&self) -> u8 {
-        TEMPERATURE_SENSOR_CHANNEL
-    }
-}
-
 impl<WORD, PIN> OneShot<Adc, WORD, PIN> for Adc
 where
     WORD: From<u16>,
@@ -151,37 +133,6 @@ where
 
     fn read(&mut self, _pin: &mut PIN) -> nb::Result<WORD, Self::Error> {
         let chan = PIN::channel();
-
-        if chan == 4 {
-            self.device.cs.modify(|_, w| w.ts_en().set_bit())
-        }
-
-        while !self.device.cs.read().ready().bit_is_set() {
-            cortex_m::asm::nop();
-        }
-
-        self.device
-            .cs
-            .modify(|_, w| unsafe { w.ainsel().bits(chan).start_once().set_bit() });
-
-        while !self.device.cs.read().ready().bit_is_set() {
-            cortex_m::asm::nop();
-        }
-
-        Ok(self.device.result.read().result().bits().into())
-    }
-}
-
-#[cfg(feature = "eh1_0_alpha")]
-impl<WORD, PIN> eh1_0_alpha::adc::nb::OneShot<Adc, WORD, PIN> for Adc
-where
-    WORD: From<u16>,
-    PIN: eh1_0_alpha::adc::nb::Channel<Adc, ID = u8>,
-{
-    type Error = ();
-
-    fn read(&mut self, pin: &mut PIN) -> nb::Result<WORD, Self::Error> {
-        let chan = PIN::channel(pin);
 
         if chan == 4 {
             self.device.cs.modify(|_, w| w.ts_en().set_bit())
