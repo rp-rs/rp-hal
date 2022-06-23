@@ -1075,7 +1075,56 @@ gpio!(
 /// [here](self#types) for a list of the available [`PinMode`] type aliases.
 ///
 /// # Example
-/// ...
+/// Calling the macro like this:
+/// ```rust
+/// use rp2040_hal::bsp_pins;
+/// bsp_pins! {
+///     #[cfg(feature = "gpio")]
+///     Gpio0 {
+///          /// Doc gpio0
+///          name: gpio0,
+///          aliases: { FunctionPio0: PioPin }
+///     },
+///     Gpio1 {
+///          name: led,
+///          aliases: { FunctionPwm: LedPwm }
+///      },
+/// }
+/// ```
+///
+/// Is roughly equivalent to the following source code (excluding the docs strings below):
+/// ```
+/// use ::rp2040_hal as hal;
+/// use hal::gpio;
+/// pub struct Pins {
+///     #[cfg(feature = "gpio")]
+///     /// Doc gpio0
+///     pub gpio0: gpio::Pin<gpio::bank0::Gpio0, <gpio::bank0::Gpio0 as gpio::PinId>::Reset>,
+///     pub led: gpio::Pin<gpio::bank0::Gpio1, <gpio::bank0::Gpio1 as gpio::PinId>::Reset>,
+/// }
+/// impl Pins {
+///     #[inline]
+///     pub fn new(
+///         io: hal::pac::IO_BANK0,
+///         pads: hal::pac::PADS_BANK0,
+///         sio: hal::sio::SioGpioBank0,
+///         reset: &mut hal::pac::RESETS,
+///     ) -> Self {
+///         let mut pins = gpio::Pins::new(io, pads, sio, reset);
+///         Self {
+///             #[cfg(feature = "gpio")]
+///             gpio0: pins.gpio0,
+///             led: pins.gpio1,
+///         }
+///     }
+/// }
+/// pub type PioPin = gpio::Pin<gpio::bank0::Gpio0, gpio::FunctionPio0>;
+/// pub const PIO_PIN_ID: gpio::DynPinId = <gpio::bank0::Gpio0 as gpio::PinId>::DYN;
+/// pub const PIO_PIN_MODE: gpio::DynPinMode = <gpio::FunctionPio0 as gpio::PinMode>::DYN;
+/// pub type LedPwm = gpio::Pin<gpio::bank0::Gpio1, gpio::FunctionPwm>;
+/// pub const LED_PWM_ID: gpio::DynPinId = <gpio::bank0::Gpio1 as gpio::PinId>::DYN;
+/// pub const LED_PWM_MODE: gpio::DynPinMode = <gpio::FunctionPwm as gpio::PinMode>::DYN;
+/// ```
 #[macro_export]
 macro_rules! bsp_pins {
     (
