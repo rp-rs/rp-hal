@@ -1138,9 +1138,14 @@ impl<SM: ValidStateMachine> Rx<SM> {
             .modify(|_, w| w.autopush().bit(enable))
     }
 
-    /// Indicate if the tx FIFO is full
+    /// Indicate if the rx FIFO is empty
     pub fn is_empty(&self) -> bool {
         self.register_block().fstat.read().rxempty().bits() & (1 << SM::id()) != 0
+    }
+
+    /// Indicate if the rx FIFO is full
+    pub fn is_full(&self) -> bool {
+        self.register_block().fstat.read().rxfull().bits() & (1 << SM::id()) != 0
     }
 }
 
