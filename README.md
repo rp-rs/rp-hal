@@ -193,7 +193,7 @@ RP2040 chip according to how it is connected up on the Trinkey.
 ### [pimoroni-pico-explorer] - Board Support for the [Pimoroni Pico Explorer]
 
 You should include this crate if you are writing code that you want to run on
-a [Pimoroni Pico Explorer] - a board featuring a small LCD screen, a
+a [Pimoroni Pico Explorer] - a breakout board for the [Raspberry Pi Pico] featuring a small LCD screen, a
 breadboard and some breakout headers.
 
 This crate includes the [rp2040-hal], but also configures each pin of the

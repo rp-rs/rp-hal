@@ -10,6 +10,9 @@ pub use hal::entry;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
+///
+/// This currently assumes an rp-pico or pimoroni-pico-lipo is used as the brains.
+/// Currently those are the only boards that have the right pin out to be able to be used
 #[cfg(feature = "boot2")]
 #[link_section = ".boot2"]
 #[no_mangle]
@@ -45,7 +48,7 @@ use hal::{
 };
 use st7789::ST7789;
 
-mod internal_pins {
+pub mod all_pins {
     hal::bsp_pins!(
         Gpio0 { name: gpio0 },
         Gpio1 { name: gpio1 },
@@ -112,6 +115,7 @@ mod internal_pins {
     );
 }
 
+// Can't use `hal::bsp_pins!` here because some pins are not set to their reset state
 pub struct Pins {
     pub gpio0: Pin<Gpio0, <Gpio0 as PinId>::Reset>,
     pub gpio1: Pin<Gpio1, <Gpio1 as PinId>::Reset>,
@@ -160,10 +164,10 @@ pub type Screen = ST7789<
 >;
 
 pub struct PicoExplorer {
-    a: Pin<Gpio12, PullUpInput>,
-    b: Pin<Gpio13, PullUpInput>,
-    x: Pin<Gpio14, PullUpInput>,
-    y: Pin<Gpio15, PullUpInput>,
+    pub a: Pin<Gpio12, PullUpInput>,
+    pub b: Pin<Gpio13, PullUpInput>,
+    pub x: Pin<Gpio14, PullUpInput>,
+    pub y: Pin<Gpio15, PullUpInput>,
     adc: Adc,
     pub screen: Screen,
 }
@@ -190,7 +194,7 @@ impl PicoExplorer {
         resets: &mut RESETS,
         delay: &mut impl DelayUs<u32>,
     ) -> (Self, Pins) {
-        let internal_pins = internal_pins::Pins::new(io, pads, sio, resets);
+        let internal_pins = all_pins::Pins::new(io, pads, sio, resets);
 
         let a = internal_pins.switch_a.into_pull_up_input();
         let b = internal_pins.switch_b.into_pull_up_input();

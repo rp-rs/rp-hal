@@ -288,27 +288,27 @@ pub enum ScheduleAlarmError {
 impl_alarm!(Alarm0 {
     rb: alarm0,
     int: alarm_0,
-    int_name: "IRQ_TIMER_0",
+    int_name: "TIMER_IRQ_0",
     armed_bit_mask: 0b0001
 });
 
 impl_alarm!(Alarm1 {
     rb: alarm1,
     int: alarm_1,
-    int_name: "IRQ_TIMER_1",
+    int_name: "TIMER_IRQ_1",
     armed_bit_mask: 0b0010
 });
 
 impl_alarm!(Alarm2 {
     rb: alarm2,
     int: alarm_2,
-    int_name: "IRQ_TIMER_2",
+    int_name: "TIMER_IRQ_2",
     armed_bit_mask: 0b0100
 });
 
 impl_alarm!(Alarm3 {
     rb: alarm3,
     int: alarm_3,
-    int_name: "IRQ_TIMER_3",
+    int_name: "TIMER_IRQ_3",
     armed_bit_mask: 0b1000
 });
