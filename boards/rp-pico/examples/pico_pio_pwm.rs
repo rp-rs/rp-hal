@@ -50,6 +50,10 @@ fn pio_pwm_set_period<T: ValidStateMachine>(
     tx: &mut Tx<T>,
     period: u32,
 ) -> StateMachine<(hal::pac::PIO0, SM0), Running> {
+    // To make sure the inserted instructions actually use our newly written value
+    // We first busy loop to empty the queue. (Which typically should be the case)
+    while !tx.is_empty() {}
+
     let mut sm = sm.stop();
     tx.write(period);
     sm.exec_instruction(
