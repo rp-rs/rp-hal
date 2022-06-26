@@ -97,6 +97,7 @@ use super::{
     InputOverride, Interrupt, InterruptOverride, OutputDriveStrength, OutputEnableOverride,
     OutputOverride, OutputSlewRate,
 };
+
 use crate::gpio::reg::RegisterInterface;
 use crate::typelevel::{Is, NoneT, Sealed};
 use core::convert::Infallible;
@@ -105,7 +106,7 @@ use core::marker::PhantomData;
 use crate::gpio::dynpin::DynFunction;
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::digital as eh1;
-use hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin};
+use hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin, IoPin, PinState};
 
 use core::mem::transmute;
 
@@ -533,6 +534,16 @@ where
         self.into_mode()
     }
 
+    /// Configure the pin to operate as a push-pull output with an initial state
+    #[inline]
+    pub fn into_push_pull_output_in_state(mut self, initial_state: PinState) -> Pin<I, PushPullOutput> {
+        match initial_state {
+            PinState::High => self._set_high(),
+            PinState::Low => self._set_low(),
+        };
+        self.into_mode()
+    }
+
     /// Configure the pin to operate as a readable push pull output
     #[inline]
     pub fn into_readable_output(self) -> Pin<I, ReadableOutput> {
@@ -844,6 +855,23 @@ where
     }
 }
 
+impl<I, M> IoPin<Pin<I, Input<Floating>>, Pin<I, Output<PushPull>>> for Pin<I, M>
+where
+    I: PinId,
+    M: PinMode + ValidPinMode<I>,
+{
+    type Error = Infallible;
+    #[inline]
+    fn into_input_pin(self) -> Result<Pin<I, Input<Floating>>, Self::Error> {
+        Ok(self.into_floating_input())
+    }
+    #[inline]
+    fn into_output_pin(self, state: PinState) -> Result<Pin<I, Output<PushPull>>, Self::Error> {
+        Ok(self.into_push_pull_output_in_state(state))
+
+    }
+}
+
 #[cfg(feature = "eh1_0_alpha")]
 impl<I, C> eh1::ErrorType for Pin<I, Output<C>>
 where
@@ -937,6 +965,23 @@ where
     #[inline]
     fn is_set_low(&self) -> Result<bool, Self::Error> {
         Ok(self._is_set_low())
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl<I, M> eh1::blocking::IoPin<Pin<I, Input<Floating>>, Pin<I, Output<PushPull>>> for Pin<I, M>
+where
+    I: PinId,
+    M: PinMode + ValidPinMode<I>,
+{
+    #[inline]
+    fn into_input_pin(self) -> Result<Pin<I, Input<Floating>>, Self::Error> {
+        Ok(self.into_floating_input())
+    }
+    #[inline]
+    fn into_output_pin(self, state: PinState) -> Result<Pin<I, Output<PushPull>>, Self::Error> {
+        Ok(self.into_push_pull_output_in_state(state))
+
     }
 }
 
