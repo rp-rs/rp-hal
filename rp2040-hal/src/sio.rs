@@ -75,8 +75,14 @@ impl Sio {
             gpio_qspi: SioGpioQspi { _private: () },
             fifo: SioFifo { _private: () },
             hwdivider: HwDivider { _private: () },
-            interp0: Interp0 { lane0: Interp0Lane0{_private:()}, lane1: Interp0Lane1 { _private: () } },
-            interp1: Interp1 { lane0: Interp1Lane0{_private:()}, lane1: Interp1Lane1 { _private: () } }
+            interp0: Interp0 {
+                lane0: Interp0Lane0 { _private: () },
+                lane1: Interp0Lane1 { _private: () },
+            },
+            interp1: Interp1 {
+                lane0: Interp1Lane0 { _private: () },
+                lane1: Interp1Lane1 { _private: () },
+            },
         }
     }
 
@@ -672,91 +678,90 @@ pub unsafe fn spinlock_reset() {
 }
 
 /// Configuration struct for one lane of the interpolator
-pub struct LaneCtrl{
+pub struct LaneCtrl {
     #[doc = "Bit 22 - Only present on INTERP1 on each core. If CLAMP mode is enabled:  
     - LANE0 result is shifted and masked ACCUM0, clamped by a lower bound of  
     BASE0 and an upper bound of BASE1.  
     - Signedness of these comparisons is determined by LANE0_CTRL_SIGNED"]
-    pub blend:bool,
+    pub blend: bool,
     #[doc = "Bits 19:20 - ORed into bits 29:28 of the lane result presented to the processor on the bus.  
     No effect on the internal 32-bit datapath. Handy for using a lane to generate sequence  
-    of pointers into flash or SRAM."]   
-    pub force_msb:u8,
+    of pointers into flash or SRAM."]
+    pub force_msb: u8,
     #[doc = "Bit 18 - If 1, mask + shift is bypassed for LANE0 result. This does not affect FULL result."]
-    pub add_raw:bool,
+    pub add_raw: bool,
     #[doc = "Bit 17 - If 1, feed the opposite lane's result into this lane's accumulator on POP."]
-    pub cross_result:bool,
+    pub cross_result: bool,
     #[doc = "Bit 16 - If 1, feed the opposite lane's accumulator into this lane's shift + mask hardware.  
     Takes effect even if ADD_RAW is set (the CROSS_INPUT mux is before the shift+mask bypass)"]
-    pub cross_input:bool,
+    pub cross_input: bool,
     #[doc = "Bit 15 - If SIGNED is set, the shifted and masked accumulator value is sign-extended to 32 bits  
     before adding to BASE0, and LANE0 PEEK/POP appear extended to 32 bits when read by processor."]
-    pub signed:bool,
+    pub signed: bool,
     #[doc = "Bits 10:14 - The most-significant bit allowed to pass by the mask (inclusive)  
     Setting MSB < LSB may cause chip to turn inside-out"]
-    pub mask_msb:u8,
+    pub mask_msb: u8,
     #[doc = "Bits 5:9 - The least-significant bit allowed to pass by the mask (inclusive)"]
-    pub mask_lsb:u8,
+    pub mask_lsb: u8,
     #[doc = "Bits 0:4 - Logical right-shift applied to accumulator before masking"]
-    pub shift:u8,
+    pub shift: u8,
 }
 
-impl LaneCtrl{
+impl LaneCtrl {
     /// Default value where all fields are zero and false
-    pub const DEFAULT:Self = 
-        Self { 
-            blend: false, 
-            force_msb: 0, 
-            add_raw: false, 
-            cross_result: false, 
-            cross_input: false, 
-            signed: false, 
-            mask_msb: 0, 
-            mask_lsb: 0, 
-            shift: 0 
-        };
-    
+    pub const DEFAULT: Self = Self {
+        blend: false,
+        force_msb: 0,
+        add_raw: false,
+        cross_result: false,
+        cross_input: false,
+        signed: false,
+        mask_msb: 0,
+        mask_lsb: 0,
+        shift: 0,
+    };
+
     /// encode the configuration to be loaded in the ctrl register of one lane of an interpolator
-    pub const fn encode(&self)->u32{
+    pub const fn encode(&self) -> u32 {
         assert!(self.force_msb < 0b100);
         assert!(self.mask_msb < 0b100000);
         assert!(self.mask_lsb < 0b100000);
         assert!(self.mask_msb >= self.mask_lsb);
         assert!(self.shift < 0b100000);
-        ((self.blend as u32) << 21)|
-        ((self.force_msb as u32) << 19) |
-        ((self.add_raw as u32) << 18) |
-        ((self.cross_result as u32) << 17)|
-        ((self.cross_input as u32) << 16)|
-        ((self.signed as u32) << 15)|
-        ((self.mask_msb as u32) << 10)|
-        ((self.mask_lsb as u32) << 5)|
-        (self.shift as u32)
+        ((self.blend as u32) << 21)
+            | ((self.force_msb as u32) << 19)
+            | ((self.add_raw as u32) << 18)
+            | ((self.cross_result as u32) << 17)
+            | ((self.cross_input as u32) << 16)
+            | ((self.signed as u32) << 15)
+            | ((self.mask_msb as u32) << 10)
+            | ((self.mask_lsb as u32) << 5)
+            | (self.shift as u32)
     }
 }
 
 ///Trait representing the functionnality of a single lane of an interpolator.
-pub trait Lane{
+pub trait Lane {
     ///Read the lane result, and simultaneously write lane results to both accumulators.
     fn pop(&mut self) -> u32;
     ///Read the lane result without altering any internal state
-    fn peek(&self)->u32;
+    fn peek(&self) -> u32;
     ///Write a value to the accumulator
-    fn set_accum(&mut self,v:u32);
+    fn set_accum(&mut self, v: u32);
     ///Read the value from the accumulator
-    fn get_accum(&self)->u32;
+    fn get_accum(&self) -> u32;
     ///Write a value to the base register
-    fn set_base(&mut self, v:u32);
+    fn set_base(&mut self, v: u32);
     ///Read the value from the base register
     fn get_base(&self) -> u32;
     ///Write to the control register
-    fn set_ctrl(&mut self, v:u32);
+    fn set_ctrl(&mut self, v: u32);
     ///Read from the control register
-    fn get_ctrl(&self)-> u32;
+    fn get_ctrl(&self) -> u32;
     ///Add the value to the accumulator register
-    fn add_accum(&mut self,v:u32);
+    fn add_accum(&mut self, v: u32);
     ///Read the raw shift and mask value (BASE register not added)
-    fn read_raw(&self)->u32;
+    fn read_raw(&self) -> u32;
 }
 
 ///Trait representing the functionnality of an interpolator.
@@ -764,7 +769,7 @@ pub trait Lane{
 /// use rp2040_hal::sio::Sio;
 /// let mut peripherals = pac::Peripherals::take().unwrap();
 /// let sio = Sio::new(peripherals.SIO);
-/// 
+///
 /// // by having the configuration const, the validity is checked during compilation.
 /// const config: u32 = sio::LaneCtrl {
 ///     mask_msb: 4 // Most significant bit is the fourt
@@ -775,19 +780,19 @@ pub trait Lane{
 /// sio.interp0.get_lane0().set_ctrl(config);
 /// sio.interp0.get_lane0().set_accum(0);
 /// sio.interp0.get_lane0().set_base(1); // will increment the value by 1 on each call to pop
-/// 
+///
 /// sio.interp0.get_lane0().peek(); // returns 1
 /// sio.interp0.get_lane0().pop();  // returns 1
 /// sio.interp0.get_lane0().pop();  // returns 2
 /// sio.interp0.get_lane0().pop();  // returns 3
 /// ```
-pub trait Interp{
+pub trait Interp {
     ///Read the interpolator result (Result 2 in the datasheet), and simultaneously write lane results to both accumulators.
-    fn pop(&mut self)->u32;
+    fn pop(&mut self) -> u32;
     ///Read the interpolator result (Result 2 in the datasheet) without altering any internal state
-    fn peek(&self)->u32;
+    fn peek(&self) -> u32;
     ///Write to the interpolator Base register (Base2 in the datasheet)
-    fn set_base(&mut self, v:u32);
+    fn set_base(&mut self, v: u32);
     ///Read the interpolator Base register (Base2 in the datasheet)
     fn get_base(&self) -> u32;
 }
@@ -797,7 +802,7 @@ macro_rules! interpolators {
         $($interp:ident : ( $( [ $lane:ident,$lane_id:expr ] ),+ ) ),+
     ) => {
         $crate::paste::paste! {
-            
+
 
                 $(
                     $(
@@ -845,7 +850,7 @@ macro_rules! interpolators {
                             fn read_raw(&self)->u32{
                                 let sio = unsafe { &*pac::SIO::ptr() };
                                 sio.[<$interp:lower _accum $lane_id _add>].read().bits()
-                            }                        
+                            }
                         }
                     )+
                     #[doc = "Interpolator " $interp]
@@ -855,8 +860,8 @@ macro_rules! interpolators {
                         )+
                     }
                     impl $interp{
-                        $(   
-                            /// Lane accessor function   
+                        $(
+                            /// Lane accessor function
                             pub fn [<get_ $lane:lower>](&mut self)->&mut [<$interp $lane>]{
                                 &mut self.[<$lane:lower>]
                             }
@@ -886,7 +891,6 @@ macro_rules! interpolators {
             }
         }
     }
-
 
 interpolators!(
     Interp0 : ([Lane0,0],[Lane1,1]),
