@@ -16,7 +16,7 @@ RP2040 chip according to how it is connected up on the Pimoroni Plasma 2040.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-pimoroni-plasma-2040 = "0.1.0"
+pimoroni-plasma-2040 = "0.2.0"
 ```
 
 In your program, you will need to call `pimoroni_plasma_2040::Pins::new` to create

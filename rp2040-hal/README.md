@@ -68,7 +68,7 @@ https://github.com/rp-rs/rp-hal/ for more details.
 To include this crate in your project, amend your `Cargo.toml` file to include
 
 ```toml
-rp2040-hal = "0.4.0"
+rp2040-hal = "0.5.0"
 ```
 
 To obtain a copy of the source code (e.g. if you want to propose a bug-fix or
@@ -102,6 +102,8 @@ will be breaking changes even in minor versions of rp2040-hal.
 Support for embedded-hal 1.0(-alpha) exists in parallel to support for
 embedded-hal 0.2: Traits of both versions are implemented and can be used
 at the same time.
+The new blocking [SPI traits](https://docs.rs/embedded-hal/1.0.0-alpha.8/embedded_hal/spi/blocking/index.html)
+are not yet implemented.
 
 <!-- CONTRIBUTING -->
 ## Contributing

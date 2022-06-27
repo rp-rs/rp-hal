@@ -17,7 +17,7 @@ RP2040 chip according to how it is connected up on the Thing Plus RP2040.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-sparkfun-thing-plus-rp2040 = "0.1.0"
+sparkfun-thing-plus-rp2040 = "0.2.0"
 ```
 
 In your program, you will need to call `sparkfun_thing_plus_rp2040::Pins::new` to create

@@ -16,7 +16,7 @@ RP2040 chip according to how it is connected up on the Stamp
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-solderparty-rp2040-stamp = "0.1.0"
+solderparty-rp2040-stamp = "0.2.0"
 ```
 
 In your program, you will need to call `solderparty_rp2040_stamp::Pins::new` to create

@@ -16,7 +16,7 @@ RP2040 chip according to how it is connected up on the Feather.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-adafruit-macropad = "0.2.0"
+adafruit-macropad = "0.3.0"
 ```
 
 In your program, you will need to call `adafruit_macropad::Pins::new` to create

@@ -1138,9 +1138,14 @@ impl<SM: ValidStateMachine> Rx<SM> {
             .modify(|_, w| w.autopush().bit(enable))
     }
 
-    /// Indicate if the tx FIFO is full
+    /// Indicate if the rx FIFO is empty
     pub fn is_empty(&self) -> bool {
         self.register_block().fstat.read().rxempty().bits() & (1 << SM::id()) != 0
+    }
+
+    /// Indicate if the rx FIFO is full
+    pub fn is_full(&self) -> bool {
+        self.register_block().fstat.read().rxfull().bits() & (1 << SM::id()) != 0
     }
 }
 
@@ -1183,10 +1188,10 @@ impl<SM: ValidStateMachine> Tx<SM> {
         }
     }
 
-    /// Write an element to TX FIFO.
+    /// Write a u32 value to TX FIFO.
     ///
     /// Returns `true` if the value was written to FIFO, `false` otherwise.
-    pub fn write<T>(&mut self, value: T) -> bool {
+    pub fn write(&mut self, value: u32) -> bool {
         // Safety: The register is never written by software.
         let is_full = self.is_full();
 
@@ -1195,8 +1200,8 @@ impl<SM: ValidStateMachine> Tx<SM> {
         }
 
         unsafe {
-            let reg_ptr = self.register_block().txf[SM::id()].as_ptr() as *mut T;
-            core::ptr::write_volatile(reg_ptr, value);
+            let reg_ptr = self.register_block().txf[SM::id()].as_ptr() as *mut u32;
+            reg_ptr.write_volatile(value);
         }
 
         true

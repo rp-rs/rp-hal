@@ -16,7 +16,7 @@ RP2040 chip according to how it is connected up on the ItsyBitsy RP2040.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-adafruit-itsy-bitsy-rp2040 = "0.2.0"
+adafruit-itsy-bitsy-rp2040 = "0.3.0"
 ```
 
 In your program, you will need to call `adafruit_itsy_bitsy_rp2040::Pins::new` to create

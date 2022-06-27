@@ -18,7 +18,7 @@ space, and so it may not work if you only have the 4MB variant.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-pimoroni-pico-lipo-16mb = "0.2.0"
+pimoroni-pico-lipo-16mb = "0.3.0"
 ```
 
 In your program, you will need to call `pimoroni_pico_lipo_16mb::Pins::new` to create
