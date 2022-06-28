@@ -766,17 +766,18 @@ pub trait Lane {
 
 ///Trait representing the functionnality of an interpolator.
 /// ```no_run
-/// use rp2040_hal::sio::Sio;
+/// use rp2040_hal::sio::{Sio,LaneCtrl,Lane};
+/// use rp2040_hal::pac;
 /// let mut peripherals = pac::Peripherals::take().unwrap();
-/// let sio = Sio::new(peripherals.SIO);
+/// let mut sio = Sio::new(peripherals.SIO);
 ///
 /// // by having the configuration const, the validity is checked during compilation.
-/// const config: u32 = sio::LaneCtrl {
-///     mask_msb: 4 // Most significant bit is the fourt
+/// const config: u32 = LaneCtrl {
+///     mask_msb: 4, // Most significant bit is the fourt
 ///                 // By default the least significant bit is 0th
 ///                 // the result will therefor be %32
-///     ..sio::LaneCtrl::DEFAULT
-/// };
+///     ..LaneCtrl::DEFAULT
+/// }.encode();
 /// sio.interp0.get_lane0().set_ctrl(config);
 /// sio.interp0.get_lane0().set_accum(0);
 /// sio.interp0.get_lane0().set_base(1); // will increment the value by 1 on each call to pop
