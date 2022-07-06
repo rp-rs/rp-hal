@@ -17,6 +17,7 @@ members = [
     "boards/pimoroni-servo2040",
     "boards/pimoroni-tiny2040",
     "boards/rp-pico",
+    "boards/rp-pico-w",
     "boards/seeeduino-xiao-rp2040",
     "boards/solderparty-rp2040-stamp",
     "boards/sparkfun-pro-micro-rp2040",
