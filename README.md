@@ -261,6 +261,18 @@ RP2040 chip according to how it is connected up on the nano connect.
 [Arduino Nano RP2040 Connect]: https://store-usa.arduino.cc/collections/boards/products/arduino-nano-rp2040-connect
 [arduino_nano_connect]: https://github.com/rp-rs/rp-hal/tree/main/boards/arduino_nano_connect
 
+### [seeeduino-xiao-rp2040] - Board Support for the [Seeeduino XIAO RP2040]
+
+You should include this crate if you are writing code that you want to run on
+a [Seeeduino XIAO RP2040] - a tiny board for wearable devices and small
+projects.
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the XIAO RP2040.
+
+[Seeeduino XIAO RP2040]: https://www.seeedstudio.com/XIAO-RP2040-v1-0-p-5026.html
+[seeeduino-xiao-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/seeeduino-xiao-rp2040
+
 <!-- PROGRAMMING -->
 ## Programming
 
