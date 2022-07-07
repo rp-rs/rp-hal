@@ -126,6 +126,17 @@ RP2040 chip according to how it is connected up on the Pico.
 [Raspberry Pi Pico]: https://www.raspberrypi.org/products/raspberry-pi-pico/
 [rp-pico]: https://github.com/rp-rs/rp-hal/tree/main/boards/rp-pico
 
+### [rp-pico-w] - Board Support for the [Raspberry Pi Pico] W
+
+You should include this crate if you are writing code that you want to run on
+a [Raspberry Pi Pico] W - the Wifi enabled version of the [Raspberry Pi Pico].
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the Pico W.
+
+[Raspberry Pi Pico]: https://www.raspberrypi.org/products/raspberry-pi-pico/
+[rp-pico-w]: https://github.com/rp-rs/rp-hal/tree/main/boards/rp-pico-w
+
 ### [adafruit-feather-rp2040] - Board Support for the [Adafruit Feather RP2040]
 
 You should include this crate if you are writing code that you want to run on
