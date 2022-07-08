@@ -58,7 +58,7 @@ macro_rules! intrinsics_aliases {
 /// Like the compiler-builtins macro, it accepts a series of functions that
 /// looks like normal Rust code:
 ///
-/// ```text
+/// ```ignore
 /// intrinsics! {
 ///     extern "C" fn foo(a: i32) -> u32 {
 ///         // ...
