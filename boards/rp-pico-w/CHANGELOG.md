@@ -19,6 +19,9 @@ Created based on the rp-pico BSP.
 
 ### TODO
 
+- Implement Wifi driver
+- Add led pin (not a native GPIO, but could provide a compatible
+  API so rp-pico examples can work on rp-pico-w with little modification)
 - Fix pico_w_blinky example.
 
 [@jannic]: https://github.com/jannic
