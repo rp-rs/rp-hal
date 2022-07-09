@@ -21,7 +21,7 @@ To use this crate, your `Cargo.toml` file should contain:
 rp-pico-w = "0.0.1"
 ```
 
-In your program, you will need to call `rp_pico::Pins::new` to create
+In your program, you will need to call `rp_pico_w::Pins::new` to create
 a new `Pins` structure. This will set up all the GPIOs for any on-board
 devices. See the [examples](./examples) folder for more details.
 
@@ -56,9 +56,9 @@ $ cargo install elf2uf2-rs
 ```
 then try repeating the `cargo run` command above.
 
-### [pico__w_blinky](./examples/pico_w_blinky.rs)
+### [pico_w_blinky](./examples/pico_w_blinky.rs)
 
-Flashes the Pico's on-board LED on and off.
+Flashes the Pico W's on-board LED on and off.
 
 ## Contributing
 

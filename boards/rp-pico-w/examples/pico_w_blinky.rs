@@ -1,9 +1,9 @@
-//! # Pico Blinky Example
+//! # Pico W Blinky Example
 //!
-//! Blinks the LED on a Pico board.
+//! Blinks the LED on a Pico W board.
 //!
-//! This will blink an LED attached to GP25, which is the pin the Pico uses for
-//! the on-board LED.
+//! This will blink an LED attached to WL_GPIO0, which is the pin the Pico W uses for
+//! the on-board LED. It is connected to the the Wifi chip so it cannot be set using RP2040 pins
 //!
 //! See the `Cargo.toml` file for Copyright and license details.
 
