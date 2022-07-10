@@ -1,6 +1,17 @@
-//!  all the functionality on a Adafruit MacroPad Showcase board
+//!  Adafruit MacroPad showcase example
 //!
-//! This will showcase all the functionality on a Adafruit MacroPad board
+//! This example exercises shows off all the functionality on an Adafruit MacroPad board
+//! - LCD displays a message
+//! - LEDs cycle a colour pattern
+//! - Buzzer makes some sound
+//! - Blinks the LED
+//! TODO:
+//! - Poll keys
+//! - Poll rotary encoder
+//! - Poll rotary encoder button
+//! - USB
+//! - Interact with external i2c devices connected via qwiic port
+
 #![no_std]
 #![no_main]
 
@@ -27,8 +38,7 @@ use smart_leds::{brightness, SmartLedsWrite, RGB, RGB8};
 use embedded_hal::digital::v2::OutputPin;
 use ws2812_pio::Ws2812;
 
-// Currently 3 consecutive LEDs are driven by this example
-// to keep the power draw compatible with USB:
+// There are 12 RGB leds in the strip, one for each key
 const STRIP_LEN: usize = 12;
 // For in the graphics drawing utilities like the font
 // and the drawing routines:
@@ -91,15 +101,16 @@ fn main() -> ! {
     let mut leds: [RGB8; STRIP_LEN] = [(0, 0, 0).into(); STRIP_LEN];
     let mut t = 0.0;
 
-    // Bring down the overall brightness of the LEDS
-    // Original code here was worried about power consumption
-    // my measurements show around 300ma for 12 LEDs at full brightness. we should be good.
-    let strip_brightness = 64u8; // Limit brightness to 64/256
+    // Bring down the overall brightness of the LEDs.
+    // The onboard LEDs are very bright, they still look pretty good when not as bright.
+    // Reducing power might also be helpful for bad cables/connectors.
+    let strip_brightness = 64u8; // Limit brightness to 64/255
 
     // Slow down timer by this factor (0.1 will result in 10 seconds)
     let animation_speed = 0.1;
 
     // Configure two pins as being I²C for the qwiic port
+    // TODO: use qwiic port in example
     let _sda_pin = pins.sda.into_mode::<hal::gpio::FunctionI2C>();
     let _scl_pin = pins.scl.into_mode::<hal::gpio::FunctionI2C>();
 
