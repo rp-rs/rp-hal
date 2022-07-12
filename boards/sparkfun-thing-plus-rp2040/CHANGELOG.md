@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Use `rp2040-hal`'s entry function.
 - Migrate from `embedded-time` to `fugit`
+- Bump `pio` to 0.2.0
 
 ## 0.2.0 - 2022-06-13
 
