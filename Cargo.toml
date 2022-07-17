@@ -20,6 +20,7 @@ members = [
     "boards/solderparty-rp2040-stamp",
     "boards/sparkfun-pro-micro-rp2040",
     "boards/sparkfun-thing-plus-rp2040",
+    "boards/vcc-gnd-yd-rp2040",
 ]
 
 [patch.'https://github.com/rp-rs/rp-hal.git']
