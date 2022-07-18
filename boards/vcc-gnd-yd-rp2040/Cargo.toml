@@ -1,0 +1,46 @@
+[package]
+name = "vcc-gnd-yd-rp2040"
+version = "0.1.0"
+authors = ["Nicolas <nleguen@gmail.com>", "The rp-rs Developers"]
+edition = "2018"
+homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/vcc-gnd-yd-rp2040"
+description = "Board Support Package for the VCC-GND Studio YD-RP2040"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/rp-rs/rp-hal.git"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cortex-m = "0.7.2"
+rp2040-boot2 = { version = "0.2.0", optional = true }
+rp2040-hal = { path = "../../rp2040-hal", version = "0.5.0" }
+cortex-m-rt = { version = "0.7", optional = true }
+embedded-time = "0.12.0"
+usb-device= "0.2.8"
+usbd-serial = "0.1.1"
+usbd-hid = "0.5.1"
+futures = { version = "0.3", default-features = false, optional = true }
+
+[dev-dependencies]
+panic-halt= "0.2.0"
+embedded-hal ="0.2.5"
+cortex-m-rtic = "1.1.2"
+nb = "1.0"
+i2c-pio = "0.3.0"
+heapless = "0.7.9"
+embedded-sdmmc = { git = "https://github.com/rust-embedded-community/embedded-sdmmc-rs.git" }
+smart-leds = "0.3.0"
+ws2812-pio = "0.3.0"
+ssd1306 = "0.7.0"
+embedded-graphics = "0.7.1"
+hd44780-driver = "0.4.0"
+pio = "0.2.0"
+pio-proc = "0.2.1"
+
+defmt = "0.2.0"
+defmt-rtt = "0.2.0"
+
+[features]
+default = ["boot2", "rt"]
+boot2 = ["rp2040-boot2"]
+rt = ["cortex-m-rt","rp2040-hal/rt"]

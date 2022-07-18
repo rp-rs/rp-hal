@@ -275,6 +275,17 @@ RP2040 chip according to how it is connected up on the XIAO RP2040.
 [Seeeduino XIAO RP2040]: https://www.seeedstudio.com/XIAO-RP2040-v1-0-p-5026.html
 [seeeduino-xiao-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/seeeduino-xiao-rp2040
 
+### [vcc-gnd-yd-rp2040] - Board Support for the [VCC-GND Studio YD-RP2040]
+
+You should include this crate if you are writing code that you want to run on
+a [VCC-GND Studio YD-RP2040] - a PCB for the RP2040 chip with USB-C port, WS2812 RGB LED on GPIO23, user key on GPIO24 and built-in blue LED.
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the YD-RP2040.
+
+[VCC-GND Studio YD-RP2040]: http://152.32.187.208:8080/yd-data/YD-RP2040/
+[vcc-gnd-yd-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/vcc-gnd-yd-rp2040
+
 <!-- PROGRAMMING -->
 ## Programming
 
