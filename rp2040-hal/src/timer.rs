@@ -1,5 +1,12 @@
 //! Timer Peripheral
-// See [Chapter 4 Section 6](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
+//!
+//! The Timer peripheral on RP2040 consists of a 64-bit counter and 4 alarms.  
+//! The Counter is incremented once per microsecond. It obtains its clock source from the watchdog peripheral, you must enable the watchdog before using this peripheral.  
+//! Since it would take thousands of years for this counter to overflow you do not need to write logic for dealing with this if using get_counter.  
+//!
+//! Each of the 4 alarms can match on the lower 32 bits of Counter and trigger an interrupt.
+//!
+//! See [Chapter 4 Section 6](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) of the datasheet for more details.
 
 use embedded_time::duration::Microseconds;
 
@@ -100,7 +107,26 @@ impl Timer {
     }
 }
 
-/// Delay implementation
+/// Implementation of the embedded_hal::Timer traits using rp2040_hal::timer counter
+///
+/// ## Usage
+/// ```no_run
+/// use embedded_hal::timer::{CountDown, Cancel};
+/// use embedded_time::duration::Extensions;
+/// use rp2040_hal;
+/// let mut pac = rp2040_hal::pac::Peripherals::take().unwrap();
+/// // Configure the Timer peripheral in count-down mode
+/// let timer = rp2040_hal::Timer::new(pac.TIMER, &mut pac.RESETS);
+/// let mut count_down = timer.count_down();
+/// // Create a count_down timer for 500 milliseconds
+/// count_down.start(500.milliseconds());
+/// // Block until timer has elapsed
+/// let _ = nb::block!(count_down.wait());
+/// // Restart the count_down timer with a period of 100 milliseconds
+/// count_down.start(100.milliseconds());
+/// // Cancel it immediately
+/// count_down.cancel();
+/// ```
 pub struct CountDown<'timer> {
     timer: &'timer Timer,
     period: embedded_time::duration::Microseconds<u64>,
