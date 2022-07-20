@@ -46,7 +46,7 @@ impl VectorTable {
             crate::rom_data::memcpy44(
                 &mut self.table as *mut _ as *mut u32,
                 vector_table as *const u32,
-                core::mem::size_of::<VectorTable>() as u32,
+                192,
             )
         };
     }
