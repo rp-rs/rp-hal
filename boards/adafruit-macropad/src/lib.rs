@@ -18,6 +18,9 @@ pub use hal::entry;
 pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
 pub use hal::pac;
+pub use macros::*;
+
+mod macros;
 
 hal::bsp_pins!(
     Gpio0 { name: button },
