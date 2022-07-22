@@ -8,7 +8,8 @@
 //! let mut watchdog = Watchdog::new(pac.WATCHDOG);
 //! let clocks = macropad_clocks!(pac, watchdog);
 //! let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
-//! let pins = macropad_pins!(pac);
+//! let mut sio = Sio::new(pac.SIO);
+//! let pins = macropad_pins!(pac, sio);
 //! let timer = Timer::new(pac.TIMER, &mut pac.RESETS);
 //! //
 //! let mut disp = macropad_oled!(pins, clocks, delay, pac);
@@ -33,6 +34,7 @@ pub use core::convert::Infallible;
 pub use embedded_hal::digital::v2::InputPin;
 pub use embedded_hal::spi::MODE_0;
 pub use embedded_time::rate::Extensions;
+pub use rotary_encoder_hal::Rotary;
 pub use sh1106::prelude::GraphicsMode;
 
 // XXX missing: speaker, I2C side port
@@ -87,15 +89,14 @@ macro_rules! macropad_oled {
 
 #[macro_export]
 macro_rules! macropad_pins {
-    ($pac:expr) => {{
-        let sio = $crate::Sio::new($pac.SIO);
+    ($pac:expr, $sio:expr) => {
         $crate::Pins::new(
             $pac.IO_BANK0,
             $pac.PADS_BANK0,
-            sio.gpio_bank0,
+            $sio.gpio_bank0,
             &mut $pac.RESETS,
         )
-    }};
+    };
 }
 
 #[macro_export]
@@ -118,7 +119,7 @@ macro_rules! macropad_clocks {
 #[macro_export]
 macro_rules! macropad_rotary_encoder {
     ($pins:expr) => {
-        Rotary::new(
+        $crate::Rotary::new(
             $pins.encoder_rota.into_pull_up_input(),
             $pins.encoder_rotb.into_pull_up_input(),
         )
@@ -128,7 +129,7 @@ macro_rules! macropad_rotary_encoder {
 #[macro_export]
 macro_rules! macropad_keypad {
     ($pins:expr) => {
-        KeysTwelve {
+        $crate::KeysTwelve {
             key1: $pins.key1.into_pull_up_input(),
             key2: $pins.key2.into_pull_up_input(),
             key3: $pins.key3.into_pull_up_input(),
