@@ -98,7 +98,7 @@ fn main() -> ! {
     let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
             hal::uart::common_configs::_115200_8_N_1,
-            clocks.peripheral_clock.into(),
+            clocks.peripheral_clock.freq(),
         )
         .unwrap();
 

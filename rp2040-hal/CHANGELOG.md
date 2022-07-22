@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Update embedded-hal alpha support to version 1.0.0-alpha.8
+- Implement `From<&SomeClock> for Hertz` instead of `From<SomeClock> for Hertz`
+  for the clocks in `rp2040_hal::clocks`.
 
 ## [0.5.0] - 2022-06-13
 

@@ -25,6 +25,7 @@ use hal::pac;
 
 // Some traits we need
 use core::fmt::Write;
+use hal::Clock;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -89,7 +90,7 @@ fn main() -> ! {
     let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
             hal::uart::common_configs::_9600_8_N_1,
-            clocks.peripheral_clock.into(),
+            clocks.peripheral_clock.freq(),
         )
         .unwrap();
 
