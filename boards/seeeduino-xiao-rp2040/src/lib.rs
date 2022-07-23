@@ -27,7 +27,7 @@ hal::bsp_pins!(
         aliases: { FunctionUart: UartRx, FunctionSpi: Csn }
     },
     Gpio2 {
-        name: d8,
+        name: sck,
         aliases: { FunctionSpi: Sck }
     },
     Gpio3 {
