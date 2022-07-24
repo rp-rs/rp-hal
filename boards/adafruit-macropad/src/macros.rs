@@ -2,7 +2,12 @@
 //! You probably want a `main()` routine that starts out like this:
 //!
 //! ```
-//! use rp_pico as bsp;
+//! # use adafruit_macropad as bsp;
+//! # use bsp::*;
+//! # use embedded_time::fixed_point::FixedPoint;
+//! # use rp2040_hal::Timer;
+//! # use rp2040_hal::Watchdog;
+//!
 //! let mut pac = pac::Peripherals::take().unwrap();
 //! let core = pac::CorePeripherals::take().unwrap();
 //! let mut watchdog = Watchdog::new(pac.WATCHDOG);
@@ -51,7 +56,7 @@ macro_rules! macropad_neopixels {
         )
     }};
     ($pins: expr, $clocks:expr, $timer:expr, $pac:expr) => {{
-        let (mut pio, sm0, _, _, _) = $pac.PIO0.split(&mut $pac.RESETS);
+        let (mut pio, sm0, _, _, _) = rp2040_hal::pio::PIOExt::split($pac.PIO0, &mut $pac.RESETS);
         macropad_neopixels!($pins, pio, sm0, $clocks, $timer)
     }};
 }
