@@ -572,6 +572,7 @@ pub struct Channel<S: SliceId, M: SliceMode, C: ChannelId> {
     slice_mode: PhantomData<M>,
     channel_id: PhantomData<C>,
     duty_cycle: u16,
+    enabled: bool,
 }
 
 impl<S: SliceId, M: SliceMode, C: ChannelId> Channel<S, M, C> {
@@ -580,7 +581,8 @@ impl<S: SliceId, M: SliceMode, C: ChannelId> Channel<S, M, C> {
             regs: Registers::new(),
             slice_mode: PhantomData,
             channel_id: PhantomData,
-            duty_cycle,
+            duty_cycle, // stores the duty cycle while the channel is disabled
+            enabled: true,
         }
     }
 }
@@ -593,16 +595,26 @@ impl<S: SliceId, M: SliceMode> PwmPin for Channel<S, M, A> {
     /// We cant disable the channel without disturbing the other channel.
     /// So this just sets the duty cycle to zero
     fn disable(&mut self) {
-        self.duty_cycle = self.regs.read_cc_a();
+        if self.enabled {
+            self.duty_cycle = self.regs.read_cc_a();
+        }
+        self.enabled = false;
         self.regs.write_cc_a(0)
     }
 
     fn enable(&mut self) {
-        self.regs.write_cc_a(self.duty_cycle)
+        if !self.enabled {
+            self.enabled = true;
+            self.regs.write_cc_a(self.duty_cycle)
+        }
     }
 
     fn get_duty(&self) -> Self::Duty {
-        self.regs.read_cc_a()
+        if self.enabled {
+            self.regs.read_cc_a()
+        } else {
+            self.duty_cycle
+        }
     }
 
     fn get_max_duty(&self) -> Self::Duty {
@@ -610,7 +622,10 @@ impl<S: SliceId, M: SliceMode> PwmPin for Channel<S, M, A> {
     }
 
     fn set_duty(&mut self, duty: Self::Duty) {
-        self.regs.write_cc_a(duty)
+        self.duty_cycle = duty;
+        if self.enabled {
+            self.regs.write_cc_a(duty)
+        }
     }
 }
 
@@ -620,16 +635,26 @@ impl<S: SliceId, M: SliceMode> PwmPin for Channel<S, M, B> {
     /// We cant disable the channel without disturbing the other channel.
     /// So this just sets the duty cycle to zero
     fn disable(&mut self) {
-        self.duty_cycle = self.regs.read_cc_b();
+        if self.enabled {
+            self.duty_cycle = self.regs.read_cc_b();
+        }
+        self.enabled = false;
         self.regs.write_cc_b(0)
     }
 
     fn enable(&mut self) {
-        self.regs.write_cc_b(self.duty_cycle)
+        if !self.enabled {
+            self.enabled = true;
+            self.regs.write_cc_b(self.duty_cycle)
+        }
     }
 
     fn get_duty(&self) -> Self::Duty {
-        self.regs.read_cc_b()
+        if self.enabled {
+            self.regs.read_cc_b()
+        } else {
+            self.duty_cycle
+        }
     }
 
     fn get_max_duty(&self) -> Self::Duty {
@@ -637,7 +662,10 @@ impl<S: SliceId, M: SliceMode> PwmPin for Channel<S, M, B> {
     }
 
     fn set_duty(&mut self, duty: Self::Duty) {
-        self.regs.write_cc_b(duty)
+        self.duty_cycle = duty;
+        if self.enabled {
+            self.regs.write_cc_b(duty)
+        }
     }
 }
 
