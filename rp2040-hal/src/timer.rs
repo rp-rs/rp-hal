@@ -60,50 +60,42 @@ impl Timer {
 
     /// Retrieve a reference to alarm 0. Will only return a value the first time this is called
     pub fn alarm_0(&mut self) -> Option<Alarm0> {
-        cortex_m::interrupt::free(|_| {
-            if self.alarms[0] {
-                self.alarms[0] = false;
-                Some(Alarm0(PhantomData))
-            } else {
-                None
-            }
-        })
+        if self.alarms[0] {
+            self.alarms[0] = false;
+            Some(Alarm0(PhantomData))
+        } else {
+            None
+        }
     }
 
     /// Retrieve a reference to alarm 1. Will only return a value the first time this is called
     pub fn alarm_1(&mut self) -> Option<Alarm1> {
-        cortex_m::interrupt::free(|_| {
-            if self.alarms[1] {
-                self.alarms[1] = false;
-                Some(Alarm1(PhantomData))
-            } else {
-                None
-            }
-        })
+        if self.alarms[1] {
+            self.alarms[1] = false;
+            Some(Alarm1(PhantomData))
+        } else {
+            None
+        }
     }
 
     /// Retrieve a reference to alarm 2. Will only return a value the first time this is called
     pub fn alarm_2(&mut self) -> Option<Alarm2> {
-        cortex_m::interrupt::free(|_| {
-            if self.alarms[2] {
-                self.alarms[2] = false;
-                Some(Alarm2(PhantomData))
-            } else {
-                None
-            }
-        })
+        if self.alarms[2] {
+            self.alarms[2] = false;
+            Some(Alarm2(PhantomData))
+        } else {
+            None
+        }
     }
 
     /// Retrieve a reference to alarm 3. Will only return a value the first time this is called
     pub fn alarm_3(&mut self) -> Option<Alarm3> {
-        cortex_m::interrupt::free(|_| {
-            if self.alarms[3] {
-                self.alarms[3] = false;
-                Some(Alarm3(PhantomData))
-            } else {
-                None
-            }
-        })
+        if self.alarms[3] {
+            self.alarms[3] = false;
+            Some(Alarm3(PhantomData))
+        } else {
+            None
+        }
     }
 }
 
