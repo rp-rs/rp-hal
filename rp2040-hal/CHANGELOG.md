@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Experimental support for critical-section 1.0.0-alpha.1
+
 ### Changed
 
 - Update embedded-hal alpha support to version 1.0.0-alpha.8

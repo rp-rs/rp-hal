@@ -105,6 +105,20 @@ at the same time.
 The new blocking [SPI traits](https://docs.rs/embedded-hal/1.0.0-alpha.8/embedded_hal/spi/blocking/index.html)
 are not yet implemented.
 
+### Support for critical-section 1.0
+
+We plan to support critical-section 1.0 soon after it is released.
+
+For now, there is preliminary support for alpha versions of critical-section, which can
+be enabled with the feature `c_s_alpha`. Please note that this support does not
+provide any semver compatibility guarantees: With that feature activated, there
+will be breaking changes even in minor versions of rp2040-hal.
+
+As of version 1.0.0-alpha.1, support for critical-section 1.0(-alpha)
+is compatible with critical-section 0.2: Libraries using version 0.2 can
+still be used if the feature `c_s_alpha` is enabled. The underlying
+implementation stays identical.
+
 <!-- CONTRIBUTING -->
 ## Contributing
 
