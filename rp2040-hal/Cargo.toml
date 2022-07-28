@@ -26,7 +26,7 @@ vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
 rand_core = "0.6.3"
 critical-section = { version = "0.2.4", features = ["custom-impl"] }
-c_s_alpha = { package = "critical-section", version = "=1.0.0-alpha.1", features = ["restore-state-u8"], optional = true }
+c_s_alpha = { package = "critical-section", version = "=1.0.0-alpha.2", features = ["restore-state-u8"], optional = true }
 
 futures = { version = "0.3", default-features = false, optional = true }
 chrono = { version = "0.4", default-features = false, optional = true }

@@ -114,7 +114,7 @@ be enabled with the feature `c_s_alpha`. Please note that this support does not
 provide any semver compatibility guarantees: With that feature activated, there
 will be breaking changes even in minor versions of rp2040-hal.
 
-As of version 1.0.0-alpha.1, support for critical-section 1.0(-alpha)
+As of version 1.0.0-alpha.2, support for critical-section 1.0(-alpha)
 is compatible with critical-section 0.2: Libraries using version 0.2 can
 still be used if the feature `c_s_alpha` is enabled. The underlying
 implementation stays identical.

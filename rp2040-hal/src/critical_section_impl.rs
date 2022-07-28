@@ -1,7 +1,6 @@
 use core::sync::atomic::{AtomicU8, Ordering};
 
 struct RpSpinlockCs;
-#[cfg(not(feature = "c_s_alpha"))]
 critical_section::custom_impl!(RpSpinlockCs);
 #[cfg(feature = "c_s_alpha")]
 c_s_alpha::set_impl!(RpSpinlockCs);
@@ -24,7 +23,6 @@ static mut LOCK_OWNER: AtomicU8 = AtomicU8::new(LOCK_UNOWNED);
 /// The value 2 indicates that we aren't the outermost call, and should not release the spinlock or re-enable interrupts in `release`
 const LOCK_ALREADY_OWNED: u8 = 2;
 
-#[cfg(not(feature = "c_s_alpha"))]
 unsafe impl critical_section::Impl for RpSpinlockCs {
     unsafe fn acquire() -> u8 {
         RpSpinlockCs::acquire() as u8
