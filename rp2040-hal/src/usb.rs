@@ -113,7 +113,7 @@ use crate::pac::USBCTRL_DPRAM;
 use crate::pac::USBCTRL_REGS;
 use crate::resets::SubsystemReset;
 
-use cortex_m::interrupt::{self, Mutex};
+use critical_section::{self, Mutex};
 
 use usb_device::{
     bus::{PollResult, UsbBus as UsbBusTrait},
@@ -471,7 +471,7 @@ impl UsbBus {
 
     /// Generates a resume request on the bus.
     pub fn remote_wakeup(&self) {
-        interrupt::free(|cs| {
+        critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             inner.ctrl_reg.sie_ctrl.modify(|_, w| w.resume().set_bit());
         });
@@ -487,7 +487,7 @@ impl UsbBusTrait for UsbBus {
         max_packet_size: u16,
         _interval: u8,
     ) -> UsbResult<EndpointAddress> {
-        interrupt::free(|cs| {
+        critical_section::with(|cs| {
             let mut inner = self.inner.borrow(cs).borrow_mut();
 
             inner.ep_allocate(ep_addr, ep_dir, ep_type, max_packet_size)
@@ -495,7 +495,7 @@ impl UsbBusTrait for UsbBus {
     }
 
     fn enable(&mut self) {
-        interrupt::free(|cs| {
+        critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             // at this stage ep's are expected to be in their reset state
             // TODO: is it worth having a debug_assert for that here?
@@ -524,7 +524,7 @@ impl UsbBusTrait for UsbBus {
         })
     }
     fn reset(&self) {
-        interrupt::free(|cs| {
+        critical_section::with(|cs| {
             let mut inner = self.inner.borrow(cs).borrow_mut();
 
             // clear reset flag
@@ -544,7 +544,7 @@ impl UsbBusTrait for UsbBus {
         })
     }
     fn set_device_address(&self, addr: u8) {
-        interrupt::free(|cs| {
+        critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             inner
                 .ctrl_reg
@@ -556,19 +556,19 @@ impl UsbBusTrait for UsbBus {
         })
     }
     fn write(&self, ep_addr: EndpointAddress, buf: &[u8]) -> UsbResult<usize> {
-        interrupt::free(|cs| {
+        critical_section::with(|cs| {
             let mut inner = self.inner.borrow(cs).borrow_mut();
             inner.ep_write(ep_addr, buf)
         })
     }
     fn read(&self, ep_addr: EndpointAddress, buf: &mut [u8]) -> UsbResult<usize> {
-        interrupt::free(|cs| {
+        critical_section::with(|cs| {
             let mut inner = self.inner.borrow(cs).borrow_mut();
             inner.ep_read(ep_addr, buf)
         })
     }
     fn set_stalled(&self, ep_addr: EndpointAddress, stalled: bool) {
-        interrupt::free(|cs| {
+        critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
 
             if ep_addr.index() == 0 {
@@ -586,7 +586,7 @@ impl UsbBusTrait for UsbBus {
         })
     }
     fn is_stalled(&self, ep_addr: EndpointAddress) -> bool {
-        interrupt::free(|cs| {
+        critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             let index = ep_addr_to_ep_buf_ctrl_idx(ep_addr);
             inner.ctrl_dpram.ep_buffer_control[index]
@@ -598,7 +598,7 @@ impl UsbBusTrait for UsbBus {
     fn suspend(&self) {}
     fn resume(&self) {}
     fn poll(&self) -> PollResult {
-        interrupt::free(|cs| {
+        critical_section::with(|cs| {
             let mut inner = self.inner.borrow(cs).borrow_mut();
 
             #[cfg(feature = "rp2040-e5")]

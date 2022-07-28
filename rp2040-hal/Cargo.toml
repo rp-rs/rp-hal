@@ -13,7 +13,7 @@ license = "MIT OR Apache-2.0"
 cortex-m = "0.7.2"
 cortex-m-rt = ">=0.6.15,<0.8"
 embedded-hal = { version = "0.2.5", features = ["unproven"] }
-eh1_0_alpha = { version = "=1.0.0-alpha.8", package="embedded-hal", optional=true }
+eh1_0_alpha = { package = "embedded-hal", version = "=1.0.0-alpha.8",  optional = true }
 embedded-time = "0.12.0"
 itertools = { version = "0.10.1", default-features = false }
 nb = "1.0"
@@ -25,7 +25,8 @@ usb-device = "0.2.9"
 vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
 rand_core = "0.6.3"
-critical-section = { version = "0.2.4", features = ["custom-impl"] }
+critical-section_0_2 = { package = "critical-section", version = "0.2.4", features = ["custom-impl"] }
+critical-section = { version = "1.0.0", features = ["restore-state-u8"] }
 
 futures = { version = "0.3", default-features = false, optional = true }
 chrono = { version = "0.4", default-features = false, optional = true }
