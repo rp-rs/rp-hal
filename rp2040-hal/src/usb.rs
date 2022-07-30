@@ -352,8 +352,12 @@ impl Inner {
                 w.full_0().clear_bit();
                 w.pid_0().bit(!r.pid_0().bit())
             });
-            cortex_m::asm::delay(12);
-            buf_control.modify(|_, w| w.available_0().set_bit());
+            if index != 0 || len == ep.max_packet_size.into() {
+                // only mark as available on the control endpoint if and only if the packet was
+                // max_packet_size
+                cortex_m::asm::delay(12);
+                buf_control.modify(|_, w| w.available_0().set_bit());
+            }
             Ok(len)
         }
     }
