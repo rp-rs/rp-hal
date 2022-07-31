@@ -122,11 +122,11 @@ fn main() -> ! {
     b_channel.set_duty(0);
 
     // 20 - LCD backlight
-    let _bl_pin = pins.gpio20.into_push_pull_output().set_high().unwrap();
+    pins.gpio20.into_push_pull_output().set_high().unwrap();
 
     // 22 - LCD hard reset
     let mut rst_pin = pins.gpio22.into_push_pull_output();
-    let _ = rst_pin.set_low().unwrap();
+    rst_pin.set_low().unwrap();
 
     // Setup SPI
     let spi_cs = pins.gpio17.into_push_pull_output();
