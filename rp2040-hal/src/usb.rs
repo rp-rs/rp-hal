@@ -402,6 +402,14 @@ impl UsbBus {
             inner: Mutex::new(RefCell::new(Inner::new(ctrl_reg, ctrl_dpram))),
         }
     }
+
+    /// Generates a resume request on the bus.
+    pub fn remote_wakeup(&self) {
+        interrupt::free(|cs| {
+            let inner = self.inner.borrow(cs).borrow_mut();
+            inner.ctrl_reg.sie_ctrl.modify(|_, w| w.resume().set_bit());
+        });
+    }
 }
 
 impl UsbBusTrait for UsbBus {
@@ -433,6 +441,10 @@ impl UsbBusTrait for UsbBus {
                 w.buff_status()
                     .set_bit()
                     .bus_reset()
+                    .set_bit()
+                    .dev_resume_from_host()
+                    .set_bit()
+                    .dev_suspend()
                     .set_bit()
                     .setup_req()
                     .set_bit()
@@ -518,21 +530,35 @@ impl UsbBusTrait for UsbBus {
         })
     }
     fn suspend(&self) {
-        todo!()
+        interrupt::free(|cs| {
+            let inner = self.inner.borrow(cs).borrow_mut();
+            inner
+                .ctrl_reg
+                .sie_status
+                .modify(|_, w| w.suspended().set_bit());
+        });
     }
     fn resume(&self) {
-        todo!()
+        interrupt::free(|cs| {
+            let inner = self.inner.borrow(cs).borrow_mut();
+            inner
+                .ctrl_reg
+                .sie_status
+                .modify(|_, w| w.resume().set_bit());
+        });
     }
     fn poll(&self) -> PollResult {
         interrupt::free(|cs| {
             let mut inner = self.inner.borrow(cs).borrow_mut();
-            // TODO: check for suspend request
-            // TODO: check for resume request
 
             // check for bus reset
             let sie_status = inner.ctrl_reg.sie_status.read();
             if sie_status.bus_reset().bit_is_set() {
                 return PollResult::Reset;
+            } else if sie_status.suspended().bit_is_set() {
+                return PollResult::Suspend;
+            } else if sie_status.resume().bit_is_set() {
+                return PollResult::Resume;
             }
 
             let (mut ep_out, mut ep_in_complete, mut ep_setup): (u16, u16, u16) = (0, 0, 0);
