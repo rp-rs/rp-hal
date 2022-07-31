@@ -31,7 +31,6 @@ rustflags = [
     "-C", "link-arg=-Tlink.x",
     "-C", "inline-threshold=5",
     "-C", "no-vectorize-loops",
-    "-C", "link-arg=-Tdefmt.x",
 ]
 
 # This runner will make a UF2 file and then copy it to a mounted RP2040 in USB
