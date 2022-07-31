@@ -164,7 +164,5 @@ fn main() -> ! {
     display.clear(Rgb565::BLACK).unwrap();
     circle.draw(&mut display).unwrap();
 
-    loop {
-        continue; // keep optimizer from removing in --release
-    }
+    loop {}
 }
