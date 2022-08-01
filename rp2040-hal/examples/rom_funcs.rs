@@ -166,7 +166,7 @@ fn main() -> ! {
 
     // In case the reboot fails
     loop {
-        cortex_m::asm::nop();
+        cortex_m::asm::wfi();
     }
 }
 

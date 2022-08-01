@@ -64,6 +64,7 @@ fn main() -> ! {
     sm.start();
 
     // PIO runs in background, independently from CPU
-    #[allow(clippy::empty_loop)]
-    loop {}
+    loop {
+        cortex_m::asm::wfi();
+    }
 }
