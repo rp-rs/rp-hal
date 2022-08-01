@@ -80,9 +80,9 @@ use core::marker::PhantomData;
 
 use crate::{
     gpio::{
-        bank0::*, FunctionClock, FunctionI2C, FunctionPio0, FunctionPio1, FunctionPwm, FunctionSpi,
-        FunctionUart, FunctionUsbAux, FunctionXip, Input, InputConfig, Output, OutputConfig, Pin,
-        PinId, PinMode, ValidPinMode,
+        bank0::*, Disabled, DisabledConfig, FunctionClock, FunctionI2C, FunctionPio0, FunctionPio1,
+        FunctionPwm, FunctionSpi, FunctionUart, FunctionUsbAux, FunctionXip, Input, InputConfig,
+        Output, OutputConfig, Pin, PinId, PinMode, ValidPinMode,
     },
     resets::SubsystemReset,
     typelevel::Sealed,
@@ -509,6 +509,7 @@ impl NonPwmPinMode for FunctionUsbAux {}
 impl NonPwmPinMode for FunctionXip {}
 impl<C: InputConfig> NonPwmPinMode for Input<C> {}
 impl<C: OutputConfig> NonPwmPinMode for Output<C> {}
+impl<C: DisabledConfig> NonPwmPinMode for Disabled<C> {}
 
 /// Stores the attached gpio pin.
 ///
