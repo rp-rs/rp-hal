@@ -212,10 +212,9 @@ impl Inner {
             .modify(|_, w| w.ep0_int_1buf().set_bit());
         // expect ctrl ep to receive on DATA first
         self.ctrl_dpram.ep_buffer_control[0].write(|w| w.pid_0().set_bit());
-        self.ctrl_dpram.ep_buffer_control[1].write(|w| {
-            w.available_0().set_bit();
-            w.pid_0().set_bit()
-        });
+        self.ctrl_dpram.ep_buffer_control[1].write(|w| w.pid_0().set_bit());
+        cortex_m::asm::delay(12);
+        self.ctrl_dpram.ep_buffer_control[1].write(|w| w.available_0().set_bit());
 
         for (index, ep) in itertools::interleave(
             self.in_endpoints.iter().skip(1),  // skip control endpoint
@@ -246,10 +245,11 @@ impl Inner {
                 buf_control.write(|w| w.pid_0().set_bit());
             } else {
                 buf_control.write(|w| unsafe {
-                    w.available_0().set_bit();
                     w.pid_0().clear_bit();
                     w.length_0().bits(ep.max_packet_size)
                 });
+                cortex_m::asm::delay(12);
+                buf_control.write(|w| w.available_0().set_bit());
             }
         }
     }
@@ -274,11 +274,12 @@ impl Inner {
         ep_buf[..buf.len()].copy_from_slice(buf);
 
         buf_control.modify(|r, w| unsafe {
-            w.available_0().set_bit();
             w.length_0().bits(buf.len() as u16);
             w.full_0().set_bit();
             w.pid_0().bit(!r.pid_0().bit())
         });
+        cortex_m::asm::delay(12);
+        buf_control.modify(|_, w| w.available_0().set_bit());
 
         Ok(buf.len())
     }
@@ -295,62 +296,70 @@ impl Inner {
         let buf_control_val = buf_control.read();
 
         let process_setup = index == 0 && self.read_setup;
-        let (ep_buf, len) = if process_setup {
+        if process_setup {
             // assume we want to read the setup request
+            //
+            // the OUT packet will be either data or a status zlp
+            let len = 8;
+            let ep_buf =
+                unsafe { core::slice::from_raw_parts(USBCTRL_DPRAM::ptr() as *const u8, len) };
+            if len > buf.len() {
+                return Err(UsbError::BufferOverflow);
+            }
+
+            buf[..len].copy_from_slice(&ep_buf[..len]);
 
             // Next packet will be on DATA1 so clear pid_0 so it gets flipped by next buf config
             self.ctrl_dpram.ep_buffer_control[0].modify(|_, w| w.pid_0().clear_bit());
-            // the OUT packet will be either data or a status zlp
             // clear setup request flag
             self.ctrl_reg.sie_status.write(|w| w.setup_rec().set_bit());
-            (
-                unsafe { core::slice::from_raw_parts(USBCTRL_DPRAM::ptr() as *const u8, 8) },
-                8,
-            )
-        } else {
-            if buf_control_val.full_0().bit_is_clear() {
-                return Err(UsbError::WouldBlock);
-            }
-            let len: usize = buf_control_val.length_0().bits().into();
-            (ep.get_buf(), len)
-        };
-
-        if len > buf.len() {
-            return Err(UsbError::BufferOverflow);
-        }
-
-        buf[..len].copy_from_slice(&ep_buf[..len]);
-
-        if process_setup {
-            self.read_setup = false;
 
             // clear any out standing out flag e.g. in case a zlp got discarded
             self.ctrl_reg.buff_status.write(|w| unsafe { w.bits(2) });
 
-            let data_length = u16::from(buf[6]) | (u16::from(buf[7]) << 8);
             let is_in_request = (buf[0] & 0x80) == 0x80;
+            let data_length = u16::from(buf[6]) | (u16::from(buf[7]) << 8);
             let expect_data_or_zlp = is_in_request || data_length != 0;
+
             buf_control.modify(|_, w| unsafe {
-                // enable if and only if a dataphase is expected.
-                w.available_0().bit(expect_data_or_zlp);
                 w.length_0().bits(ep.max_packet_size);
                 w.full_0().clear_bit();
                 w.pid_0().set_bit()
             });
+            // enable if and only if a dataphase is expected.
+            cortex_m::asm::delay(12);
+            buf_control.modify(|_, w| w.available_0().bit(expect_data_or_zlp));
+
+            self.read_setup = false;
+            Ok(len)
         } else {
-            buf_control.modify(|r, w| unsafe {
-                w.available_0().set_bit();
-                w.length_0().bits(ep.max_packet_size);
-                w.full_0().clear_bit();
-                w.pid_0().bit(!r.pid_0().bit())
-            });
+            if buf_control_val.full_0().bit_is_clear() {
+                return Err(UsbError::WouldBlock);
+            }
+            let len = buf_control_val.length_0().bits().into();
+            if len > buf.len() {
+                return Err(UsbError::BufferOverflow);
+            }
+
+            buf[..len].copy_from_slice(&ep.get_buf()[..len]);
             // Clear OUT flag once it is read.
             self.ctrl_reg
                 .buff_status
                 .write(|w| unsafe { w.bits(1 << (index * 2 + 1)) });
-        }
 
-        Ok(len)
+            buf_control.modify(|r, w| unsafe {
+                w.length_0().bits(ep.max_packet_size);
+                w.full_0().clear_bit();
+                w.pid_0().bit(!r.pid_0().bit())
+            });
+            if index != 0 || len == ep.max_packet_size.into() {
+                // only mark as available on the control endpoint if and only if the packet was
+                // max_packet_size
+                cortex_m::asm::delay(12);
+                buf_control.modify(|_, w| w.available_0().set_bit());
+            }
+            Ok(len)
+        }
     }
 }
 
@@ -574,10 +583,12 @@ impl UsbBusTrait for UsbBus {
                 for i in 0..32u32 {
                     let mask = 1 << i;
                     if (buff_status & mask) == mask {
-                        if (i & 1) == 0 {
-                            ep_in_complete |= 1 << (i / 2);
+                        let is_in = (i & 1) == 0;
+                        let ep_idx = i / 2;
+                        if is_in {
+                            ep_in_complete |= 1 << ep_idx;
                         } else {
-                            ep_out |= 1 << (i / 2);
+                            ep_out |= 1 << ep_idx;
                         }
                     }
                 }
