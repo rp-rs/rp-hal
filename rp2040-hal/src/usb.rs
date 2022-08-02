@@ -564,7 +564,10 @@ impl UsbBusTrait for UsbBus {
             let sie_status = inner.ctrl_reg.sie_status.read();
             if sie_status.bus_reset().bit_is_set() {
                 return PollResult::Reset;
-            } else if sie_status.suspended().bit_is_set() {
+            }
+
+            #[cfg(feature = "usb-suspend")]
+            if sie_status.suspended().bit_is_set() {
                 return PollResult::Suspend;
             } else if sie_status.resume().bit_is_set() {
                 return PollResult::Resume;

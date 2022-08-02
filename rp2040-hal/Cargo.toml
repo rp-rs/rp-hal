@@ -45,6 +45,7 @@ rt = ["rp2040-pac/rt"]
 rom-func-cache = []
 disable-intrinsics = []
 rom-v2-intrinsics = []
+usb-suspend = []
 
 [[example]]
 # irq example uses cortex-m-rt::interrupt, need rt feature for that
