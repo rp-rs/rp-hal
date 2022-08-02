@@ -544,7 +544,7 @@ impl UsbBusTrait for UsbBus {
             inner
                 .ctrl_reg
                 .sie_status
-                .modify(|_, w| w.suspended().set_bit());
+                .write(|w| w.suspended().set_bit());
         });
     }
     fn resume(&self) {
@@ -553,7 +553,7 @@ impl UsbBusTrait for UsbBus {
             inner
                 .ctrl_reg
                 .sie_status
-                .modify(|_, w| w.resume().set_bit());
+                .write(|w| w.resume().set_bit());
         });
     }
     fn poll(&self) -> PollResult {
