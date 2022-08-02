@@ -21,7 +21,7 @@ rp2040-pac = "0.3.0"
 paste = "1.0"
 pio = "0.2.0"
 rp2040-hal-macros = { version = "0.1.0", path = "../rp2040-hal-macros" }
-usb-device = "0.2.8"
+usb-device = "0.2.9"
 vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
 rand_core = "0.6.3"
