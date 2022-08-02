@@ -538,24 +538,8 @@ impl UsbBusTrait for UsbBus {
                 .bit_is_set()
         })
     }
-    fn suspend(&self) {
-        interrupt::free(|cs| {
-            let inner = self.inner.borrow(cs).borrow_mut();
-            inner
-                .ctrl_reg
-                .sie_status
-                .write(|w| w.suspended().set_bit());
-        });
-    }
-    fn resume(&self) {
-        interrupt::free(|cs| {
-            let inner = self.inner.borrow(cs).borrow_mut();
-            inner
-                .ctrl_reg
-                .sie_status
-                .write(|w| w.resume().set_bit());
-        });
-    }
+    fn suspend(&self) {}
+    fn resume(&self) {}
     fn poll(&self) -> PollResult {
         interrupt::free(|cs| {
             let mut inner = self.inner.borrow(cs).borrow_mut();
@@ -565,8 +549,10 @@ impl UsbBusTrait for UsbBus {
             if sie_status.bus_reset().bit_is_set() {
                 return PollResult::Reset;
             } else if sie_status.suspended().bit_is_set() {
+                inner.ctrl_reg.sie_status.write(|w| w.suspended().set_bit());
                 return PollResult::Suspend;
             } else if sie_status.resume().bit_is_set() {
+                inner.ctrl_reg.sie_status.write(|w| w.resume().set_bit());
                 return PollResult::Resume;
             }
 
