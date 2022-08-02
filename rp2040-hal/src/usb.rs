@@ -447,13 +447,15 @@ impl UsbBusTrait for UsbBus {
             // and when a setup packet is received
             // this should be sufficient for device mode, will need more for host.
             inner.ctrl_reg.inte.modify(|_, w| {
+                #[cfg(feature = "usb-suspend")]
                 w.buff_status()
-                    .set_bit()
-                    .bus_reset()
-                    .set_bit()
                     .dev_resume_from_host()
                     .set_bit()
                     .dev_suspend()
+                    .set_bit();
+                w.buff_status()
+                    .set_bit()
+                    .bus_reset()
                     .set_bit()
                     .setup_req()
                     .set_bit()
