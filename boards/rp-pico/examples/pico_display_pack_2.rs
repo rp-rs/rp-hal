@@ -164,5 +164,7 @@ fn main() -> ! {
     display.clear(Rgb565::BLACK).unwrap();
     circle.draw(&mut display).unwrap();
 
-    loop {}
+    loop {
+        cortex_m::asm::wfi();
+    }
 }
