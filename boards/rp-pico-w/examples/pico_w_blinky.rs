@@ -10,39 +10,34 @@
 #![no_std]
 #![no_main]
 
-// The macro for our start-up function
 use rp_pico_w::entry;
 
-// Time handling traits
-use embedded_time::rate::*;
+use defmt::*;
+use defmt_rtt as _;
+use panic_probe as _;
 
-// Ensure we halt the program on panic (if we don't mention this crate it won't
-// be linked)
-use panic_halt as _;
-
-// Pull in any important traits
-use rp_pico_w::hal::prelude::*;
-
-// A shorter alias for the Peripheral Access Crate, which provides low-level
-// register access
 use rp_pico_w::hal::pac;
 
-// A shorter alias for the Hardware Abstraction Layer, which provides
-// higher-level drivers.
+use rp_pico_w::gspi::GSpi;
 use rp_pico_w::hal;
 
-/// Entry point to our bare-metal application.
-///
-/// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
-/// as soon as all global variables are initialised.
-///
+use embedded_hal_1 as eh_1;
+
+use embedded_hal::digital::v2::OutputPin;
+
+use embassy_executor::raw::TaskPool;
+use embassy_executor::Executor;
+use embassy_executor::Spawner;
+use embassy_time::{Duration, Timer};
+
 /// The function configures the RP2040 peripherals, then blinks the LED in an
 /// infinite loop.
 #[entry]
 fn main() -> ! {
+    info!("start");
+
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
-    let core = pac::CorePeripherals::take().unwrap();
 
     // Set up the watchdog driver - needed by the clock setup code
     let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
@@ -50,7 +45,7 @@ fn main() -> ! {
     // Configure the clocks
     //
     // The default is to generate a 125 MHz system clock
-    let clocks = hal::clocks::init_clocks_and_plls(
+    let _clocks = hal::clocks::init_clocks_and_plls(
         rp_pico_w::XOSC_CRYSTAL_FREQ,
         pac.XOSC,
         pac.CLOCKS,
@@ -62,22 +57,89 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    // The delay object lets us wait for specified amounts of time (in
-    // milliseconds)
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let sio = hal::Sio::new(pac.SIO);
 
-    // Set the LED to be an output
-    // TODO fix this, the on-board LED is not directly accessible on a
-    // GPIO pin, but only via the WLAN chip.
-    // let mut led_pin = pins.led.into_push_pull_output();
+    let pins = rp_pico_w::Pins::new(
+        pac.IO_BANK0,
+        pac.PADS_BANK0,
+        sio.gpio_bank0,
+        &mut pac.RESETS,
+    );
+
+    info!("init time driver");
+    let timer = hal::timer::Timer::new(pac.TIMER, &mut pac.RESETS);
+    unsafe { rp_pico_w::embassy_time_driver::init(timer) };
+
+    let mut executor = Executor::new();
+
+    // Safety: function never returns, executor is never dropped
+    let executor: &'static mut Executor = unsafe { forever_mut(&mut executor) };
+
+    let task_pool: TaskPool<_, 10> = TaskPool::new();
+    let task_pool = unsafe { forever(&task_pool) };
+
+    let state = cyw43::State::new();
+    let state = unsafe { forever(&state) };
+
+    info!("run spawner");
+    executor.run(|spawner| {
+        let spawn_token = task_pool.spawn(|| run(spawner, pins, state));
+        spawner.spawn(spawn_token).unwrap();
+    });
+}
+
+unsafe fn forever_mut<T>(r: &'_ mut T) -> &'static mut T {
+    core::mem::transmute(r)
+}
+
+unsafe fn forever<T>(r: &'_ T) -> &'static T {
+    core::mem::transmute(r)
+}
+
+async fn run(spawner: Spawner, pins: rp_pico_w::Pins, state: &'static cyw43::State) {
+    // These are implicitly used by the spi driver if they are in the correct mode
+    let mut spi_cs: hal::gpio::dynpin::DynPin = pins.wl_cs.into();
+    // TODO should be high from the beginning :-(
+    spi_cs.into_readable_output();
+    spi_cs.set_high().unwrap();
+    spi_cs.into_push_pull_output();
+    spi_cs.set_high().unwrap();
+
+    let mut spi_clk = pins.voltage_monitor_wl_clk.into_push_pull_output();
+    spi_clk.set_low().unwrap();
+
+    let mut spi_mosi_miso: hal::gpio::dynpin::DynPin = pins.wl_d.into();
+    spi_mosi_miso.into_readable_output();
+    spi_mosi_miso.set_low().unwrap();
+    spi_mosi_miso.into_push_pull_output();
+    spi_mosi_miso.set_low().unwrap();
+
+    let bus = GSpi::new(spi_clk, spi_mosi_miso);
+    let spi = eh_1::spi::blocking::ExclusiveDevice::new(bus, spi_cs);
+
+    let pwr = pins.wl_on.into_push_pull_output();
+
+    let fw = include_bytes!("firmware/43439A0.bin");
+
+    use embassy_futures::yield_now;
+    yield_now().await;
+
+    info!("create cyw43 driver");
+    let (mut control, runner) = cyw43::new(state, pwr, spi, fw).await;
+
+    let task_pool: TaskPool<_, 10> = TaskPool::new();
+    let task_pool = unsafe { forever(&task_pool) };
+    let spawn_token = task_pool.spawn(|| runner.run());
+    spawner.spawn(spawn_token).unwrap();
 
     // Blink the LED at 1 Hz
     loop {
-        // led_pin.set_high().unwrap();
-        delay.delay_ms(500);
-        // led_pin.set_low().unwrap();
-        delay.delay_ms(500);
+        info!("on");
+        control.gpio_set(0, true).await;
+        Timer::after(Duration::from_millis(500)).await;
+
+        info!("off");
+        control.gpio_set(0, false).await;
+        Timer::after(Duration::from_millis(500)).await;
     }
 }
-
-// End of file
