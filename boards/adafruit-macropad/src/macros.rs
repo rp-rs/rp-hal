@@ -1,7 +1,8 @@
 //!
 //! You probably want a `main()` routine that starts out like this:
 //!
-//! ```
+//! ```no_run
+//! # // for some reason this code example fails to link during CI ( cargo test --doc --target x86_64-unknown-linux-gnu )
 //! # use adafruit_macropad as bsp;
 //! # use bsp::*;
 //! # use embedded_time::fixed_point::FixedPoint;
@@ -56,7 +57,7 @@ macro_rules! macropad_neopixels {
         )
     }};
     ($pins: expr, $clocks:expr, $timer:expr, $pac:expr) => {{
-        let (mut pio, sm0, _, _, _) = rp2040_hal::pio::PIOExt::split($pac.PIO0, &mut $pac.RESETS);
+        let (mut pio, sm0, _, _, _) = $crate::hal::pio::PIOExt::split($pac.PIO0, &mut $pac.RESETS);
         macropad_neopixels!($pins, pio, sm0, $clocks, $timer)
     }};
 }
