@@ -121,9 +121,8 @@ fn main() -> ! {
         Err(_) => {} // handle errors
     };
 
-    #[allow(clippy::empty_loop)]
     loop {
-        // Empty loop
+        cortex_m::asm::wfi();
     }
 }
 

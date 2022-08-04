@@ -113,9 +113,8 @@ fn main() -> ! {
     lcd.write_str("HD44780!", &mut delay).unwrap();
 
     // Do nothing - we're finished
-    #[allow(clippy::empty_loop)]
     loop {
-        // Empty loop
+        cortex_m::asm::wfi();
     }
 }
 

@@ -91,6 +91,7 @@ fn main() -> ! {
     cortex_m::asm::delay(10_000_000);
     let _sm2 = sm2.stop();
 
-    #[allow(clippy::empty_loop)]
-    loop {}
+    loop {
+        cortex_m::asm::wfi();
+    }
 }

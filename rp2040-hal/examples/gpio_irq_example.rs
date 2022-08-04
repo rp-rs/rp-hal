@@ -147,11 +147,7 @@ fn main() -> ! {
 
     loop {
         // interrupts handle everything else in this example.
-        // if we wanted low power we could go to sleep. to
-        // keep this example simple we'll just execute a `nop`.
-        // the `nop` (No Operation) instruction does nothing,
-        // but if we have no code here clippy would complain.
-        cortex_m::asm::nop();
+        cortex_m::asm::wfi();
     }
 }
 

@@ -97,9 +97,8 @@ fn main() -> ! {
 
     // Demo finish - just loop until reset
 
-    #[allow(clippy::empty_loop)]
     loop {
-        // Empty loop
+        cortex_m::asm::wfi();
     }
 }
 

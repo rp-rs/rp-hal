@@ -139,9 +139,8 @@ fn main() -> ! {
     // In this case, we just ignore the result. A real application
     // would do something with the measurement.
 
-    #[allow(clippy::empty_loop)]
     loop {
-        // Empty loop
+        cortex_m::asm::wfi();
     }
 }
 
