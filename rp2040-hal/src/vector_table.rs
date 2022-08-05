@@ -10,7 +10,7 @@
 ///
 /// Implementation borrowed from https://docs.rs/cortex-m-rt/0.7.1/cortex_m_rt/index.html#__interrupts
 #[derive(Clone, Copy)]
-pub union Vector {
+union Vector {
     handler: extern "C" fn(),
     reserved: usize,
 }
