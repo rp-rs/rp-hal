@@ -18,9 +18,9 @@ cortex-m-rt = { version = "0.7", optional = true }
 ws2812-pio = "0.3.0"
 sh1106 = "0.4.0"
 embedded-graphics = "0.7.1"
-embedded-hal = "*"
-embedded-time = "*"
-rotary-encoder-hal = "*"
+embedded-hal = "0.2.7"
+embedded-time = "0.12.1"
+rotary-encoder-hal = "0.5.0"
 
 [dev-dependencies]
 embedded-time = "0.12.0"
