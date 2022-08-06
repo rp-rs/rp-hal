@@ -6,8 +6,8 @@
 //! # use adafruit_macropad as bsp;
 //! # use bsp::*;
 //! # use embedded_time::fixed_point::FixedPoint;
-//! # use rp2040_hal::Timer;
-//! # use rp2040_hal::Watchdog;
+//! # use bsp::hal::Timer;
+//! # use bsp::hal::Watchdog;
 //!
 //! let mut pac = pac::Peripherals::take().unwrap();
 //! let core = pac::CorePeripherals::take().unwrap();
@@ -72,7 +72,6 @@ macro_rules! macropad_oled {
             &mut $pac.RESETS,
             $crate::Clock::freq(&$clocks.peripheral_clock),
             $crate::Extensions::Hz(16_000_000u32),
-            // (16_000_000u32 as embedded_time::rate::Extensions).Hz(),
             &$crate::MODE_0,
         );
 
@@ -136,18 +135,18 @@ macro_rules! macropad_rotary_encoder {
 macro_rules! macropad_keypad {
     ($pins:expr) => {
         $crate::KeysTwelve {
-            key1: $pins.key1.into_pull_up_input(),
-            key2: $pins.key2.into_pull_up_input(),
-            key3: $pins.key3.into_pull_up_input(),
-            key4: $pins.key4.into_pull_up_input(),
-            key5: $pins.key5.into_pull_up_input(),
-            key6: $pins.key6.into_pull_up_input(),
-            key7: $pins.key7.into_pull_up_input(),
-            key8: $pins.key8.into_pull_up_input(),
-            key9: $pins.key9.into_pull_up_input(),
-            key10: $pins.key10.into_pull_up_input(),
-            key11: $pins.key11.into_pull_up_input(),
-            key12: $pins.key12.into_pull_up_input(),
+            key1: $pins.key1.into_mode(),
+            key2: $pins.key2.into_mode(),
+            key3: $pins.key3.into_mode(),
+            key4: $pins.key4.into_mode(),
+            key5: $pins.key5.into_mode(),
+            key6: $pins.key6.into_mode(),
+            key7: $pins.key7.into_mode(),
+            key8: $pins.key8.into_mode(),
+            key9: $pins.key9.into_mode(),
+            key10: $pins.key10.into_mode(),
+            key11: $pins.key11.into_mode(),
+            key12: $pins.key12.into_mode(),
         }
     };
 }
