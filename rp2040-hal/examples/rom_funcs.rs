@@ -270,20 +270,17 @@ fn main() -> ! {
         // If data was recieved on the usb poll, write out the results of all
         // the rom functions tested
         if send_results {
-            match serial.write(wr_ptr) {
-                Ok(len) => {
-                    wr_ptr = &wr_ptr[len..];
-                    results_buf_count += len;
-                    if results_buf_count == results_buf_len {
-                        send_results = false;
-                        results_buf_count = 0;
-                        wr_ptr = &results_buf.buf[..results_buf_len];
-                    }
+            // The write buffer will fill up, but we will just try again
+            // in the next loop untill all bytes are sent
+            if let Ok(len) = serial.write(wr_ptr) {
+                wr_ptr = &wr_ptr[len..];
+                results_buf_count += len;
+                if results_buf_count == results_buf_len {
+                    send_results = false;
+                    results_buf_count = 0;
+                    wr_ptr = &results_buf.buf[..results_buf_len];
                 }
-                // The write buffer will fill up, but we will just try again
-                // in the next loop untill all bytes are sent
-                Err(_) => {}
-            };
+            }
         }
     }
 }
