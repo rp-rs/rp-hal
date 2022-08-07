@@ -2,7 +2,10 @@
 //!
 //! This application demonstrates how to call functions in the RP2040's boot ROM.
 //!
-//! It may need to be adapted to your particular board layout and/or pin assignment.
+//! It may need to be adapted to your particular board layout and/or pin assignment,
+//! but only outputs via USB Serial port.
+//!
+//! Send characters to get results or send `!` to put the rp2040 in usb boot
 //!
 //! See the `Cargo.toml` file for Copyright and license details.
 
@@ -25,7 +28,12 @@ use hal::pac;
 
 // Some traits we need
 use core::fmt::Write;
-use hal::Clock;
+
+// USB Device support
+use usb_device::{class_prelude::*, prelude::*};
+
+// USB Communications Class Device support
+use usbd_serial::SerialPort;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -40,6 +48,26 @@ const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 /// Our Cortex-M systick goes from this value down to zero. For our timer maths
 /// to work, this value must be of the form `2**N - 1`.
 const SYSTICK_RELOAD: u32 = 0x00FF_FFFF;
+
+struct Buffer<'a> {
+    buf: &'a mut [u8],
+    index: usize,
+}
+
+// write_str from https://stackoverflow.com/a/39491059
+impl<'a> core::fmt::Write for Buffer<'a> {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        let b = s.as_bytes();
+        let remaining_buf = &mut self.buf[self.index..];
+        self.index += b.len();
+        if remaining_buf.len() < b.len() {
+            return Err(core::fmt::Error);
+        }
+        let remaining_buf = &mut remaining_buf[..b.len()];
+        remaining_buf.copy_from_slice(b);
+        Ok(())
+    }
+}
 
 /// Entry point to our bare-metal application.
 ///
@@ -74,29 +102,34 @@ fn main() -> ! {
     let sio = hal::Sio::new(pac.SIO);
 
     // Set the pins to their default state
-    let pins = hal::gpio::Pins::new(
+    let _pins = hal::gpio::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,
         &mut pac.RESETS,
     );
 
-    let uart_pins = (
-        // UART TX (characters sent from RP2040) on pin 1 (GPIO0)
-        pins.gpio0.into_mode::<hal::gpio::FunctionUart>(),
-        // UART RX (characters received by RP2040) on pin 2 (GPIO1)
-        pins.gpio1.into_mode::<hal::gpio::FunctionUart>(),
-    );
-    let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
-        .enable(
-            hal::uart::common_configs::_9600_8_N_1,
-            clocks.peripheral_clock.freq(),
-        )
-        .unwrap();
+    let mut results_buf = Buffer {
+        buf: &mut [0x0; 65536],
+        index: 0,
+    };
 
-    writeln!(uart, "ROM Copyright: {}", hal::rom_data::copyright_string()).unwrap();
     writeln!(
-        uart,
+        results_buf,
+        "ROM Copyright: {}",
+        hal::rom_data::copyright_string()
+    )
+    .unwrap();
+
+    writeln!(
+        results_buf,
+        "ROM Version: {}",
+        hal::rom_data::rom_version_number()
+    )
+    .unwrap();
+
+    writeln!(
+        results_buf,
         "ROM Git Revision: 0x{:x}",
         hal::rom_data::git_revision()
     )
@@ -104,7 +137,7 @@ fn main() -> ! {
 
     // Some ROM functions are exported directly, so we can just call them
     writeln!(
-        uart,
+        results_buf,
         "popcount32(0xF000_0001) = {}",
         hal::rom_data::popcount32(0xF000_0001)
     )
@@ -127,8 +160,8 @@ fn main() -> ! {
     let end_soft = cortex_m::peripheral::SYST::get_current();
 
     writeln!(
-        uart,
-        "{} x {} = {} in {} systicks (doing soft-float maths)",
+        results_buf,
+        "{} x {} = {} in {} systicks (doing f32 soft-float maths)",
         x,
         y,
         soft_result,
@@ -139,34 +172,119 @@ fn main() -> ! {
     // Some functions require a look-up in a table. First we do the lookup and
     // find the function pointer in ROM (you only want to do this once per
     // function).
-    let fmul = hal::rom_data::float_funcs::fmul::ptr();
-
+    let fnp = hal::rom_data::float_funcs::fmul::ptr();
+    let start_fn = cortex_m::peripheral::SYST::get_current();
     // Then we can call the function whenever we want
-    let start_rom = cortex_m::peripheral::SYST::get_current();
-    let rom_result = fmul(x, y);
-    let end_rom = cortex_m::peripheral::SYST::get_current();
-
+    let result = fnp(x, y);
+    let end_fn = cortex_m::peripheral::SYST::get_current();
     writeln!(
-        uart,
-        "{} x {} = {} in {} systicks (using the ROM)",
+        results_buf,
+        "fmul({}, {}) = {} in {} systicks (using the ROM)",
         x,
         y,
-        rom_result,
-        calc_delta(start_rom, end_rom)
+        result,
+        calc_delta(start_fn, end_fn)
     )
     .unwrap();
+    // the first rom version does not implement f64 rom funcs
+    if hal::rom_data::rom_version_number() > 1 {
+        // Try to hide the numbers from the compiler so it is forced to do the maths
+        let x = hal::rom_data::double_funcs::dsin(8f64) as f64;
+        let y = hal::rom_data::double_funcs::dsin(12f64) as f64;
 
-    // Now just spin (whilst the UART does its thing)
-    for _ in 0..1_000_000 {
-        cortex_m::asm::nop();
+        let start_soft = cortex_m::peripheral::SYST::get_current();
+        core::sync::atomic::compiler_fence(core::sync::atomic::Ordering::SeqCst);
+        let soft_result = x * y;
+        core::sync::atomic::compiler_fence(core::sync::atomic::Ordering::SeqCst);
+        let end_soft = cortex_m::peripheral::SYST::get_current();
+
+        writeln!(
+            results_buf,
+            "{:.3} x {:.3} = {:.3} in {} systicks (doing f64 soft-float maths)",
+            x,
+            y,
+            soft_result,
+            calc_delta(start_soft, end_soft)
+        )
+        .unwrap();
+        let fnp = hal::rom_data::double_funcs::dmul::ptr();
+        let start_fn = cortex_m::peripheral::SYST::get_current();
+        let result = fnp(x, y);
+        let end_fn = cortex_m::peripheral::SYST::get_current();
+        writeln!(
+            results_buf,
+            "dmul({:.3}, {:.3}) = {:.3} in {} systicks (using the ROM)",
+            x,
+            y,
+            result,
+            calc_delta(start_fn, end_fn)
+        )
+        .unwrap();
     }
 
-    // Reboot back into USB mode (no activity, both interfaces enabled)
-    rp2040_hal::rom_data::reset_to_usb_boot(0, 0);
+    // Set up the USB driver
+    let usb_bus = UsbBusAllocator::new(hal::usb::UsbBus::new(
+        pac.USBCTRL_REGS,
+        pac.USBCTRL_DPRAM,
+        clocks.usb_clock,
+        true,
+        &mut pac.RESETS,
+    ));
 
-    // In case the reboot fails
+    // Set up the USB Communications Class Device driver
+    let mut serial = SerialPort::new(&usb_bus);
+
+    // Create a USB device with a fake VID and PID
+    let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x16c0, 0x27dd))
+        .manufacturer("Fake company")
+        .product("Serial port")
+        .serial_number("TEST")
+        .device_class(2) // from: https://www.usb.org/defined-class-codes
+        .build();
+
+    let mut send_results = false;
+    let results_buf_len: usize = results_buf.buf.len();
+    let mut results_buf_count: usize = 0;
+
+    let mut wr_ptr = &results_buf.buf[..results_buf_len];
     loop {
-        cortex_m::asm::nop();
+        // Check for new data
+        if usb_dev.poll(&mut [&mut serial]) {
+            let mut buf = [0u8; 64];
+            match serial.read(&mut buf) {
+                Err(_e) => {
+                    // Do nothing
+                }
+                Ok(0) => {
+                    // Do nothing
+                }
+                Ok(_c) => {
+                    send_results = true;
+                    // Reboot back into USB mode if ! is received
+                    if buf.contains(&"!".as_bytes()[0]) {
+                        hal::rom_data::reset_to_usb_boot(0, 0);
+                    }
+                }
+            }
+        }
+        // If data was recieved on the usb poll, write out the results of all
+        // the rom functions tested
+        if send_results {
+            match serial.write(wr_ptr) {
+                Ok(len) => {
+                    wr_ptr = &wr_ptr[len..];
+                    results_buf_count += len;
+                    if results_buf_count == results_buf_len {
+                        send_results = false;
+                        results_buf_count = 0;
+                        wr_ptr = &results_buf.buf[..results_buf_len];
+                    }
+                }
+                // The write buffer will fill up, but we will just try again
+                // in the next loop untill all bytes are sent
+                Err(_) => {}
+            };
+        }
     }
 }
 

@@ -37,6 +37,7 @@ cortex-m-rt = "0.7"
 panic-halt = "0.2.0"
 rp2040-boot2 = "0.2.0"
 hd44780-driver = "0.4.0"
+usbd-serial = "0.1.1"
 pio-proc = "0.2.0"
 dht-sensor = "0.2.1"
 
