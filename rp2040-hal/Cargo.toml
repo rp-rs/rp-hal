@@ -25,8 +25,10 @@ usb-device = "0.2.9"
 vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
 rand_core = "0.6.3"
+# Always set the custom-impl feature of legacy critical-section, even if we don't provide our own,
+# as the default implementation should no longer be used.
 critical-section_0_2 = { package = "critical-section", version = "0.2.4", features = ["custom-impl"] }
-critical-section = { version = "1.0.0", features = ["restore-state-u8"] }
+critical-section = { version = "1.0.0" }
 
 futures = { version = "0.3", default-features = false, optional = true }
 chrono = { version = "0.4", default-features = false, optional = true }
@@ -42,11 +44,13 @@ pio-proc = "0.2.0"
 dht-sensor = "0.2.1"
 
 [features]
+default = ["critical-section-impl"]
 rt = ["rp2040-pac/rt"]
 rom-func-cache = []
 disable-intrinsics = []
 rom-v2-intrinsics = []
 rp2040-e5 = [] # USB errata 5: USB device fails to exit RESET state on busy USB bus.
+critical-section-impl = ["critical-section/restore-state-u8"]
 
 [[example]]
 # irq example uses cortex-m-rt::interrupt, need rt feature for that
