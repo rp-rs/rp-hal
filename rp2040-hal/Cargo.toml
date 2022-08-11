@@ -50,3 +50,8 @@ rom-v2-intrinsics = []
 # irq example uses cortex-m-rt::interrupt, need rt feature for that
 name = "gpio_irq_example"
 required-features = ["rt"]
+
+[[example]]
+# vector_table example uses cortex-m-rt::interrupt, need rt feature for that
+name = "vector_table"
+required-features = ["rt"]
