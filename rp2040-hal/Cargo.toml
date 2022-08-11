@@ -35,7 +35,7 @@ defmt = { version = ">=0.2.0, <0.4", optional = true }
 [dev-dependencies]
 cortex-m-rt = "0.7"
 panic-halt = "0.2.0"
-rp2040-boot2 = "0.2.0"
+rp2040-boot2 = "0.2.1"
 hd44780-driver = "0.4.0"
 pio-proc = "0.2.0"
 dht-sensor = "0.2.1"
