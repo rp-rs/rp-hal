@@ -383,7 +383,7 @@ where
     pub fn enable_interrupt(&mut self) {
         unsafe {
             let pwm = &(*pac::PWM::ptr());
-            let reg = (&pwm.inte).as_ptr();
+            let reg = pwm.inte.as_ptr();
             write_bitmask_set(reg, self.bitmask());
         }
     }
@@ -393,7 +393,7 @@ where
     pub fn disable_interrupt(&mut self) {
         unsafe {
             let pwm = &(*pac::PWM::ptr());
-            let reg = (&pwm.inte).as_ptr();
+            let reg = pwm.inte.as_ptr();
             write_bitmask_clear(reg, self.bitmask());
         };
     }
@@ -417,7 +417,7 @@ where
     pub fn force_interrupt(&mut self) {
         unsafe {
             let pwm = &(*pac::PWM::ptr());
-            let reg = (&pwm.intf).as_ptr();
+            let reg = pwm.intf.as_ptr();
             write_bitmask_set(reg, self.bitmask());
         }
     }
@@ -428,7 +428,7 @@ where
     pub fn clear_force_interrupt(&mut self) {
         unsafe {
             let pwm = &(*pac::PWM::ptr());
-            let reg = (&pwm.intf).as_ptr();
+            let reg = pwm.intf.as_ptr();
             write_bitmask_clear(reg, self.bitmask());
         }
     }
