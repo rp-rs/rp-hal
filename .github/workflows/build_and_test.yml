@@ -12,43 +12,51 @@ jobs:
           target: thumbv6m-none-eabi
           override: true
           profile: minimal
-      - uses: actions-rs/cargo@v1
+      - name: "Build workspace (debug)"
+        uses: actions-rs/cargo@v1
         with:
           command: build
           args: --workspace
-      - uses: actions-rs/cargo@v1
+      - name: "Build workspace and examples (debug)"
+        uses: actions-rs/cargo@v1
         with:
           command: build
           args: --workspace --examples
-      - run: echo "Debug examples built:" && ls target/thumbv6m-none-eabi/debug/examples/ |grep -v '-' |grep -v '\.d'
-      - run: rm target/thumbv6m-none-eabi/debug/examples/ -rf
-      - uses: actions-rs/cargo@v1
+      - name: "List built examples and clean"
+        run: rm -vrf target/thumbv6m-none-eabi/*/examples/* | sed -e "s/removed '\(.*\)'/\1/" | xargs -l basename | grep -Ev '(-|\.d)'
+      - name: "Build workspace and examples (debug, features=eh1_0_alpha)"
+        uses: actions-rs/cargo@v1
         with:
           command: build
           args: --workspace --examples --features eh1_0_alpha
-      - run: echo "Debug eh1_0 examples built:" && ls target/thumbv6m-none-eabi/debug/examples/ |grep -v '-' |grep -v '\.d'
-      - run: rm target/thumbv6m-none-eabi/debug/examples/ -rf
-      - uses: actions-rs/cargo@v1
+      - name: "List built examples and clean"
+        run: rm -vrf target/thumbv6m-none-eabi/*/examples/* | sed -e "s/removed '\(.*\)'/\1/" | xargs -l basename | grep -Ev '(-|\.d)'
+      - name: "Build workspace and examples (release)"
+        uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release --workspace --examples
-      - run: echo "Release examples built:" && ls target/thumbv6m-none-eabi/release/examples/ |grep -v '-' |grep -v '\.d'
-      - run: rm target/thumbv6m-none-eabi/release/examples/ -rf
-      - uses: actions-rs/cargo@v1
+      - name: "List built examples and clean"
+        run: rm -vrf target/thumbv6m-none-eabi/*/examples/* | sed -e "s/removed '\(.*\)'/\1/" | xargs -l basename | grep -Ev '(-|\.d)'
+      - name: "Build workspace and examples (release, features=eh1_0_alpha)"
+        uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release --workspace --examples --features eh1_0_alpha
-      - run: echo "Release eh1_0 examples built:" && ls target/thumbv6m-none-eabi/release/examples/ |grep -v '-' |grep -v '\.d'
-      - run: rm target/thumbv6m-none-eabi/release/examples/ -rf
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --doc --target x86_64-unknown-linux-gnu
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --doc --target x86_64-unknown-linux-gnu --features chrono
-      - uses: actions-rs/cargo@v1
+      - name: "List built examples and clean"
+        run: rm -vrf target/thumbv6m-none-eabi/*/examples/* | sed -e "s/removed '\(.*\)'/\1/" | xargs -l basename | grep -Ev '(-|\.d)'
+      - name: "Test"
+        uses: actions-rs/cargo@v1
         with:
           command: test
           args: --tests --target x86_64-unknown-linux-gnu
+      - name: "Test docs"
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --doc --target x86_64-unknown-linux-gnu
+      - name: "Test docs (features=chrono)"
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --doc --target x86_64-unknown-linux-gnu --features chrono
