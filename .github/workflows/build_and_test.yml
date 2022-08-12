@@ -31,6 +31,12 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
+          args: --workspace --examples --features rp2040-e5
+      - run: echo "Debug rp2040-e5 examples built:" && ls target/thumbv6m-none-eabi/debug/examples/ |grep -v '-' |grep -v '\.d'
+      - run: rm target/thumbv6m-none-eabi/debug/examples/ -rf
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
           args: --release --workspace --examples
       - run: echo "Release examples built:" && ls target/thumbv6m-none-eabi/release/examples/ |grep -v '-' |grep -v '\.d'
       - run: rm target/thumbv6m-none-eabi/release/examples/ -rf
@@ -39,6 +45,12 @@ jobs:
           command: build
           args: --release --workspace --examples --features eh1_0_alpha
       - run: echo "Release eh1_0 examples built:" && ls target/thumbv6m-none-eabi/release/examples/ |grep -v '-' |grep -v '\.d'
+      - run: rm target/thumbv6m-none-eabi/release/examples/ -rf
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --workspace --examples --features rp2040-e5
+      - run: echo "Release rp2040-e5 examples built:" && ls target/thumbv6m-none-eabi/release/examples/ |grep -v '-' |grep -v '\.d'
       - run: rm target/thumbv6m-none-eabi/release/examples/ -rf
       - uses: actions-rs/cargo@v1
         with:

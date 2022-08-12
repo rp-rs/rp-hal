@@ -31,6 +31,12 @@ impl Errata5State {
                 if pac.USBCTRL_REGS.sie_status.read().line_state().is_se0() {
                     Some(self)
                 } else {
+                    let reset_state = pac.RESETS.reset.read();
+                    assert!(
+                        reset_state.io_bank0().bit_is_clear()
+                            && reset_state.pads_bank0().bit_is_clear(),
+                        "IO Bank 0 must be out of reset for this work around to function properly."
+                    );
                     Some(Self::ForceLineStateJ(start_force_j(&pac)))
                 }
             }

@@ -44,3 +44,4 @@ defmt-rtt = "0.3.0"
 default = ["boot2", "rt"]
 boot2 = ["rp2040-boot2"]
 rt = ["cortex-m-rt","rp2040-hal/rt"]
+rp2040-e5 = ["rp2040-hal/rp2040-e5"]

@@ -10,7 +10,6 @@
 //! const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates
 //!
 //! let mut pac = pac::Peripherals::take().unwrap();
-//! let sio = Sio::new(pac.SIO);
 //! let mut watchdog = Watchdog::new(pac.WATCHDOG);
 //! let mut clocks = init_clocks_and_plls(
 //!     XOSC_CRYSTAL_FREQ,
@@ -39,7 +38,7 @@
 //!
 //! During enumeration Windows hosts send a `StatusOut` after the `DataIn` packet of the first
 //! `Get Descriptor` resquest even if the `DataIn` isn't completed (typically when the `max_packet_size_ep0`
-//! is less than 18bytes). The next request request is a `Set Address` that expect a `StatusIn`.
+//! is less than 18bytes). The next request is a `Set Address` that expect a `StatusIn`.
 //!
 //! The issue is that by the time the previous `DataIn` packet is acknoledged and the `StatusOut`
 //! followed by `Setup` are received, the usb stack may have already prepared the next `DataIn` payload
@@ -54,6 +53,56 @@
 //!
 //! If the required timing cannot be met, using an maximum packet size of the endpoint 0 above 18bytes
 //! (e.g. `.max_packet_size_ep0(64)`) should avoid that issue.
+//!
+//! ## Issue on RP2040B0 and RP2040B1: USB device fails to exit RESET state on busy USB bus.
+//!
+//! The feature `rp2040-e5`implements the workaround described by [RP2040-E5](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf#%5B%7B%22num%22%3A630%2C%22gen%22%3A0%7D%2C%7B%22name%22%3A%22XYZ%22%7D%2C115%2C158.848%2Cnull%5D).
+//!
+//! The workaround requires the GPIO block to be released from its reset and has for side effect
+//! that GPIO15 will be stolen for a few hundred microseconds each time a Reset is detected on the
+//! USB bus.
+//!
+//! Although the external state of the pin will not be affected (the pin it put in "bus keep"), a
+//! user will lose control of the pin's output and reading from it may not reflect the actual state
+//! of the external pin.
+//!
+//! ```no_run
+//! # use rp2040_hal::{clocks::init_clocks_and_plls, pac, usb::UsbBus, watchdog::Watchdog};
+//! # use usb_device::class_prelude::UsbBusAllocator;
+//! use rp2040_hal::{gpio::Pins, Sio};
+//!
+//! # const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates
+//! #
+//! # let mut pac = pac::Peripherals::take().unwrap();
+//! # let mut watchdog = Watchdog::new(pac.WATCHDOG);
+//! # let mut clocks = init_clocks_and_plls(
+//! #     XOSC_CRYSTAL_FREQ,
+//! #     pac.XOSC,
+//! #     pac.CLOCKS,
+//! #     pac.PLL_SYS,
+//! #     pac.PLL_USB,
+//! #     &mut pac.RESETS,
+//! #     &mut watchdog
+//! # ).ok().unwrap();
+//! #
+//! // required for the errata 5's workaround to function properly.
+//! let sio = Sio::new(pac.SIO);
+//! let _pins = Pins::new(
+//!     pac.IO_BANK0,
+//!     pac.PADS_BANK0,
+//!     sio.gpio_bank0,
+//!     &mut pac.RESETS,
+//! );
+//! #
+//! # let usb_bus = UsbBusAllocator::new(UsbBus::new(
+//! #         pac.USBCTRL_REGS,
+//! #         pac.USBCTRL_DPRAM,
+//! #         clocks.usb_clock,
+//! #         true,
+//! #         &mut pac.RESETS,
+//! #     ));
+//! # // Use the usb_bus as usual.
+//! ```
 
 use core::cell::RefCell;
 
@@ -550,7 +599,6 @@ impl UsbBusTrait for UsbBus {
     fn poll(&self) -> PollResult {
         interrupt::free(|cs| {
             let mut inner = self.inner.borrow(cs).borrow_mut();
-
 
             #[cfg(feature = "rp2040-e5")]
             if let Some(state) = inner.errata5_state.take() {
