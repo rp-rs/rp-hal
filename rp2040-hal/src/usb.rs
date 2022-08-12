@@ -62,8 +62,9 @@
 //! that GPIO15 will be stolen for a few hundred microseconds each time a Reset is detected on the
 //! USB bus.
 //!
-//! Although the external state of the pin will not be affected (the pin it put in "bus keep"), a
-//! user will lose control of the pin's output and reading from it may not reflect the actual state
+//! The pin will be temporarily put in "bus keep" mode, weakly pulling the output towards its current
+//! logic level. In absence of external loads, the current logic level will be maintained.
+//! A user will lose control of the pin's output and reading from it may not reflect the actual state
 //! of the external pin.
 //!
 //! ```no_run
