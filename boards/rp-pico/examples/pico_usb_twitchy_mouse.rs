@@ -1,6 +1,6 @@
 //! # Pico USB 'Twitchy' Mouse Example
 //!
-//! Creates a USB HID Class Poiting device (i.e. a virtual mouse) on a Pico
+//! Creates a USB HID Class Pointing device (i.e. a virtual mouse) on a Pico
 //! board, with the USB driver running in the main thread.
 //!
 //! It generates movement reports which will twitch the cursor up and down by a
