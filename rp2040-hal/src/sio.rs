@@ -683,6 +683,15 @@ pub struct LaneCtrl {
     - LANE0 result is shifted and masked ACCUM0, clamped by a lower bound of  
     BASE0 and an upper bound of BASE1.  
     - Signedness of these comparisons is determined by LANE0_CTRL_SIGNED"]
+    pub clamp: bool,
+    #[doc = "Bit 21 - Only present on INTERP0 on each core. If BLEND mode is enabled:
+    - LANE1 result is a linear interpolation between BASE0 and BASE1, controlled
+    by the 8 LSBs of lane 1 shift and mask value (a fractional number between
+    0 and 255/256ths)
+    - LANE0 result does not have BASE0 added (yields only
+    the 8 LSBs of lane 1 shift+mask value)
+    - FULL result does not have lane 1 shift+mask value added (BASE2 + lane 0 shift+mask)
+    LANE1 SIGNED flag controls whether the interpolation is signed or unsigned."]
     pub blend: bool,
     #[doc = "Bits 19:20 - ORed into bits 29:28 of the lane result presented to the processor on the bus.  
     No effect on the internal 32-bit datapath. Handy for using a lane to generate sequence  
@@ -708,27 +717,30 @@ pub struct LaneCtrl {
 }
 
 impl LaneCtrl {
-    /// Default value where all fields are zero and false
+    /// Default configuration. Normal operation, unsigned, mask keeps all bits, no shift.
     pub const DEFAULT: Self = Self {
+        clamp: false,
         blend: false,
         force_msb: 0,
         add_raw: false,
         cross_result: false,
         cross_input: false,
         signed: false,
-        mask_msb: 0,
+        mask_msb: 31,
         mask_lsb: 0,
         shift: 0,
     };
 
     /// encode the configuration to be loaded in the ctrl register of one lane of an interpolator
     pub const fn encode(&self) -> u32 {
+        assert!(!(self.blend && self.clamp));
         assert!(self.force_msb < 0b100);
         assert!(self.mask_msb < 0b100000);
         assert!(self.mask_lsb < 0b100000);
         assert!(self.mask_msb >= self.mask_lsb);
         assert!(self.shift < 0b100000);
-        ((self.blend as u32) << 21)
+        ((self.clamp as u32) << 22)
+            | ((self.blend as u32) << 21)
             | ((self.force_msb as u32) << 19)
             | ((self.add_raw as u32) << 18)
             | ((self.cross_result as u32) << 17)
