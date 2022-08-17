@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `rp2040-e5` feature enabling the workaround for errata 5 on the USB device peripheral.
+
 ### Changed
 
 - Update embedded-hal alpha support to version 1.0.0-alpha.8
