@@ -1,14 +1,14 @@
 //! Semi-internal enums mostly used in typelevel magic
 
 /// Value-level `struct` representing slice IDs
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub struct DynSliceId {
     /// Slice id
     pub num: u8,
 }
 
 /// Slice modes
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum DynSliceMode {
     /// Count continuously whenever the slice is enabled
     FreeRunning,
@@ -21,7 +21,7 @@ pub enum DynSliceMode {
 }
 
 /// Channel ids
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum DynChannelId {
     /// Channel A
     A,

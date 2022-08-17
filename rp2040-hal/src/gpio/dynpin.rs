@@ -210,7 +210,7 @@ dyn_function!(Spi, Xip, Uart, I2C, Pwm, Pio0, Pio1, Clock, UsbAux);
 //==============================================================================
 
 /// Value-level `enum` for pin groups
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum DynGroup {
     /// .
     Bank0,
@@ -219,7 +219,7 @@ pub enum DynGroup {
 }
 
 /// Value-level `struct` representing pin IDs
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub struct DynPinId {
     /// .
     pub group: DynGroup,

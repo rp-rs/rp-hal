@@ -40,6 +40,7 @@ pub mod timer;
 pub mod typelevel;
 pub mod uart;
 pub mod usb;
+pub mod vector_table;
 pub mod watchdog;
 pub mod xosc;
 

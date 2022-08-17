@@ -149,7 +149,7 @@ fn main() -> ! {
     print_temperature(&mut uart, temp);
 
     loop {
-        cortex_m::asm::nop();
+        cortex_m::asm::wfi();
     }
 }
 

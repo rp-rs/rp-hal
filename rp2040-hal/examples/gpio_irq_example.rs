@@ -54,7 +54,7 @@ use rp2040_hal::gpio::Interrupt::EdgeLow;
 /// need this to help the ROM bootloader get our code up and running.
 #[link_section = ".boot2"]
 #[used]
-pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
 
 /// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz. Adjust
 /// if your board has a different frequency
@@ -147,11 +147,7 @@ fn main() -> ! {
 
     loop {
         // interrupts handle everything else in this example.
-        // if we wanted low power we could go to sleep. to
-        // keep this example simple we'll just execute a `nop`.
-        // the `nop` (No Operation) instruction does nothing,
-        // but if we have no code here clippy would complain.
-        cortex_m::asm::nop();
+        cortex_m::asm::wfi();
     }
 }
 
