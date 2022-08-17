@@ -10,7 +10,6 @@
 //! const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates
 //!
 //! let mut pac = pac::Peripherals::take().unwrap();
-//! let sio = Sio::new(pac.SIO);
 //! let mut watchdog = Watchdog::new(pac.WATCHDOG);
 //! let mut clocks = init_clocks_and_plls(
 //!     XOSC_CRYSTAL_FREQ,
@@ -39,7 +38,7 @@
 //!
 //! During enumeration Windows hosts send a `StatusOut` after the `DataIn` packet of the first
 //! `Get Descriptor` resquest even if the `DataIn` isn't completed (typically when the `max_packet_size_ep0`
-//! is less than 18bytes). The next request request is a `Set Address` that expect a `StatusIn`.
+//! is less than 18bytes). The next request is a `Set Address` that expect a `StatusIn`.
 //!
 //! The issue is that by the time the previous `DataIn` packet is acknoledged and the `StatusOut`
 //! followed by `Setup` are received, the usb stack may have already prepared the next `DataIn` payload
@@ -54,6 +53,57 @@
 //!
 //! If the required timing cannot be met, using an maximum packet size of the endpoint 0 above 18bytes
 //! (e.g. `.max_packet_size_ep0(64)`) should avoid that issue.
+//!
+//! ## Issue on RP2040B0 and RP2040B1: USB device fails to exit RESET state on busy USB bus.
+//!
+//! The feature `rp2040-e5`implements the workaround described by [RP2040-E5](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf#%5B%7B%22num%22%3A630%2C%22gen%22%3A0%7D%2C%7B%22name%22%3A%22XYZ%22%7D%2C115%2C158.848%2Cnull%5D).
+//!
+//! The workaround requires the GPIO block to be released from its reset and has for side effect
+//! that GPIO15 will be stolen for a few hundred microseconds each time a Reset is detected on the
+//! USB bus.
+//!
+//! The pin will be temporarily put in "bus keep" mode, weakly pulling the output towards its current
+//! logic level. In absence of external loads, the current logic level will be maintained.
+//! A user will lose control of the pin's output and reading from it may not reflect the actual state
+//! of the external pin.
+//!
+//! ```no_run
+//! # use rp2040_hal::{clocks::init_clocks_and_plls, pac, usb::UsbBus, watchdog::Watchdog};
+//! # use usb_device::class_prelude::UsbBusAllocator;
+//! use rp2040_hal::{gpio::Pins, Sio};
+//!
+//! # const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates
+//! #
+//! # let mut pac = pac::Peripherals::take().unwrap();
+//! # let mut watchdog = Watchdog::new(pac.WATCHDOG);
+//! # let mut clocks = init_clocks_and_plls(
+//! #     XOSC_CRYSTAL_FREQ,
+//! #     pac.XOSC,
+//! #     pac.CLOCKS,
+//! #     pac.PLL_SYS,
+//! #     pac.PLL_USB,
+//! #     &mut pac.RESETS,
+//! #     &mut watchdog
+//! # ).ok().unwrap();
+//! #
+//! // required for the errata 5's workaround to function properly.
+//! let sio = Sio::new(pac.SIO);
+//! let _pins = Pins::new(
+//!     pac.IO_BANK0,
+//!     pac.PADS_BANK0,
+//!     sio.gpio_bank0,
+//!     &mut pac.RESETS,
+//! );
+//! #
+//! # let usb_bus = UsbBusAllocator::new(UsbBus::new(
+//! #         pac.USBCTRL_REGS,
+//! #         pac.USBCTRL_DPRAM,
+//! #         clocks.usb_clock,
+//! #         true,
+//! #         &mut pac.RESETS,
+//! #     ));
+//! # // Use the usb_bus as usual.
+//! ```
 
 use core::cell::RefCell;
 
@@ -70,6 +120,9 @@ use usb_device::{
     endpoint::{EndpointAddress, EndpointType},
     Result as UsbResult, UsbDirection, UsbError,
 };
+
+#[cfg(feature = "rp2040-e5")]
+mod errata5;
 
 fn ep_addr_to_ep_buf_ctrl_idx(ep_addr: EndpointAddress) -> usize {
     ep_addr.index() * 2 + (if ep_addr.is_in() { 0 } else { 1 })
@@ -114,6 +167,8 @@ struct Inner {
     out_endpoints: [Option<Endpoint>; 16],
     next_offset: u16,
     read_setup: bool,
+    #[cfg(feature = "rp2040-e5")]
+    errata5_state: Option<errata5::Errata5State>,
 }
 impl Inner {
     fn new(ctrl_reg: USBCTRL_REGS, ctrl_dpram: USBCTRL_DPRAM) -> Self {
@@ -124,6 +179,8 @@ impl Inner {
             out_endpoints: Default::default(),
             next_offset: 0,
             read_setup: false,
+            #[cfg(feature = "rp2040-e5")]
+            errata5_state: None,
         }
     }
 
@@ -544,43 +601,68 @@ impl UsbBusTrait for UsbBus {
         interrupt::free(|cs| {
             let mut inner = self.inner.borrow(cs).borrow_mut();
 
-            // check for bus reset
+            #[cfg(feature = "rp2040-e5")]
+            if let Some(state) = inner.errata5_state.take() {
+                unsafe {
+                    inner.errata5_state = state.update();
+                }
+                return if inner.errata5_state.is_some() {
+                    PollResult::None
+                } else {
+                    PollResult::Reset
+                };
+            }
+
+            // check for bus reset and/or suspended states.
             let sie_status = inner.ctrl_reg.sie_status.read();
+            let mut buff_status = inner.ctrl_reg.buff_status.read().bits();
+
             if sie_status.bus_reset().bit_is_set() {
+                #[cfg(feature = "rp2040-e5")]
+                if sie_status.connected().bit_is_clear() {
+                    inner.errata5_state = Some(errata5::Errata5State::start());
+                    return PollResult::None;
+                } else {
+                    return PollResult::Reset;
+                }
+
+                #[cfg(not(feature = "rp2040-e5"))]
                 return PollResult::Reset;
-            } else if sie_status.suspended().bit_is_set() {
-                inner.ctrl_reg.sie_status.write(|w| w.suspended().set_bit());
-                return PollResult::Suspend;
-            } else if sie_status.resume().bit_is_set() {
-                inner.ctrl_reg.sie_status.write(|w| w.resume().set_bit());
-                return PollResult::Resume;
+            } else if buff_status == 0 && sie_status.setup_rec().bit_is_clear() {
+                if sie_status.suspended().bit_is_set() {
+                    inner.ctrl_reg.sie_status.write(|w| w.suspended().set_bit());
+                    return PollResult::Suspend;
+                } else if sie_status.resume().bit_is_set() {
+                    inner.ctrl_reg.sie_status.write(|w| w.resume().set_bit());
+                    return PollResult::Resume;
+                }
+                return PollResult::None;
             }
 
             let (mut ep_out, mut ep_in_complete, mut ep_setup): (u16, u16, u16) = (0, 0, 0);
 
-            let buff_status = inner.ctrl_reg.buff_status.read().bits();
-            if buff_status != 0 {
-                // IN Complete shall only be reported once.
-                inner
-                    .ctrl_reg
-                    .buff_status
-                    .write(|w| unsafe { w.bits(0x5555_5555) });
+            // IN Complete shall only be reported once.
+            inner
+                .ctrl_reg
+                .buff_status
+                .write(|w| unsafe { w.bits(0x5555_5555) });
 
-                for i in 0..32u32 {
-                    let mask = 1 << i;
-                    if (buff_status & mask) == mask {
-                        let is_in = (i & 1) == 0;
-                        let ep_idx = i / 2;
-                        if is_in {
-                            ep_in_complete |= 1 << ep_idx;
-                        } else {
-                            ep_out |= 1 << ep_idx;
-                        }
+            for i in 0..32u32 {
+                if buff_status == 0 {
+                    break;
+                } else if (buff_status & 1) == 1 {
+                    let is_in = (i & 1) == 0;
+                    let ep_idx = i / 2;
+                    if is_in {
+                        ep_in_complete |= 1 << ep_idx;
+                    } else {
+                        ep_out |= 1 << ep_idx;
                     }
                 }
+                buff_status >>= 1;
             }
+
             // check for setup request
-            // Only report setup if OUT has been cleared.
             if sie_status.setup_rec().bit_is_set() {
                 // Small max_packet_size_ep0 Work-Around
                 inner.ctrl_dpram.ep_buffer_control[0].modify(|_, w| w.available_0().clear_bit());
@@ -589,9 +671,6 @@ impl UsbBusTrait for UsbBus {
                 inner.read_setup = true;
             }
 
-            if let (0, 0, 0) = (ep_out, ep_in_complete, ep_setup) {
-                return PollResult::None;
-            }
             PollResult::Data {
                 ep_out,
                 ep_in_complete,

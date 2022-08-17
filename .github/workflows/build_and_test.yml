@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        features: ["", "--features eh1_0_alpha", "--features chrono"]
+        features: ["", "--features eh1_0_alpha", "--features chrono", "--features rp2040-e5"]
         mode: ["", "--release"]
     steps:
       - uses: actions/checkout@v2
