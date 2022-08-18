@@ -47,7 +47,7 @@ use hal::pac::interrupt;
 
 // Some short-cuts to useful types
 use core::cell::RefCell;
-use cortex_m::interrupt::Mutex;
+use critical_section::Mutex;
 
 /// Import the GPIO pins we use
 use hal::gpio::pin::bank0::{Gpio0, Gpio1};
@@ -142,7 +142,7 @@ fn main() -> ! {
 
     // Now we give away the entire UART peripheral, via the variable
     // `GLOBAL_UART`. We can no longer access the UART from this main thread.
-    cortex_m::interrupt::free(|cs| {
+    critical_section::with(|cs| {
         GLOBAL_UART.borrow(cs).replace(Some(uart));
     });
 
@@ -177,7 +177,7 @@ fn UART0_IRQ() {
     // This is one-time lazy initialisation. We steal the variable given to us
     // via `GLOBAL_UART`.
     if UART.is_none() {
-        cortex_m::interrupt::free(|cs| {
+        critical_section::with(|cs| {
             *UART = GLOBAL_UART.borrow(cs).take();
         });
     }
