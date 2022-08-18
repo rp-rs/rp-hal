@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `rp2040-e5` feature enabling the workaround for errata 5 on the USB device peripheral.
+- Support for critical-section 1.0.0.
+  Critical-section 0.2 is still supported (ie. a custom-impl is provided, compatible
+  with the 1.0.0 implementation), to avoid a breaking change. It will be removed
+  later.
 
 ### Changed
 
