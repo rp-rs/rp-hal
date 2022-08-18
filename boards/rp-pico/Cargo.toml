@@ -22,6 +22,7 @@ usbd-hid = "0.5.1"
 futures = { version = "0.3", default-features = false, optional = true }
 
 [dev-dependencies]
+rp2040-hal = { path = "../../rp2040-hal", version = "0.5.0", features = [ "defmt" ] }
 panic-halt= "0.2.0"
 embedded-hal ="0.2.5"
 cortex-m-rtic = "1.1.2"
