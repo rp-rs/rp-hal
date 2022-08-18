@@ -21,9 +21,6 @@ use rp_pico::hal::pac::interrupt;
 // GPIO traits
 use embedded_hal::digital::v2::OutputPin;
 
-// Time handling traits
-use embedded_time::rate::*;
-
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
@@ -131,7 +128,7 @@ fn main() -> ! {
 
     // The delay object lets us wait for specified amounts of time (in
     // milliseconds)
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);

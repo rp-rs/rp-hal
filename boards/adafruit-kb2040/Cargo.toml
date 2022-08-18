@@ -26,6 +26,6 @@ rt = ["cortex-m-rt","rp2040-hal/rt"]
 panic-halt = "0.2.0"
 rp2040-boot2 = "0.2"
 smart-leds = "0.3.0"
-embedded-time = "0.12.0"
+fugit = "0.3.5"
 nb = "1.0.0"
 ws2812-pio = "0.3.0"

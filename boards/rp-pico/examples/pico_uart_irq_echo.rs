@@ -22,9 +22,6 @@ use embedded_hal::{
     serial::{Read, Write},
 };
 
-// We need this for the 'Delay' object to work.
-use embedded_time::fixed_point::FixedPoint;
-
 // We also need this for the 'Delay' object to work.
 use rp2040_hal::Clock;
 
@@ -98,7 +95,7 @@ fn main() -> ! {
     .unwrap();
 
     // Lets us wait for fixed periods of time
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);

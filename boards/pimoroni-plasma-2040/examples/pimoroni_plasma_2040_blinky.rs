@@ -5,7 +5,6 @@
 use defmt::*;
 use defmt_rtt as _;
 use embedded_hal::digital::v2::OutputPin;
-use embedded_time::fixed_point::FixedPoint;
 use panic_halt as _;
 
 use pimoroni_plasma_2040 as bsp;
@@ -41,7 +40,7 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     let pins = bsp::Pins::new(
         pac.IO_BANK0,

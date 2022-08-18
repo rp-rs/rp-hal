@@ -8,7 +8,7 @@
 //!
 //! See [Chapter 4 Section 6](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) of the datasheet for more details.
 
-use embedded_time::duration::Microseconds;
+use fugit::{Duration, MicrosDurationU64};
 
 use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
 use crate::pac::{RESETS, TIMER};
@@ -53,7 +53,7 @@ impl Timer {
     pub fn count_down(&self) -> CountDown<'_> {
         CountDown {
             timer: self,
-            period: Microseconds::new(0),
+            period: MicrosDurationU64::nanos(0),
             next_end: None,
         }
     }
@@ -104,43 +104,47 @@ impl Timer {
 /// ## Usage
 /// ```no_run
 /// use embedded_hal::timer::{CountDown, Cancel};
-/// use embedded_time::duration::Extensions;
+/// use fugit::ExtU32;
 /// use rp2040_hal;
 /// let mut pac = rp2040_hal::pac::Peripherals::take().unwrap();
 /// // Configure the Timer peripheral in count-down mode
 /// let timer = rp2040_hal::Timer::new(pac.TIMER, &mut pac.RESETS);
 /// let mut count_down = timer.count_down();
 /// // Create a count_down timer for 500 milliseconds
-/// count_down.start(500.milliseconds());
+/// count_down.start(500.millis());
 /// // Block until timer has elapsed
 /// let _ = nb::block!(count_down.wait());
 /// // Restart the count_down timer with a period of 100 milliseconds
-/// count_down.start(100.milliseconds());
+/// count_down.start(100.millis());
 /// // Cancel it immediately
 /// count_down.cancel();
 /// ```
 pub struct CountDown<'timer> {
     timer: &'timer Timer,
-    period: embedded_time::duration::Microseconds<u64>,
+    period: MicrosDurationU64,
     next_end: Option<u64>,
 }
 
 impl embedded_hal::timer::CountDown for CountDown<'_> {
-    type Time = embedded_time::duration::Microseconds<u64>;
+    type Time = MicrosDurationU64;
 
     fn start<T>(&mut self, count: T)
     where
         T: Into<Self::Time>,
     {
         self.period = count.into();
-        self.next_end = Some(self.timer.get_counter().wrapping_add(self.period.0));
+        self.next_end = Some(
+            self.timer
+                .get_counter()
+                .wrapping_add(self.period.to_micros()),
+        );
     }
 
     fn wait(&mut self) -> nb::Result<(), void::Void> {
         if let Some(end) = self.next_end {
             let ts = self.timer.get_counter();
             if ts >= end {
-                self.next_end = Some(end.wrapping_add(self.period.0));
+                self.next_end = Some(end.wrapping_add(self.period.to_micros()));
                 Ok(())
             } else {
                 Err(nb::Error::WouldBlock)
@@ -187,12 +191,12 @@ pub trait Alarm {
     /// this will trigger interrupt whenever this time elapses.
     ///
     /// The RP2040 has been observed to take a little while to schedule an alarm. For this
-    /// reason, the minimum time that this function accepts is `10.microseconds()`
+    /// reason, the minimum time that this function accepts is `10.micros()`
     ///
     /// [enable_interrupt]: #method.enable_interrupt
-    fn schedule<TIME: Into<Microseconds>>(
+    fn schedule<const NOM: u32, const DENOM: u32>(
         &mut self,
-        countdown: TIME,
+        countdown: Duration<u32, NOM, DENOM>,
     ) -> Result<(), ScheduleAlarmError>;
 
     /// Return true if this alarm is finished.
@@ -255,14 +259,14 @@ macro_rules! impl_alarm {
             #[doc = $int_name]
             /// ` whenever this time elapses.
             ///
-            /// The RP2040 has been observed to take a little while to schedule an alarm. For this reason, the minimum time that this function accepts is `10.microseconds()`
+            /// The RP2040 has been observed to take a little while to schedule an alarm. For this reason, the minimum time that this function accepts is `10.micros()`
             ///
             /// [enable_interrupt]: #method.enable_interrupt
-            fn schedule<TIME: Into<Microseconds>>(
+            fn schedule<const NOM: u32, const DENOM: u32>(
                 &mut self,
-                countdown: TIME,
+                countdown: Duration<u32, NOM, DENOM>,
             ) -> Result<(), ScheduleAlarmError> {
-                let duration = countdown.into().0;
+                let duration = countdown.to_micros();
 
                 const MIN_MICROSECONDS: u32 = 10;
                 if duration < MIN_MICROSECONDS {

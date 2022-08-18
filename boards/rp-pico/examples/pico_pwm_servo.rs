@@ -15,7 +15,7 @@ use cortex_m::prelude::*;
 use embedded_hal::PwmPin;
 
 // Traits for converting integers to amounts of time
-use embedded_time::duration::Extensions;
+use fugit::ExtU32;
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
@@ -93,22 +93,22 @@ fn main() -> ! {
     loop {
         // move to 0°
         channel.set_duty(2500);
-        count_down.start(400.milliseconds());
+        count_down.start(400.millis());
         let _ = nb::block!(count_down.wait());
 
         // 0° to 90°
         channel.set_duty(3930);
-        count_down.start(400.milliseconds());
+        count_down.start(400.millis());
         let _ = nb::block!(count_down.wait());
 
         // 90° to 180°
         channel.set_duty(7860);
-        count_down.start(400.milliseconds());
+        count_down.start(400.millis());
         let _ = nb::block!(count_down.wait());
 
         // 180° to 90°
         channel.set_duty(3930);
-        count_down.start(400.milliseconds());
+        count_down.start(400.millis());
         let _ = nb::block!(count_down.wait());
     }
 }

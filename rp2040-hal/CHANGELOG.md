@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implement `From<&SomeClock> for Hertz` instead of `From<SomeClock> for Hertz`
   for the clocks in `rp2040_hal::clocks`.
 - Use `rp2040-hal`'s entry function.
+- Migrate from `embedded-time` to `fugit`
 
 ## [0.5.0] - 2022-06-13
 

@@ -15,7 +15,7 @@ use panic_halt as _;
 
 // Some traits we need
 use embedded_hal::blocking::i2c::Write;
-use embedded_time::rate::Extensions;
+use fugit::RateExtU32;
 
 // Alias for our HAL crate
 use rp2040_hal as hal;

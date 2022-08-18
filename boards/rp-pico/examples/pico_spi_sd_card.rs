@@ -107,7 +107,7 @@ use panic_halt as _;
 use rp_pico::hal::prelude::*;
 
 // Embed the `Hz` function/trait:
-use embedded_time::rate::*;
+use fugit::RateExtU32;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
@@ -236,7 +236,7 @@ fn main() -> ! {
     let mut led_pin = pins.led.into_push_pull_output();
 
     // Setup a delay for the LED blink signals:
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // These are implicitly used by the spi driver if they are in the correct mode
     let _spi_sclk = pins.gpio2.into_mode::<gpio::FunctionSpi>();

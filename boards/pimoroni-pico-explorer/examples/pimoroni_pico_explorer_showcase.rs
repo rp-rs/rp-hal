@@ -10,7 +10,6 @@ use embedded_graphics::{
     text::{Alignment, Text},
 };
 use embedded_hal::digital::v2::OutputPin;
-use embedded_time::rate::*;
 use hal::{adc::Adc, clocks::*, watchdog::Watchdog, Sio};
 use panic_halt as _;
 use pimoroni_pico_explorer::entry;
@@ -41,7 +40,7 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let mut delay = cortex_m::delay::Delay::new(cp.SYST, clocks.system_clock.get_freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(cp.SYST, clocks.system_clock.get_freq().to_Hz());
 
     // Enable adc
     let mut adc = Adc::new(p.ADC, &mut p.RESETS);

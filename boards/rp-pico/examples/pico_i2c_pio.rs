@@ -21,7 +21,7 @@ use rp_pico::entry;
 use embedded_hal::blocking::i2c::{Operation, Read, Transactional, Write};
 
 // Time handling traits
-use embedded_time::rate::*;
+use fugit::RateExtU32;
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
@@ -109,7 +109,7 @@ fn main() -> ! {
         pins.gpio20,
         pins.gpio21,
         sm0,
-        100_000.Hz(),
+        100.kHz(),
         clocks.system_clock.freq(),
     );
 

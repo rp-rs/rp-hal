@@ -21,7 +21,7 @@ use rp2040_hal as hal;
 
 // Some traits we need
 use cortex_m::prelude::*;
-use embedded_time::rate::Extensions;
+use fugit::RateExtU32;
 use rp2040_hal::clocks::Clock;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
@@ -87,7 +87,7 @@ fn main() -> ! {
     let mut spi = spi.init(
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
-        16_000_000u32.Hz(),
+        16.MHz(),
         &embedded_hal::spi::MODE_0,
     );
 

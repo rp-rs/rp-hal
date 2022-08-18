@@ -6,7 +6,7 @@
 //!
 //! ```no_run
 //! use embedded_hal::spi::MODE_0;
-//! use embedded_time::rate::*;
+//! use fugit::RateExtU32;
 //! use rp2040_hal::{spi::Spi, gpio::{Pins, FunctionSpi}, pac, Sio};
 //!
 //! let mut peripherals = pac::Peripherals::take().unwrap();
@@ -25,7 +25,7 @@ use core::{convert::Infallible, marker::PhantomData, ops::Deref};
 use eh1_0_alpha::spi as eh1;
 use embedded_hal::blocking::spi;
 use embedded_hal::spi::{FullDuplex, Mode, Phase, Polarity};
-use embedded_time::rate::*;
+use fugit::HertzU32;
 use pac::RESETS;
 
 /// State of the SPI
@@ -78,13 +78,13 @@ impl<S: State, D: SpiDevice, const DS: u8> Spi<S, D, DS> {
     /// Set baudrate based on peripheral clock
     ///
     /// Typically the peripheral clock is set to 125_000_000
-    pub fn set_baudrate<F: Into<Hertz<u32>>, B: Into<Hertz<u32>>>(
+    pub fn set_baudrate<F: Into<HertzU32>, B: Into<HertzU32>>(
         &mut self,
         peri_frequency: F,
         baudrate: B,
-    ) -> Hertz {
-        let freq_in = peri_frequency.into().integer();
-        let baudrate = baudrate.into().integer();
+    ) -> HertzU32 {
+        let freq_in = peri_frequency.into().to_Hz();
+        let baudrate = baudrate.into().to_Hz();
         let mut prescale: u8 = u8::MAX;
         let mut postdiv: u8 = 0;
 
@@ -120,6 +120,7 @@ impl<S: State, D: SpiDevice, const DS: u8> Spi<S, D, DS> {
             .modify(|_, w| unsafe { w.scr().bits(postdiv) });
 
         // Return the frequency we were able to achieve
+        use fugit::RateExtU32;
         (freq_in / (prescale as u32 * (1 + postdiv as u32))).Hz()
     }
 }
@@ -146,7 +147,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
     }
 
     /// Initialize the SPI
-    pub fn init<F: Into<Hertz<u32>>, B: Into<Hertz<u32>>>(
+    pub fn init<F: Into<HertzU32>, B: Into<HertzU32>>(
         mut self,
         resets: &mut RESETS,
         peri_frequency: F,

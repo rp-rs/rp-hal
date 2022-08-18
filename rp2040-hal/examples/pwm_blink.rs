@@ -19,7 +19,6 @@ use rp2040_hal as hal;
 
 // Some traits we need
 use embedded_hal::PwmPin;
-use embedded_time::rate::*;
 use rp2040_hal::clocks::Clock;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
@@ -86,7 +85,7 @@ fn main() -> ! {
 
     // The delay object lets us wait for specified amounts of time (in
     // milliseconds)
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // Init PWMs
     let mut pwm_slices = hal::pwm::Slices::new(pac.PWM, &mut pac.RESETS);

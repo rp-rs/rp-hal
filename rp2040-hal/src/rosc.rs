@@ -1,8 +1,7 @@
 //! Ring Oscillator (ROSC)
 // See [Chapter 2 Section 17](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 
-use embedded_time::rate::Extensions;
-use embedded_time::rate::Hertz;
+use fugit::HertzU32;
 
 /// State of the Ring Oscillator (typestate trait)
 pub trait State {}
@@ -12,7 +11,7 @@ pub struct Disabled;
 
 /// ROSC is initialized, ie we've given parameters (typestate)
 pub struct Enabled {
-    freq_hz: Hertz,
+    freq_hz: HertzU32,
 }
 
 /// ROSC is in dormant mode (see Chapter 2, Section 17, §7)
@@ -56,6 +55,7 @@ impl RingOscillator<Disabled> {
     pub fn initialize(self) -> RingOscillator<Enabled> {
         self.device.ctrl.write(|w| w.enable().enable());
 
+        use fugit::RateExtU32;
         self.transition(Enabled {
             freq_hz: 6_500_000u32.Hz(),
         })
@@ -64,7 +64,7 @@ impl RingOscillator<Disabled> {
 
 impl RingOscillator<Enabled> {
     /// Approx operating frequency of the ROSC in hertz
-    pub fn operating_frequency(&self) -> Hertz {
+    pub fn operating_frequency(&self) -> HertzU32 {
         self.state.freq_hz
     }
 

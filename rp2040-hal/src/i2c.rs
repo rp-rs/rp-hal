@@ -4,7 +4,7 @@
 //!
 //! ## Usage
 //! ```no_run
-//! use embedded_time::rate::Extensions;
+//! use fugit::RateExtU32;
 //! use rp2040_hal::{i2c::I2C, gpio::Pins, pac, Sio};
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
@@ -55,7 +55,7 @@ use crate::{
     resets::SubsystemReset,
     typelevel::Sealed,
 };
-use embedded_time::rate::Hertz;
+use fugit::HertzU32;
 use pac::{i2c0::RegisterBlock as I2CBlock, I2C0, I2C1, RESETS};
 
 /// Controller implementaion
@@ -294,12 +294,12 @@ macro_rules! hal {
                     resets: &mut RESETS,
                     system_clock: SystemF) -> Self
                 where
-                    F: Into<Hertz<u64>>,
+                    F: Into<HertzU32>,
                     Sda: SdaPin<$I2CX>,
                     Scl: SclPin<$I2CX>,
-                    SystemF: Into<Hertz<u32>>,
+                    SystemF: Into<HertzU32>,
                 {
-                    Self::new_controller(i2c, sda_pin, scl_pin, freq, resets, system_clock)
+                    Self::new_controller(i2c, sda_pin, scl_pin, freq.into(), resets, system_clock.into())
                 }
             }
         )+

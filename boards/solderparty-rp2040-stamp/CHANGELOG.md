@@ -7,22 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-### Added
-
-- None
-
 ### Changed
 
-- Use `rp2040-hal`'s entry function.
 - Migrate from `embedded-time` to `fugit`
-
-## 0.2.0 - 2022-06-13
-
-### Changed
-
-- Update to rp2040-hal 0.5.0
-
-## 0.1.0 - 2022-04-28
-
-- Initial release
 

@@ -50,9 +50,6 @@ use panic_halt as _;
 // Pull in any important traits
 use rp_pico::hal::prelude::*;
 
-// Embed the `Hz` function/trait:
-use embedded_time::rate::*;
-
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
 use rp_pico::hal::pac;
@@ -115,7 +112,7 @@ fn main() -> ! {
 
     // Setup a delay for the LED blink signals:
     let mut frame_delay =
-        cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+        cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // Import the `sin` function for a smooth hue animation from the
     // Pico rp2040 ROM:

@@ -28,7 +28,7 @@ use pimoroni_badger2040::hal;
 
 // A few traits required for using the CountDown timer
 use embedded_hal::timer::CountDown;
-use embedded_time::duration::Extensions;
+use fugit::ExtU32;
 
 #[entry]
 fn main() -> ! {
@@ -75,12 +75,12 @@ fn main() -> ! {
     loop {
         // LED on, and wait for 500ms
         led_pin.set_high().unwrap();
-        delay.start(500.milliseconds());
+        delay.start(500.millis());
         let _ = nb::block!(delay.wait());
 
         // LED off, and wait for 500ms
         led_pin.set_low().unwrap();
-        delay.start(500.milliseconds());
+        delay.start(500.millis());
         let _ = nb::block!(delay.wait());
     }
 }

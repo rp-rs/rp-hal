@@ -22,8 +22,7 @@ use hal::pac;
 use core::cell::RefCell;
 use critical_section::Mutex;
 use embedded_hal::digital::v2::ToggleableOutputPin;
-use embedded_time::duration::Microseconds;
-use embedded_time::fixed_point::FixedPoint;
+use fugit::MicrosDurationU32;
 use pac::interrupt;
 use rp2040_hal::clocks::Clock;
 use rp2040_hal::timer::Alarm;
@@ -42,8 +41,8 @@ type LedAndAlarm = (
 static mut LED_AND_ALARM: Mutex<RefCell<Option<LedAndAlarm>>> = Mutex::new(RefCell::new(None));
 
 // Period that each of the alarms will be set for - 1 second and 300ms respectively
-const SLOW_BLINK_INTERVAL_US: u32 = 1_000_000;
-const FAST_BLINK_INTERVAL_US: u32 = 300_000;
+const SLOW_BLINK_INTERVAL_US: MicrosDurationU32 = MicrosDurationU32::secs(1);
+const FAST_BLINK_INTERVAL_US: MicrosDurationU32 = MicrosDurationU32::millis(300);
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -96,7 +95,7 @@ fn main() -> ! {
     .unwrap();
 
     // Create simple delay
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // Set the pins to their default state
     let pins = hal::gpio::Pins::new(
@@ -113,7 +112,7 @@ fn main() -> ! {
     critical_section::with(|cs| {
         let mut alarm = timer.alarm_0().unwrap();
         // Schedule an alarm in 1 second
-        let _ = alarm.schedule(Microseconds(SLOW_BLINK_INTERVAL_US));
+        let _ = alarm.schedule(SLOW_BLINK_INTERVAL_US);
         // Enable generating an interrupt on alarm
         alarm.enable_interrupt();
         // Move alarm into ALARM, so that it can be accessed from interrupts
@@ -151,7 +150,7 @@ fn TIMER_IRQ_0() {
             // Clear the alarm interrupt or this interrupt service routine will keep firing
             alarm.clear_interrupt();
             // Schedule a new alarm after SLOW_BLINK_INTERVAL_US have passed (1 second)
-            let _ = alarm.schedule(Microseconds(SLOW_BLINK_INTERVAL_US));
+            let _ = alarm.schedule(SLOW_BLINK_INTERVAL_US);
             // Blink the LED so we know we hit this interrupt
             led.toggle().unwrap();
             // Return LED_AND_ALARM into our static variable
@@ -172,7 +171,7 @@ extern "C" fn timer_irq0_replacement() {
             // Clear the alarm interrupt or this interrupt service routine will keep firing
             alarm.clear_interrupt();
             // Schedule a new alarm after FAST_BLINK_INTERVAL_US have passed (300 milliseconds)
-            let _ = alarm.schedule(Microseconds(FAST_BLINK_INTERVAL_US));
+            let _ = alarm.schedule(FAST_BLINK_INTERVAL_US);
             led.toggle().unwrap();
             // Return LED_AND_ALARM into our static variable
             unsafe {
