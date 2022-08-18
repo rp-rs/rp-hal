@@ -12,7 +12,6 @@
 #![no_std]
 #![no_main]
 
-use embedded_time::fixed_point::FixedPoint;
 use hal::clocks::Clock;
 use hal::multicore::{Multicore, Stack};
 use hal::sio::Sio;
@@ -107,7 +106,7 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let sys_freq = clocks.system_clock.freq().integer();
+    let sys_freq = clocks.system_clock.freq().to_Hz();
 
     // The single-cycle I/O block controls our GPIO pins
     let mut sio = hal::sio::Sio::new(pac.SIO);

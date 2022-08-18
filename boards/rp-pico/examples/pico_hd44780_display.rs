@@ -48,9 +48,6 @@ use rp_pico::hal::prelude::*;
 // GPIO traits
 use embedded_hal::digital::v2::OutputPin;
 
-// Time handling traits
-use embedded_time::rate::*;
-
 // For LCD display
 use hd44780_driver::HD44780;
 
@@ -95,7 +92,7 @@ fn main() -> ! {
     let mut led_pin = pins.led.into_push_pull_output();
 
     // The delay object lets us wait for specified amounts of time
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // Init pins
     let rs = pins.gpio7.into_push_pull_output();

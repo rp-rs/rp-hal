@@ -22,7 +22,6 @@ use hal::pac;
 
 // Some traits we need
 use embedded_hal::digital::v2::OutputPin;
-use embedded_time::fixed_point::FixedPoint;
 use rp2040_hal::clocks::Clock;
 
 /// The linker will place this boot block at the start of our program image. We
@@ -64,7 +63,7 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);

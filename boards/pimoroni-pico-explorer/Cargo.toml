@@ -17,7 +17,7 @@ cortex-m-rt = { version = "0.7", optional = true }
 embedded-hal = { version = "0.2.4", features = ["unproven"] }
 st7789 = "0.6.1"
 display-interface-spi = "0.4.1"
-embedded-time = "0.12.0"
+fugit = "0.3.5"
 embedded-graphics = "0.7.1"
 rp2040-boot2 = { version = "0.2.0", optional = true }
 

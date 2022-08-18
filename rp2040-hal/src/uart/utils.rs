@@ -1,7 +1,8 @@
+use fugit::HertzU32;
+
 use crate::pac::{uart0::RegisterBlock, UART0, UART1};
 use crate::resets::SubsystemReset;
 use core::ops::Deref;
-use embedded_time::rate::Baud;
 
 /// Error type for UART operations.
 #[derive(Debug)]
@@ -73,7 +74,7 @@ pub enum Parity {
 #[non_exhaustive]
 pub struct UartConfig {
     /// The baudrate the uart will run at.
-    pub baudrate: Baud,
+    pub baudrate: HertzU32,
 
     /// The amount of data bits the uart should be configured to.
     pub data_bits: DataBits,
@@ -88,7 +89,7 @@ pub struct UartConfig {
 impl Default for UartConfig {
     fn default() -> Self {
         Self {
-            baudrate: Baud(115_200),
+            baudrate: HertzU32::from_raw(115_200),
             data_bits: DataBits::Eight,
             stop_bits: StopBits::One,
             parity: None,

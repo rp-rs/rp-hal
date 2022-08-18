@@ -25,7 +25,6 @@ use rp_pico::hal::pac::interrupt;
 use panic_halt as _;
 
 // Pull in any important traits
-use embedded_time::fixed_point::FixedPoint;
 use rp_pico::hal::prelude::*;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
@@ -136,7 +135,7 @@ fn main() -> ! {
         pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
     };
     let core = pac::CorePeripherals::take().unwrap();
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // Move the cursor up and down every 200ms
     loop {

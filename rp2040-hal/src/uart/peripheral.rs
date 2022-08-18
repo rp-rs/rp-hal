@@ -8,9 +8,7 @@ use crate::pac::uart0::uartlcr_h::W as UART_LCR_H_Writer;
 use core::convert::Infallible;
 use core::fmt;
 use embedded_hal::serial::{Read, Write};
-use embedded_time::fixed_point::FixedPoint;
-use embedded_time::rate::Baud;
-use embedded_time::rate::Hertz;
+use fugit::HertzU32;
 use nb::Error::{Other, WouldBlock};
 use rp2040_pac::{UART0, UART1};
 
@@ -57,10 +55,10 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
     pub fn enable(
         self,
         config: UartConfig,
-        frequency: Hertz,
+        frequency: HertzU32,
     ) -> Result<UartPeripheral<Enabled, D, P>, Error> {
         let (mut device, pins) = self.free();
-        configure_baudrate(&mut device, &config.baudrate, &frequency)?;
+        configure_baudrate(&mut device, config.baudrate, frequency)?;
 
         device.uartlcr_h.write(|w| {
             // FIFOs are enabled
@@ -229,15 +227,15 @@ impl<P: ValidUartPinout<UART1>> UartPeripheral<Enabled, UART1, P> {
 /// From the wanted baudrate, we calculate the divider's two parts: integer and fractional parts.
 /// Code inspired from the C SDK.
 fn calculate_baudrate_dividers(
-    wanted_baudrate: &Baud,
-    frequency: &Hertz,
+    wanted_baudrate: HertzU32,
+    frequency: HertzU32,
 ) -> Result<(u16, u16), Error> {
     // See Chapter 4, Section 2 §7.1 from the datasheet for an explanation of how baudrate is
     // calculated
     let baudrate_div = frequency
-        .integer()
+        .to_Hz()
         .checked_mul(8)
-        .and_then(|r| r.checked_div(wanted_baudrate.integer()))
+        .and_then(|r| r.checked_div(wanted_baudrate.to_Hz()))
         .ok_or(Error::BadArgument)?;
 
     Ok(match (baudrate_div >> 7, ((baudrate_div & 0x7F) + 1) / 2) {
@@ -252,9 +250,9 @@ fn calculate_baudrate_dividers(
 /// Baudrate configuration. Code loosely inspired from the C SDK.
 fn configure_baudrate(
     device: &mut dyn UartDevice,
-    wanted_baudrate: &Baud,
-    frequency: &Hertz,
-) -> Result<Baud, Error> {
+    wanted_baudrate: HertzU32,
+    frequency: HertzU32,
+) -> Result<HertzU32, Error> {
     let (baud_div_int, baud_div_frac) = calculate_baudrate_dividers(wanted_baudrate, frequency)?;
 
     // First we load the integer part of the divider.
@@ -273,8 +271,8 @@ fn configure_baudrate(
     // divisors. We don't want to actually change LCR contents here.
     device.uartlcr_h.modify(|_, w| w);
 
-    Ok(Baud(
-        (4 * frequency.integer()) / (64 * baud_div_int + baud_div_frac) as u32,
+    Ok(HertzU32::from_raw(
+        (4 * frequency.to_Hz()) / (64 * baud_div_int + baud_div_frac) as u32,
     ))
 }
 

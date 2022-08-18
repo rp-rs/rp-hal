@@ -30,7 +30,7 @@ use embedded_hal::{
     digital::v2::{InputPin, OutputPin},
     spi::MODE_0,
 };
-use embedded_time::rate::*;
+use fugit::RateExtU32;
 pub use hal::pac;
 use hal::{
     adc::Adc,
@@ -211,12 +211,7 @@ impl PicoExplorer {
         let spi_sclk = internal_pins.spi_sclk.into_mode::<FunctionSpi>();
         let spi_mosi = internal_pins.spi_mosi.into_mode::<FunctionSpi>();
 
-        let spi_screen = Spi::<_, _, 8>::new(spi0).init(
-            resets,
-            125_000_000u32.Hz(),
-            16_000_000u32.Hz(),
-            &MODE_0,
-        );
+        let spi_screen = Spi::<_, _, 8>::new(spi0).init(resets, 125u32.MHz(), 16u32.MHz(), &MODE_0);
 
         let spii_screen = SPIInterface::new(spi_screen, dc, cs);
 

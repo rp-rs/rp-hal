@@ -14,7 +14,7 @@ cortex-m = "0.7.2"
 cortex-m-rt = ">=0.6.15,<0.8"
 embedded-hal = { version = "0.2.5", features = ["unproven"] }
 eh1_0_alpha = { package = "embedded-hal", version = "=1.0.0-alpha.8",  optional = true }
-embedded-time = "0.12.0"
+fugit = "0.3.6"
 itertools = { version = "0.10.1", default-features = false }
 nb = "1.0"
 rp2040-pac = "0.3.0"

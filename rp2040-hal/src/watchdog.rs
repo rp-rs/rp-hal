@@ -9,7 +9,7 @@
 //! ## Usage
 //! ```no_run
 //! use cortex_m::prelude::{_embedded_hal_watchdog_Watchdog, _embedded_hal_watchdog_WatchdogEnable};
-//! use embedded_time::duration::units::*;
+//! use fugit::ExtU32;
 //! use rp2040_hal::{clocks::init_clocks_and_plls, pac, watchdog::Watchdog};
 //! let mut pac = pac::Peripherals::take().unwrap();
 //! let mut watchdog = Watchdog::new(pac.WATCHDOG);
@@ -23,7 +23,7 @@
 //!     &mut watchdog,
 //! ).ok().unwrap();
 //! // Set to watchdog to reset if it's not reloaded within 1.05 seconds, and start it
-//! watchdog.start(1_050_000.microseconds());
+//! watchdog.start(1_050_000.micros());
 //! // Feed the watchdog once per cycle to avoid reset
 //! for _ in 1..=10000 {
 //!     cortex_m::asm::delay(100_000);
@@ -36,7 +36,7 @@
 
 use crate::pac::WATCHDOG;
 use embedded_hal::watchdog;
-use embedded_time::{duration, fixed_point::FixedPoint};
+use fugit::MicrosDurationU32;
 
 /// Watchdog peripheral
 pub struct Watchdog {
@@ -114,14 +114,14 @@ impl watchdog::Watchdog for Watchdog {
 }
 
 impl watchdog::WatchdogEnable for Watchdog {
-    type Time = duration::Microseconds;
+    type Time = MicrosDurationU32;
 
     fn start<T: Into<Self::Time>>(&mut self, period: T) {
         const MAX_PERIOD: u32 = 0xFFFFFF;
 
         // Due to a logic error, the watchdog decrements by 2 and
         // the load value must be compensated; see RP2040-E1
-        self.delay_ms = period.into().integer() * 2;
+        self.delay_ms = period.into().to_millis() * 2;
 
         if self.delay_ms > MAX_PERIOD {
             panic!("Period cannot exceed maximum load value of {}", MAX_PERIOD);

@@ -23,7 +23,6 @@
 
 use crate::clocks::Clock;
 use crate::clocks::RtcClock;
-use embedded_time::fixed_point::FixedPoint;
 use rp2040_pac::{RESETS, RTC};
 
 mod filter;
@@ -66,7 +65,7 @@ impl RealTimeClock {
         }
 
         // Set the RTC divider
-        let freq = clock.freq().integer() - 1;
+        let freq = clock.freq().to_Hz() - 1;
         rtc.clkdiv_m1.write(|w| unsafe { w.bits(freq) });
 
         let mut result = Self { rtc };

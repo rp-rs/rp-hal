@@ -26,7 +26,6 @@ use hal::pac;
 // Some traits we need
 use embedded_hal::digital::v2::InputPin;
 use embedded_hal::digital::v2::OutputPin;
-use embedded_time::fixed_point::FixedPoint;
 use hal::gpio::dynpin::DynPin;
 use hal::Clock;
 
@@ -124,7 +123,7 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // Use GPIO 28 as an InOutPin
     let mut pin = InOutPin::new(pins.gpio28.into());

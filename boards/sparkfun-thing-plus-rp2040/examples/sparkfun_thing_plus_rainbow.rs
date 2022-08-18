@@ -10,7 +10,7 @@
 
 use core::iter::once;
 use embedded_hal::timer::CountDown;
-use embedded_time::duration::Extensions;
+use fugit::ExtU32;
 use panic_halt as _;
 
 use smart_leds::{brightness, SmartLedsWrite, RGB8};
@@ -82,7 +82,7 @@ fn main() -> ! {
         ws.write(brightness(once(wheel(n)), 32)).unwrap();
         n = n.wrapping_add(1);
 
-        delay.start(25.milliseconds());
+        delay.start(25.millis());
         let _ = nb::block!(delay.wait());
     }
 }

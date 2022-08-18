@@ -10,4 +10,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Use `rp2040-hal`'s entry function.
+- Migrate from `embedded-time` to `fugit`
 

@@ -23,8 +23,7 @@ use hal::pac;
 // Some traits we need
 use embedded_hal::digital::v2::OutputPin;
 use embedded_hal::watchdog::{Watchdog, WatchdogEnable};
-use embedded_time::duration::Extensions;
-use embedded_time::fixed_point::FixedPoint;
+use fugit::ExtU32;
 use rp2040_hal::clocks::Clock;
 
 /// The linker will place this boot block at the start of our program image. We
@@ -67,7 +66,7 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);
@@ -88,7 +87,7 @@ fn main() -> ! {
     delay.delay_ms(2000);
 
     // Set to watchdog to reset if it's not reloaded within 1.05 seconds, and start it
-    watchdog.start(1_050_000u32.microseconds());
+    watchdog.start(1_050.millis());
 
     // Blink once a second for 5 seconds, refreshing the watchdog timer once a second to avoid a reset
     for _ in 1..=5 {

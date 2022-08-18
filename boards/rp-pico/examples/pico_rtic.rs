@@ -7,13 +7,13 @@ use panic_halt as _;
 mod app {
 
     use embedded_hal::digital::v2::OutputPin;
-    use embedded_time::duration::Extensions;
+    use fugit::SecsDurationU32;
     use rp_pico::{
         hal::{self, clocks::init_clocks_and_plls, timer::Alarm, watchdog::Watchdog, Sio},
         XOSC_CRYSTAL_FREQ,
     };
 
-    const SCAN_TIME_US: u32 = 1000000;
+    const SCAN_TIME_US: SecsDurationU32 = SecsDurationU32::secs(1);
 
     #[shared]
     struct Shared {
@@ -58,7 +58,7 @@ mod app {
 
         let mut timer = hal::Timer::new(c.device.TIMER, &mut resets);
         let mut alarm = timer.alarm_0().unwrap();
-        let _ = alarm.schedule(SCAN_TIME_US.microseconds());
+        let _ = alarm.schedule(SCAN_TIME_US);
         alarm.enable_interrupt();
 
         (Shared { timer, alarm, led }, Local {}, init::Monotonics())
@@ -81,7 +81,7 @@ mod app {
         let mut alarm = c.shared.alarm;
         (alarm).lock(|a| {
             a.clear_interrupt();
-            let _ = a.schedule(SCAN_TIME_US.microseconds());
+            let _ = a.schedule(SCAN_TIME_US);
         });
     }
 }
