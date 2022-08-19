@@ -95,9 +95,7 @@
 // The macro for our start-up function
 use rp_pico::entry;
 
-// info!() and error!() macros for printing information to the debug output
-use defmt::*;
-use defmt_rtt as _;
+use rtt_target::{rprintln, rtt_init_print};
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
@@ -197,7 +195,9 @@ fn blink_signals_loop(
 
 #[entry]
 fn main() -> ! {
-    info!("Program start");
+    rtt_init_print!();
+
+    rprintln!("Program start");
 
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
@@ -255,7 +255,7 @@ fn main() -> ! {
         &embedded_hal::spi::MODE_0,
     );
 
-    info!("Aquire SPI SD/MMC BlockDevice...");
+    rprintln!("Aquire SPI SD/MMC BlockDevice...");
     let mut sdspi = SdMmcSpi::new(spi, spi_cs);
 
     blink_signals(&mut led_pin, &mut delay, &BLINK_OK_LONG);
@@ -265,34 +265,34 @@ fn main() -> ! {
     let block = match sdspi.acquire() {
         Ok(block) => block,
         Err(e) => {
-            error!("Error retrieving card size: {}", defmt::Debug2Format(&e));
+            rprintln!("Error retrieving card size: {:?}", e);
             blink_signals_loop(&mut led_pin, &mut delay, &BLINK_ERR_2_SHORT);
         }
     };
 
     blink_signals(&mut led_pin, &mut delay, &BLINK_OK_LONG);
 
-    info!("Init SD card controller...");
+    rprintln!("Init SD card controller...");
     let mut cont = Controller::new(block, DummyTimesource::default());
 
     blink_signals(&mut led_pin, &mut delay, &BLINK_OK_LONG);
 
-    info!("OK!\nCard size...");
+    rprintln!("OK!\nCard size...");
     match cont.device().card_size_bytes() {
-        Ok(size) => info!("card size is {} bytes", size),
+        Ok(size) => rprintln!("card size is {} bytes", size),
         Err(e) => {
-            error!("Error retrieving card size: {}", defmt::Debug2Format(&e));
+            rprintln!("Error retrieving card size: {:?}", e);
             blink_signals_loop(&mut led_pin, &mut delay, &BLINK_ERR_3_SHORT);
         }
     }
 
     blink_signals(&mut led_pin, &mut delay, &BLINK_OK_LONG);
 
-    info!("Getting Volume 0...");
+    rprintln!("Getting Volume 0...");
     let mut volume = match cont.get_volume(VolumeIdx(0)) {
         Ok(v) => v,
         Err(e) => {
-            error!("Error getting volume 0: {}", defmt::Debug2Format(&e));
+            rprintln!("Error getting volume 0: {:?}", e);
             blink_signals_loop(&mut led_pin, &mut delay, &BLINK_ERR_4_SHORT);
         }
     };
@@ -304,18 +304,18 @@ fn main() -> ! {
     let dir = match cont.open_root_dir(&volume) {
         Ok(dir) => dir,
         Err(e) => {
-            error!("Error opening root dir: {}", defmt::Debug2Format(&e));
+            rprintln!("Error opening root dir: {:?}", e);
             blink_signals_loop(&mut led_pin, &mut delay, &BLINK_ERR_5_SHORT);
         }
     };
 
-    info!("Root directory opened!");
+    rprintln!("Root directory opened!");
     blink_signals(&mut led_pin, &mut delay, &BLINK_OK_LONG);
 
     // This shows how to iterate through the directory and how
     // to get the file names (and print them in hope they are UTF-8 compatible):
     cont.iterate_dir(&volume, &dir, |ent| {
-        info!(
+        rprintln!(
             "/{}.{}",
             core::str::from_utf8(ent.name.base_name()).unwrap(),
             core::str::from_utf8(ent.name.extension()).unwrap()
@@ -334,7 +334,7 @@ fn main() -> ! {
         cont.close_file(&volume, file).unwrap();
 
         if read_count >= 2 {
-            info!("READ {} bytes: {}", read_count, buf);
+            rprintln!("READ {} bytes: {:?}", read_count, buf);
 
             // If we read what we wrote before the last reset,
             // we set a flag so that the success blinking at the end
@@ -353,7 +353,7 @@ fn main() -> ! {
             cont.close_file(&volume, file).unwrap();
         }
         Err(e) => {
-            error!("Error opening file 'O.TST': {}", defmt::Debug2Format(&e));
+            rprintln!("Error opening file 'O.TST': {:?}", e);
             blink_signals_loop(&mut led_pin, &mut delay, &BLINK_ERR_6_SHORT);
         }
     }
@@ -363,10 +363,10 @@ fn main() -> ! {
     blink_signals(&mut led_pin, &mut delay, &BLINK_OK_LONG);
 
     if successful_read {
-        info!("Successfully read previously written file 'O.TST'");
+        rprintln!("Successfully read previously written file 'O.TST'");
     } else {
-        info!("Could not read file, which is ok for the first run.");
-        info!("Reboot the pico!");
+        rprintln!("Could not read file, which is ok for the first run.");
+        rprintln!("Reboot the pico!");
     }
 
     loop {

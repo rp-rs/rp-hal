@@ -12,8 +12,8 @@
 #![no_std]
 #![no_main]
 
-use defmt::info;
-use defmt_rtt as _;
+use rtt_target::{rprintln, rtt_init_print};
+
 // The macro for our start-up function
 use rp_pico::entry;
 
@@ -90,6 +90,8 @@ fn pio_pwm_set_level<T: ValidStateMachine>(tx: &mut Tx<T>, level: u32) {
 /// infinite loop.
 #[entry]
 fn main() -> ! {
+    rtt_init_print!();
+
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
     let core = pac::CorePeripherals::take().unwrap();
@@ -156,7 +158,7 @@ fn main() -> ! {
     // Loop forever and adjust duty cycle to make te led brighter
     let mut level = 0;
     loop {
-        info!("Level = {}", level);
+        rprintln!("Level = {}", level);
         pio_pwm_set_level(&mut tx, level * level);
         level = (level + 1) % 256;
         delay.delay_ms(10);

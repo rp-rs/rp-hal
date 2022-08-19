@@ -3,11 +3,10 @@
 #![no_main]
 
 use bsp::entry;
-use defmt::*;
-use defmt_rtt as _;
 use embedded_hal::digital::v2::OutputPin;
 use embedded_time::fixed_point::FixedPoint;
 use panic_halt as _;
+use rtt_target::{rprintln, rtt_init_print};
 
 use pimoroni_tiny2040 as bsp;
 
@@ -20,7 +19,8 @@ use bsp::hal::{
 
 #[entry]
 fn main() -> ! {
-    info!("Program start");
+    rtt_init_print!();
+    rprintln!("Program start");
     let mut pac = pac::Peripherals::take().unwrap();
     let core = pac::CorePeripherals::take().unwrap();
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
