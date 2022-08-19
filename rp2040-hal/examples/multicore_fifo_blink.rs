@@ -12,9 +12,6 @@
 #![no_std]
 #![no_main]
 
-// The macro for our start-up function
-use cortex_m_rt::entry;
-
 use embedded_time::fixed_point::FixedPoint;
 use hal::clocks::Clock;
 use hal::multicore::{Multicore, Stack};
@@ -83,12 +80,12 @@ fn core1_task(sys_freq: u32) -> ! {
 
 /// Entry point to our bare-metal application.
 ///
-/// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
-/// as soon as all global variables are initialised.
+/// The `#[rp2040_hal::entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables and the spinlock are initialised.
 ///
 /// The function configures the RP2040 peripherals, then toggles a GPIO pin in
 /// an infinite loop. If there is an LED connected to that pin, it will blink.
-#[entry]
+#[rp2040_hal::entry]
 fn main() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
