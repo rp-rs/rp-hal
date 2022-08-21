@@ -273,7 +273,7 @@ fn main() -> ! {
     blink_signals(&mut led_pin, &mut delay, &BLINK_OK_LONG);
 
     info!("Init SD card controller...");
-    let mut cont = Controller::new(block, DummyTimesource::default());
+    let mut cont: Controller<_, _, 4, 4> = Controller::new(block, DummyTimesource::default());
 
     blink_signals(&mut led_pin, &mut delay, &BLINK_OK_LONG);
 
