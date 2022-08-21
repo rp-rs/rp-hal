@@ -22,12 +22,13 @@
 //! let mut watchdog = Watchdog::new(peripherals.WATCHDOG);
 //! const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates
 //!
-//! // Start tick in watchdog
-//! watchdog.enable_tick_generation(XOSC_CRYSTAL_FREQ as u8);
-//!
-//! let mut clocks = ClocksManager::new(peripherals.CLOCKS);
 //! // Enable the xosc
 //! let xosc = setup_xosc_blocking(peripherals.XOSC, XOSC_CRYSTAL_FREQ.Hz()).map_err(InitError::XoscErr)?;
+//!
+//! // Start tick in watchdog
+//! watchdog.enable_tick_generation((XOSC_CRYSTAL_FREQ / 1_000_000) as u8);
+//!
+//! let mut clocks = ClocksManager::new(peripherals.CLOCKS);
 //!
 //! // Configure PLLs
 //! //                   REF     FBDIV VCO            POSTDIV
