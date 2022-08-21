@@ -38,9 +38,6 @@
 #![no_std]
 #![no_main]
 
-// The macro for our start-up function
-use cortex_m_rt::entry;
-
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
@@ -57,7 +54,11 @@ use embedded_time::rate::*;
 // For LCD display
 use hd44780_driver::HD44780;
 
-#[entry]
+/// Entry point to our bare-metal application.
+///
+/// The `#[rp_pico::entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables and the spinlock are initialised.
+#[rp_pico::entry]
 fn main() -> ! {
     // Grab our singleton objects
     let mut pac = rp_pico::hal::pac::Peripherals::take().unwrap();

@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- None
+- Use `rp2040-hal`'s entry function.
 
 ## 0.2.0 - 2022-06-13
 
