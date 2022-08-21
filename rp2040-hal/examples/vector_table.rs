@@ -23,7 +23,7 @@ use hal::pac;
 
 // Some traits we need
 use core::cell::RefCell;
-use cortex_m::interrupt::Mutex;
+use critical_section::Mutex;
 use embedded_hal::digital::v2::ToggleableOutputPin;
 use embedded_time::duration::Microseconds;
 use embedded_time::fixed_point::FixedPoint;
@@ -113,7 +113,7 @@ fn main() -> ! {
     let led_pin = pins.gpio25.into_push_pull_output();
 
     let mut timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS);
-    cortex_m::interrupt::free(|cs| {
+    critical_section::with(|cs| {
         let mut alarm = timer.alarm_0().unwrap();
         // Schedule an alarm in 1 second
         let _ = alarm.schedule(Microseconds(SLOW_BLINK_INTERVAL_US));
@@ -132,7 +132,7 @@ fn main() -> ! {
     // After 5 seconds, switch to our modified vector rable
     delay.delay_ms(5000);
     unsafe {
-        cortex_m::interrupt::free(|_| {
+        critical_section::with(|_| {
             RAM_VTABLE.activate(ppb);
         });
     }
@@ -147,7 +147,7 @@ fn main() -> ! {
 // that this interrupt entry ends up in the vector table.
 #[interrupt]
 fn TIMER_IRQ_0() {
-    cortex_m::interrupt::free(|cs| {
+    critical_section::with(|cs| {
         // Temporarily take our LED_AND_ALARM
         let ledalarm = unsafe { LED_AND_ALARM.borrow(cs).take() };
         if let Some((mut led, mut alarm)) = ledalarm {
@@ -169,7 +169,7 @@ fn TIMER_IRQ_0() {
 
 // This is the function we will use to replace TIMER_IRQ_0 in our RAM Vector Table
 extern "C" fn timer_irq0_replacement() {
-    cortex_m::interrupt::free(|cs| {
+    critical_section::with(|cs| {
         let ledalarm = unsafe { LED_AND_ALARM.borrow(cs).take() };
         if let Some((mut led, mut alarm)) = ledalarm {
             // Clear the alarm interrupt or this interrupt service routine will keep firing

@@ -44,7 +44,7 @@ use hal::pac::interrupt;
 
 // Some short-cuts to useful types
 use core::cell::RefCell;
-use cortex_m::interrupt::Mutex;
+use critical_section::Mutex;
 use rp2040_hal::gpio;
 
 // The GPIO interrupt type we're going to generate
@@ -133,7 +133,7 @@ fn main() -> ! {
 
     // Give away our pins by moving them into the `GLOBAL_PINS` variable.
     // We won't need to access them in the main thread again
-    cortex_m::interrupt::free(|cs| {
+    critical_section::with(|cs| {
         GLOBAL_PINS.borrow(cs).replace(Some((led, in_pin)));
     });
 
@@ -159,7 +159,7 @@ fn IO_IRQ_BANK0() {
     // This is one-time lazy initialisation. We steal the variables given to us
     // via `GLOBAL_PINS`.
     if LED_AND_BUTTON.is_none() {
-        cortex_m::interrupt::free(|cs| {
+        critical_section::with(|cs| {
             *LED_AND_BUTTON = GLOBAL_PINS.borrow(cs).take();
         });
     }
