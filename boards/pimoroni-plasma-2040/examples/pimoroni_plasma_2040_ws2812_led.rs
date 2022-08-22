@@ -6,9 +6,6 @@
 #![no_std]
 #![no_main]
 
-// The macro for our start-up function
-use cortex_m_rt::entry;
-
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
@@ -44,7 +41,11 @@ use ws2812_pio::Ws2812;
 // to keep the power draw compatible with USB:
 const STRIP_LEN: usize = 3;
 
-#[entry]
+/// Entry point to our bare-metal application.
+///
+/// The `#[pimoroni_plasma_2040::entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables and the spinlock are initialised.
+#[pimoroni_plasma_2040::entry]
 fn main() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();

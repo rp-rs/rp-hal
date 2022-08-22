@@ -2,7 +2,6 @@
 #![no_std]
 #![no_main]
 
-use cortex_m_rt::entry;
 use defmt::*;
 use defmt_rtt as _;
 use embedded_hal::digital::v2::OutputPin;
@@ -18,7 +17,11 @@ use bsp::hal::{
     watchdog::Watchdog,
 };
 
-#[entry]
+/// Entry point to our bare-metal application.
+///
+/// The `#[rp2040_hal::entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables and the spinlock are initialised.
+#[rp2040_hal::entry]
 fn main() -> ! {
     info!("Program start");
     let mut pac = pac::Peripherals::take().unwrap();

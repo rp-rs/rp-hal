@@ -4,7 +4,6 @@
 #![no_std]
 #![no_main]
 
-use cortex_m_rt::entry;
 use hal::gpio::{FunctionPio0, Pin};
 use hal::pac;
 use hal::pio::PIOExt;
@@ -14,9 +13,15 @@ use rp2040_hal as hal;
 
 #[link_section = ".boot2"]
 #[used]
-pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
 
-#[entry]
+/// Entry point to our bare-metal application.
+///
+/// The `#[rp2040_hal::entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables and the spinlock are initialised.
+///
+/// The function configures the RP2040 peripherals, then blinks an LED using the PIO peripheral.
+#[rp2040_hal::entry]
 fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
 
@@ -64,6 +69,7 @@ fn main() -> ! {
     sm.start();
 
     // PIO runs in background, independently from CPU
-    #[allow(clippy::empty_loop)]
-    loop {}
+    loop {
+        cortex_m::asm::wfi();
+    }
 }

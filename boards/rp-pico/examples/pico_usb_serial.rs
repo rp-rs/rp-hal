@@ -63,6 +63,17 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
+    #[cfg(feature = "rp2040-e5")]
+    {
+        let sio = hal::Sio::new(pac.SIO);
+        let _pins = rp_pico::Pins::new(
+            pac.IO_BANK0,
+            pac.PADS_BANK0,
+            sio.gpio_bank0,
+            &mut pac.RESETS,
+        );
+    }
+
     // Set up the USB driver
     let usb_bus = UsbBusAllocator::new(hal::usb::UsbBus::new(
         pac.USBCTRL_REGS,

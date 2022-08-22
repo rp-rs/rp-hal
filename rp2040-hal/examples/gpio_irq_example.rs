@@ -22,9 +22,6 @@
 #![no_std]
 #![no_main]
 
-// The macro for our start-up function
-use cortex_m_rt::entry;
-
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
@@ -44,7 +41,7 @@ use hal::pac::interrupt;
 
 // Some short-cuts to useful types
 use core::cell::RefCell;
-use cortex_m::interrupt::Mutex;
+use critical_section::Mutex;
 use rp2040_hal::gpio;
 
 // The GPIO interrupt type we're going to generate
@@ -54,7 +51,7 @@ use rp2040_hal::gpio::Interrupt::EdgeLow;
 /// need this to help the ROM bootloader get our code up and running.
 #[link_section = ".boot2"]
 #[used]
-pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
 
 /// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz. Adjust
 /// if your board has a different frequency
@@ -82,12 +79,12 @@ static GLOBAL_PINS: Mutex<RefCell<Option<LedAndButton>>> = Mutex::new(RefCell::n
 
 /// Entry point to our bare-metal application.
 ///
-/// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
-/// as soon as all global variables are initialised.
+/// The `#[rp2040_hal::entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables and the spinlock are initialised.
 ///
 /// The function configures the RP2040 peripherals, then toggles a GPIO pin in
 /// an infinite loop. If there is an LED connected to that pin, it will blink.
-#[entry]
+#[rp2040_hal::entry]
 fn main() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
@@ -133,7 +130,7 @@ fn main() -> ! {
 
     // Give away our pins by moving them into the `GLOBAL_PINS` variable.
     // We won't need to access them in the main thread again
-    cortex_m::interrupt::free(|cs| {
+    critical_section::with(|cs| {
         GLOBAL_PINS.borrow(cs).replace(Some((led, in_pin)));
     });
 
@@ -147,11 +144,7 @@ fn main() -> ! {
 
     loop {
         // interrupts handle everything else in this example.
-        // if we wanted low power we could go to sleep. to
-        // keep this example simple we'll just execute a `nop`.
-        // the `nop` (No Operation) instruction does nothing,
-        // but if we have no code here clippy would complain.
-        cortex_m::asm::nop();
+        cortex_m::asm::wfi();
     }
 }
 
@@ -163,7 +156,7 @@ fn IO_IRQ_BANK0() {
     // This is one-time lazy initialisation. We steal the variables given to us
     // via `GLOBAL_PINS`.
     if LED_AND_BUTTON.is_none() {
-        cortex_m::interrupt::free(|cs| {
+        critical_section::with(|cs| {
             *LED_AND_BUTTON = GLOBAL_PINS.borrow(cs).take();
         });
     }
@@ -174,14 +167,17 @@ fn IO_IRQ_BANK0() {
         // these will be of type `&mut LedPin` and `&mut ButtonPin`, so we don't have
         // to move them back into the static after we use them
         let (led, button) = gpios;
+        // Check if the interrupt source is from the pushbutton going from high-to-low.
+        // Note: this will always be true in this example, as that is the only enabled GPIO interrupt source
+        if button.interrupt_status(EdgeLow) {
+            // toggle can't fail, but the embedded-hal traits always allow for it
+            // we can discard the return value by assigning it to an unnamed variable
+            let _ = led.toggle();
 
-        // toggle can't fail, but the embedded-hal traits always allow for it
-        // we can discard the return value by assigning it to an unnamed variable
-        let _ = led.toggle();
-
-        // Our interrupt doesn't clear itself.
-        // Do that now so we don't immediately jump back to this interrupt handler.
-        button.clear_interrupt(EdgeLow);
+            // Our interrupt doesn't clear itself.
+            // Do that now so we don't immediately jump back to this interrupt handler.
+            button.clear_interrupt(EdgeLow);
+        }
     }
 }
 

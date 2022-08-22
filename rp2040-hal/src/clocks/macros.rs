@@ -417,9 +417,9 @@ macro_rules! base_clock {
 
             impl Sealed for $name {}
 
-            impl From<$name> for Hertz
+            impl From<&$name> for Hertz
              {
-                fn from(value: $name) -> Hertz {
+                fn from(value: &$name) -> Hertz {
                     value.frequency
                 }
             }

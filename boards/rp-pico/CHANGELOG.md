@@ -9,11 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- None
+- `rp2040-e5` feature enabling the workaround for errata 5 on the USB device peripheral.
+- Support for critical-section 1.0.0 in the examples.
 
 ### Changed
 
-- None
+- Use `rp2040-hal`'s entry function.
 
 ## 0.4.0 - 2022-06-13
 

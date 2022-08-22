@@ -1235,7 +1235,7 @@ macro_rules! bsp_pins {
                     <$crate::gpio::bank0::$Id as $crate::gpio::PinId>::DYN;
 
                     $( #[$attr] )*
-                    #[doc = "[DynPinMode]rp2040_hal::gpio::DynPinMode) "]
+                    #[doc = "[DynPinMode](rp2040_hal::gpio::DynPinMode) "]
                     #[doc = "for the `" $Alias "` alias."]
                     pub const [<$Alias:snake:upper _MODE>]: $crate::gpio::DynPinMode =
                     <$crate::gpio::$Mode as $crate::gpio::PinMode>::DYN;

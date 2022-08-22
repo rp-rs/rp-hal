@@ -134,7 +134,7 @@ fn main() -> ! {
         scl_pin,
         400.kHz(),
         &mut pac.RESETS,
-        clocks.peripheral_clock,
+        &clocks.peripheral_clock,
     );
 
     // Create the I²C display interface:

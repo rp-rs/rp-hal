@@ -10,9 +10,6 @@
 #![no_std]
 #![no_main]
 
-// The macro for our start-up function
-use cortex_m_rt::entry;
-
 use embedded_hal::digital::v2::OutputPin;
 // // Time handling traits
 use embedded_time::rate::*;
@@ -36,12 +33,12 @@ use bsp::hal;
 
 /// Entry point to our bare-metal application.
 ///
-/// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
-/// as soon as all global variables are initialised.
+/// The `#[arduino_nano_connect::entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables and the spinlock are initialised.
 ///
 /// The function configures the RP2040 peripherals, then blinks the LED in an
 /// infinite loop.
-#[entry]
+#[arduino_nano_connect::entry]
 fn main() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();

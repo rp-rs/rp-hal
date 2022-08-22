@@ -12,9 +12,6 @@
 #![no_std]
 #![no_main]
 
-// The macro for our start-up function
-use cortex_m_rt::entry;
-
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
@@ -35,7 +32,7 @@ use hal::pac;
 /// need this to help the ROM bootloader get our code up and running.
 #[link_section = ".boot2"]
 #[used]
-pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
 
 /// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz. Adjust
 /// if your board has a different frequency
@@ -43,12 +40,12 @@ const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
 /// Entry point to our bare-metal application.
 ///
-/// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
-/// as soon as all global variables are initialised.
+/// The `#[rp2040_hal::entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables and the spinlock are initialised.
 ///
 /// The function configures the RP2040 peripherals, then performs some example
 /// SPI transactions, then goes to sleep.
-#[entry]
+#[rp2040_hal::entry]
 fn main() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
@@ -121,9 +118,8 @@ fn main() -> ! {
         Err(_) => {} // handle errors
     };
 
-    #[allow(clippy::empty_loop)]
     loop {
-        // Empty loop
+        cortex_m::asm::wfi();
     }
 }
 

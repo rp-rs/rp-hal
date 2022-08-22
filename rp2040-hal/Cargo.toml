@@ -13,7 +13,7 @@ license = "MIT OR Apache-2.0"
 cortex-m = "0.7.2"
 cortex-m-rt = ">=0.6.15,<0.8"
 embedded-hal = { version = "0.2.5", features = ["unproven"] }
-eh1_0_alpha = { version = "=1.0.0-alpha.8", package="embedded-hal", optional=true }
+eh1_0_alpha = { package = "embedded-hal", version = "=1.0.0-alpha.8",  optional = true }
 embedded-time = "0.12.0"
 itertools = { version = "0.10.1", default-features = false }
 nb = "1.0"
@@ -21,11 +21,14 @@ rp2040-pac = "0.3.0"
 paste = "1.0"
 pio = "0.2.0"
 rp2040-hal-macros = { version = "0.1.0", path = "../rp2040-hal-macros" }
-usb-device = "0.2.8"
+usb-device = "0.2.9"
 vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
 rand_core = "0.6.3"
-critical-section = { version = "0.2.4", features = ["custom-impl"] }
+# Always set the custom-impl feature of legacy critical-section, even if we don't provide our own,
+# as the default implementation should no longer be used.
+critical-section_0_2 = { package = "critical-section", version = "0.2.4", features = ["custom-impl"] }
+critical-section = { version = "1.0.0" }
 
 futures = { version = "0.3", default-features = false, optional = true }
 chrono = { version = "0.4", default-features = false, optional = true }
@@ -35,18 +38,26 @@ defmt = { version = ">=0.2.0, <0.4", optional = true }
 [dev-dependencies]
 cortex-m-rt = "0.7"
 panic-halt = "0.2.0"
-rp2040-boot2 = "0.2.0"
+rp2040-boot2 = "0.2.1"
 hd44780-driver = "0.4.0"
 pio-proc = "0.2.0"
 dht-sensor = "0.2.1"
 
 [features]
+default = ["critical-section-impl"]
 rt = ["rp2040-pac/rt"]
 rom-func-cache = []
 disable-intrinsics = []
 rom-v2-intrinsics = []
+rp2040-e5 = [] # USB errata 5: USB device fails to exit RESET state on busy USB bus.
+critical-section-impl = ["critical-section/restore-state-u8"]
 
 [[example]]
 # irq example uses cortex-m-rt::interrupt, need rt feature for that
 name = "gpio_irq_example"
+required-features = ["rt"]
+
+[[example]]
+# vector_table example uses cortex-m-rt::interrupt, need rt feature for that
+name = "vector_table"
 required-features = ["rt"]

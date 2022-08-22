@@ -37,7 +37,7 @@ hal::bsp_pins!(
     Gpio14 {
         name: speaker_shutdown
     },
-    Gpio15 { name: speaker },
+    Gpio16 { name: speaker },
     Gpio17 {
         name: encoder_rota,
         aliases: { PullUpInput: RotaryA }
