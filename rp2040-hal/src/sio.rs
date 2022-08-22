@@ -785,9 +785,10 @@ pub trait Lane {
 ///
 /// // by having the configuration const, the validity is checked during compilation.
 /// const config: u32 = LaneCtrl {
-///     mask_msb: 4, // Most significant bit is the fourt
-///                 // By default the least significant bit is 0th
-///                 // the result will therefor be %32
+///     mask_msb: 4, // Most significant bit of the mask is bit 4
+///                  // By default the least significant bit is bit 0
+///                  // this will keep only the 5 least significant bits.
+///                  // this is equivalent to %32
 ///     ..LaneCtrl::DEFAULT
 /// }.encode();
 /// sio.interp0.get_lane0().set_ctrl(config);
