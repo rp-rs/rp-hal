@@ -679,40 +679,40 @@ pub unsafe fn spinlock_reset() {
 
 /// Configuration struct for one lane of the interpolator
 pub struct LaneCtrl {
-    #[doc = "Bit 22 - Only present on INTERP1 on each core. If CLAMP mode is enabled:  
-    - LANE0 result is shifted and masked ACCUM0, clamped by a lower bound of  
-    BASE0 and an upper bound of BASE1.  
-    - Signedness of these comparisons is determined by LANE0_CTRL_SIGNED"]
+    /// Bit 22 - Only present on INTERP1 on each core. If CLAMP mode is enabled:  
+    /// - LANE0 result is shifted and masked ACCUM0, clamped by a lower bound of  
+    /// BASE0 and an upper bound of BASE1.  
+    /// - Signedness of these comparisons is determined by LANE0_CTRL_SIGNED
     pub clamp: bool,
-    #[doc = "Bit 21 - Only present on INTERP0 on each core. If BLEND mode is enabled:
-    - LANE1 result is a linear interpolation between BASE0 and BASE1, controlled
-    by the 8 LSBs of lane 1 shift and mask value (a fractional number between
-    0 and 255/256ths)
-    - LANE0 result does not have BASE0 added (yields only
-    the 8 LSBs of lane 1 shift+mask value)
-    - FULL result does not have lane 1 shift+mask value added (BASE2 + lane 0 shift+mask)
-    LANE1 SIGNED flag controls whether the interpolation is signed or unsigned."]
+    /// Bit 21 - Only present on INTERP0 on each core. If BLEND mode is enabled:
+    /// - LANE1 result is a linear interpolation between BASE0 and BASE1, controlled
+    /// by the 8 LSBs of lane 1 shift and mask value (a fractional number between
+    /// 0 and 255/256ths)
+    /// - LANE0 result does not have BASE0 added (yields only
+    /// the 8 LSBs of lane 1 shift+mask value)
+    /// - FULL result does not have lane 1 shift+mask value added (BASE2 + lane 0 shift+mask)
+    /// LANE1 SIGNED flag controls whether the interpolation is signed or unsigned.
     pub blend: bool,
-    #[doc = "Bits 19:20 - ORed into bits 29:28 of the lane result presented to the processor on the bus.  
-    No effect on the internal 32-bit datapath. Handy for using a lane to generate sequence  
-    of pointers into flash or SRAM."]
+    /// Bits 19:20 - ORed into bits 29:28 of the lane result presented to the processor on the bus.  
+    /// No effect on the internal 32-bit datapath. Handy for using a lane to generate sequence  
+    /// of pointers into flash or SRAM.
     pub force_msb: u8,
-    #[doc = "Bit 18 - If 1, mask + shift is bypassed for LANE0 result. This does not affect FULL result."]
+    /// Bit 18 - If 1, mask + shift is bypassed for LANE0 result. This does not affect FULL result.
     pub add_raw: bool,
-    #[doc = "Bit 17 - If 1, feed the opposite lane's result into this lane's accumulator on POP."]
+    /// Bit 17 - If 1, feed the opposite lane's result into this lane's accumulator on POP.
     pub cross_result: bool,
-    #[doc = "Bit 16 - If 1, feed the opposite lane's accumulator into this lane's shift + mask hardware.  
-    Takes effect even if ADD_RAW is set (the CROSS_INPUT mux is before the shift+mask bypass)"]
+    /// Bit 16 - If 1, feed the opposite lane's accumulator into this lane's shift + mask hardware.  
+    /// Takes effect even if ADD_RAW is set (the CROSS_INPUT mux is before the shift+mask bypass)
     pub cross_input: bool,
-    #[doc = "Bit 15 - If SIGNED is set, the shifted and masked accumulator value is sign-extended to 32 bits  
-    before adding to BASE0, and LANE0 PEEK/POP appear extended to 32 bits when read by processor."]
+    /// Bit 15 - If SIGNED is set, the shifted and masked accumulator value is sign-extended to 32 bits  
+    /// before adding to BASE0, and LANE0 PEEK/POP appear extended to 32 bits when read by processor.
     pub signed: bool,
-    #[doc = "Bits 10:14 - The most-significant bit allowed to pass by the mask (inclusive)  
-    Setting MSB < LSB may cause chip to turn inside-out"]
+    /// Bits 10:14 - The most-significant bit allowed to pass by the mask (inclusive)  
+    /// Setting MSB < LSB may cause chip to turn inside-out
     pub mask_msb: u8,
-    #[doc = "Bits 5:9 - The least-significant bit allowed to pass by the mask (inclusive)"]
+    /// Bits 5:9 - The least-significant bit allowed to pass by the mask (inclusive)
     pub mask_lsb: u8,
-    #[doc = "Bits 0:4 - Logical right-shift applied to accumulator before masking"]
+    /// Bits 0:4 - Logical right-shift applied to accumulator before masking
     pub shift: u8,
 }
 
