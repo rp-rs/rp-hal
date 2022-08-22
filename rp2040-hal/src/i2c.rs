@@ -65,8 +65,11 @@ pub mod peripheral;
 
 /// I2C error
 #[non_exhaustive]
-#[derive(Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[cfg_attr(not(feature = "eh1_0_alpha"), derive(Debug))]
+#[cfg_attr(
+    all(feature = "defmt", not(feature = "eh1_0_alpha")),
+    derive(defmt::Format)
+)]
 pub enum Error {
     /// I2C abort with error
     Abort(u32),
@@ -78,6 +81,38 @@ pub enum Error {
     AddressOutOfRange(u16),
     /// Target i2c address is reserved
     AddressReserved(u16),
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl core::fmt::Debug for Error {
+    fn fmt(&self, fmt: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        use eh1_0_alpha::i2c::Error as _;
+        match self {
+            Error::InvalidReadBufferLength => write!(fmt, "InvalidReadBufferLength"),
+            Error::InvalidWriteBufferLength => write!(fmt, "InvalidWriteBufferLength"),
+            Error::AddressOutOfRange(addr) => write!(fmt, "AddressOutOfRange({:x})", addr),
+            Error::AddressReserved(addr) => write!(fmt, "AddressReserved({:x})", addr),
+            Error::Abort(_) => {
+                write!(fmt, "{:?}", self.kind())
+            }
+        }
+    }
+}
+
+#[cfg(all(feature = "defmt", feature = "eh1_0_alpha"))]
+impl defmt::Format for Error {
+    fn format(&self, fmt: defmt::Formatter) {
+        use eh1_0_alpha::i2c::Error as _;
+        match self {
+            Error::InvalidReadBufferLength => defmt::write!(fmt, "InvalidReadBufferLength"),
+            Error::InvalidWriteBufferLength => defmt::write!(fmt, "InvalidWriteBufferLength"),
+            Error::AddressOutOfRange(addr) => defmt::write!(fmt, "AddressOutOfRange({:x})", addr),
+            Error::AddressReserved(addr) => defmt::write!(fmt, "AddressReserved({:x})", addr),
+            Error::Abort(_) => {
+                defmt::write!(fmt, "{}", defmt::Debug2Format(&self.kind()))
+            }
+        }
+    }
 }
 
 #[cfg(feature = "eh1_0_alpha")]
