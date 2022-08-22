@@ -136,7 +136,7 @@ fn main() -> ! {
 
 fn multiplication_table(interp: &mut Interp0) -> bool {
     //get the default configuration that just keep adding base into accum
-    let config = LaneCtrl::DEFAULT;
+    let config = LaneCtrl::new();
 
     //write the configuration to the hardware.
     interp.get_lane0().set_ctrl(config.encode());
@@ -161,7 +161,7 @@ fn multiplication_table(interp: &mut Interp0) -> bool {
 
 fn moving_mask(interp: &mut Interp0) -> bool {
     //get the default configuration that just keep adding base into accum
-    let mut config = LaneCtrl::DEFAULT;
+    let mut config = LaneCtrl::new();
 
     interp.get_lane0().set_accum(0x1234ABCD);
 
@@ -218,7 +218,7 @@ fn cross_lanes(interp: &mut Interp0) -> bool {
     // when applied to lane1 : set lane1 accumulator to the result from lane0
     let config = LaneCtrl {
         cross_result: true,
-        ..LaneCtrl::DEFAULT
+        ..LaneCtrl::new()
     };
     let encoded_config = config.encode();
 
@@ -258,13 +258,13 @@ fn cross_lanes(interp: &mut Interp0) -> bool {
 fn simple_blend1(interp: &mut Interp0) -> bool {
     let config = LaneCtrl {
         blend: true,
-        ..LaneCtrl::DEFAULT
+        ..LaneCtrl::new()
     };
 
     //enable blend mode
     interp.get_lane0().set_ctrl(config.encode());
     //make sure the default configuration is in lane1 as the value may be shifted and masked.
-    interp.get_lane1().set_ctrl(LaneCtrl::DEFAULT.encode());
+    interp.get_lane1().set_ctrl(LaneCtrl::new().encode());
 
     //set the minimum value for interp.get_lane0().set_accum(0) 0/256
     interp.get_lane0().set_base(500);
@@ -285,7 +285,7 @@ fn simple_blend1(interp: &mut Interp0) -> bool {
 fn simple_blend2(interp: &mut Interp0) -> bool {
     let config = LaneCtrl {
         blend: true,
-        ..LaneCtrl::DEFAULT
+        ..LaneCtrl::new()
     };
     //enable blend mode
     interp.get_lane0().set_ctrl(config.encode());
@@ -295,7 +295,7 @@ fn simple_blend2(interp: &mut Interp0) -> bool {
 
     let mut config1 = LaneCtrl {
         signed: true,
-        ..LaneCtrl::DEFAULT
+        ..LaneCtrl::new()
     };
     interp.get_lane1().set_ctrl(config1.encode());
     let expected_signed = [-1000, -672, -336, -8, 328, 656, 992];
@@ -333,7 +333,7 @@ fn clamp(interp: &mut Interp1) -> bool {
         mask_lsb: 0,
         mask_msb: 29,
         signed: true,
-        ..LaneCtrl::DEFAULT
+        ..LaneCtrl::new()
     };
     interp.get_lane0().set_ctrl(config.encode());
     //set minimum value of result
@@ -390,7 +390,7 @@ fn texture_mapping(interp: &mut Interp0) -> bool {
         shift: uv_fractional_bits,
         mask_lsb: 0,
         mask_msb: texture_width_bits - 1,
-        ..LaneCtrl::DEFAULT
+        ..LaneCtrl::new()
     };
     interp.get_lane0().set_ctrl(config0.encode());
     let config1 = LaneCtrl {
@@ -398,7 +398,7 @@ fn texture_mapping(interp: &mut Interp0) -> bool {
         shift: uv_fractional_bits - texture_width_bits,
         mask_lsb: texture_width_bits,
         mask_msb: texture_width_bits + texture_height_bits - 1,
-        ..LaneCtrl::DEFAULT
+        ..LaneCtrl::new()
     };
     interp.get_lane1().set_ctrl(config1.encode());
 

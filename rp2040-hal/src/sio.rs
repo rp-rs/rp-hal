@@ -718,18 +718,20 @@ pub struct LaneCtrl {
 
 impl LaneCtrl {
     /// Default configuration. Normal operation, unsigned, mask keeps all bits, no shift.
-    pub const DEFAULT: Self = Self {
-        clamp: false,
-        blend: false,
-        force_msb: 0,
-        add_raw: false,
-        cross_result: false,
-        cross_input: false,
-        signed: false,
-        mask_msb: 31,
-        mask_lsb: 0,
-        shift: 0,
-    };
+    pub const fn new() -> Self {
+        Self {
+            clamp: false,
+            blend: false,
+            force_msb: 0,
+            add_raw: false,
+            cross_result: false,
+            cross_input: false,
+            signed: false,
+            mask_msb: 31,
+            mask_lsb: 0,
+            shift: 0,
+        }
+    }
 
     /// encode the configuration to be loaded in the ctrl register of one lane of an interpolator
     pub const fn encode(&self) -> u32 {
@@ -789,7 +791,7 @@ pub trait Lane {
 ///                  // By default the least significant bit is bit 0
 ///                  // this will keep only the 5 least significant bits.
 ///                  // this is equivalent to %32
-///     ..LaneCtrl::DEFAULT
+///     ..LaneCtrl::new()
 /// }.encode();
 /// sio.interp0.get_lane0().set_ctrl(config);
 /// sio.interp0.get_lane0().set_accum(0);
