@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Migrate from `embedded-time` to `fugit`
+- Bump `ws2812-pio` to 0.4.0
+- Bump `i2c-pio` to 0.4.0
 
 ## 0.1.0 - 2022-07-17
 

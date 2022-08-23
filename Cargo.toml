@@ -24,7 +24,7 @@ members = [
 ]
 
 [patch.'https://github.com/rp-rs/rp-hal.git']
-rp2040-hal = { path ="./rp2040-hal" }
+rp2040-hal = { path = "./rp2040-hal" }
 
 [patch.crates-io]
-rp2040-hal = { path ="./rp2040-hal" }
+rp2040-hal = { path = "./rp2040-hal" }
