@@ -7,10 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.5.0 - 2022-08-26
+
 ### Added
 
 - `rp2040-e5` feature enabling the workaround for errata 5 on the USB device peripheral.
 - Support for critical-section 1.0.0 in the examples.
+- Example for the interpolator
 
 ### Changed
 
@@ -18,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migrate from `embedded-time` to `fugit`
 - Bump `ws2812-pio` to 0.4.0
 - Bump `i2c-pio` to 0.4.0
+- Update to rp2040-hal 0.6.0
+
+### Removed
+
+- Unused dependencies
 
 ## 0.4.0 - 2022-06-13
 

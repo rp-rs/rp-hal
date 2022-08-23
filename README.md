@@ -1,7 +1,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
-  <a href="https://github.com/rp-rs/rp2040-hal">
+  <a href="https://github.com/rp-rs/rp-hal">
     <img src="https://www.svgrepo.com/show/281119/microchip.svg" alt="Logo" width="140" height="140">
   </a>
 

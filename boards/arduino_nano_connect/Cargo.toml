@@ -1,6 +1,6 @@
 [package]
 name = "arduino_nano_connect"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["splicedbread <dxbunrated@gmail.com>", "The rp-rs Developers"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/arduino_nano_connect"
@@ -13,7 +13,7 @@ repository = "https://github.com/rp-rs/rp-hal.git"
 [dependencies]
 cortex-m = "0.7.3"
 rp2040-boot2 = { version = "0.2.0", optional = true }
-rp2040-hal = { path = "../../rp2040-hal", version = "0.5.0" }
+rp2040-hal = { path = "../../rp2040-hal", version = "0.6.0" }
 cortex-m-rt = { version = "0.7.0", optional = true }
 embedded-hal = { version = "0.2.4", features = ["unproven"] }
 panic-probe = { version = "0.3.0", features = ["print-defmt"] }

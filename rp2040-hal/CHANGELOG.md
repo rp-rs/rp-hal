@@ -7,21 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2022-08-26
+
 ### Added
 
-- `rp2040-e5` feature enabling the workaround for errata 5 on the USB device peripheral.
+- Documentation Example for the bsp_pin! macro - @ hmvp
+- Timer: Documentation & doc examples for Timers - @9names
+- Add suspend, resume and remote wakeup support. - @ithinuel & @jannic
+- `rp2040-e5` feature enabling the workaround for errata 5 on the USB device peripheral. - @ithinuel
+- NonPwmPinMode for gpio::Disabled - @FlorianUekermann
+- RAM-based interrupt vector tables - @9names
 - Support for critical-section 1.0.0.
   Critical-section 0.2 is still supported (ie. a custom-impl is provided, compatible
   with the 1.0.0 implementation), to avoid a breaking change. It will be removed
-  later.
+  later. - @jannic
+- Add support for the Interpolator. @fenax
 
 ### Changed
 
-- Update embedded-hal alpha support to version 1.0.0-alpha.8
+- Update dev dependencies on cortex-m-rtic to 1.1.2 - @jannic
+- Use correct interrupt names in `timer::alarms` - @hmvp
+- Update embedded-hal alpha support to version 1.0.0-alpha.8 - @jannic
+- Fix PIO rx fifo status - @jannic
 - Implement `From<&SomeClock> for Hertz` instead of `From<SomeClock> for Hertz`
-  for the clocks in `rp2040_hal::clocks`.
-- Use `rp2040-hal`'s entry function.
-- Migrate from `embedded-time` to `fugit`
+  for the clocks in `rp2040_hal::clocks`. - @jannic
+- Fix i2c example using the wrong clock. - @jannic
+- Fix duty cycle handing on disabled pwm channels. - @jannic
+- GPIO IRQ example: add check for interrupt source - @9names
+- Align USB synchronisation requirements with the manual & pico-sdk - @ithinuel
+- Update dependencies on usb-device to 0.2.9 - @ithinuel
+- Use wfi in otherwise empty infinite loops in examples. - @jannic
+- Use generic bootloader in examples - @jannic
+- Use `rp2040-hal`'s entry function. - @ithinuel
+- Migrate from `embedded-time` to `fugit` - @ithinuel
+- Fix PIO's `set_pins` and `set_pindirs` when `out_sticky` is set. - @jannic & @ithinuel
+
+### Removed
+
+- Unnecessary cortex_m::interrupt::free in timer.rs - @jannic
+- Unused embassy-traits deps - @9names
 
 ## [0.5.0] - 2022-06-13
 
