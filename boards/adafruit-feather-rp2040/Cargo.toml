@@ -22,7 +22,7 @@ embedded-hal ="0.2.5"
 fugit = "0.3.5"
 nb = "1.0.0"
 smart-leds = "0.3.0"
-ws2812-pio = "0.3.0"
+ws2812-pio = "0.4.0"
 
 [features]
 default = ["boot2", "rt"]
