@@ -18,7 +18,7 @@ cortex-m-rt = { version = "0.7", optional = true }
 embedded-time = "0.12.0"
 
 [dev-dependencies]
-rtt-target = { version = "0.3.1", features = ["cortex-m"] }
+rtt-target = { version = "0.3.1" }
 panic-halt= "0.2.0"
 embedded-hal ="0.2.5"
 

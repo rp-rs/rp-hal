@@ -28,3 +28,4 @@ rp2040-hal = { path ="./rp2040-hal" }
 
 [patch.crates-io]
 rp2040-hal = { path ="./rp2040-hal" }
+rtt-target = { git = "https://github.com/Dirbaio/rtt-target/", rev = "98854f67efc160609c0c7ff63d5770c0e6694d1c" }

@@ -38,7 +38,7 @@ pio = "0.2.0"
 pio-proc = "0.2.1"
 critical-section = "1.0.0"
 
-rtt-target = { version = "0.3.1", features = ["cortex-m"] }
+rtt-target = { version = "0.3.1" }
 
 [features]
 default = ["boot2", "rt"]
