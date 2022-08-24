@@ -27,6 +27,7 @@ defmt = "0.3.0"
 defmt-rtt = "0.3.0"
 
 [features]
-default = ["boot2", "rt"]
+default = ["boot2", "rt", "critical-section-impl"]
+critical-section-impl = ["rp2040-hal/critical-section-impl"]
 boot2 = ["rp2040-boot2"]
 rt = ["cortex-m-rt","rp2040-hal/rt"]

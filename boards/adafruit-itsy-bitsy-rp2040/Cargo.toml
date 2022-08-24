@@ -25,6 +25,7 @@ nb = "1.0.0"
 ws2812-pio = "0.3.0"
 
 [features]
-default = ["rt", "boot2"]
+default = ["boot2", "rt", "critical-section-impl"]
+critical-section-impl = ["rp2040-hal/critical-section-impl"]
 boot2 = ["rp2040-boot2"]
 rt = ["cortex-m-rt","rp2040-hal/rt"]
