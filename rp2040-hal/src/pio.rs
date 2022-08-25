@@ -627,6 +627,11 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
     // `UninitStateMachine` byt adding a program.
     pub fn set_pindirs(&mut self, pindirs: impl IntoIterator<Item = (u8, PinDir)>) {
         let saved_ctrl = self.sm.sm().sm_pinctrl.read();
+        let saved_execctrl = self.sm.sm().sm_execctrl.read();
+        self.sm
+            .sm()
+            .sm_execctrl
+            .modify(|_, w| w.out_sticky().clear_bit());
         for (pinnum, pin_dir) in pindirs {
             self.sm
                 .sm()
@@ -644,6 +649,10 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
             .sm()
             .sm_pinctrl
             .write(|w| unsafe { w.bits(saved_ctrl.bits()) });
+        self.sm
+            .sm()
+            .sm_execctrl
+            .write(|w| unsafe { w.bits(saved_execctrl.bits()) });
     }
 }
 
