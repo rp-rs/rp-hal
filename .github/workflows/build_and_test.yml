@@ -2,7 +2,7 @@ on: [push, pull_request]
 name: Build and Test check
 jobs:
   builds:
-    name: "Build checks"
+    name: Build checks
     runs-on: ubuntu-20.04
     strategy:
       matrix:
@@ -16,26 +16,41 @@ jobs:
           target: thumbv6m-none-eabi
           override: true
           profile: minimal
-      - name: "Build workspace"
+      - name: Build workspace
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: ${{ matrix.mode }} --workspace ${{ matrix.features }}
-      - name: "Build workspace and examples"
+      - name: Build workspace and examples
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: ${{ matrix.mode }} --workspace --examples ${{ matrix.features }}
-      - name: "List built examples and clean"
+      - name: List built examples and clean
         run: rm -vrf target/thumbv6m-none-eabi/*/examples/* | sed -e "s/removed '\(.*\)'/\1/" | xargs -l basename | grep -Ev '(-|\.d)'
-      - name: "Test"
+      - name: Test
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --tests --target x86_64-unknown-linux-gnu ${{ matrix.features }}
-      - name: "Test docs"
+      - name: Test docs
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --doc --target x86_64-unknown-linux-gnu ${{ matrix.features }}
+      - name: Clean
+        uses: actions-rs/cargo@v1
+        with:
+          command: clean
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          target: thumbv6m-none-eabi
+          override: true
+          profile: minimal
+      - name: Check unused deps
+        uses: aig787/cargo-udeps-action@v1
+        with:
+          version: latest
+          args: ${{ matrix.mode }} --workspace ${{ matrix.features }}
 
