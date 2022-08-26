@@ -1,5 +1,5 @@
 [package]
-name = "pimoroni_badger2040"
+name = "pimoroni-badger2040"
 version = "0.2.0"
 authors = ["9names", "The rp-rs Developers"]
 edition = "2018"
