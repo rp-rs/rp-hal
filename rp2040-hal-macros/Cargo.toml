@@ -12,7 +12,6 @@ proc-macro = true
 [dependencies]
 quote = "1.0"
 proc-macro2 = "1.0"
-cortex-m-rt = "0.7.0"
 
 [dependencies.syn]
 features = ["extra-traits", "full"]
