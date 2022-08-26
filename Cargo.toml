@@ -28,5 +28,3 @@ rp2040-hal = { path = "./rp2040-hal" }
 
 [patch.crates-io]
 rp2040-hal = { path = "./rp2040-hal" }
-i2c-pio = { git = "https://github.com/rp-rs/i2c-pio-rs", rev = "e1e733bdd0b73944a4ad5afbf2bddce03bd5fdfa" }
-ws2812-pio = { git = "https://github.com/rp-rs/ws2812-pio-rs", rev = "8505952e70af1624e3eef9885240b9a6948be12a" }
