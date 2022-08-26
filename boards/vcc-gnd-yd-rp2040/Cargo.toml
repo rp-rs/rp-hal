@@ -1,6 +1,6 @@
 [package]
 name = "vcc-gnd-yd-rp2040"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Nicolas <nleguen@gmail.com>", "The rp-rs Developers"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/vcc-gnd-yd-rp2040"
@@ -13,7 +13,7 @@ repository = "https://github.com/rp-rs/rp-hal.git"
 [dependencies]
 cortex-m = "0.7.2"
 rp2040-boot2 = { version = "0.2.0", optional = true }
-rp2040-hal = { path = "../../rp2040-hal", version = "0.5.0" }
+rp2040-hal = { path = "../../rp2040-hal", version = "0.6.0" }
 cortex-m-rt = { version = "0.7", optional = true }
 fugit = "0.3.5"
 usb-device= "0.2.9"

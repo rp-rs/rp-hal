@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.3.0 - 2022-08-26
+
 ### Changed
 
 - Use `rp2040-hal`'s entry function.
 - Migrate from `embedded-time` to `fugit`
 - Bump `ws2812-pio` to 0.4.0
+- Update to rp2040-hal 0.6.0
 

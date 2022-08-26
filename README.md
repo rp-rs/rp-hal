@@ -1,7 +1,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
-  <a href="https://github.com/rp-rs/rp2040-hal">
+  <a href="https://github.com/rp-rs/rp-hal">
     <img src="https://www.svgrepo.com/show/281119/microchip.svg" alt="Logo" width="140" height="140">
   </a>
 
@@ -192,6 +192,18 @@ RP2040 chip according to how it is connected up on the Trinkey.
 [Adafruit-Trinkey-QT2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit-trinkey-qt2040
 [adafruit trinkey qt2040]: https://www.adafruit.com/product/5056
 
+### [pimoroni-badger2040] - Board Support for the [Pimoroni Badger2040]
+
+You should include this crate if you are writing code that you want to run on
+a [Pimoroni Badger2040] - a conference-style badge built around an e-paper
+display and an rp2040
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the Badger2040.
+
+[Pimoroni Badger2040]: https://shop.pimoroni.com/products/badger-2040
+[pimoroni-badger2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-badger2040
+
 ### [pimoroni-pico-explorer] - Board Support for the [Pimoroni Pico Explorer]
 
 You should include this crate if you are writing code that you want to run on
@@ -218,6 +230,29 @@ space, and so it may not work if you only have the 4MB variant.
 
 [Pimoroni Pico Lipo 16MB]: https://shop.pimoroni.com/products/pimoroni-pico-lipo?variant=39335427080275
 [pimoroni-pico-lipo-16mb]: https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-pico-lipo-16mb
+
+### [pimoroni-plasma-2040] - Board Support for the [Pimoroni Plasma 2040]
+
+You should include this crate if you are writing code that you want to run on
+a [Pimoroni Plasma 2040] - Swathe everything in rainbows with this all-in-one, USB-C powered controller
+for WS2812/Neopixel and APA102/Dotstar addressable LED strip.
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the Pimoroni Plasma 2040.
+
+[Pimoroni Plasma 2040]: https://shop.pimoroni.com/products/plasma-2040
+[pimoroni-plasma-2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-plasma-2040
+
+### [pimoroni-tiny2040] - Board Support for the [Pimoroni Tiny2040]
+
+You should include this crate if you are writing code that you want to run on
+a [Pimoroni Tiny2040] - one of the first third party RP2040 boards available, with 8MB flash and a 3 colour LED.
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the Tiny2040.
+
+[Pimoroni Tiny2040]: https://shop.pimoroni.com/products/tiny-2040
+[pimoroni-tiny2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-tiny2040
 
 ### [solderparty-rp2040-stamp] - Board Support for the [SolderParty RP2040 Stamp]
 
