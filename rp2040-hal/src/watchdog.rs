@@ -58,6 +58,7 @@ impl Watchdog {
     /// # Arguments
     ///
     /// * `cycles` - Total number of tick cycles before the next tick is generated.
+    ///   It is expected to be the frequency in MHz of clk_ref.
     pub fn enable_tick_generation(&mut self, cycles: u8) {
         const WATCHDOG_TICK_ENABLE_BITS: u32 = 0x200;
 

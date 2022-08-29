@@ -98,7 +98,7 @@ fn main() -> ! {
     let mut said_hello = false;
     loop {
         // A welcome message at the beginning
-        if !said_hello && timer.get_counter() >= 2_000_000 {
+        if !said_hello && timer.get_counter().ticks() >= 2_000_000 {
             said_hello = true;
             let _ = serial.write(b"Hello, World!\r\n");
         }
