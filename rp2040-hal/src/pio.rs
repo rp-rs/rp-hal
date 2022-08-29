@@ -471,11 +471,7 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
     }
 
     // Safety: The Send trait assumes this is the only write to sm_clkdiv
-    fn set_clock_divisor(&self, divisor: f32) {
-        // sm frequency = clock freq / (CLKDIV_INT + CLKDIV_FRAC / 256)
-        let int = divisor as u16;
-        let frac = ((divisor - int as f32) * 256.0) as u8;
-
+    fn set_clock_divisor(&self, int: u16, frac: u8) {
         self.sm().sm_clkdiv.write(|w| {
             unsafe {
                 w.int().bits(int);
@@ -1619,7 +1615,7 @@ impl ShiftDirection {
 #[derive(Debug)]
 pub struct PIOBuilder<P> {
     /// Clock divisor.
-    clock_divisor: f32,
+    clock_divisor: (u16, u8),
 
     /// Program location and configuration.
     program: InstalledProgram<P>,
@@ -1688,7 +1684,7 @@ impl<P: PIOExt> PIOBuilder<P> {
     /// Additional configuration may be needed in addition to this.
     pub fn from_program(p: InstalledProgram<P>) -> Self {
         PIOBuilder {
-            clock_divisor: 1.0,
+            clock_divisor: (1, 0),
             program: p,
             jmp_pin: 0,
             out_sticky: false,
@@ -1772,7 +1768,19 @@ impl<P: PIOExt> PIOBuilder<P> {
     /// The is based on the sys_clk. Set 1 for full speed. A clock divisor of `n` will cause the state machine to run 1
     /// cycle every `n` clock cycles. For small values of `n`, a fractional divisor may introduce unacceptable jitter.
     pub fn clock_divisor(mut self, divisor: f32) -> Self {
-        self.clock_divisor = divisor;
+        self.clock_divisor = (divisor as u16, (divisor * 256.0) as u8);
+        self
+    }
+
+    /// The clock is based on the `sys_clk` and will execute an intruction every `int + (frac/256)` ticks.
+    ///
+    /// A clock divisor of `n` will cause the state machine to run 1 cycle every `n` clock cycles. If the integer part
+    /// is 0 then the fractional part must be 0. This is interpreted by the device as the integer 65536.
+    ///
+    /// For small values of `int`, a fractional divisor may introduce unacceptable jitter.
+    pub fn clock_divisor_fixed_point(mut self, int: u16, frac: u8) -> Self {
+        assert!(int != 0 || frac == 0);
+        self.clock_divisor = (int, frac);
         self
     }
 
@@ -1852,7 +1860,7 @@ impl<P: PIOExt> PIOBuilder<P> {
         sm.set_enabled(false);
 
         // Write all configuration bits
-        sm.set_clock_divisor(self.clock_divisor);
+        sm.set_clock_divisor(self.clock_divisor.0, self.clock_divisor.1);
 
         sm.sm().sm_execctrl.write(|w| {
             w.side_en().bit(self.program.side_set.optional());
