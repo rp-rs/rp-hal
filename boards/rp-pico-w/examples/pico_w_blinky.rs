@@ -29,6 +29,7 @@ use embassy_executor::raw::TaskPool;
 use embassy_executor::Executor;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
+use embassy_net::{Stack};
 
 /// The function configures the RP2040 peripherals, then blinks the LED in an
 /// infinite loop.
@@ -130,6 +131,43 @@ async fn run(spawner: Spawner, pins: rp_pico_w::Pins, state: &'static cyw43::Sta
     let task_pool: TaskPool<_, 10> = TaskPool::new();
     let task_pool = unsafe { forever(&task_pool) };
     let spawn_token = task_pool.spawn(|| runner.run());
+    spawner.spawn(spawn_token).unwrap();
+
+    let clm = include_bytes!("firmware/43439A0_clm.bin");
+    info!("init net net device");
+    let net_device = control.init(clm).await;
+    info!("init net net device done");
+
+    if option_env!("WIFI_PASSWORD").is_some() {
+        control.join_wpa2(env!("WIFI_NETWORK"), option_env!("WIFI_PASSWORD").unwrap()).await;
+    } else {
+        control.join_open(env!("WIFI_NETWORK")).await;
+    }
+    let config = embassy_net::ConfigStrategy::Dhcp;
+    //let config = embassy_net::ConfigStrategy::Static(embassy_net::Config {
+    //    address: Ipv4Cidr::new(Ipv4Address::new(192, 168, 69, 2), 24),
+    //    dns_servers: Vec::new(),
+    //    gateway: Some(Ipv4Address::new(192, 168, 69, 1)),
+    //});
+
+    // Generate random seed
+    let seed = 0x0123_4567_89ab_cdef; // chosen by fair dice roll. guarenteed to be random.
+
+    let mut stack_resources =  embassy_net::StackResources::<1, 2, 8>::new();
+    let stack_resources = unsafe { forever_mut(&mut stack_resources) };
+
+    // Init network stack
+    let stack = Stack::new(
+        net_device,
+        config,
+        stack_resources,
+        seed
+    );
+    let stack = unsafe { forever(&stack) };
+
+    let task_pool: TaskPool<_, 10> = TaskPool::new();
+    let task_pool = unsafe { forever(&task_pool) };
+    let spawn_token = task_pool.spawn(|| stack.run() );
     spawner.spawn(spawn_token).unwrap();
 
     // Blink the LED at 1 Hz
