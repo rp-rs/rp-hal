@@ -15,8 +15,8 @@ cortex-m = "0.7.2"
 rp2040-boot2 = { version = "0.2.0", optional = true }
 rp2040-hal = { path = "../../rp2040-hal", version = "0.6.0", features=["eh1_0_alpha"] }
 cortex-m-rt = { version = "0.7", optional = true }
-embassy-time = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", branch = "net-stable" }
-embassy-sync = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", branch = "net-stable" }
+embassy-time = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "1fb6bfbec943742fb25e70391278bf4a4b638772" }
+embassy-sync = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "1fb6bfbec943742fb25e70391278bf4a4b638772" }
 
 
 defmt = "0.3"
@@ -31,9 +31,9 @@ fugit = "0.3.6"
 [dev-dependencies]
 panic-probe = { version = "0.3", features = ["print-defmt"] }
 cyw43 = { version = "0.1.0", path = "/home/jan/rp2040/cyw43", features=["defmt"] }
-embassy-executor = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", features=["integrated-timers"], branch = "net-stable" }
+embassy-executor = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", features=["integrated-timers"], rev = "1fb6bfbec943742fb25e70391278bf4a4b638772" }
 embassy-futures = { version = "0.1.0" }
-embassy-net = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", branch = "net-stable",  features = ["defmt", "tcp", "dhcpv4", "medium-ethernet", "pool-16"] }
+embassy-net = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "1fb6bfbec943742fb25e70391278bf4a4b638772",  features = ["defmt", "tcp", "dhcpv4", "medium-ethernet", "pool-16"] }
 
 [features]
 default = ["boot2", "rt"]
