@@ -8,7 +8,7 @@
 //!
 //! See [Chapter 4 Section 6](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) of the datasheet for more details.
 
-use fugit::{Duration, MicrosDurationU64, TimerInstantU64};
+use fugit::{MicrosDurationU32, MicrosDurationU64, TimerInstantU64};
 
 use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
 use crate::pac::{RESETS, TIMER};
@@ -200,10 +200,7 @@ pub trait Alarm {
     /// this will trigger interrupt whenever this time elapses.
     ///
     /// [enable_interrupt]: #method.enable_interrupt
-    fn schedule<const NOM: u32, const DENOM: u32>(
-        &mut self,
-        countdown: Duration<u32, NOM, DENOM>,
-    ) -> Result<(), ScheduleAlarmError>;
+    fn schedule(&mut self, countdown: MicrosDurationU32) -> Result<(), ScheduleAlarmError>;
 
     /// Schedule the alarm to be finished at the given timestamp. If [enable_interrupt] is
     /// called, this will trigger interrupt whenever this timestamp is reached.
@@ -307,14 +304,10 @@ macro_rules! impl_alarm {
             /// ` whenever this time elapses.
             ///
             /// [enable_interrupt]: #method.enable_interrupt
-            fn schedule<const NOM: u32, const DENOM: u32>(
-                &mut self,
-                countdown: Duration<u32, NOM, DENOM>,
-            ) -> Result<(), ScheduleAlarmError> {
+            fn schedule(&mut self, countdown: MicrosDurationU32) -> Result<(), ScheduleAlarmError> {
                 // safety: Only read operations are made on the timer and they should not have any UB
                 let timer = unsafe { &*TIMER::ptr() };
-                let micros = fugit::MicrosDurationU32::micros(countdown.to_micros());
-                let timestamp = get_counter(timer) + micros;
+                let timestamp = get_counter(timer) + countdown;
 
                 self.schedule_internal(timer, timestamp)
             }
