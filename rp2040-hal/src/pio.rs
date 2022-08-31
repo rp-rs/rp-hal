@@ -1767,6 +1767,10 @@ impl<P: PIOExt> PIOBuilder<P> {
     ///
     /// The is based on the sys_clk. Set 1 for full speed. A clock divisor of `n` will cause the state machine to run 1
     /// cycle every `n` clock cycles. For small values of `n`, a fractional divisor may introduce unacceptable jitter.
+    #[deprecated(
+        since = "0.7.0",
+        note = "Pulls in floating points. Use the fixed point alternative: clock_divisor_fixed_point"
+    )]
     pub fn clock_divisor(mut self, divisor: f32) -> Self {
         self.clock_divisor = (divisor as u16, (divisor * 256.0) as u8);
         self
