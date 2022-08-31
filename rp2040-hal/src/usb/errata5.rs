@@ -6,6 +6,7 @@
 //! We only need to force DP as DM can be left at zero. It will be gated off by GPIO
 //! logic if it isn't func selected.
 
+use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
 use rp2040_pac::Peripherals;
 
 pub struct ForceLineStateJ {
@@ -58,6 +59,9 @@ impl Errata5State {
     }
 }
 
+const DP_PULLUP_EN_FLAG: u32 = 0x0000_0002;
+const DP_PULLUP_EN_OVERRIDE_FLAG: u32 = 0x0000_0004;
+
 fn start_force_j(pac: &Peripherals) -> ForceLineStateJ {
     let pads = &pac.PADS_BANK0.gpio[15];
     let io = &pac.IO_BANK0.gpio[15];
@@ -87,22 +91,11 @@ fn start_force_j(pac: &Peripherals) -> ForceLineStateJ {
     io.gpio_ctrl.modify(|_, w| w.inover().high());
 
     // Force PHY pull up to stay before switching away from the phy
-    //usb_ctrl
-    //    .usbphy_direct
-    //    .modify(|_, w| w.dp_pullup_en().set_bit());
-    //usb_ctrl
-    //    .usbphy_direct_override
-    //    .modify(|_, w| w.dp_pullup_en_override_en().set_bit());
-    // Use the "SET" alias region to only write rather than "read/modify/write"
     unsafe {
-        let ctrl_regs_set_alias: &pac::usbctrl_regs::RegisterBlock =
-            &*(((pac::USBCTRL_REGS::ptr() as usize) | (2 << 12)) as *const _);
-        ctrl_regs_set_alias
-            .usbphy_direct
-            .write_with_zero(|w| w.dp_pullup_en().set_bit());
-        ctrl_regs_set_alias
-            .usbphy_direct_override
-            .write_with_zero(|w| w.dp_pullup_en_override_en().set_bit());
+        let usbphy_direct = usb_ctrl.usbphy_direct.as_ptr();
+        let usbphy_direct_override = usb_ctrl.usbphy_direct_override.as_ptr();
+        write_bitmask_set(usbphy_direct, DP_PULLUP_EN_FLAG);
+        write_bitmask_set(usbphy_direct_override, DP_PULLUP_EN_OVERRIDE_FLAG);
     }
 
     // Switch to GPIO phy with LS_J forced
@@ -136,11 +129,8 @@ fn finish(pac: &Peripherals, prev_pads: u32, prev_io_ctrls: u32) {
 
     // Get rid of DP pullup override
     unsafe {
-        let ctrl_regs_clear_alias: &pac::usbctrl_regs::RegisterBlock =
-            &*(((pac::USBCTRL_REGS::ptr() as usize) | (3 << 12)) as *const _);
-        ctrl_regs_clear_alias
-            .usbphy_direct_override
-            .write_with_zero(|w| w.dp_pullup_en_override_en().set_bit());
+        let usbphy_direct_override = pac.USBCTRL_REGS.usbphy_direct_override.as_ptr();
+        write_bitmask_clear(usbphy_direct_override, DP_PULLUP_EN_OVERRIDE_FLAG);
 
         // Finally, restore the gpio ctrl value back to GPIO15
         io.gpio_ctrl.write(|w| w.bits(prev_io_ctrls));
