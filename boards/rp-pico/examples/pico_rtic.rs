@@ -7,13 +7,13 @@ use panic_halt as _;
 mod app {
 
     use embedded_hal::digital::v2::OutputPin;
-    use fugit::SecsDurationU32;
+    use fugit::MicrosDurationU32;
     use rp_pico::{
         hal::{self, clocks::init_clocks_and_plls, timer::Alarm, watchdog::Watchdog, Sio},
         XOSC_CRYSTAL_FREQ,
     };
 
-    const SCAN_TIME_US: SecsDurationU32 = SecsDurationU32::secs(1);
+    const SCAN_TIME_US: MicrosDurationU32 = MicrosDurationU32::secs(1);
 
     #[shared]
     struct Shared {
