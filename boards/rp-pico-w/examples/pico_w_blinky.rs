@@ -120,7 +120,20 @@ async fn run(spawner: Spawner, pins: rp_pico_w::Pins, state: &'static cyw43::Sta
 
     let pwr = pins.wl_on.into_push_pull_output();
 
+    #[cfg(not(feature="fix_fw"))]
     let fw = include_bytes!("firmware/43439A0.bin");
+    #[cfg(not(feature="fix_fw"))]
+    let clm = include_bytes!("firmware/43439A0_clm.bin");
+
+    // To make flashing faster for development, you may want to flash the firmwares independently
+    // at hardcoded addresses, instead of baking them into the program with `include_bytes!`:
+    //     probe-rs-cli download 43439A0.bin --format bin --chip RP2040 --base-address 0x10100000
+    //     probe-rs-cli download 43439A0.clm_blob --format bin --chip RP2040 --base-address 0x10140000
+    #[cfg(feature="fix_fw")]
+    let fw = unsafe { core::slice::from_raw_parts(0x10100000 as *const u8, 224190) };
+    #[cfg(feature="fix_fw")]
+    let clm = unsafe { core::slice::from_raw_parts(0x10140000 as *const u8, 4752) };
+
 
     use embassy_futures::yield_now;
     yield_now().await;
@@ -133,7 +146,6 @@ async fn run(spawner: Spawner, pins: rp_pico_w::Pins, state: &'static cyw43::Sta
     let spawn_token = task_pool.spawn(|| runner.run());
     spawner.spawn(spawn_token).unwrap();
 
-    let clm = include_bytes!("firmware/43439A0_clm.bin");
     info!("init net net device");
     let net_device = control.init(clm).await;
     info!("init net net device done");

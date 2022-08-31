@@ -39,3 +39,4 @@ embassy-net = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.
 default = ["boot2", "rt"]
 boot2 = ["rp2040-boot2"]
 rt = ["cortex-m-rt","rp2040-hal/rt"]
+fix_fw = []
