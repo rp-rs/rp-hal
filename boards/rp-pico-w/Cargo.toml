@@ -15,7 +15,7 @@ cortex-m = "0.7.2"
 rp2040-boot2 = { version = "0.2.0", optional = true }
 rp2040-hal = { path = "../../rp2040-hal", version = "0.6.0", features=["eh1_0_alpha"] }
 cortex-m-rt = { version = "0.7", optional = true }
-embassy-time = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "1fb6bfbec943742fb25e70391278bf4a4b638772" }
+embassy-time = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "1fb6bfbec943742fb25e70391278bf4a4b638772", features = ["tick-1mhz"] }
 embassy-sync = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "1fb6bfbec943742fb25e70391278bf4a4b638772" }
 
 

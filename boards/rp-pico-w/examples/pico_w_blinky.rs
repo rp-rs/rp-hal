@@ -28,8 +28,8 @@ use embedded_hal::digital::v2::OutputPin;
 use embassy_executor::raw::TaskPool;
 use embassy_executor::Executor;
 use embassy_executor::Spawner;
+use embassy_net::Stack;
 use embassy_time::{Duration, Timer};
-use embassy_net::{Stack};
 
 /// The function configures the RP2040 peripherals, then blinks the LED in an
 /// infinite loop.
@@ -153,31 +153,26 @@ async fn run(spawner: Spawner, pins: rp_pico_w::Pins, state: &'static cyw43::Sta
     // Generate random seed
     let seed = 0x0123_4567_89ab_cdef; // chosen by fair dice roll. guarenteed to be random.
 
-    let mut stack_resources =  embassy_net::StackResources::<1, 2, 8>::new();
+    let mut stack_resources = embassy_net::StackResources::<1, 2, 8>::new();
     let stack_resources = unsafe { forever_mut(&mut stack_resources) };
 
     // Init network stack
-    let stack = Stack::new(
-        net_device,
-        config,
-        stack_resources,
-        seed
-    );
+    let stack = Stack::new(net_device, config, stack_resources, seed);
     let stack = unsafe { forever(&stack) };
 
     let task_pool: TaskPool<_, 10> = TaskPool::new();
     let task_pool = unsafe { forever(&task_pool) };
-    let spawn_token = task_pool.spawn(|| stack.run() );
+    let spawn_token = task_pool.spawn(|| stack.run());
     spawner.spawn(spawn_token).unwrap();
 
     // Blink the LED at 1 Hz
     loop {
         info!("on");
         control.gpio_set(0, true).await;
-        Timer::after(Duration::from_millis(500)).await;
+        Timer::after(Duration::from_millis(200)).await;
 
         info!("off");
         control.gpio_set(0, false).await;
-        Timer::after(Duration::from_millis(500)).await;
+        Timer::after(Duration::from_millis(200)).await;
     }
 }
