@@ -57,12 +57,12 @@ fn main() -> ! {
     // then through a LED. If there is a clock offset, there will be a
     // short time with a voltage between the pins, so the LED will flash up.
     // With a slow clock this is not visible, so use a reasonably fast clock.
-    let div = 256f32;
+    let (int, frac) = (256, 0);
 
     let installed = pio.install(&program.program).unwrap();
     let (mut sm0, _, _) = rp2040_hal::pio::PIOBuilder::from_program(installed)
         .set_pins(pin0, 1)
-        .clock_divisor(div)
+        .clock_divisor_fixed_point(int, frac)
         .build(sm0);
     // The GPIO pin needs to be configured as an output.
     sm0.set_pindirs([(pin0, hal::pio::PinDir::Output)]);
@@ -72,7 +72,7 @@ fn main() -> ! {
     let installed = pio.install(&program.program).unwrap();
     let (mut sm1, _, _) = rp2040_hal::pio::PIOBuilder::from_program(installed)
         .set_pins(pin1, 1)
-        .clock_divisor(div)
+        .clock_divisor_fixed_point(int, frac)
         .build(sm1);
     // The GPIO pin needs to be configured as an output.
     sm1.set_pindirs([(pin1, hal::pio::PinDir::Output)]);
