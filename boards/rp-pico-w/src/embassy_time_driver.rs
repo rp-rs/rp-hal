@@ -179,7 +179,7 @@ impl TimerDriver {
             let (n, timestamp) = next;
             let now = self.now_instant();
             // alarm peripheral has only 32 bits, so might have triggered early
-            if timestamp <= now {
+            if timestamp.const_cmp(now) != core::cmp::Ordering::Less {
                 self.trigger_alarm(n, cs)
             }
             // next alarm could have changed - rearm
