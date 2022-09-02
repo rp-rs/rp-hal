@@ -50,7 +50,7 @@ const FAST_BLINK_INTERVAL_US: MicrosDurationU32 = MicrosDurationU32::millis(300)
 /// as the BSPs already perform this step.
 #[link_section = ".boot2"]
 #[used]
-pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
 
 /// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz. Adjust
 /// if your board has a different frequency
