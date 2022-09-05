@@ -14,9 +14,9 @@ use rp2040_hal::pac;
 use rp2040_hal::pac::interrupt;
 use rp2040_hal::timer::Alarm;
 use rp2040_hal::timer::Alarm0;
-use rp2040_hal::timer::Timer;
-use rp2040_hal::timer::ScheduleAlarmError;
 use rp2040_hal::timer::Instant;
+use rp2040_hal::timer::ScheduleAlarmError;
+use rp2040_hal::timer::Timer;
 
 use defmt::*;
 
@@ -132,33 +132,35 @@ impl TimerDriver {
             .as_mut()
             .unwrap()
             .schedule_at(min_timestamp)
-            {
-                Result::Err(ScheduleAlarmError::AlarmTooSoon)
-                    => {
-                        // If alarm timestamp has passed, trigger it instantly.
-                        // This disarms it.
-                        trace!("timestamp has passed, trigger now! timestamp {} <= now {}", min_timestamp.ticks(), now.ticks());
-                        self.trigger_alarm(n, cs);
-                    },
-                Result::Err(ScheduleAlarmError::AlarmTooLate)
-                    => {
-                        // Duration >72 minutes. Reschedule 1 hour later.
-                        trace!("reschedule in 1h");
-                        self
-                            .alarm
-                            .borrow(cs)
-                            .borrow_mut()
-                            .deref_mut()
-                            .as_mut()
-                            .unwrap()
-                            .schedule(MicrosDurationU32::hours(1)).unwrap();
-                    },
-                Ok(_) => {
-                    trace!("min: {}, now: {}", min_timestamp.ticks(), now.ticks());
-                    trace!("alarm armed for {}", (min_timestamp - now).ticks());
-                },
-                Err(_) => core::panic!("Unknown error scheduling an alarm"),
+        {
+            Result::Err(ScheduleAlarmError::AlarmTooSoon) => {
+                // If alarm timestamp has passed, trigger it instantly.
+                // This disarms it.
+                trace!(
+                    "timestamp has passed, trigger now! timestamp {} <= now {}",
+                    min_timestamp.ticks(),
+                    now.ticks()
+                );
+                self.trigger_alarm(n, cs);
             }
+            Result::Err(ScheduleAlarmError::AlarmTooLate) => {
+                // Duration >72 minutes. Reschedule 1 hour later.
+                trace!("reschedule in 1h");
+                self.alarm
+                    .borrow(cs)
+                    .borrow_mut()
+                    .deref_mut()
+                    .as_mut()
+                    .unwrap()
+                    .schedule(MicrosDurationU32::hours(1))
+                    .unwrap();
+            }
+            Ok(_) => {
+                trace!("min: {}, now: {}", min_timestamp.ticks(), now.ticks());
+                trace!("alarm armed for {}", (min_timestamp - now).ticks());
+            }
+            Err(_) => core::panic!("Unknown error scheduling an alarm"),
+        }
     }
 
     fn check_alarm(&self) {
@@ -236,7 +238,6 @@ pub unsafe fn init(mut timer: Timer) {
             a.timestamp.set(NO_ALARM);
         }
     });
-
 }
 
 #[interrupt]
@@ -244,4 +245,3 @@ unsafe fn TIMER_IRQ_0() {
     trace!("Interrupt!");
     DRIVER.check_alarm()
 }
-
