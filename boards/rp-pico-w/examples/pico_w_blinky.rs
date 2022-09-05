@@ -152,10 +152,15 @@ async fn run(spawner: Spawner, pins: rp_pico_w::Pins, state: &'static cyw43::Sta
     if option_env!("WIFI_NETWORK").is_some() {
         if option_env!("WIFI_PASSWORD").is_some() {
             control
-                .join_wpa2(option_env!("WIFI_NETWORK").unwrap(), option_env!("WIFI_PASSWORD").unwrap())
+                .join_wpa2(
+                    option_env!("WIFI_NETWORK").unwrap(),
+                    option_env!("WIFI_PASSWORD").unwrap(),
+                )
                 .await;
         } else {
-            control.join_open(option_env!("WIFI_NETWORK").unwrap()).await;
+            control
+                .join_open(option_env!("WIFI_NETWORK").unwrap())
+                .await;
         }
     } else {
         warn!("Environment variable WIFI_NETWORK not set during compilation - not joining wireless network");
