@@ -149,12 +149,16 @@ async fn run(spawner: Spawner, pins: rp_pico_w::Pins, state: &'static cyw43::Sta
     let net_device = control.init(clm).await;
     info!("init net net device done");
 
-    if option_env!("WIFI_PASSWORD").is_some() {
-        control
-            .join_wpa2(env!("WIFI_NETWORK"), option_env!("WIFI_PASSWORD").unwrap())
-            .await;
+    if option_env!("WIFI_NETWORK").is_some() {
+        if option_env!("WIFI_PASSWORD").is_some() {
+            control
+                .join_wpa2(option_env!("WIFI_NETWORK").unwrap(), option_env!("WIFI_PASSWORD").unwrap())
+                .await;
+        } else {
+            control.join_open(option_env!("WIFI_NETWORK").unwrap()).await;
+        }
     } else {
-        control.join_open(env!("WIFI_NETWORK")).await;
+        warn!("Environment variable WIFI_NETWORK not set during compilation - not joining wireless network");
     }
     let config = embassy_net::ConfigStrategy::Dhcp;
     //let config = embassy_net::ConfigStrategy::Static(embassy_net::Config {
