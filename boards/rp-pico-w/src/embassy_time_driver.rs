@@ -45,8 +45,8 @@ struct TimerDriver {
 
 embassy_time::time_driver_impl!(static DRIVER: TimerDriver = TimerDriver{
     timer: Mutex::const_new(CriticalSectionRawMutex::new(), RefCell::new(None)),
-    alarm:  Mutex::const_new(CriticalSectionRawMutex::new(), RefCell::new(None)),
-    alarms:  Mutex::const_new(CriticalSectionRawMutex::new(), [DUMMY_ALARM; ALARM_COUNT]),
+    alarm: Mutex::const_new(CriticalSectionRawMutex::new(), RefCell::new(None)),
+    alarms: Mutex::const_new(CriticalSectionRawMutex::new(), [DUMMY_ALARM; ALARM_COUNT]),
     next_alarm: AtomicU8::new(0),
 });
 
