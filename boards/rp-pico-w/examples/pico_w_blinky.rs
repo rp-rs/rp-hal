@@ -76,7 +76,7 @@ fn main() -> ! {
     // Safety: function never returns, executor is never dropped
     let executor: &'static mut Executor = unsafe { forever_mut(&mut executor) };
 
-    let task_pool: TaskPool<_, 10> = TaskPool::new();
+    let task_pool: TaskPool<_, 1> = TaskPool::new();
     let task_pool = unsafe { forever(&task_pool) };
 
     let state = cyw43::State::new();
@@ -140,7 +140,7 @@ async fn run(spawner: Spawner, pins: rp_pico_w::Pins, state: &'static cyw43::Sta
     info!("create cyw43 driver");
     let (mut control, runner) = cyw43::new(state, pwr, spi, fw).await;
 
-    let task_pool: TaskPool<_, 10> = TaskPool::new();
+    let task_pool: TaskPool<_, 1> = TaskPool::new();
     let task_pool = unsafe { forever(&task_pool) };
     let spawn_token = task_pool.spawn(|| runner.run());
     spawner.spawn(spawn_token).unwrap();
@@ -182,7 +182,7 @@ async fn run(spawner: Spawner, pins: rp_pico_w::Pins, state: &'static cyw43::Sta
     let stack = Stack::new(net_device, config, stack_resources, seed);
     let stack = unsafe { forever(&stack) };
 
-    let task_pool: TaskPool<_, 10> = TaskPool::new();
+    let task_pool: TaskPool<_, 1> = TaskPool::new();
     let task_pool = unsafe { forever(&task_pool) };
     let spawn_token = task_pool.spawn(|| stack.run());
     spawner.spawn(spawn_token).unwrap();
