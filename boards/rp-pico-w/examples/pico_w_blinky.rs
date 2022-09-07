@@ -31,8 +31,9 @@ use embassy_executor::Spawner;
 use embassy_net::Stack;
 use embassy_time::{Duration, Timer};
 
-/// The function configures the RP2040 peripherals, then blinks the LED in an
-/// infinite loop.
+/// The function configures the RP2040 peripherals, initializes
+/// networking, then blinks the LED in an infinite loop.
+/// TODO: add some simple network service
 #[entry]
 fn main() -> ! {
     info!("start");
@@ -89,15 +90,17 @@ fn main() -> ! {
     });
 }
 
+// TODO documentation
 unsafe fn forever_mut<T>(r: &'_ mut T) -> &'static mut T {
     core::mem::transmute(r)
 }
 
+// TODO documentation
 unsafe fn forever<T>(r: &'_ T) -> &'static T {
     core::mem::transmute(r)
 }
 
-async fn run(spawner: Spawner, pins: rp_pico_w::Pins, state: &'static cyw43::State) {
+async fn run(spawner: Spawner, pins: rp_pico_w::Pins, state: &'static cyw43::State) -> ! {
     // These are implicitly used by the spi driver if they are in the correct mode
     let mut spi_cs: hal::gpio::dynpin::DynPin = pins.wl_cs.into();
     // TODO should be high from the beginning :-(
@@ -120,19 +123,8 @@ async fn run(spawner: Spawner, pins: rp_pico_w::Pins, state: &'static cyw43::Sta
 
     let pwr = pins.wl_on.into_push_pull_output();
 
-    #[cfg(not(feature = "fix_fw"))]
-    let fw = include_bytes!("firmware/43439A0.bin");
-    #[cfg(not(feature = "fix_fw"))]
-    let clm = include_bytes!("firmware/43439A0_clm.bin");
-
-    // To make flashing faster for development, you may want to flash the firmwares independently
-    // at hardcoded addresses, instead of baking them into the program with `include_bytes!`:
-    //     probe-rs-cli download 43439A0.bin --format bin --chip RP2040 --base-address 0x10100000
-    //     probe-rs-cli download 43439A0.clm_blob --format bin --chip RP2040 --base-address 0x10140000
-    #[cfg(feature = "fix_fw")]
-    let fw = unsafe { core::slice::from_raw_parts(0x10100000 as *const u8, 224190) };
-    #[cfg(feature = "fix_fw")]
-    let clm = unsafe { core::slice::from_raw_parts(0x10140000 as *const u8, 4752) };
+    let fw = cyw43::firmware::firmware();
+    let clm = cyw43::firmware::clm();
 
     use embassy_futures::yield_now;
     yield_now().await;
@@ -191,10 +183,10 @@ async fn run(spawner: Spawner, pins: rp_pico_w::Pins, state: &'static cyw43::Sta
     loop {
         info!("on");
         control.gpio_set(0, true).await;
-        Timer::after(Duration::from_millis(200)).await;
+        Timer::after(Duration::from_millis(500)).await;
 
         info!("off");
         control.gpio_set(0, false).await;
-        Timer::after(Duration::from_millis(200)).await;
+        Timer::after(Duration::from_millis(500)).await;
     }
 }
