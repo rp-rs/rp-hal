@@ -118,6 +118,18 @@ impl<P: PIOExt> PIO<P> {
         &self.interrupts
     }
 
+    /// Enable interrupts raised by state machines.
+    ///
+    /// The PIO peripheral has 4 outside visible interrupts that can be raised by the state machines. Note that this
+    /// does not correspond with the state machine index; any state machine can raise any one of the four interrupts.
+    pub fn enable_sm_interrupt(&self, irq: PioIRQ, id: u8) {
+        assert!(
+            id < 4,
+            "Only the lower 4 can also be masked into one of PIO’s interrupt request lines."
+        );
+        self.interrupts[irq.to_index()].enable_sm_interrupt(id)
+    }
+
     /// Get raw irq flags.
     ///
     /// The PIO has 8 IRQ flags, of which 4 are visible to the host processor. Each bit of `flags` corresponds to one of
@@ -509,6 +521,24 @@ pub struct Stopped;
 /// Marker for an initialized and running state machine.
 pub struct Running;
 
+/// Id for the PIO's IRQ
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum PioIRQ {
+    #[allow(missing_docs)]
+    Irq0,
+    #[allow(missing_docs)]
+    Irq1,
+}
+impl PioIRQ {
+    const fn to_index(self) -> usize {
+        match self {
+            PioIRQ::Irq0 => 0,
+            PioIRQ::Irq1 => 1,
+        }
+    }
+}
+
 impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     /// Stops the state machine if it is still running and returns its program.
     ///
@@ -547,6 +577,74 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     /// Check if the current instruction is stalled.
     pub fn stalled(&self) -> bool {
         self.sm.sm().sm_execctrl.read().exec_stalled().bits()
+    }
+
+    /// Enable TX FIFO not full interrupt.
+    ///
+    /// This interrupt is raised when the TX FIFO is not full, i.e. one could push more data to it.
+    pub fn enable_tx_not_full_interrupt(&self, id: PioIRQ) {
+        unsafe {
+            write_bitmask_set(
+                (*self.sm.block).sm_irq[id.to_index()].irq_inte.as_ptr(),
+                1 << (SM::id() + 4),
+            );
+        }
+    }
+
+    /// Disable TX FIFO not full interrupt.
+    pub fn disable_tx_not_full_interrupt(&self, id: PioIRQ) {
+        unsafe {
+            write_bitmask_clear(
+                (*self.sm.block).sm_irq[id.to_index()].irq_inte.as_ptr(),
+                1 << (SM::id() + 4),
+            );
+        }
+    }
+    /// Force TX FIFO not full interrupt.
+    pub fn force_tx_not_full_interrupt(&self, id: PioIRQ) {
+        unsafe {
+            write_bitmask_set(
+                (*self.sm.block).sm_irq[id.to_index()].irq_intf.as_ptr(),
+                1 << (SM::id() + 4),
+            );
+        }
+    }
+
+    /// Enable RX FIFO not empty interrupt.
+    ///
+    /// This interrupt is raised when the RX FIFO is not empty, i.e. one could read more data from it.
+    pub fn enable_rx_not_empty_interrupt(&self, id: PioIRQ) {
+        unsafe {
+            write_bitmask_set(
+                (*self.sm.block).sm_irq[id.to_index()].irq_inte.as_ptr(),
+                1 << SM::id(),
+            );
+        }
+    }
+
+    /// Disable RX FIFO not empty interrupt.
+    pub fn disable_rx_not_empty_interrupt(&self, id: PioIRQ) {
+        unsafe {
+            write_bitmask_clear(
+                (*self.sm.block).sm_irq[id.to_index()].irq_inte.as_ptr(),
+                1 << SM::id(),
+            );
+        }
+    }
+
+    /// Force RX FIFO not empty interrupt.
+    pub fn force_rx_not_empty_interrupt(&self, id: PioIRQ, state: bool) {
+        let action = if state {
+            write_bitmask_set
+        } else {
+            write_bitmask_clear
+        };
+        unsafe {
+            action(
+                (*self.sm.block).sm_irq[id.to_index()].irq_intf.as_ptr(),
+                1 << SM::id(),
+            );
+        }
     }
 }
 
@@ -1407,6 +1505,10 @@ impl<P: PIOExt> Interrupt<P> {
     ///
     /// Each of the 4 state machines have their own TX FIFO. This interrupt is raised when the TX FIFO is not full, i.e.
     /// one could push more data to it.
+    #[deprecated(
+        since = "0.7.0",
+        note = "Use the dedicated method on the state machine"
+    )]
     pub fn enable_tx_not_full_interrupt(&self, id: u8) {
         match id {
             0 => self.irq().irq_inte.modify(|_, w| w.sm0_txnfull().set_bit()),
@@ -1420,6 +1522,10 @@ impl<P: PIOExt> Interrupt<P> {
     /// Disable TX FIFO not full interrupt.
     ///
     /// See [`Self::enable_tx_not_full_interrupt`] for info about the index.
+    #[deprecated(
+        since = "0.7.0",
+        note = "Use the dedicated method on the state machine"
+    )]
     pub fn disable_tx_not_full_interrupt(&self, id: u8) {
         match id {
             0 => self
@@ -1445,6 +1551,10 @@ impl<P: PIOExt> Interrupt<P> {
     /// Force TX FIFO not full interrupt.
     ///
     /// See [`Self::enable_tx_not_full_interrupt`] for info about the index.
+    #[deprecated(
+        since = "0.7.0",
+        note = "Use the dedicated method on the state machine"
+    )]
     pub fn force_tx_not_full_interrupt(&self, id: u8) {
         match id {
             0 => self.irq().irq_intf.modify(|_, w| w.sm0_txnfull().set_bit()),
@@ -1459,6 +1569,10 @@ impl<P: PIOExt> Interrupt<P> {
     ///
     /// Each of the 4 state machines have their own RX FIFO. This interrupt is raised when the RX FIFO is not empty,
     /// i.e. one could read more data from it.
+    #[deprecated(
+        since = "0.7.0",
+        note = "Use the dedicated method on the state machine"
+    )]
     pub fn enable_rx_not_empty_interrupt(&self, id: u8) {
         match id {
             0 => self
@@ -1484,6 +1598,10 @@ impl<P: PIOExt> Interrupt<P> {
     /// Disable RX FIFO not empty interrupt.
     ///
     /// See [`Self::enable_rx_not_empty_interrupt`] for info about the index.
+    #[deprecated(
+        since = "0.7.0",
+        note = "Use the dedicated method on the state machine"
+    )]
     pub fn disable_rx_not_empty_interrupt(&self, id: u8) {
         match id {
             0 => self
@@ -1509,6 +1627,10 @@ impl<P: PIOExt> Interrupt<P> {
     /// Force RX FIFO not empty interrupt.
     ///
     /// See [`Self::enable_rx_not_empty_interrupt`] for info about the index.
+    #[deprecated(
+        since = "0.7.0",
+        note = "Use the dedicated method on the state machine"
+    )]
     pub fn force_rx_not_empty_interrupt(&self, id: u8) {
         match id {
             0 => self
