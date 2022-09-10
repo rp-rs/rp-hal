@@ -51,18 +51,6 @@ pub trait PIOExt:
         (
             PIO {
                 used_instruction_space: 0,
-                interrupts: [
-                    Interrupt {
-                        id: 0,
-                        block: self.deref(),
-                        _phantom: core::marker::PhantomData,
-                    },
-                    Interrupt {
-                        id: 1,
-                        block: self.deref(),
-                        _phantom: core::marker::PhantomData,
-                    },
-                ],
                 pio: self,
             },
             sm0,
@@ -80,7 +68,6 @@ impl PIOExt for PIO1 {}
 pub struct PIO<P: PIOExt> {
     used_instruction_space: u32, // bit for each PIO_INSTRUCTION_COUNT
     pio: P,
-    interrupts: [Interrupt<P>; 2],
 }
 
 impl<P: PIOExt> core::fmt::Debug for PIO<P> {
@@ -113,21 +100,20 @@ impl<P: PIOExt> PIO<P> {
         self.pio
     }
 
-    /// This PIO's interrupts.
-    pub fn interrupts(&self) -> &[Interrupt<P>; 2] {
-        &self.interrupts
+    /// This PIO0's interrupts.
+    pub fn irq0<'a>(&'a self) -> Interrupt<'a, P, 0> {
+        Interrupt {
+            block: self.pio.deref(),
+            _phantom: core::marker::PhantomData,
+        }
     }
 
-    /// Enable interrupts raised by state machines.
-    ///
-    /// The PIO peripheral has 4 outside visible interrupts that can be raised by the state machines. Note that this
-    /// does not correspond with the state machine index; any state machine can raise any one of the four interrupts.
-    pub fn enable_sm_interrupt(&self, irq: PioIRQ, id: u8) {
-        assert!(
-            id < 4,
-            "Only the lower 4 can also be masked into one of PIO’s interrupt request lines."
-        );
-        self.interrupts[irq.to_index()].enable_sm_interrupt(id)
+    /// This PIO0's interrupts.
+    pub fn irq1<'a>(&'a self) -> Interrupt<'a, P, 1> {
+        Interrupt {
+            block: self.pio.deref(),
+            _phantom: core::marker::PhantomData,
+        }
     }
 
     /// Get raw irq flags.
@@ -1458,20 +1444,19 @@ impl<SM: ValidStateMachine> Tx<SM> {
 
 /// PIO Interrupt controller.
 #[derive(Debug)]
-pub struct Interrupt<P: PIOExt> {
-    id: u8,
+pub struct Interrupt<'a, P: PIOExt, const IRQ: usize> {
     block: *const rp2040_pac::pio0::RegisterBlock,
-    _phantom: core::marker::PhantomData<P>,
+    _phantom: core::marker::PhantomData<&'a P>,
 }
 
 // Safety: `Interrupt` provides exclusive access to interrupt registers.
-unsafe impl<P: PIOExt> Send for Interrupt<P> {}
+unsafe impl<'a, P: PIOExt, const IRQ: usize> Send for Interrupt<'a, P, IRQ> {}
 
 // Safety: `Interrupt` is marked Send so ensure all accesses remain atomic and no new concurrent
 // accesses are added.
 // `Interrupt` provides exclusive access to `irq_intf` to `irq_inte` for it's state machine, this
 // must remain true to satisfy Send.
-impl<P: PIOExt> Interrupt<P> {
+impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
     /// Enable interrupts raised by state machines.
     ///
     /// The PIO peripheral has 4 outside visible interrupts that can be raised by the state machines. Note that this
@@ -1616,7 +1601,7 @@ impl<P: PIOExt> Interrupt<P> {
     }
 
     fn irq(&self) -> &rp2040_pac::pio0::SM_IRQ {
-        &self.register_block().sm_irq[self.id as usize]
+        &self.register_block().sm_irq[IRQ]
     }
 }
 
