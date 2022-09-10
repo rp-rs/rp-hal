@@ -101,7 +101,7 @@ impl<P: PIOExt> PIO<P> {
     }
 
     /// This PIO0's interrupts.
-    pub fn irq0<'a>(&'a self) -> Interrupt<'a, P, 0> {
+    pub fn irq0(&self) -> Interrupt<'_, P, 0> {
         Interrupt {
             block: self.pio.deref(),
             _phantom: core::marker::PhantomData,
@@ -109,7 +109,7 @@ impl<P: PIOExt> PIO<P> {
     }
 
     /// This PIO0's interrupts.
-    pub fn irq1<'a>(&'a self) -> Interrupt<'a, P, 1> {
+    pub fn irq1(&self) -> Interrupt<'_, P, 1> {
         Interrupt {
             block: self.pio.deref(),
             _phantom: core::marker::PhantomData,
