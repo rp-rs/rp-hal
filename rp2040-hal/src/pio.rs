@@ -578,74 +578,6 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     pub fn stalled(&self) -> bool {
         self.sm.sm().sm_execctrl.read().exec_stalled().bits()
     }
-
-    /// Enable TX FIFO not full interrupt.
-    ///
-    /// This interrupt is raised when the TX FIFO is not full, i.e. one could push more data to it.
-    pub fn enable_tx_not_full_interrupt(&self, id: PioIRQ) {
-        unsafe {
-            write_bitmask_set(
-                (*self.sm.block).sm_irq[id.to_index()].irq_inte.as_ptr(),
-                1 << (SM::id() + 4),
-            );
-        }
-    }
-
-    /// Disable TX FIFO not full interrupt.
-    pub fn disable_tx_not_full_interrupt(&self, id: PioIRQ) {
-        unsafe {
-            write_bitmask_clear(
-                (*self.sm.block).sm_irq[id.to_index()].irq_inte.as_ptr(),
-                1 << (SM::id() + 4),
-            );
-        }
-    }
-    /// Force TX FIFO not full interrupt.
-    pub fn force_tx_not_full_interrupt(&self, id: PioIRQ) {
-        unsafe {
-            write_bitmask_set(
-                (*self.sm.block).sm_irq[id.to_index()].irq_intf.as_ptr(),
-                1 << (SM::id() + 4),
-            );
-        }
-    }
-
-    /// Enable RX FIFO not empty interrupt.
-    ///
-    /// This interrupt is raised when the RX FIFO is not empty, i.e. one could read more data from it.
-    pub fn enable_rx_not_empty_interrupt(&self, id: PioIRQ) {
-        unsafe {
-            write_bitmask_set(
-                (*self.sm.block).sm_irq[id.to_index()].irq_inte.as_ptr(),
-                1 << SM::id(),
-            );
-        }
-    }
-
-    /// Disable RX FIFO not empty interrupt.
-    pub fn disable_rx_not_empty_interrupt(&self, id: PioIRQ) {
-        unsafe {
-            write_bitmask_clear(
-                (*self.sm.block).sm_irq[id.to_index()].irq_inte.as_ptr(),
-                1 << SM::id(),
-            );
-        }
-    }
-
-    /// Force RX FIFO not empty interrupt.
-    pub fn force_rx_not_empty_interrupt(&self, id: PioIRQ, state: bool) {
-        let action = if state {
-            write_bitmask_set
-        } else {
-            write_bitmask_clear
-        };
-        unsafe {
-            action(
-                (*self.sm.block).sm_irq[id.to_index()].irq_intf.as_ptr(),
-                1 << SM::id(),
-            );
-        }
-    }
 }
 
 // Safety: All shared register accesses are atomic.
@@ -1194,7 +1126,7 @@ unsafe impl<SM: ValidStateMachine + Send> Send for Rx<SM> {}
 // are added.
 impl<SM: ValidStateMachine> Rx<SM> {
     fn register_block(&self) -> &pac::pio0::RegisterBlock {
-        // Safety: The register is unique to this Tx instance.
+        // Safety: The register is unique to this Rx instance.
         unsafe { &*self.block }
     }
 
@@ -1233,7 +1165,7 @@ impl<SM: ValidStateMachine> Rx<SM> {
     }
 
     /// Enable/Disable the autopush feature of the state machine.
-    // Safety: This register is read by Tx, this is the only write.
+    // Safety: This register is read by Rx, this is the only write.
     pub fn enable_autopush(&mut self, enable: bool) {
         self.register_block().sm[SM::id()]
             .sm_shiftctrl
@@ -1248,6 +1180,49 @@ impl<SM: ValidStateMachine> Rx<SM> {
     /// Indicate if the rx FIFO is full
     pub fn is_full(&self) -> bool {
         self.register_block().fstat.read().rxfull().bits() & (1 << SM::id()) != 0
+    }
+
+    /// Enable RX FIFO not empty interrupt.
+    ///
+    /// This interrupt is raised when the RX FIFO is not empty, i.e. one could read more data from it.
+    pub fn enable_rx_not_empty_interrupt(&self, id: PioIRQ) {
+        unsafe {
+            write_bitmask_set(
+                self.register_block().sm_irq[id.to_index()]
+                    .irq_inte
+                    .as_ptr(),
+                1 << SM::id(),
+            );
+        }
+    }
+
+    /// Disable RX FIFO not empty interrupt.
+    pub fn disable_rx_not_empty_interrupt(&self, id: PioIRQ) {
+        unsafe {
+            write_bitmask_clear(
+                self.register_block().sm_irq[id.to_index()]
+                    .irq_inte
+                    .as_ptr(),
+                1 << SM::id(),
+            );
+        }
+    }
+
+    /// Force RX FIFO not empty interrupt.
+    pub fn force_rx_not_empty_interrupt(&self, id: PioIRQ, state: bool) {
+        let action = if state {
+            write_bitmask_set
+        } else {
+            write_bitmask_clear
+        };
+        unsafe {
+            action(
+                self.register_block().sm_irq[id.to_index()]
+                    .irq_intf
+                    .as_ptr(),
+                1 << SM::id(),
+            );
+        }
     }
 }
 
@@ -1302,7 +1277,7 @@ impl<SM: ValidStateMachine> Tx<SM> {
         }
 
         unsafe {
-            let reg_ptr = self.register_block().txf[SM::id()].as_ptr() as *mut u32;
+            let reg_ptr = self.fifo_address() as *mut u32;
             reg_ptr.write_volatile(value);
         }
 
@@ -1336,7 +1311,7 @@ impl<SM: ValidStateMachine> Tx<SM> {
         }
 
         unsafe {
-            let reg_ptr = self.register_block().txf[SM::id()].as_ptr() as *mut u8;
+            let reg_ptr = self.fifo_address() as *mut u8;
             reg_ptr.write_volatile(value);
         }
 
@@ -1370,7 +1345,7 @@ impl<SM: ValidStateMachine> Tx<SM> {
         }
 
         unsafe {
-            let reg_ptr = self.register_block().txf[SM::id()].as_ptr() as *mut u16;
+            let reg_ptr = self.fifo_address() as *mut u16;
             reg_ptr.write_volatile(value);
         }
 
@@ -1441,6 +1416,44 @@ impl<SM: ValidStateMachine> Tx<SM> {
                 .write(|w| unsafe { w.sm0_instr().bits(instr) })
         }
     }
+
+    /// Enable TX FIFO not full interrupt.
+    ///
+    /// This interrupt is raised when the TX FIFO is not full, i.e. one could push more data to it.
+    pub fn enable_tx_not_full_interrupt(&self, id: PioIRQ) {
+        unsafe {
+            write_bitmask_set(
+                self.register_block().sm_irq[id.to_index()]
+                    .irq_inte
+                    .as_ptr(),
+                1 << (SM::id() + 4),
+            );
+        }
+    }
+
+    /// Disable TX FIFO not full interrupt.
+    pub fn disable_tx_not_full_interrupt(&self, id: PioIRQ) {
+        unsafe {
+            write_bitmask_clear(
+                self.register_block().sm_irq[id.to_index()]
+                    .irq_inte
+                    .as_ptr(),
+                1 << (SM::id() + 4),
+            );
+        }
+    }
+
+    /// Force TX FIFO not full interrupt.
+    pub fn force_tx_not_full_interrupt(&self, id: PioIRQ) {
+        unsafe {
+            write_bitmask_set(
+                self.register_block().sm_irq[id.to_index()]
+                    .irq_intf
+                    .as_ptr(),
+                1 << (SM::id() + 4),
+            );
+        }
+    }
 }
 
 /// PIO Interrupt controller.
@@ -1464,12 +1477,9 @@ impl<P: PIOExt> Interrupt<P> {
     /// The PIO peripheral has 4 outside visible interrupts that can be raised by the state machines. Note that this
     /// does not correspond with the state machine index; any state machine can raise any one of the four interrupts.
     pub fn enable_sm_interrupt(&self, id: u8) {
-        match id {
-            0 => self.irq().irq_inte.modify(|_, w| w.sm0().set_bit()),
-            1 => self.irq().irq_inte.modify(|_, w| w.sm1().set_bit()),
-            2 => self.irq().irq_inte.modify(|_, w| w.sm2().set_bit()),
-            3 => self.irq().irq_inte.modify(|_, w| w.sm3().set_bit()),
-            _ => panic!("invalid state machine interrupt number"),
+        assert!(id < 3, "invalid state machine interrupt number");
+        unsafe {
+            write_bitmask_set(self.irq().irq_inte.as_ptr(), 1 << (id + 8));
         }
     }
 
@@ -1477,12 +1487,9 @@ impl<P: PIOExt> Interrupt<P> {
     ///
     /// See [`Self::enable_sm_interrupt`] for info about the index.
     pub fn disable_sm_interrupt(&self, id: u8) {
-        match id {
-            0 => self.irq().irq_inte.modify(|_, w| w.sm0().clear_bit()),
-            1 => self.irq().irq_inte.modify(|_, w| w.sm1().clear_bit()),
-            2 => self.irq().irq_inte.modify(|_, w| w.sm2().clear_bit()),
-            3 => self.irq().irq_inte.modify(|_, w| w.sm3().clear_bit()),
-            _ => panic!("invalid state machine interrupt number"),
+        assert!(id < 3, "invalid state machine interrupt number");
+        unsafe {
+            write_bitmask_clear(self.irq().irq_inte.as_ptr(), 1 << (id + 8));
         }
     }
 
@@ -1490,14 +1497,17 @@ impl<P: PIOExt> Interrupt<P> {
     ///
     /// Note that this doesn't affect the state seen by the state machine. For that, see [`PIO::force_irq`].
     ///
+    ///
+    ///
     /// See [`Self::enable_sm_interrupt`] for info about the index.
-    pub fn force_sm_interrupt(&self, id: u8) {
-        match id {
-            0 => self.irq().irq_intf.modify(|_, w| w.sm0().set_bit()),
-            1 => self.irq().irq_intf.modify(|_, w| w.sm1().set_bit()),
-            2 => self.irq().irq_intf.modify(|_, w| w.sm2().set_bit()),
-            3 => self.irq().irq_intf.modify(|_, w| w.sm3().set_bit()),
-            _ => panic!("invalid state machine interrupt number"),
+    pub fn force_sm_interrupt(&self, id: u8, set: bool) {
+        assert!(id < 3, "invalid state machine interrupt number");
+        unsafe {
+            if set {
+                write_bitmask_set(self.irq().irq_intf.as_ptr(), 1 << (id + 8));
+            } else {
+                write_bitmask_clear(self.irq().irq_intf.as_ptr(), 1 << (id + 8));
+            }
         }
     }
 
@@ -1510,12 +1520,9 @@ impl<P: PIOExt> Interrupt<P> {
         note = "Use the dedicated method on the state machine"
     )]
     pub fn enable_tx_not_full_interrupt(&self, id: u8) {
-        match id {
-            0 => self.irq().irq_inte.modify(|_, w| w.sm0_txnfull().set_bit()),
-            1 => self.irq().irq_inte.modify(|_, w| w.sm1_txnfull().set_bit()),
-            2 => self.irq().irq_inte.modify(|_, w| w.sm2_txnfull().set_bit()),
-            3 => self.irq().irq_inte.modify(|_, w| w.sm3_txnfull().set_bit()),
-            _ => panic!("invalid state machine interrupt number"),
+        assert!(id < 3, "invalid state machine interrupt number");
+        unsafe {
+            write_bitmask_set(self.irq().irq_inte.as_ptr(), 1 << (id + 4));
         }
     }
 
@@ -1527,24 +1534,9 @@ impl<P: PIOExt> Interrupt<P> {
         note = "Use the dedicated method on the state machine"
     )]
     pub fn disable_tx_not_full_interrupt(&self, id: u8) {
-        match id {
-            0 => self
-                .irq()
-                .irq_inte
-                .modify(|_, w| w.sm0_txnfull().clear_bit()),
-            1 => self
-                .irq()
-                .irq_inte
-                .modify(|_, w| w.sm1_txnfull().clear_bit()),
-            2 => self
-                .irq()
-                .irq_inte
-                .modify(|_, w| w.sm2_txnfull().clear_bit()),
-            3 => self
-                .irq()
-                .irq_inte
-                .modify(|_, w| w.sm3_txnfull().clear_bit()),
-            _ => panic!("invalid state machine interrupt number"),
+        assert!(id < 3, "invalid state machine interrupt number");
+        unsafe {
+            write_bitmask_clear(self.irq().irq_inte.as_ptr(), 1 << (id + 4));
         }
     }
 
@@ -1556,12 +1548,9 @@ impl<P: PIOExt> Interrupt<P> {
         note = "Use the dedicated method on the state machine"
     )]
     pub fn force_tx_not_full_interrupt(&self, id: u8) {
-        match id {
-            0 => self.irq().irq_intf.modify(|_, w| w.sm0_txnfull().set_bit()),
-            1 => self.irq().irq_intf.modify(|_, w| w.sm1_txnfull().set_bit()),
-            2 => self.irq().irq_intf.modify(|_, w| w.sm2_txnfull().set_bit()),
-            3 => self.irq().irq_intf.modify(|_, w| w.sm3_txnfull().set_bit()),
-            _ => panic!("invalid state machine interrupt number"),
+        assert!(id < 3, "invalid state machine interrupt number");
+        unsafe {
+            write_bitmask_set(self.irq().irq_intf.as_ptr(), 1 << (id + 4));
         }
     }
 
@@ -1574,24 +1563,9 @@ impl<P: PIOExt> Interrupt<P> {
         note = "Use the dedicated method on the state machine"
     )]
     pub fn enable_rx_not_empty_interrupt(&self, id: u8) {
-        match id {
-            0 => self
-                .irq()
-                .irq_inte
-                .modify(|_, w| w.sm0_rxnempty().set_bit()),
-            1 => self
-                .irq()
-                .irq_inte
-                .modify(|_, w| w.sm1_rxnempty().set_bit()),
-            2 => self
-                .irq()
-                .irq_inte
-                .modify(|_, w| w.sm2_rxnempty().set_bit()),
-            3 => self
-                .irq()
-                .irq_inte
-                .modify(|_, w| w.sm3_rxnempty().set_bit()),
-            _ => panic!("invalid state machine interrupt number"),
+        assert!(id < 3, "invalid state machine interrupt number");
+        unsafe {
+            write_bitmask_set(self.irq().irq_inte.as_ptr(), 1 << id);
         }
     }
 
@@ -1603,24 +1577,9 @@ impl<P: PIOExt> Interrupt<P> {
         note = "Use the dedicated method on the state machine"
     )]
     pub fn disable_rx_not_empty_interrupt(&self, id: u8) {
-        match id {
-            0 => self
-                .irq()
-                .irq_inte
-                .modify(|_, w| w.sm0_rxnempty().clear_bit()),
-            1 => self
-                .irq()
-                .irq_inte
-                .modify(|_, w| w.sm1_rxnempty().clear_bit()),
-            2 => self
-                .irq()
-                .irq_inte
-                .modify(|_, w| w.sm2_rxnempty().clear_bit()),
-            3 => self
-                .irq()
-                .irq_inte
-                .modify(|_, w| w.sm3_rxnempty().clear_bit()),
-            _ => panic!("invalid state machine interrupt number"),
+        assert!(id < 3, "invalid state machine interrupt number");
+        unsafe {
+            write_bitmask_clear(self.irq().irq_inte.as_ptr(), 1 << id);
         }
     }
 
@@ -1632,24 +1591,9 @@ impl<P: PIOExt> Interrupt<P> {
         note = "Use the dedicated method on the state machine"
     )]
     pub fn force_rx_not_empty_interrupt(&self, id: u8) {
-        match id {
-            0 => self
-                .irq()
-                .irq_intf
-                .modify(|_, w| w.sm0_rxnempty().set_bit()),
-            1 => self
-                .irq()
-                .irq_intf
-                .modify(|_, w| w.sm1_rxnempty().set_bit()),
-            2 => self
-                .irq()
-                .irq_intf
-                .modify(|_, w| w.sm2_rxnempty().set_bit()),
-            3 => self
-                .irq()
-                .irq_intf
-                .modify(|_, w| w.sm3_rxnempty().set_bit()),
-            _ => panic!("invalid state machine interrupt number"),
+        assert!(id < 3, "invalid state machine interrupt number");
+        unsafe {
+            write_bitmask_set(self.irq().irq_intf.as_ptr(), 1 << id);
         }
     }
 
