@@ -1462,7 +1462,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
     /// The PIO peripheral has 4 outside visible interrupts that can be raised by the state machines. Note that this
     /// does not correspond with the state machine index; any state machine can raise any one of the four interrupts.
     pub fn enable_sm_interrupt(&self, id: u8) {
-        assert!(id < 3, "invalid state machine interrupt number");
+        assert!(id < 4, "invalid state machine interrupt number");
         unsafe {
             write_bitmask_set(self.irq().irq_inte.as_ptr(), 1 << (id + 8));
         }
@@ -1472,7 +1472,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
     ///
     /// See [`Self::enable_sm_interrupt`] for info about the index.
     pub fn disable_sm_interrupt(&self, id: u8) {
-        assert!(id < 3, "invalid state machine interrupt number");
+        assert!(id < 4, "invalid state machine interrupt number");
         unsafe {
             write_bitmask_clear(self.irq().irq_inte.as_ptr(), 1 << (id + 8));
         }
@@ -1486,7 +1486,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
     ///
     /// See [`Self::enable_sm_interrupt`] for info about the index.
     pub fn force_sm_interrupt(&self, id: u8, set: bool) {
-        assert!(id < 3, "invalid state machine interrupt number");
+        assert!(id < 4, "invalid state machine interrupt number");
         unsafe {
             if set {
                 write_bitmask_set(self.irq().irq_intf.as_ptr(), 1 << (id + 8));
@@ -1505,7 +1505,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         note = "Use the dedicated method on the state machine"
     )]
     pub fn enable_tx_not_full_interrupt(&self, id: u8) {
-        assert!(id < 3, "invalid state machine interrupt number");
+        assert!(id < 4, "invalid state machine interrupt number");
         unsafe {
             write_bitmask_set(self.irq().irq_inte.as_ptr(), 1 << (id + 4));
         }
@@ -1519,7 +1519,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         note = "Use the dedicated method on the state machine"
     )]
     pub fn disable_tx_not_full_interrupt(&self, id: u8) {
-        assert!(id < 3, "invalid state machine interrupt number");
+        assert!(id < 4, "invalid state machine interrupt number");
         unsafe {
             write_bitmask_clear(self.irq().irq_inte.as_ptr(), 1 << (id + 4));
         }
@@ -1533,7 +1533,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         note = "Use the dedicated method on the state machine"
     )]
     pub fn force_tx_not_full_interrupt(&self, id: u8) {
-        assert!(id < 3, "invalid state machine interrupt number");
+        assert!(id < 4, "invalid state machine interrupt number");
         unsafe {
             write_bitmask_set(self.irq().irq_intf.as_ptr(), 1 << (id + 4));
         }
@@ -1548,7 +1548,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         note = "Use the dedicated method on the state machine"
     )]
     pub fn enable_rx_not_empty_interrupt(&self, id: u8) {
-        assert!(id < 3, "invalid state machine interrupt number");
+        assert!(id < 4, "invalid state machine interrupt number");
         unsafe {
             write_bitmask_set(self.irq().irq_inte.as_ptr(), 1 << id);
         }
@@ -1562,7 +1562,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         note = "Use the dedicated method on the state machine"
     )]
     pub fn disable_rx_not_empty_interrupt(&self, id: u8) {
-        assert!(id < 3, "invalid state machine interrupt number");
+        assert!(id < 4, "invalid state machine interrupt number");
         unsafe {
             write_bitmask_clear(self.irq().irq_inte.as_ptr(), 1 << id);
         }
@@ -1576,7 +1576,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         note = "Use the dedicated method on the state machine"
     )]
     pub fn force_rx_not_empty_interrupt(&self, id: u8) {
-        assert!(id < 3, "invalid state machine interrupt number");
+        assert!(id < 4, "invalid state machine interrupt number");
         unsafe {
             write_bitmask_set(self.irq().irq_intf.as_ptr(), 1 << id);
         }
