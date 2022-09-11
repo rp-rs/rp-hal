@@ -34,7 +34,7 @@ use rp_pico::hal;
 
 // Import pio crates
 use hal::pio::{PIOBuilder, Running, StateMachine, Tx, ValidStateMachine, SM0};
-use pio::{InstructionOperands, OutDestination};
+use pio::{Instruction, InstructionOperands, OutDestination};
 use pio_proc::pio_file;
 
 /// Set pio pwm period
@@ -53,20 +53,22 @@ fn pio_pwm_set_period<T: ValidStateMachine>(
 
     let mut sm = sm.stop();
     tx.write(period);
-    sm.exec_instruction(
-        InstructionOperands::PULL {
+    sm.exec_instruction(Instruction {
+        operands: InstructionOperands::PULL {
             if_empty: false,
             block: false,
-        }
-        .encode(),
-    );
-    sm.exec_instruction(
-        InstructionOperands::OUT {
+        },
+        delay: 0,
+        side_set: None,
+    });
+    sm.exec_instruction(Instruction {
+        operands: InstructionOperands::OUT {
             destination: OutDestination::ISR,
             bit_count: 32,
-        }
-        .encode(),
-    );
+        },
+        delay: 0,
+        side_set: None,
+    });
     sm.start()
 }
 

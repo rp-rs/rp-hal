@@ -4,7 +4,7 @@ use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
     resets::SubsystemReset,
 };
-use pio::{Program, SideSet, Wrap};
+use pio::{Instruction, InstructionOperands, Program, SideSet, Wrap};
 use rp2040_pac::{PIO0, PIO1};
 
 const PIO_INSTRUCTION_COUNT: usize = 32;
@@ -191,31 +191,37 @@ impl<P: PIOExt> PIO<P> {
         p: &Program<{ pio::RP2040_MAX_PROGRAM_SIZE }>,
     ) -> Result<InstalledProgram<P>, InstallError> {
         if let Some(offset) = self.find_offset_for_instructions(&p.code, p.origin) {
-            for (i, instr) in p
-                .code
+            p.code
                 .iter()
+                .cloned()
                 .map(|instr| {
-                    let mut instr = pio::Instruction::decode(*instr, p.side_set).unwrap();
+                    if let Some(Instruction {
+                        operands: InstructionOperands::JMP { condition, address },
+                        delay,
+                        side_set,
+                    }) = Instruction::decode(instr, p.side_set)
+                    {
+                        // JMP instruction. We need to apply offset here
+                        let address = address + offset as u8;
+                        assert!(
+                            address < pio::RP2040_MAX_PROGRAM_SIZE as u8,
+                            "Invalid JMP out of the program after offset addition"
+                        );
 
-                    instr.operands = match instr.operands {
-                        pio::InstructionOperands::JMP { condition, address } => {
-                            // JMP instruction. We need to apply offset here
-                            let address = address + offset as u8;
-                            assert!(
-                                address < pio::RP2040_MAX_PROGRAM_SIZE as u8,
-                                "Invalid JMP out of the program after offset addition"
-                            );
-                            pio::InstructionOperands::JMP { condition, address }
+                        Instruction {
+                            operands: InstructionOperands::JMP { condition, address },
+                            delay,
+                            side_set,
                         }
-                        _ => instr.operands,
-                    };
-
-                    instr.encode(p.side_set)
+                        .encode(p.side_set)
+                    } else {
+                        instr
+                    }
                 })
                 .enumerate()
-            {
-                self.pio.instr_mem[i + offset].write(|w| unsafe { w.bits(instr as u32) })
-            }
+                .for_each(|(i, instr)| {
+                    self.pio.instr_mem[i + offset].write(|w| unsafe { w.instr_mem0().bits(instr) })
+                });
             self.used_instruction_space |= Self::instruction_mask(p.code.len()) << offset;
             Ok(InstalledProgram {
                 offset: offset as u8,
@@ -480,18 +486,12 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
         });
     }
 
-    /// Execute the instruction immediately.
-    // Safety: The Send trait assumes this is the only write to sm_instr while uninitialized. The
-    // initialized `StateMachine` may also use this register. The `UnintStateMachine` is consumed
-    // by `PIOBuilder.build` to create `StateMachine`
-    fn exec_instruction(&mut self, instruction: u16) {
-        self.sm()
-            .sm_instr
-            .write(|w| unsafe { w.sm0_instr().bits(instruction) })
-    }
-
     fn sm(&self) -> &rp2040_pac::pio0::SM {
         unsafe { &*self.sm }
+    }
+
+    fn pio(&self) -> &rp2040_pac::pio0::RegisterBlock {
+        unsafe { &*self.block }
     }
 }
 
@@ -547,22 +547,78 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     #[deprecated(note = "Renamed to exec_instruction")]
     ///Execute the instruction immediately.
     pub fn set_instruction(&mut self, instruction: u16) {
+        let instruction =
+            Instruction::decode(instruction, self.program.side_set).expect("Invalid instruction");
         self.exec_instruction(instruction);
     }
 
     /// Execute the instruction immediately.
     ///
-    /// While this is allowed even when the state machine is running, the datasheet says:
-    /// > If EXEC instructions are used, instructions written to INSTR must not stall.
-    /// It's unclear what happens if this is violated.
-    pub fn exec_instruction(&mut self, instruction: u16) {
-        // TODO: clarify what happens if the instruction stalls.
-        self.sm.exec_instruction(instruction);
+    /// If an instruction written to INSTR stalls, it is stored in the same instruction latch used
+    /// by OUT EXEC and MOV EXEC, and will overwrite an in-progress instruction there. If EXEC
+    /// instructions are used, instructions written to INSTR must not stall.
+    pub fn exec_instruction(&mut self, instruction: Instruction) {
+        let instruction = instruction.encode(self.program.side_set);
+
+        self.sm
+            .sm()
+            .sm_instr
+            .write(|w| unsafe { w.sm0_instr().bits(instruction) })
     }
 
     /// Check if the current instruction is stalled.
     pub fn stalled(&self) -> bool {
         self.sm.sm().sm_execctrl.read().exec_stalled().bits()
+    }
+
+    /// Drain Tx fifo.
+    pub fn drain_tx_fifo(&mut self) {
+        // According to the datasheet 3.5.4.2 Page 358:
+        //
+        // When autopull is enabled, the behaviour of 'PULL'  is  altered:  it  becomes  a  no-op
+        // if  the  OSR  is  full.  This  is  to  avoid  a  race  condition  against  the  system
+        // DMA.  It behaves as a fence: either an autopull has already taken place, in which case
+        // the 'PULL' has no effect, or the program will stall on the 'PULL' until data becomes
+        // available in the FIFO.
+
+        // TODO: encode at compile time once pio 0.3.0 is out
+        const OUT: InstructionOperands = InstructionOperands::OUT {
+            destination: pio::OutDestination::NULL,
+            bit_count: 32,
+        };
+        const PULL: InstructionOperands = InstructionOperands::PULL {
+            if_empty: false,
+            block: false,
+        };
+
+        let sm = &self.sm.sm();
+        let sm_pinctrl = &sm.sm_pinctrl;
+        let sm_instr = &sm.sm_instr;
+        let fstat = &self.sm.pio().fstat;
+
+        let operands = if sm.sm_shiftctrl.read().autopull().bit_is_set() {
+            OUT
+        } else {
+            PULL
+        }
+        .encode();
+
+        // Safety: sm0_instr may be accessed from SM::exec_instruction.
+        let mut saved_sideset_count = 0;
+        sm_pinctrl.modify(|r, w| unsafe {
+            saved_sideset_count = r.sideset_count().bits();
+            w.sideset_count().bits(0)
+        });
+
+        let mask = 1 << SM::id();
+        // white tx fifo is not empty
+        while (fstat.read().txempty().bits() & mask) == 0 {
+            sm_instr.write(|w| unsafe { w.sm0_instr().bits(operands) })
+        }
+
+        if saved_sideset_count != 0 {
+            sm_pinctrl.modify(|_, w| unsafe { w.sideset_count().bits(saved_sideset_count) });
+        }
     }
 }
 
@@ -590,14 +646,12 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
         let int = divisor as u16;
         let frac = ((divisor - int as f32) * 256.0) as u8;
 
-        self.sm.sm().sm_clkdiv.write(|w| {
-            unsafe {
-                w.int().bits(int);
-                w.frac().bits(frac);
-            }
+        self.sm.set_clock_divisor(int, frac);
+    }
 
-            w
-        });
+    /// Change the clock divider of a stopped state machine using a 16.8 fixed point value.
+    pub fn clock_divisor_fixed_point(&mut self, int: u16, frac: u8) {
+        self.sm.set_clock_divisor(int, frac);
     }
 
     /// Sets the pin state for the specified pins.
@@ -606,29 +660,47 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
     /// other state machines of the same PIO block.
     ///
     /// The iterator's item are pairs of `(pin_number, pin_state)`.
-    // Safety: this exclusively manages the SM resource and is created from the
-    // `UninitStateMachine` byt adding a program.
     pub fn set_pins(&mut self, pins: impl IntoIterator<Item = (u8, PinState)>) {
-        let saved_ctrl = self.sm.sm().sm_pinctrl.read();
-        let saved_execctrl = self.sm.sm().sm_execctrl.read();
-        for (pin_num, pin_state) in pins {
-            self.sm
-                .sm()
-                .sm_pinctrl
-                .write(|w| unsafe { w.set_base().bits(pin_num).set_count().bits(1) });
-            self.exec_instruction(
-                pio::InstructionOperands::SET {
-                    destination: pio::SetDestination::PINS,
-                    data: if PinState::High == pin_state { 1 } else { 0 },
-                }
-                .encode(),
-            );
+        // TODO: turn those three into const once pio 0.3.0 is released
+        let set_high_instr = InstructionOperands::SET {
+            destination: pio::SetDestination::PINS,
+            data: 1,
         }
+        .encode();
+        let set_low_instr = InstructionOperands::SET {
+            destination: pio::SetDestination::PINS,
+            data: 0,
+        }
+        .encode();
+
         let sm = self.sm.sm();
-        sm.sm_pinctrl
-            .write(|w| unsafe { w.bits(saved_ctrl.bits()) });
-        sm.sm_execctrl
-            .write(|w| unsafe { w.bits(saved_execctrl.bits()) })
+        let sm_pinctrl = &sm.sm_pinctrl;
+        let sm_execctrl = &sm.sm_execctrl;
+        let sm_instr = &sm.sm_instr;
+
+        // sideset_count is implicitly set to 0 when the set_base/set_count are written (rather
+        // than modified)
+        let saved_pin_ctrl = sm_pinctrl.read().bits();
+        let mut saved_execctrl = 0;
+
+        sm_execctrl.modify(|r, w| {
+            saved_execctrl = r.bits();
+            w.out_sticky().clear_bit()
+        });
+
+        for (pin_num, pin_state) in pins {
+            sm_pinctrl.write(|w| unsafe { w.set_base().bits(pin_num).set_count().bits(1) });
+            let instruction = if pin_state == PinState::High {
+                set_high_instr
+            } else {
+                set_low_instr
+            };
+
+            sm_instr.write(|w| unsafe { w.sm0_instr().bits(instruction) })
+        }
+
+        sm_pinctrl.write(|w| unsafe { w.bits(saved_pin_ctrl) });
+        sm_execctrl.write(|w| unsafe { w.bits(saved_execctrl) });
     }
 
     /// Set pin directions.
@@ -637,33 +709,47 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
     /// other state machines of the same PIO block.
     ///
     /// The iterator's item are pairs of `(pin_number, pin_dir)`.
-    // Safety: this exclusively manages the SM resource and is created from the
-    // `UninitStateMachine` byt adding a program.
     pub fn set_pindirs(&mut self, pindirs: impl IntoIterator<Item = (u8, PinDir)>) {
-        let saved_ctrl = self.sm.sm().sm_pinctrl.read();
-        let saved_execctrl = self.sm.sm().sm_execctrl.read();
-        self.sm
-            .sm()
-            .sm_execctrl
-            .modify(|_, w| w.out_sticky().clear_bit());
-        for (pinnum, pin_dir) in pindirs {
-            self.sm
-                .sm()
-                .sm_pinctrl
-                .write(|w| unsafe { w.set_base().bits(pinnum).set_count().bits(1) });
-            self.exec_instruction(
-                pio::InstructionOperands::SET {
-                    destination: pio::SetDestination::PINDIRS,
-                    data: if PinDir::Output == pin_dir { 1 } else { 0 },
-                }
-                .encode(),
-            );
+        // TODO: turn those three into const once pio 0.3.0 is released
+        let set_output_instr = InstructionOperands::SET {
+            destination: pio::SetDestination::PINDIRS,
+            data: 1,
         }
+        .encode();
+        let set_input_instr = InstructionOperands::SET {
+            destination: pio::SetDestination::PINDIRS,
+            data: 0,
+        }
+        .encode();
+
         let sm = self.sm.sm();
-        sm.sm_pinctrl
-            .write(|w| unsafe { w.bits(saved_ctrl.bits()) });
-        sm.sm_execctrl
-            .write(|w| unsafe { w.bits(saved_execctrl.bits()) });
+        let sm_pinctrl = &sm.sm_pinctrl;
+        let sm_execctrl = &sm.sm_execctrl;
+        let sm_instr = &sm.sm_instr;
+
+        // sideset_count is implicitly set to 0 when the set_base/set_count are written (rather
+        // than modified)
+        let saved_pin_ctrl = sm_pinctrl.read().bits();
+        let mut saved_execctrl = 0;
+
+        sm_execctrl.modify(|r, w| {
+            saved_execctrl = r.bits();
+            w.out_sticky().clear_bit()
+        });
+
+        for (pin_num, pin_dir) in pindirs {
+            sm_pinctrl.write(|w| unsafe { w.set_base().bits(pin_num).set_count().bits(1) });
+            let instruction = if pin_dir == PinDir::Output {
+                set_output_instr
+            } else {
+                set_input_instr
+            };
+
+            sm_instr.write(|w| unsafe { w.sm0_instr().bits(instruction) })
+        }
+
+        sm_pinctrl.write(|w| unsafe { w.bits(saved_pin_ctrl) });
+        sm_execctrl.write(|w| unsafe { w.bits(saved_execctrl) });
     }
 }
 
@@ -1084,16 +1170,34 @@ impl<SM: ValidStateMachine> StateMachine<SM, Running> {
     pub fn restart(&mut self) {
         // pause the state machine
         self.sm.set_enabled(false);
+
+        let sm = self.sm.sm();
+        let sm_pinctrl = &sm.sm_pinctrl;
+        let sm_instr = &sm.sm_instr;
+
+        // save exec_ctrl & make side_set optional
+        let mut saved_sideset_count = 0;
+        sm_pinctrl.modify(|r, w| unsafe {
+            saved_sideset_count = r.sideset_count().bits();
+            w.sideset_count().bits(0)
+        });
+
         // revert it to its wrap target
-        self.sm.exec_instruction(
-            pio::InstructionOperands::JMP {
-                condition: pio::JmpCondition::Always,
-                address: self.program.wrap_target(),
-            }
-            .encode(),
-        );
+        let instruction = InstructionOperands::JMP {
+            condition: pio::JmpCondition::Always,
+            address: self.program.wrap_target(),
+        }
+        .encode();
+        sm_instr.write(|w| unsafe { w.sm0_instr().bits(instruction) });
+
+        // restore exec_ctrl
+        if saved_sideset_count != 0 {
+            sm_pinctrl.modify(|_, w| unsafe { w.sideset_count().bits(saved_sideset_count) });
+        }
+
         // clear osr/isr
         self.sm.restart();
+
         // unpause the state machine
         self.sm.set_enabled(true);
     }
@@ -1112,7 +1216,6 @@ unsafe impl<SM: ValidStateMachine + Send> Send for Rx<SM> {}
 // are added.
 impl<SM: ValidStateMachine> Rx<SM> {
     fn register_block(&self) -> &pac::pio0::RegisterBlock {
-        // Safety: The register is unique to this Rx instance.
         unsafe { &*self.block }
     }
 
@@ -1225,7 +1328,6 @@ unsafe impl<SM: ValidStateMachine + Send> Send for Tx<SM> {}
 // are added.
 impl<SM: ValidStateMachine> Tx<SM> {
     fn register_block(&self) -> &pac::pio0::RegisterBlock {
-        // Safety: The register is unique to this Tx instance.
         unsafe { &*self.block }
     }
 
@@ -1365,42 +1467,6 @@ impl<SM: ValidStateMachine> Tx<SM> {
     /// Indicate if the tx FIFO is full
     pub fn is_full(&self) -> bool {
         self.register_block().fstat.read().txfull().bits() & (1 << SM::id()) != 0
-    }
-
-    /// Drain Tx fifo.
-    pub fn drain_fifo(&mut self) {
-        // According to the datasheet 3.5.4.2 Page 358:
-        //
-        // When autopull is enabled, the behaviour of 'PULL'  is  altered:  it  becomes  a  no-op
-        // if  the  OSR  is  full.  This  is  to  avoid  a  race  condition  against  the  system
-        // DMA.  It behaves as a fence: either an autopull has already taken place, in which case
-        // the 'PULL' has no effect, or the program will stall on the 'PULL' until data becomes
-        // available in the FIFO.
-        let instr = if self.register_block().sm[SM::id()]
-            .sm_shiftctrl
-            .read()
-            .autopull()
-            .bit_is_set()
-        {
-            pio::InstructionOperands::OUT {
-                destination: pio::OutDestination::NULL,
-                bit_count: 32,
-            }
-        } else {
-            pio::InstructionOperands::PULL {
-                if_empty: false,
-                block: false,
-            }
-        }
-        .encode();
-        // Safety: The only other place this register is written is
-        // `UninitStatemachine.exec_instruction`, `Tx` is only created after init.
-        let mask = 1 << SM::id();
-        while self.register_block().fstat.read().txempty().bits() & mask != mask {
-            self.register_block().sm[SM::id()]
-                .sm_instr
-                .write(|w| unsafe { w.sm0_instr().bits(instr) })
-        }
     }
 
     /// Enable TX FIFO not full interrupt.
@@ -2004,13 +2070,14 @@ impl<P: PIOExt> PIOBuilder<P> {
 
         // Set starting location by forcing the state machine to execute a jmp
         // to the beginning of the program we loaded in.
-        sm.exec_instruction(
-            pio::InstructionOperands::JMP {
-                condition: pio::JmpCondition::Always,
-                address: offset as u8,
-            }
-            .encode(),
-        );
+        let instr = InstructionOperands::JMP {
+            condition: pio::JmpCondition::Always,
+            address: offset as u8,
+        }
+        .encode();
+        sm.sm()
+            .sm_instr
+            .write(|w| unsafe { w.sm0_instr().bits(instr) });
 
         let rx = Rx {
             block: sm.block,
