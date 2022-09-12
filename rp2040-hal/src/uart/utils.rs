@@ -44,7 +44,6 @@ pub enum DataBits {
 pub enum StopBits {
     /// 1 bit
     One,
-
     /// 2 bits
     Two,
 }
@@ -54,7 +53,6 @@ pub enum StopBits {
 pub enum Parity {
     /// Odd parity
     Odd,
-
     /// Even parity
     Even,
 }
@@ -84,6 +82,28 @@ pub struct UartConfig {
 
     /// The parity that this uart should have
     pub parity: Option<Parity>,
+}
+
+/// Rx/Tx FIFO Watermark
+///
+/// Determine the FIFO level that trigger DMA/Interrupt
+/// Default is Bytes16, see DS Table 423 and UARTIFLS Register
+/// Example of use:
+///     uart0.set_fifos(true); // Default is false
+///     uart0.set_rx_watermark(hal::uart::FifoWatermark::Bytes8);
+///     uart0.enable_rx_interrupt();
+///
+pub enum FifoWatermark {
+    /// Trigger when 4 bytes are (Rx: filled / Tx: available)
+    Bytes4,
+    /// Trigger when 8 bytes are (Rx: filled / Tx: available)
+    Bytes8,
+    /// Trigger when 16 bytes are (Rx: filled / Tx: available)
+    Bytes16,
+    /// Trigger when 24 bytes are (Rx: filled / Tx: available)
+    Bytes24,
+    /// Trigger when 28 bytes are (Rx: filled / Tx: available)
+    Bytes28,
 }
 
 impl Default for UartConfig {

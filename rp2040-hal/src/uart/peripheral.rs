@@ -62,7 +62,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
 
         device.uartlcr_h.write(|w| {
             // FIFOs are enabled
-            w.fen().set_bit();
+            w.fen().set_bit(); // Leaved here for backward compatibility
             set_format(w, &config.data_bits, &config.stop_bits, &config.parity);
             w
         });
@@ -106,6 +106,29 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
         });
 
         self.transition(Disabled)
+    }
+
+    /// Enable/disable the rx/tx FIFO
+    ///
+    /// Unfortunately, it's not possible to enable/disable rx/tx
+    /// independently on this chip
+    /// Default is false
+    pub fn set_fifos(&mut self, enable: bool) {
+        super::reader::set_fifos(&self.device, enable)
+    }
+
+    /// Set rx FIFO watermark
+    ///
+    /// See DS: Table 423
+    pub fn set_rx_watermark(&mut self, watermark: FifoWatermark) {
+        super::reader::set_rx_watermark(&self.device, watermark)
+    }
+
+    /// Set tx FIFO watermark
+    ///
+    /// See DS: Table 423
+    pub fn set_tx_watermark(&mut self, watermark: FifoWatermark) {
+        super::writer::set_tx_watermark(&self.device, watermark)
     }
 
     /// Enables the Receive Interrupt.
