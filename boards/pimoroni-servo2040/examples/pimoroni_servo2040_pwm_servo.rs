@@ -7,8 +7,8 @@
 #![no_main]
 
 // GPIO traits
-use embedded_hal::PwmPin;
 use embedded_hal::timer::CountDown;
+use embedded_hal::PwmPin;
 
 // Traits for converting integers to amounts of time
 use fugit::ExtU64;

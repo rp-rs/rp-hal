@@ -3,21 +3,21 @@
 #![no_main]
 
 use bsp::entry;
-use defmt::*;
-use defmt_rtt as _;
-use embedded_hal::timer::CountDown;
-use fugit::ExtU32;
 use bsp::hal::{
     clocks::{init_clocks_and_plls, Clock},
     pac,
     sio::Sio,
     watchdog::Watchdog,
 };
+use defmt::*;
+use defmt_rtt as _;
+use embedded_hal::timer::CountDown;
+use fugit::ExtU32;
 use panic_halt as _;
 use pimoroni_servo2040 as bsp;
-use rp2040_hal::Timer;
 use rp2040_hal::pio::PIOExt;
-use smart_leds::{brightness, RGB8, SmartLedsWrite};
+use rp2040_hal::Timer;
+use smart_leds::{brightness, SmartLedsWrite, RGB8};
 use ws2812_pio::Ws2812;
 
 #[entry]
@@ -66,14 +66,18 @@ fn main() -> ! {
     let mut n: u8 = 128;
     let offset = (256u16 / bsp::NUM_LEDS as u16) as u8;
     loop {
-        ws.write(brightness(IntoIterator::into_iter([
-            wheel(n),
-            wheel(n.wrapping_add(offset)),
-            wheel(n.wrapping_add(offset*2)),
-            wheel(n.wrapping_add(offset*3)),
-            wheel(n.wrapping_add(offset*4)),
-            wheel(n.wrapping_add(offset*5)),
-        ]), 32)).unwrap();
+        ws.write(brightness(
+            IntoIterator::into_iter([
+                wheel(n),
+                wheel(n.wrapping_add(offset)),
+                wheel(n.wrapping_add(offset * 2)),
+                wheel(n.wrapping_add(offset * 3)),
+                wheel(n.wrapping_add(offset * 4)),
+                wheel(n.wrapping_add(offset * 5)),
+            ]),
+            32,
+        ))
+        .unwrap();
         n = n.wrapping_add(1);
 
         delay.start(25.millis());

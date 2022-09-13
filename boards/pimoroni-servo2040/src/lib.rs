@@ -28,12 +28,10 @@ pub const SENSOR_6_ADDR: u8 = 0b_0101;
 pub const VOLTAGE_SENSE_ADDR: u8 = 0b_0110;
 pub const CURRENT_SENSE_ADDR: u8 = 0b_0111;
 
-
 pub const VOLTAGE_GAIN: f32 = 0.28058;
 pub const SHUNT_RESISTOR: f32 = 0.003;
 pub const CURRENT_GAIN: u8 = 69;
 pub const CURRENT_OFFSET: f32 = -0.02;
-
 
 pub use hal::pac;
 
