@@ -14,9 +14,25 @@ use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
 use crate::pac::{RESETS, TIMER};
 use crate::resets::SubsystemReset;
 use core::marker::PhantomData;
+use core::sync::atomic::{AtomicU8, Ordering};
 
 /// Instant type used by the Timer & Alarm methods.
 pub type Instant = TimerInstantU64<1_000_000>;
+
+static ALARMS: AtomicU8 = AtomicU8::new(0x0F);
+fn take_alarm(mask: u8) -> bool {
+    critical_section::with(|_| {
+        let alarms = ALARMS.load(Ordering::Relaxed);
+        ALARMS.store(alarms & !mask, Ordering::Relaxed);
+        (alarms & mask) != 0
+    })
+}
+fn release_alarm(mask: u8) {
+    critical_section::with(|_| {
+        let alarms = ALARMS.load(Ordering::Relaxed);
+        ALARMS.store(alarms | mask, Ordering::Relaxed);
+    });
+}
 
 fn get_counter(timer: &crate::pac::timer::RegisterBlock) -> Instant {
     let mut hi0 = timer.timerawh.read().bits();
@@ -33,7 +49,6 @@ fn get_counter(timer: &crate::pac::timer::RegisterBlock) -> Instant {
 /// Timer peripheral
 pub struct Timer {
     timer: TIMER,
-    alarms: [bool; 4],
 }
 
 impl Timer {
@@ -41,10 +56,7 @@ impl Timer {
     pub fn new(timer: TIMER, resets: &mut RESETS) -> Self {
         timer.reset_bring_down(resets);
         timer.reset_bring_up(resets);
-        Self {
-            timer,
-            alarms: [true; 4],
-        }
+        Self { timer }
     }
 
     /// Get the current counter value.
@@ -65,47 +77,29 @@ impl Timer {
             next_end: None,
         }
     }
-
     /// Retrieve a reference to alarm 0. Will only return a value the first time this is called
     pub fn alarm_0(&mut self) -> Option<Alarm0> {
-        if self.alarms[0] {
-            self.alarms[0] = false;
-            Some(Alarm0(PhantomData))
-        } else {
-            None
-        }
+        take_alarm(1 << 0).then_some(Alarm0(PhantomData))
     }
 
     /// Retrieve a reference to alarm 1. Will only return a value the first time this is called
     pub fn alarm_1(&mut self) -> Option<Alarm1> {
-        if self.alarms[1] {
-            self.alarms[1] = false;
-            Some(Alarm1(PhantomData))
-        } else {
-            None
-        }
+        take_alarm(1 << 1).then_some(Alarm1(PhantomData))
     }
 
     /// Retrieve a reference to alarm 2. Will only return a value the first time this is called
     pub fn alarm_2(&mut self) -> Option<Alarm2> {
-        if self.alarms[2] {
-            self.alarms[2] = false;
-            Some(Alarm2(PhantomData))
-        } else {
-            None
-        }
+        take_alarm(1 << 2).then_some(Alarm2(PhantomData))
     }
 
     /// Retrieve a reference to alarm 3. Will only return a value the first time this is called
     pub fn alarm_3(&mut self) -> Option<Alarm3> {
-        if self.alarms[3] {
-            self.alarms[3] = false;
-            Some(Alarm3(PhantomData))
-        } else {
-            None
-        }
+        take_alarm(1 << 3).then_some(Alarm3(PhantomData))
     }
 }
+
+// safety: all write operations are synchronised and all reads are atomic
+unsafe impl Sync for Timer {}
 
 /// Implementation of the embedded_hal::Timer traits using rp2040_hal::timer counter
 ///
@@ -338,6 +332,13 @@ macro_rules! impl_alarm {
                 // safety: This is a read action and should not have any UB
                 let bits: u32 = unsafe { &*TIMER::ptr() }.armed.read().bits();
                 (bits & $armed_bit_mask) == 0
+            }
+        }
+
+        impl Drop for $name {
+            fn drop(&mut self) {
+                self.disable_interrupt();
+                release_alarm($armed_bit_mask)
             }
         }
     };
