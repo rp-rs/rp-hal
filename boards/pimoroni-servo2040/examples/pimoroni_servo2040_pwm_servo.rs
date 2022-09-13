@@ -28,7 +28,7 @@ use pimoroni_servo2040::hal;
 /// Number of microseconds for the pwm signal period.
 const PERIOD_US: u32 = 20_000;
 /// Max resolution for the pwm signal.
-const TOP: u32 = u16::MAX;
+const TOP: u16 = u16::MAX;
 
 #[pimoroni_servo2040::entry]
 fn main() -> ! {
@@ -111,5 +111,5 @@ fn main() -> ! {
 fn us_to_duty(us: u16) -> u16 {
     // Do math in u32 so we maintain higher precision. If we do math in u16, we need to divide first
     // and lose some precision when truncating the remainder.
-    (TOP * us as u32 / PERIOD_US) as u16
+    (TOP as u32 * us as u32 / PERIOD_US) as u16
 }
