@@ -25,6 +25,11 @@ use pimoroni_servo2040::hal::pac;
 // higher-level drivers.
 use pimoroni_servo2040::hal;
 
+/// Number of microseconds for the pwm signal period.
+const PERIOD_US: u32 = 20_000;
+/// Max resolution for the pwm signal.
+const TOP: u32 = u16::MAX;
+
 #[pimoroni_servo2040::entry]
 fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
@@ -57,20 +62,21 @@ fn main() -> ! {
 
     let pwm_slices = hal::pwm::Slices::new(pac.PWM, &mut pac.RESETS);
 
+    const MIN_PULSE: u16 = 1000;
+    const MID_PULSE: u16 = 1500;
+    const MAX_PULSE: u16 = 2000;
+
     let mut pwm: hal::pwm::Slice<_, _> = pwm_slices.pwm0;
     pwm.set_ph_correct();
-    // pwm.set_div_int(38);
-    // pwm.set_div_frac(3);
-    pwm.set_div_int(20u8); // 50Hz
+    // 50Hz
+    pwm.set_div_int(38);
+    pwm.set_div_frac(3);
+    pwm.set_top(TOP);
     pwm.enable();
 
     // Output channel A on PWM0 to the GPIO0/servo1 pin
     let mut channel_a = pwm.channel_a;
     let _channel_a_pin = channel_a.output_to(pins.servo1);
-
-    const MIN_PULSE: u16 = 1000;
-    const MID_PULSE: u16 = 1500;
-    const MAX_PULSE: u16 = 2000;
     let movement_delay = 400.millis();
 
     // Infinite loop, moving micro servo from one position to another.
@@ -78,27 +84,32 @@ fn main() -> ! {
     // different manufacturers respond differently.
     loop {
         // move to 0°
-        channel_a.set_duty(MID_PULSE);
+        channel_a.set_duty(us_to_duty(MID_PULSE));
         count_down.start(movement_delay);
         let _ = nb::block!(count_down.wait());
 
         // 0° to 90°
-        channel_a.set_duty(MAX_PULSE);
+        channel_a.set_duty(us_to_duty(MAX_PULSE));
         count_down.start(movement_delay);
         let _ = nb::block!(count_down.wait());
 
         // 90° to 0°
-        channel_a.set_duty(MID_PULSE);
+        channel_a.set_duty(us_to_duty(MID_PULSE));
         count_down.start(movement_delay);
         let _ = nb::block!(count_down.wait());
 
         // 0° to -90°
-        channel_a.set_duty(MIN_PULSE);
+        channel_a.set_duty(us_to_duty(MIN_PULSE));
         count_down.start(movement_delay);
         let _ = nb::block!(count_down.wait());
     }
 }
 
-fn us_to_duty(cycle: u16, top: u16, us: u16) -> u16 {
-    top / cycle * us
+/// Convert microseconds to duty value.
+///
+/// This function uses the constants TOP and PERIOD_US defined at the top of the file.
+fn us_to_duty(us: u16) -> u16 {
+    // Do math in u32 so we maintain higher precision. If we do math in u16, we need to divide first
+    // and lose some precision when truncating the remainder.
+    (TOP * us as u32 / PERIOD_US) as u16
 }
