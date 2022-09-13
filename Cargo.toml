@@ -14,6 +14,7 @@ members = [
     "boards/pimoroni-pico-explorer",
     "boards/pimoroni-pico-lipo-16mb",
     "boards/pimoroni-plasma-2040",
+    "boards/pimoroni-servo2040",
     "boards/pimoroni-tiny2040",
     "boards/rp-pico",
     "boards/seeeduino-xiao-rp2040",
