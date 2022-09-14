@@ -243,6 +243,18 @@ RP2040 chip according to how it is connected up on the Pimoroni Plasma 2040.
 [Pimoroni Plasma 2040]: https://shop.pimoroni.com/products/plasma-2040
 [pimoroni-plasma-2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-plasma-2040
 
+### [pimoroni-servo2040] - Board Support for the [Pimoroni Servo2040]
+
+You should include this crate if you are writing code that you want to run on
+a [Pimoroni Servo2040] - a standalone servo motor controller for up to 18 servos
+and 6 sensors.
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the Servo2040.
+
+[Pimoroni Servo2040]: https://shop.pimoroni.com/products/servo-2040
+[pimoroni-servo2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-servo2040
+
 ### [pimoroni-tiny2040] - Board Support for the [Pimoroni Tiny2040]
 
 You should include this crate if you are writing code that you want to run on
