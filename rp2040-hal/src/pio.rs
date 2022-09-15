@@ -195,26 +195,17 @@ impl<P: PIOExt> PIO<P> {
                 .iter()
                 .cloned()
                 .map(|instr| {
-                    if let Some(Instruction {
-                        operands: InstructionOperands::JMP { condition, address },
-                        delay,
-                        side_set,
-                    }) = Instruction::decode(instr, p.side_set)
-                    {
-                        // JMP instruction. We need to apply offset here
-                        let address = address + offset as u8;
+                    if instr & 0b1110_0000_0000_0000 == 0 {
+                        // this is a JMP instruction -> add offset to address
+                        let address = (instr & 0b11111) as usize;
+                        let address = address + offset;
                         assert!(
-                            address < pio::RP2040_MAX_PROGRAM_SIZE as u8,
+                            address < pio::RP2040_MAX_PROGRAM_SIZE,
                             "Invalid JMP out of the program after offset addition"
                         );
-
-                        Instruction {
-                            operands: InstructionOperands::JMP { condition, address },
-                            delay,
-                            side_set,
-                        }
-                        .encode(p.side_set)
+                        instr & (!0b11111) | address as u16
                     } else {
+                        // this is not a JMP instruction -> keep it unchanged
                         instr
                     }
                 })
