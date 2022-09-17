@@ -2,7 +2,7 @@
 //!
 //! This module is for transmitting data with a UART.
 
-use super::{UartDevice, ValidUartPinout};
+use super::{FifoWatermark, UartDevice, ValidUartPinout};
 use core::fmt;
 use core::{convert::Infallible, marker::PhantomData};
 use embedded_hal::serial::Write;
@@ -11,6 +11,20 @@ use rp2040_pac::uart0::RegisterBlock;
 
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::serial as eh1;
+
+/// Set tx FIFO watermark
+///
+/// See DS: Table 423
+pub fn set_tx_watermark(rb: &RegisterBlock, watermark: FifoWatermark) {
+    let wm = match watermark {
+        FifoWatermark::Bytes4 => 4,
+        FifoWatermark::Bytes8 => 3,
+        FifoWatermark::Bytes16 => 2,
+        FifoWatermark::Bytes24 => 1,
+        FifoWatermark::Bytes28 => 0,
+    };
+    rb.uartifls.modify(|_r, w| unsafe { w.txiflsel().bits(wm) });
+}
 
 /// Returns `Err(WouldBlock)` if the UART TX FIFO still has data in it or
 /// `Ok(())` if the FIFO is empty.
