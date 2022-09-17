@@ -11,6 +11,7 @@ use pimoroni_plasma_2040 as bsp;
 
 use bsp::hal::{
     clocks::{init_clocks_and_plls, Clock},
+    gpio::PinState,
     pac,
     sio::Sio,
     watchdog::Watchdog,
@@ -49,12 +50,11 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    let mut led_green = pins.led_green.into_push_pull_output();
-    let mut led_red = pins.led_red.into_push_pull_output();
-    let mut led_blue = pins.led_blue.into_push_pull_output();
-    led_green.set_high().unwrap();
-    led_red.set_high().unwrap();
-    led_blue.set_high().unwrap();
+    let mut led_green = pins
+        .led_green
+        .into_push_pull_output_in_state(PinState::High);
+    let mut led_red = pins.led_red.into_push_pull_output_in_state(PinState::High);
+    let mut led_blue = pins.led_blue.into_push_pull_output_in_state(PinState::High);
 
     loop {
         led_green.set_low().unwrap();
