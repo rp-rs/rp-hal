@@ -103,9 +103,7 @@ unsafe fn forever<T>(r: &'_ T) -> &'static T {
 async fn run(spawner: Spawner, pins: rp_pico_w::Pins, state: &'static cyw43::State) -> ! {
     // These are implicitly used by the spi driver if they are in the correct mode
     let mut spi_cs: hal::gpio::dynpin::DynPin = pins.wl_cs.into();
-    // TODO should be high from the beginning :-(
-    spi_cs.into_readable_output();
-    spi_cs.set_high().unwrap();
+    spi_cs.into_readable_output_in_state(hal::gpio::PinState::High);
     spi_cs.into_push_pull_output();
     spi_cs.set_high().unwrap();
 
