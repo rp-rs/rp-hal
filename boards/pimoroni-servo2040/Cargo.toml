@@ -1,0 +1,34 @@
+[package]
+name = "pimoroni-servo2040"
+version = "0.1.0"
+authors = ["Paul Daniel Faria <nashenas88@gmail.com>", "The rp-rs Developers"]
+edition = "2018"
+homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-servo2040"
+description = "Board Support Package for the Pimoroni Servo2040"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/rp-rs/rp-hal.git"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cortex-m = "0.7.2"
+rp2040-boot2 = { version = "0.2.0", optional = true }
+rp2040-hal = { path = "../../rp2040-hal", version = "0.6.0" }
+cortex-m-rt = { version = "0.7", optional = true }
+
+[dev-dependencies]
+rp2040-hal = { path = "../../rp2040-hal", version = "0.6.0", features = [ "defmt" ] }
+panic-halt= "0.2.0"
+defmt = "0.3.0"
+defmt-rtt = "0.3.0"
+embedded-hal ="0.2.5"
+fugit = "0.3.5"
+nb = "1.0.0"
+smart-leds = "0.3.0"
+ws2812-pio = "0.4.0"
+
+[features]
+default = ["boot2", "rt", "critical-section-impl"]
+critical-section-impl = ["rp2040-hal/critical-section-impl"]
+boot2 = ["rp2040-boot2"]
+rt = ["cortex-m-rt","rp2040-hal/rt"]
