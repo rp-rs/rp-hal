@@ -32,6 +32,8 @@ use seeeduino_xiao_rp2040::hal::pac;
 // higher-level drivers.
 use seeeduino_xiao_rp2040::hal;
 
+use hal::gpio::PinState;
+
 // The minimum PWM value (i.e. LED brightness) we want
 const LOW: u16 = 0;
 
@@ -98,12 +100,12 @@ fn main() -> ! {
     channel.set_duty(u16::MAX);
 
     // Set the blue LED to be an output, initially off
-    let mut led_blue_pin = pins.led_blue.into_push_pull_output();
-    led_blue_pin.set_high().unwrap();
+    let mut led_blue_pin = pins.led_blue.into_push_pull_output_in_state(PinState::High);
 
     // Turn off the green LED
-    let mut led_green_pin = pins.led_green.into_push_pull_output();
-    led_green_pin.set_high().unwrap();
+    let mut _led_green_pin = pins
+        .led_green
+        .into_push_pull_output_in_state(PinState::High);
 
     loop {
         // Blink blue LED at 1 Hz

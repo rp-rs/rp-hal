@@ -105,6 +105,7 @@ use core::marker::PhantomData;
 use crate::gpio::dynpin::DynFunction;
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::digital as eh1;
+pub use embedded_hal::digital::v2::PinState;
 use hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin};
 
 use core::mem::transmute;
@@ -527,15 +528,41 @@ where
         self.into_mode()
     }
 
-    /// Configure the pin to operate as a push-pull output
+    /// Configure the pin to operate as a push-pull output.
+    ///
+    /// If you want to specify the initial pin state, use [`Pin::into_push_pull_output_in_state`].
     #[inline]
     pub fn into_push_pull_output(self) -> Pin<I, PushPullOutput> {
         self.into_mode()
     }
 
-    /// Configure the pin to operate as a readable push pull output
+    /// Configure the pin to operate as a push-pull output, specifying an initial
+    /// state which is applied immediately.
+    #[inline]
+    pub fn into_push_pull_output_in_state(mut self, state: PinState) -> Pin<I, PushPullOutput> {
+        match state {
+            PinState::High => self._set_high(),
+            PinState::Low => self._set_low(),
+        }
+        self.into_mode()
+    }
+
+    /// Configure the pin to operate as a readable push pull output.
+    ///
+    /// If you want to specify the initial pin state, use [`Pin::into_readable_output_in_state`].
     #[inline]
     pub fn into_readable_output(self) -> Pin<I, ReadableOutput> {
+        self.into_mode()
+    }
+
+    /// Configure the pin to operate as a readable push pull output, specifying an initial
+    /// state which is applied immediately.
+    #[inline]
+    pub fn into_readable_output_in_state(mut self, state: PinState) -> Pin<I, ReadableOutput> {
+        match state {
+            PinState::High => self._set_high(),
+            PinState::Low => self._set_low(),
+        }
         self.into_mode()
     }
 
