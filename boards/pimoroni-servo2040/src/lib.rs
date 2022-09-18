@@ -40,21 +40,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI0 RX`    | [crate::Servo1Spi0Rx]          |
-    /// | `UART0 TX`   | [crate::Servo1Uart0Tx]         |
-    /// | `I2C0 SDA`   | [crate::Servo1I2C0Sda]         |
     /// | `PWM0 A`     | [crate::Servo1Pwm0A]           |
     /// | `PIO0`       | [crate::Servo1Pio0]            |
     /// | `PIO1`       | [crate::Servo1Pio1]            |
     Gpio0 {
         name: servo1,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo1].
-            FunctionUart: Servo1Uart0Tx,
-            /// SPI Function alias for pin [crate::Pins::servo1].
-            FunctionSpi: Servo1Spi0Rx,
-            /// I2C Function alias for pin [crate::Pins::servo1].
-            FunctionI2C: Servo1I2C0Sda,
             /// PWM Function alias for pin [crate::Pins::servo1].
             FunctionPwm: Servo1Pwm0A,
             /// PIO0 Function alias for pin [crate::Pins::servo1].
@@ -68,21 +59,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI0 CSn`   | [crate::Servo2Spi0Csn]         |
-    /// | `UART0 RX`   | [crate::Servo2Uart0Rx]         |
-    /// | `I2C0 SCL`   | [crate::Servo2I2C0Scl]         |
     /// | `PWM0 B`     | [crate::Servo2Pwm0B]           |
     /// | `PIO0`       | [crate::Servo2Pio0]            |
     /// | `PIO1`       | [crate::Servo2Pio1]            |
     Gpio1 {
         name: servo2,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo2].
-            FunctionUart: Servo2Uart0Rx,
-            /// SPI Function alias for pin [crate::Pins::servo2].
-            FunctionSpi: Servo2Spi0Csn,
-            /// I2C Function alias for pin [crate::Pins::servo2].
-            FunctionI2C: Servo2I2C0Scl,
             /// PWM Function alias for pin [crate::Pins::servo2].
             FunctionPwm: Servo2Pwm0B,
             /// PIO0 Function alias for pin [crate::Pins::servo2].
@@ -96,21 +78,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI0 SCK`   | [crate::Servo3Spi0Sck]         |
-    /// | `UART0 CTS`  | [crate::Servo3Uart0Cts]        |
-    /// | `I2C1 SDA`   | [crate::Servo3I2C1Sda]         |
     /// | `PWM1 A`     | [crate::Servo3Pwm1A]           |
     /// | `PIO0`       | [crate::Servo3Pio0]            |
     /// | `PIO1`       | [crate::Servo3Pio1]            |
     Gpio2 {
         name: servo3,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo3].
-            FunctionUart: Servo3Uart0Cts,
-            /// SPI Function alias for pin [crate::Pins::servo3].
-            FunctionSpi: Servo3Spi0Sck,
-            /// I2C Function alias for pin [crate::Pins::servo3].
-            FunctionI2C: Servo3I2C1Sda,
             /// PWM Function alias for pin [crate::Pins::servo3].
             FunctionPwm: Servo3Pwm1A,
             /// PIO0 Function alias for pin [crate::Pins::servo3].
@@ -124,21 +97,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI0 TX`    | [crate::Servo4Spi0Tx]          |
-    /// | `UART0 RTS`  | [crate::Servo4Uart0Rts]        |
-    /// | `I2C1 SCL`   | [crate::Servo4I2C1Scl]         |
     /// | `PWM1 B`     | [crate::Servo4Pwm1B]           |
     /// | `PIO0`       | [crate::Servo4Pio0]            |
     /// | `PIO1`       | [crate::Servo4Pio1]            |
     Gpio3 {
         name: servo4,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo4].
-            FunctionUart: Servo4Uart0Rts,
-            /// SPI Function alias for pin [crate::Pins::servo4].
-            FunctionSpi: Servo4Spi0Tx,
-            /// I2C Function alias for pin [crate::Pins::servo4].
-            FunctionI2C: Servo4I2C1Scl,
             /// PWM Function alias for pin [crate::Pins::servo4].
             FunctionPwm: Servo4Pwm1B,
             /// PIO0 Function alias for pin [crate::Pins::servo4].
@@ -152,21 +116,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI0 RX`    | [crate::Servo5Spi0Rx]          |
-    /// | `UART1 TX`   | [crate::Servo5Uart1Tx]         |
-    /// | `I2C0 SDA`   | [crate::Servo5I2C0Sda]         |
     /// | `PWM2 A`     | [crate::Servo5Pwm2A]           |
     /// | `PIO0`       | [crate::Servo5Pio0]            |
     /// | `PIO1`       | [crate::Servo5Pio1]            |
     Gpio4 {
         name: servo5,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo5].
-            FunctionUart: Servo5Uart1Tx,
-            /// SPI Function alias for pin [crate::Pins::servo5].
-            FunctionSpi: Servo5Spi0Rx,
-            /// I2C Function alias for pin [crate::Pins::servo5].
-            FunctionI2C: Servo5I2C0Sda,
             /// PWM Function alias for pin [crate::Pins::servo5].
             FunctionPwm: Servo5Pwm2A,
             /// PIO0 Function alias for pin [crate::Pins::servo5].
@@ -180,21 +135,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI0 CSn`   | [crate::Servo6Spi0Csn]         |
-    /// | `UART1 RX`   | [crate::Servo6Uart1Rx]         |
-    /// | `I2C0 SCL`   | [crate::Servo6I2C0Scl]         |
     /// | `PWM2 B`     | [crate::Servo6Pwm2B]           |
     /// | `PIO0`       | [crate::Servo6Pio0]            |
     /// | `PIO1`       | [crate::Servo6Pio1]            |
     Gpio5 {
         name: servo6,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo6].
-            FunctionUart: Servo6Uart1Rx,
-            /// SPI Function alias for pin [crate::Pins::servo6].
-            FunctionSpi: Servo6Spi0Csn,
-            /// I2C Function alias for pin [crate::Pins::servo6].
-            FunctionI2C: Servo6I2C0Scl,
             /// PWM Function alias for pin [crate::Pins::servo6].
             FunctionPwm: Servo6Pwm2B,
             /// PIO0 Function alias for pin [crate::Pins::servo6].
@@ -208,21 +154,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI0 SCK`   | [crate::Servo7Spi0Sck]         |
-    /// | `UART1 CTS`  | [crate::Servo7Uart1Cts]        |
-    /// | `I2C1 SDA`   | [crate::Servo7I2C1Sda]         |
     /// | `PWM3 A`     | [crate::Servo7Pwm3A]           |
     /// | `PIO0`       | [crate::Servo7Pio0]            |
     /// | `PIO1`      | [crate::Servo7Pio1]            |
     Gpio6 {
         name: servo7,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo7].
-            FunctionUart: Servo7Uart1Cts,
-            /// SPI Function alias for pin [crate::Pins::servo7].
-            FunctionSpi: Servo7Spi0Sck,
-            /// I2C Function alias for pin [crate::Pins::servo7].
-            FunctionI2C: Servo7I2C1Sda,
             /// PWM Function alias for pin [crate::Pins::servo7].
             FunctionPwm: Servo7Pwm3A,
             /// PIO0 Function alias for pin [crate::Pins::servo7].
@@ -236,21 +173,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI0 TX`    | [crate::Servo8Spi0Tx]          |
-    /// | `UART1 RTS`  | [crate::Servo8Uart1Rts]        |
-    /// | `I2C1 SCL`   | [crate::Servo8I2C1Scl]         |
     /// | `PWM3 B`     | [crate::Servo8Pwm3B]           |
     /// | `PIO0`       | [crate::Servo8Pio0]            |
     /// | `PIO1`       | [crate::Servo8Pio1]            |
     Gpio7 {
         name: servo8,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo8].
-            FunctionUart: Servo8Uart1Rts,
-            /// SPI Function alias for pin [crate::Pins::servo8].
-            FunctionSpi: Servo8Spi0Tx,
-            /// I2C Function alias for pin [crate::Pins::servo8].
-            FunctionI2C: Servo8I2C1Scl,
             /// PWM Function alias for pin [crate::Pins::servo8].
             FunctionPwm: Servo8Pwm3B,
             /// PIO0 Function alias for pin [crate::Pins::servo8].
@@ -264,21 +192,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI1 RX`    | [crate::Servo9Spi1Rx]          |
-    /// | `UART1 TX`   | [crate::Servo9Uart1Tx]         |
-    /// | `I2C0 SDA`   | [crate::Servo9I2C0Sda]         |
     /// | `PWM4 A`     | [crate::Servo9Pwm4A]           |
     /// | `PIO0`       | [crate::Servo9Pio0]            |
     /// | `PIO1`       | [crate::Servo9Pio1]            |
     Gpio8 {
         name: servo9,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo9].
-            FunctionUart: Servo9Uart1Tx,
-            /// SPI Function alias for pin [crate::Pins::servo9].
-            FunctionSpi: Servo9Spi1Rx,
-            /// I2C Function alias for pin [crate::Pins::servo9].
-            FunctionI2C: Servo9I2C0Sda,
             /// PWM Function alias for pin [crate::Pins::servo9].
             FunctionPwm: Servo9Pwm4A,
             /// PIO0 Function alias for pin [crate::Pins::servo9].
@@ -292,21 +211,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI1 CSn`   | [crate::Servo10Spi1Csn]         |
-    /// | `UART1 RX`   | [crate::Servo10Uart1Rx]         |
-    /// | `I2C0 SCL`   | [crate::Servo10I2C0Scl]         |
     /// | `PWM4 B`     | [crate::Servo10Pwm4B]           |
     /// | `PIO0`       | [crate::Servo10Pio0]            |
     /// | `PIO1`       | [crate::Servo10Pio1]            |
     Gpio9 {
         name: servo10,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo10].
-            FunctionUart: Servo10Uart1Rx,
-            /// SPI Function alias for pin [crate::Pins::servo10].
-            FunctionSpi: Servo10Spi1Csn,
-            /// I2C Function alias for pin [crate::Pins::servo10].
-            FunctionI2C: Servo10I2C0Scl,
             /// PWM Function alias for pin [crate::Pins::servo10].
             FunctionPwm: Servo10Pwm4B,
             /// PIO0 Function alias for pin [crate::Pins::servo10].
@@ -320,21 +230,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI1 SCK`   | [crate::Servo11Spi1Sck]        |
-    /// | `UART1 CTS`  | [crate::Servo11Uart1Cts]       |
-    /// | `I2C1 SDA`   | [crate::Servo11I2C1Sda]        |
     /// | `PWM5 A`     | [crate::Servo11Pwm5A]          |
     /// | `PIO0`       | [crate::Servo11Pio0]           |
     /// | `PIO1`       | [crate::Servo11Pio1]           |
     Gpio10 {
         name: servo11,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo11].
-            FunctionUart: Servo11Uart1Cts,
-            /// SPI Function alias for pin [crate::Pins::servo11].
-            FunctionSpi: Servo11Spi1Sck,
-            /// I2C Function alias for pin [crate::Pins::servo11].
-            FunctionI2C: Servo11I2C1Sda,
             /// PWM Function alias for pin [crate::Pins::servo11].
             FunctionPwm: Servo11Pwm5A,
             /// PIO0 Function alias for pin [crate::Pins::servo11].
@@ -348,21 +249,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI1 TX`    | [crate::Servo12Spi1Tx]         |
-    /// | `UART1 RTS`  | [crate::Servo12Uart1Rts]       |
-    /// | `I2C1 SCL`   | [crate::Servo12I2C1Scl]        |
     /// | `PWM5 B`     | [crate::Servo12Pwm5B]          |
     /// | `PIO0`       | [crate::Servo12Pio0]           |
     /// | `PIO1`       | [crate::Servo12Pio1]           |
     Gpio11 {
         name: servo12,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo12].
-            FunctionUart: Servo12Uart1Rts,
-            /// SPI Function alias for pin [crate::Pins::servo12].
-            FunctionSpi: Servo12Spi1Tx,
-            /// I2C Function alias for pin [crate::Pins::servo12].
-            FunctionI2C: Servo12I2C1Scl,
             /// PWM Function alias for pin [crate::Pins::servo12].
             FunctionPwm: Servo12Pwm5B,
             /// PIO0 Function alias for pin [crate::Pins::servo12].
@@ -376,21 +268,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI1 RX`    | [crate::Servo13Spi1Rx]         |
-    /// | `UART0 TX`   | [crate::Servo13Uart0Tx]        |
-    /// | `I2C0 SDA`   | [crate::Servo13I2C0Sda]        |
     /// | `PWM6 A`     | [crate::Servo13Pwm6A]          |
     /// | `PIO0`       | [crate::Servo13Pio0]           |
     /// | `PIO1`       | [crate::Servo13Pio1]           |
     Gpio12 {
         name: servo13,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo13].
-            FunctionUart: Servo13Uart0Tx,
-            /// SPI Function alias for pin [crate::Pins::servo13].
-            FunctionSpi: Servo13Spi1Rx,
-            /// I2C Function alias for pin [crate::Pins::servo13].
-            FunctionI2C: Servo13I2C0Sda,
             /// PWM Function alias for pin [crate::Pins::servo13].
             FunctionPwm: Servo13Pwm6A,
             /// PIO0 Function alias for pin [crate::Pins::servo13].
@@ -404,21 +287,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI1 CSn`   | [crate::Servo14Spi1Csn]        |
-    /// | `UART0 RX`   | [crate::Servo14Uart0Rx]        |
-    /// | `I2C0 SCL`   | [crate::Servo14I2C0Scl]        |
     /// | `PWM6 B`     | [crate::Servo14Pwm6B]          |
     /// | `PIO0`       | [crate::Servo14Pio0]           |
     /// | `PIO1`       | [crate::Servo14Pio1]           |
     Gpio13 {
         name: servo14,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo14].
-            FunctionUart: Servo14Uart0Rx,
-            /// SPI Function alias for pin [crate::Pins::servo14].
-            FunctionSpi: Servo14Spi1Csn,
-            /// I2C Function alias for pin [crate::Pins::servo14].
-            FunctionI2C: Servo14I2C0Scl,
             /// PWM Function alias for pin [crate::Pins::servo14].
             FunctionPwm: Servo14Pwm6B,
             /// PIO0 Function alias for pin [crate::Pins::servo14].
@@ -432,21 +306,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI1 SCK`   | [crate::Servo15Spi1Sck]        |
-    /// | `UART0 CTS`  | [crate::Servo15Uart0Cts]       |
-    /// | `I2C1 SDA`   | [crate::Servo15I2C1Sda]        |
     /// | `PWM7 A`     | [crate::Servo15Pwm7A]          |
     /// | `PIO0`       | [crate::Servo15Pio0]           |
     /// | `PIO1`       | [crate::Servo15Pio1]           |
     Gpio14 {
         name: servo15,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo15].
-            FunctionUart: Servo15Uart0Cts,
-            /// SPI Function alias for pin [crate::Pins::servo15].
-            FunctionSpi: Servo15Spi1Sck,
-            /// I2C Function alias for pin [crate::Pins::servo15].
-            FunctionI2C: Servo15I2C1Sda,
             /// PWM Function alias for pin [crate::Pins::servo15].
             FunctionPwm: Servo15Pwm7A,
             /// PIO0 Function alias for pin [crate::Pins::servo15].
@@ -460,21 +325,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI1 TX`    | [crate::Servo16Spi1Tx]         |
-    /// | `UART0 RTS`  | [crate::Servo16Uart0Rts]       |
-    /// | `I2C1 SCL`   | [crate::Servo16I2C1Scl]        |
     /// | `PWM7 B`     | [crate::Servo16Pwm7B]          |
     /// | `PIO0`       | [crate::Servo16Pio0]           |
     /// | `PIO1`       | [crate::Servo16Pio1]           |
     Gpio15 {
         name: servo16,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo16].
-            FunctionUart: Servo16Uart0Rts,
-            /// SPI Function alias for pin [crate::Pins::servo16].
-            FunctionSpi: Servo16Spi1Tx,
-            /// I2C Function alias for pin [crate::Pins::servo16].
-            FunctionI2C: Servo16I2C1Scl,
             /// PWM Function alias for pin [crate::Pins::servo16].
             FunctionPwm: Servo16Pwm7B,
             /// PIO0 Function alias for pin [crate::Pins::servo16].
@@ -488,21 +344,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI0 RX`    | [crate::Servo17Spi0Rx]         |
-    /// | `UART0 TX`   | [crate::Servo17Uart0Tx]        |
-    /// | `I2C0 SDA`   | [crate::Servo17I2C0Sda]        |
     /// | `PWM0 A`     | [crate::Servo17Pwm0A]          |
     /// | `PIO0`       | [crate::Servo17Pio0]           |
     /// | `PIO1`       | [crate::Servo17Pio1]           |
     Gpio16 {
         name: servo17,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo17].
-            FunctionUart: Servo17Uart0Tx,
-            /// SPI Function alias for pin [crate::Pins::servo17].
-            FunctionSpi: Servo17Spi0Rx,
-            /// I2C Function alias for pin [crate::Pins::servo17].
-            FunctionI2C: Servo17I2C0Sda,
             /// PWM Function alias for pin [crate::Pins::servo17].
             FunctionPwm: Servo17Pwm0A,
             /// PIO0 Function alias for pin [crate::Pins::servo17].
@@ -516,21 +363,12 @@ hal::bsp_pins!(
     ///
     /// | Function     | Alias with applied function |
     /// |--------------|-----------------------------|
-    /// | `SPI0 CSn`   | [crate::Servo18Spi0Csn]        |
-    /// | `UART0 RX`   | [crate::Servo18Uart0Rx]        |
-    /// | `I2C0 SCL`   | [crate::Servo18I2C0Scl]        |
     /// | `PWM0 B`     | [crate::Servo18Pwm0B]          |
     /// | `PIO0`       | [crate::Servo18Pio0]           |
     /// | `PIO1`       | [crate::Servo18Pio1]           |
     Gpio17 {
         name: servo18,
         aliases: {
-            /// UART Function alias for pin [crate::Pins::servo18].
-            FunctionUart: Servo18Uart0Rx,
-            /// SPI Function alias for pin [crate::Pins::servo18].
-            FunctionSpi: Servo18Spi0Csn,
-            /// I2C Function alias for pin [crate::Pins::servo18].
-            FunctionI2C: Servo18I2C0Scl,
             /// PWM Function alias for pin [crate::Pins::servo18].
             FunctionPwm: Servo18Pwm0B,
             /// PIO0 Function alias for pin [crate::Pins::servo18].
@@ -629,7 +467,7 @@ hal::bsp_pins!(
         }
     },
 
-    /// GPIO 22 is connected to adc_addr_0 of the Servo 2040 board..
+    /// GPIO 22 is connected to adc_addr_0 of the Servo 2040 board.
     Gpio22 {
         name: adc_addr_0,
     },

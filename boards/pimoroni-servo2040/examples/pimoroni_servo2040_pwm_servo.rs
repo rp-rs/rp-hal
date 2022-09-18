@@ -67,10 +67,31 @@ fn main() -> ! {
     const MAX_PULSE: u16 = 2000;
 
     let mut pwm: hal::pwm::Slice<_, _> = pwm_slices.pwm0;
-    pwm.set_ph_correct();
-    // 50Hz
+
+    // 50Hz desired frequency
+    // Rp2040 clock = 125MHz
+    // Top = 65_535, resolution for counter (maximum possible u16 value)
+    // Wrap = Top+1 (number of possible values)
+    // Phase correction multiplier = 2 if phase correction enabled, else 1
+
+    // Divider = rp2040_clock / (Wrap * phase_correction_multiplier * desired_frequency)
+    // Divider = 125,000,000/(65_536 * 1 * 50)
+    // Divider = 38.14639
+    // Divider int = 38
+    // Divider frac = 3 (3/16 = 0.1875, smallest frac greater than desired clock divider).
     pwm.set_div_int(38);
     pwm.set_div_frac(3);
+
+    // If phase correction enabled, then values would be:
+    // Divider = rp2040_clock / (Wrap * phase_correction_multiplier * desired_frequency)
+    // Divider = 125,000,000/(65_536 * 2 * 50)
+    // Divider = 19.073195
+    // Divider int = 19
+    // Divider frac = 2 (2/16 = .1250, smallest frac greater than desired clock divider).
+
+    // pwm.set_ph_correct();
+    // pwm.set_div_int(19);
+    // pwm.set_div_frac(2);
     pwm.set_top(TOP);
     pwm.enable();
 
