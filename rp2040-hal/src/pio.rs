@@ -156,7 +156,7 @@ impl<P: PIOExt> PIO<P> {
     }
 
     /// Tries to find an appropriate offset for the instructions, in range 0..=31.
-    fn find_offset_for_instructions(&self, i: &[u16], origin: Option<u8>) -> Option<usize> {
+    fn find_offset_for_instructions(&self, i: &[u16], origin: Option<u8>) -> Option<u8> {
         if i.len() > PIO_INSTRUCTION_COUNT || i.is_empty() {
             None
         } else {
@@ -167,10 +167,10 @@ impl<P: PIOExt> PIO<P> {
                 {
                     None
                 } else {
-                    Some(origin as usize)
+                    Some(origin)
                 }
             } else {
-                for i in (0..=32 - i.len()).rev() {
+                for i in (0..=32 - (i.len() as u8)).rev() {
                     if self.used_instruction_space & (mask << i) == 0 {
                         return Some(i);
                     }
@@ -197,10 +197,10 @@ impl<P: PIOExt> PIO<P> {
                 .map(|instr| {
                     if instr & 0b1110_0000_0000_0000 == 0 {
                         // this is a JMP instruction -> add offset to address
-                        let address = (instr & 0b11111) as usize;
+                        let address = (instr & 0b11111) as u8;
                         let address = address + offset;
                         assert!(
-                            address < pio::RP2040_MAX_PROGRAM_SIZE,
+                            address < pio::RP2040_MAX_PROGRAM_SIZE as u8,
                             "Invalid JMP out of the program after offset addition"
                         );
                         instr & (!0b11111) | address as u16
@@ -211,7 +211,8 @@ impl<P: PIOExt> PIO<P> {
                 })
                 .enumerate()
                 .for_each(|(i, instr)| {
-                    self.pio.instr_mem[i + offset].write(|w| unsafe { w.instr_mem0().bits(instr) })
+                    self.pio.instr_mem[i + offset as usize]
+                        .write(|w| unsafe { w.instr_mem0().bits(instr) })
                 });
             self.used_instruction_space |= Self::instruction_mask(p.code.len()) << offset;
             Ok(InstalledProgram {
