@@ -179,6 +179,11 @@ impl<D: SpiDevice, const DS: u8> Spi<Enabled, D, DS> {
         self.device.sspsr.read().rne().bit_is_set()
     }
 
+    /// Check if spi is busy transmitting and/or receiving
+    pub fn is_busy(&self) -> bool {
+        self.device.sspsr.read().bsy().bit_is_set()
+    }
+
     /// Disable the spi to reset its configuration
     pub fn disable(self) -> Spi<Disabled, D, DS> {
         self.device.sspcr1.modify(|_, w| w.sse().clear_bit());
