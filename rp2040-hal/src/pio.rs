@@ -1,8 +1,8 @@
 //! Programmable IO (PIO)
 //! See [Chapter 3 of the datasheet](https://rptl.io/rp2040-datasheet#section_pio) for more details.
 use crate::{
-    dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget},
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
+    dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget},
     resets::SubsystemReset,
 };
 use pio::{Instruction, InstructionOperands, Program, SideSet, Wrap};

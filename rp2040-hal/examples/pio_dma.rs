@@ -63,7 +63,7 @@ fn main() -> ! {
     let installed = pio.install(&program.program).unwrap();
     let (mut sm, rx, tx) = rp2040_hal::pio::PIOBuilder::from_program(installed)
         .out_pins(led_pin_id, 1)
-        .clock_divisor_fixed_point(0,0) // as slow as possible (0 is interpreted as 65536)
+        .clock_divisor_fixed_point(0, 0) // as slow as possible (0 is interpreted as 65536)
         .autopull(true)
         .autopush(true)
         .build(sm0);
