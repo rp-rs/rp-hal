@@ -888,8 +888,12 @@ where
     }
 
     /// Start the DMA transfer
-    pub fn start(mut self) -> Bidirectional<CH1, CH2, FROM, BIDI, TO> {
+    pub fn start(self) -> Bidirectional<CH1, CH2, FROM, BIDI, TO> {
         // TODO
+        let _ch = self.ch;
+        let _from = self.from;
+        let _bidi = self.bidi;
+        let _to = self.to;
         panic!("Not yet implemented.");
     }
 }
@@ -920,6 +924,11 @@ where
     /// Block until transfer is complete
     pub fn wait(self) -> ((CH1, CH2), FROM, BIDI, TO) {
         // TODO
+        // Reading self.value to satisfy clippy. Remove once implemented
+        let _ch = self.ch;
+        let _from = self.from;
+        let _bidi = self.bidi;
+        let _to = self.to;
         panic!("Not yet implemented.");
     }
 }
