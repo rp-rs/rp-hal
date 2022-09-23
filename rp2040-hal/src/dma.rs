@@ -148,8 +148,7 @@ pub trait SingleChannel {
         }
     }
 
-    /// Checks whether an interrupt is pending for this channel and clears the corresponding IRQ
-    /// bit.
+    /// Check if an interrupt is pending for this channel and clear the corresponding pending bit
     fn check_irq0(&mut self) -> bool {
         // Safety: The following is race-free as we only ever clear the bit for this channel.
         // Nobody else modifies that bit.
@@ -191,8 +190,7 @@ pub trait SingleChannel {
         }
     }
 
-    /// Checks whether an interrupt is pending for this channel and clears the corresponding IRQ
-    /// bit.
+    /// Check if an interrupt is pending for this channel and clear the corresponding pending bit
     fn check_irq1(&mut self) -> bool {
         // Safety: The following is race-free as we only ever clear the bit for this channel.
         // Nobody else modifies that bit.
@@ -473,6 +471,7 @@ Endless<(CH1, CH2), RX, TX> {
     stop() -> bool
 }*/
 
+/// Configuration for single-buffered DMA transfer
 pub struct SingleBufferingConfig<CH: SingleChannel, FROM: ReadTarget, TO: WriteTarget> {
     ch: CH,
     from: FROM,
@@ -486,6 +485,7 @@ where
     FROM: ReadTarget<ReceivedWord = WORD>,
     TO: WriteTarget<TransmittedWord = WORD>,
 {
+    /// Create a new configuration for single-buffered DMA transfer
     pub fn new(ch: CH, from: FROM, to: TO) -> SingleBufferingConfig<CH, FROM, TO> {
         SingleBufferingConfig {
             ch,
@@ -504,6 +504,7 @@ where
         self.pace = pace;
     }
 
+    /// Start the DMA transfer
     pub fn start(mut self) -> SingleBuffering<CH, FROM, TO> {
         // TODO: Do we want to call any callbacks to configure source/sink?
 
@@ -525,7 +526,7 @@ where
 }
 
 // TODO: Drop for most of these structs
-
+/// Instance of a single-buffered DMA transfer
 pub struct SingleBuffering<CH: SingleChannel, FROM: ReadTarget, TO: WriteTarget> {
     ch: CH,
     from: FROM,
@@ -538,19 +539,22 @@ where
     FROM: ReadTarget<ReceivedWord = WORD>,
     TO: WriteTarget<TransmittedWord = WORD>,
 {
+    /// Check if an interrupt is pending for this channel and clear the corresponding pending bit
     pub fn check_irq0(&mut self) -> bool {
         self.ch.check_irq0()
     }
 
+    /// Check if an interrupt is pending for this channel and clear the corresponding pending bit
     pub fn check_irq1(&mut self) -> bool {
         self.ch.check_irq1()
     }
 
-    /// Returns whether the transfer has completed.
+    /// Check if the transfer has completed.
     pub fn is_done(&self) -> bool {
         !self.ch.ch().ch_ctrl_trig.read().busy().bit_is_set()
     }
 
+    /// Block until the transfer is complete, returning the channel and targets
     pub fn wait(self) -> (CH, FROM, TO) {
         while !self.is_done() {}
 
@@ -562,6 +566,7 @@ where
     }
 }
 
+/// Configuration for double-buffered DMA transfer
 pub struct DoubleBufferingConfig<
     CH1: SingleChannel,
     CH2: SingleChannel,
@@ -581,6 +586,7 @@ where
     FROM: ReadTarget<ReceivedWord = WORD>,
     TO: WriteTarget<TransmittedWord = WORD>,
 {
+    /// Create a new configuration for double-buffered DMA transfer
     pub fn new(ch: (CH1, CH2), from: FROM, to: TO) -> DoubleBufferingConfig<CH1, CH2, FROM, TO> {
         DoubleBufferingConfig {
             ch,
@@ -599,6 +605,7 @@ where
         self.pace = pace;
     }
 
+    /// Start the DMA transfer
     pub fn start(mut self) -> DoubleBuffering<CH1, CH2, FROM, TO, ()> {
         // TODO: Do we want to call any callbacks to configure source/sink?
 
@@ -623,9 +630,12 @@ where
     }
 }
 
+/// State for a double-buffered read
 pub struct ReadNext<BUF: ReadTarget>(BUF);
+/// State for a double-buffered write
 pub struct WriteNext<BUF: WriteTarget>(BUF);
 
+/// Instance of a double-buffered DMA transfer
 pub struct DoubleBuffering<CH1, CH2, FROM, TO, STATE>
 where
     CH1: SingleChannel,
@@ -648,6 +658,7 @@ where
     FROM: ReadTarget<ReceivedWord = WORD>,
     TO: WriteTarget<TransmittedWord = WORD>,
 {
+    /// Check if the transfer is completed
     pub fn is_done(&self) -> bool {
         if self.second_ch {
             !self.ch.1.ch().ch_ctrl_trig.read().busy().bit_is_set()
@@ -664,6 +675,7 @@ where
     FROM: ReadTarget<ReceivedWord = WORD>,
     TO: WriteTarget<TransmittedWord = WORD> + EndlessWriteTarget,
 {
+    /// Block until transfer completed
     pub fn wait(self) -> (CH1, CH2, FROM, TO) {
         while !self.is_done() {}
 
@@ -683,6 +695,7 @@ where
     FROM: ReadTarget<ReceivedWord = WORD>,
     TO: WriteTarget<TransmittedWord = WORD> + EndlessWriteTarget,
 {
+    /// Perform the next read of a double-buffered sequence
     pub fn read_next<BUF: ReadTarget<ReceivedWord = WORD>>(
         mut self,
         buf: BUF,
@@ -724,6 +737,7 @@ where
     FROM: ReadTarget<ReceivedWord = WORD> + EndlessReadTarget,
     TO: WriteTarget<TransmittedWord = WORD>,
 {
+    /// Perform the next write of a double-buffered sequence
     pub fn write_next<BUF: WriteTarget<TransmittedWord = WORD>>(
         mut self,
         mut buf: BUF,
@@ -770,6 +784,7 @@ where
     TO: WriteTarget<TransmittedWord = WORD> + EndlessWriteTarget,
     NEXT: ReadTarget<ReceivedWord = WORD>,
 {
+    /// Block until the the transfer is complete
     pub fn wait(self) -> (FROM, DoubleBuffering<CH1, CH2, NEXT, TO, ()>) {
         while !self.is_done() {}
 
@@ -800,6 +815,7 @@ where
     TO: WriteTarget<TransmittedWord = WORD>,
     NEXT: WriteTarget<TransmittedWord = WORD>,
 {
+    /// Block until transfer is complete
     pub fn wait(self) -> (TO, DoubleBuffering<CH1, CH2, FROM, NEXT, ()>) {
         while !self.is_done() {}
 
@@ -822,6 +838,7 @@ where
     }
 }
 
+/// DMA configuration for sending and receiving data simultaneously
 pub struct BidirectionalConfig<CH1, CH2, FROM, BIDI, TO>
 where
     CH1: SingleChannel,
@@ -846,6 +863,7 @@ where
     BIDI: ReadTarget<ReceivedWord = WORD> + WriteTarget<TransmittedWord = WORD>,
     TO: WriteTarget<TransmittedWord = WORD>,
 {
+    /// Create a DMA configuration for sending and receiving data simultaneously
     pub fn new(
         ch: (CH1, CH2),
         from: FROM,
@@ -862,20 +880,24 @@ where
         }
     }
 
+    /// Set the transfer pacing for the DMA transfer from the source
     pub fn from_pace(&mut self, pace: Pace) {
         self.from_pace = pace;
     }
 
+    /// Set the transfer pacing for the DMA transfer to the target
     pub fn to_pace(&mut self, pace: Pace) {
         self.to_pace = pace;
     }
 
+    /// Start the DMA transfer
     pub fn start(mut self) -> Bidirectional<CH1, CH2, FROM, BIDI, TO> {
         // TODO
         panic!("Not yet implemented.");
     }
 }
 
+/// Instance of a bidirectional DMA transfer
 pub struct Bidirectional<CH1, CH2, FROM, BIDI, TO>
 where
     CH1: SingleChannel,
@@ -898,6 +920,7 @@ where
     BIDI: ReadTarget<ReceivedWord = WORD> + WriteTarget<TransmittedWord = WORD>,
     TO: WriteTarget<TransmittedWord = WORD>,
 {
+    /// Block until transfer is complete
     pub fn wait(self) -> ((CH1, CH2), FROM, BIDI, TO) {
         // TODO
         panic!("Not yet implemented.");
