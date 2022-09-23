@@ -41,6 +41,7 @@ fn main() -> ! {
 
     // HELLO WORLD in morse code:
     // .... . .-.. .-.. --- / .-- --- .-. .-.. -..
+    #[allow(clippy::unusual_byte_groupings)]
     let message = [
         0b10101010_00100010_11101010_00101110,
         0b10100011_10111011_10000000_10111011,
