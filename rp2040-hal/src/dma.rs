@@ -127,7 +127,7 @@ pub trait SingleChannel {
         const ATOMIC_SET_OFFSET: usize = 0x2000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            (&*DMA::ptr())
+            (*DMA::ptr())
                 .inte0
                 .as_ptr()
                 .add(ATOMIC_SET_OFFSET / 4)
@@ -140,7 +140,7 @@ pub trait SingleChannel {
         const ATOMIC_CLEAR_OFFSET: usize = 0x3000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            (&*DMA::ptr())
+            (*DMA::ptr())
                 .inte1
                 .as_ptr()
                 .add(ATOMIC_CLEAR_OFFSET / 4)
@@ -153,10 +153,10 @@ pub trait SingleChannel {
         // Safety: The following is race-free as we only ever clear the bit for this channel.
         // Nobody else modifies that bit.
         unsafe {
-            let status = (&*DMA::ptr()).ints0.read().bits();
+            let status = (*DMA::ptr()).ints0.read().bits();
             if (status & (1 << self.id())) != 0 {
                 // Clear the interrupt.
-                (&*DMA::ptr()).ints0.write(|w| w.bits(1 << self.id()));
+                (*DMA::ptr()).ints0.write(|w| w.bits(1 << self.id()));
                 true
             } else {
                 false
@@ -169,7 +169,7 @@ pub trait SingleChannel {
         const ATOMIC_SET_OFFSET: usize = 0x2000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            (&*DMA::ptr())
+            (*DMA::ptr())
                 .inte1
                 .as_ptr()
                 .add(ATOMIC_SET_OFFSET / 4)
@@ -182,7 +182,7 @@ pub trait SingleChannel {
         const ATOMIC_CLEAR_OFFSET: usize = 0x3000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            (&*DMA::ptr())
+            (*DMA::ptr())
                 .inte1
                 .as_ptr()
                 .add(ATOMIC_CLEAR_OFFSET / 4)
@@ -195,10 +195,10 @@ pub trait SingleChannel {
         // Safety: The following is race-free as we only ever clear the bit for this channel.
         // Nobody else modifies that bit.
         unsafe {
-            let status = (&*DMA::ptr()).ints1.read().bits();
+            let status = (*DMA::ptr()).ints1.read().bits();
             if (status & (1 << self.id())) != 0 {
                 // Clear the interrupt.
-                (&*DMA::ptr()).ints1.write(|w| w.bits(1 << self.id()));
+                (*DMA::ptr()).ints1.write(|w| w.bits(1 << self.id()));
                 true
             } else {
                 false
@@ -274,8 +274,8 @@ impl<CH: SingleChannel> ChannelConfig for CH {
         let dest_incr = to.tx_increment();
         const TREQ_UNPACED: u8 = 0x3f;
         let treq = match pace {
-            Pace::PreferSource => FROM::rx_treq().or(TO::tx_treq()).unwrap_or(TREQ_UNPACED),
-            Pace::PreferSink => TO::tx_treq().or(FROM::rx_treq()).unwrap_or(TREQ_UNPACED),
+            Pace::PreferSource => FROM::rx_treq().or_else(TO::tx_treq).unwrap_or(TREQ_UNPACED),
+            Pace::PreferSink => TO::tx_treq().or_else(FROM::rx_treq).unwrap_or(TREQ_UNPACED),
         };
         let len = u32::min(src_count, dest_count);
         self.ch().ch_al1_ctrl.write(|w| unsafe {
@@ -288,7 +288,7 @@ impl<CH: SingleChannel> ChannelConfig for CH {
                 .treq_sel()
                 .bits(treq)
                 .chain_to()
-                .bits(chain_to.unwrap_or(self.id()))
+                .bits(chain_to.unwrap_or_else(|| self.id()))
                 .en()
                 .bit(true)
         });
@@ -316,10 +316,7 @@ impl<CH: SingleChannel> ChannelConfig for CH {
             .modify(|_, w| unsafe { w.chain_to().bits(other.id()).en().clear_bit() });
         if self.ch().ch_al1_ctrl.read().busy().bit_is_set() {
             // This channel is still active, so just continue.
-            self.ch()
-                .ch_al1_ctrl
-                .modify(|_, w| unsafe { w.en().set_bit() });
-            return;
+            self.ch().ch_al1_ctrl.modify(|_, w| w.en().set_bit());
         } else {
             // This channel has already finished, so just start the other channel directly.
             other.start();
@@ -1103,8 +1100,6 @@ pub enum DMAError {
     /// was specified.
     IllegalConfig,
 }
-
-
 
 /// The DREQ value for PIO0's TX FIFO 0
 pub const DREQ_PIO0_TX0: u8 = 0;
