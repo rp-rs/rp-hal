@@ -48,3 +48,7 @@ critical-section-impl = ["rp2040-hal/critical-section-impl"]
 boot2 = ["rp2040-boot2"]
 rt = ["cortex-m-rt","rp2040-hal/rt"]
 rp2040-e5 = ["rp2040-hal/rp2040-e5"]
+
+[[example]]
+name = "pico_rtic_monotonic"
+required-features = ["rp2040-hal/rtic-monotonic"]

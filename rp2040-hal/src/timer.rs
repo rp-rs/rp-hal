@@ -381,3 +381,50 @@ impl_alarm!(Alarm3 {
     int_name: "TIMER_IRQ_3",
     armed_bit_mask: 0b1000
 });
+
+/// Support for RTIC monotonic trait.
+#[cfg(feature = "rtic-monotonic")]
+pub mod monotonic {
+    use super::{Alarm, Instant, Timer};
+    use fugit::ExtU32;
+
+    /// RTIC Monotonic Implementation
+    pub struct Monotonic<A>(pub Timer, A);
+    impl<A: Alarm> Monotonic<A> {
+        /// Creates a new monotonic.
+        pub const fn new(timer: Timer, alarm: A) -> Self {
+            Self(timer, alarm)
+        }
+    }
+    impl<A: Alarm> rtic_monotonic::Monotonic for Monotonic<A> {
+        type Instant = Instant;
+        type Duration = fugit::MicrosDurationU64;
+
+        const DISABLE_INTERRUPT_ON_EMPTY_QUEUE: bool = false;
+
+        fn now(&mut self) -> Instant {
+            self.0.get_counter()
+        }
+
+        fn set_compare(&mut self, instant: Instant) {
+            // The alarm can only trigger up to 2^32 - 1 ticks in the future.
+            // So, if `instant` is more than 2^32 - 2 in the future, we use `max_instant` instead.
+            let max_instant = self.0.get_counter() + 0xFFFF_FFFE.micros();
+            let wake_at = core::cmp::min(instant, max_instant);
+
+            // Cannot fail
+            let _ = self.1.schedule_at(wake_at);
+            self.1.enable_interrupt();
+        }
+
+        fn clear_compare_flag(&mut self) {
+            self.1.clear_interrupt();
+        }
+
+        fn zero() -> Self::Instant {
+            Instant::from_ticks(0)
+        }
+
+        unsafe fn reset(&mut self) {}
+    }
+}
