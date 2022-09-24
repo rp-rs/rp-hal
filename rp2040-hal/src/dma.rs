@@ -279,18 +279,13 @@ impl<CH: SingleChannel> ChannelConfig for CH {
         };
         let len = u32::min(src_count, dest_count);
         self.ch().ch_al1_ctrl.write(|w| unsafe {
-            w.data_size()
-                .bits(mem::size_of::<WORD>() as u8 >> 1)
-                .incr_read()
-                .bit(src_incr)
-                .incr_write()
-                .bit(dest_incr)
-                .treq_sel()
-                .bits(treq)
-                .chain_to()
-                .bits(chain_to.unwrap_or_else(|| self.id()))
-                .en()
-                .bit(true)
+            w.data_size().bits(mem::size_of::<WORD>() as u8 >> 1);
+            w.incr_read().bit(src_incr);
+            w.incr_write().bit(dest_incr);
+            w.treq_sel().bits(treq);
+            w.chain_to().bits(chain_to.unwrap_or_else(|| self.id()));
+            w.en().bit(true);
+            w
         });
         self.ch().ch_read_addr.write(|w| unsafe { w.bits(src) });
         self.ch().ch_trans_count.write(|w| unsafe { w.bits(len) });
@@ -311,9 +306,11 @@ impl<CH: SingleChannel> ChannelConfig for CH {
         // succession, yet we did not notice, as the situation is not distinguishable from one
         // where the second channel was not started at all.
 
-        self.ch()
-            .ch_al1_ctrl
-            .modify(|_, w| unsafe { w.chain_to().bits(other.id()).en().clear_bit() });
+        self.ch().ch_al1_ctrl.modify(|_, w| unsafe {
+            w.chain_to().bits(other.id());
+            w.en().clear_bit();
+            w
+        });
         if self.ch().ch_al1_ctrl.read().busy().bit_is_set() {
             // This channel is still active, so just continue.
             self.ch().ch_al1_ctrl.modify(|_, w| w.en().set_bit());
