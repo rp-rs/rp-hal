@@ -23,6 +23,9 @@ members = [
     "boards/sparkfun-thing-plus-rp2040",
     "boards/vcc-gnd-yd-rp2040",
 ]
+exclude = [
+    "on-target-tests"
+]
 
 [patch.'https://github.com/rp-rs/rp-hal.git']
 rp2040-hal = { path = "./rp2040-hal" }
