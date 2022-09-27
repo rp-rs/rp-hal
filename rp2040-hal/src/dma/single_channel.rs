@@ -21,7 +21,7 @@ pub trait SingleChannel {
             (*DMA::ptr())
                 .inte0
                 .as_ptr()
-                .add(ATOMIC_SET_OFFSET / 4)
+                .add(ATOMIC_SET_OFFSET)
                 .write_volatile(1 << self.id());
         }
     }
@@ -32,9 +32,9 @@ pub trait SingleChannel {
         // Safety: We only use the atomic alias of the register.
         unsafe {
             (*DMA::ptr())
-                .inte1
+                .inte0
                 .as_ptr()
-                .add(ATOMIC_CLEAR_OFFSET / 4)
+                .add(ATOMIC_CLEAR_OFFSET)
                 .write_volatile(1 << self.id());
         }
     }
@@ -63,7 +63,7 @@ pub trait SingleChannel {
             (*DMA::ptr())
                 .inte1
                 .as_ptr()
-                .add(ATOMIC_SET_OFFSET / 4)
+                .add(ATOMIC_SET_OFFSET)
                 .write_volatile(1 << self.id());
         }
     }
@@ -76,7 +76,7 @@ pub trait SingleChannel {
             (*DMA::ptr())
                 .inte1
                 .as_ptr()
-                .add(ATOMIC_CLEAR_OFFSET / 4)
+                .add(ATOMIC_CLEAR_OFFSET)
                 .write_volatile(1 << self.id());
         }
     }
