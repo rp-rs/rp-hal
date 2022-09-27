@@ -159,6 +159,7 @@ impl<CH: SingleChannel> ChannelConfig for CH {
         TO: WriteTarget<TransmittedWord = WORD>,
     {
         // Configure the DMA channel.
+        assert!(mem::size_of::<WORD>() != 8, "DMA does not support transferring 64bit data");
         let (src, src_count) = from.rx_address_count();
         let src_incr = from.rx_increment();
         let (dest, dest_count) = to.tx_address_count();
