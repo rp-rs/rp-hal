@@ -43,6 +43,8 @@ pub use crate::dma::single_buffering::SingleBufferingConfig;
 pub trait DMAExt {
     /// Splits the DMA unit into its individual channels.
     fn split(self, resets: &mut pac::RESETS) -> Channels;
+    /// Splits the DMA unit into its individual channels with runtime ownership
+    fn dyn_split(self, resets: &mut pac::RESETS) -> DynChannels;
 }
 
 /// DMA channel.
@@ -72,6 +74,18 @@ macro_rules! channels {
                     )+
                 }
             }
+
+            fn dyn_split(self, resets: &mut pac::RESETS) -> DynChannels{
+                self.reset_bring_up(resets);
+
+                DynChannels {
+                    $(
+                        $chX: Some(Channel {
+                            _phantom: PhantomData,
+                        }),
+                    )+
+                }
+            }
         }
 
         /// Set of DMA channels.
@@ -90,6 +104,14 @@ macro_rules! channels {
                 }
             }
         )+
+
+        /// Set of DMA channels.
+        pub struct DynChannels {
+            $(
+                /// DMA channel.
+                pub $chX: Option<Channel<$CHX>>,
+            )+
+        }
     }
 }
 

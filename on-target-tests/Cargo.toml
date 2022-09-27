@@ -24,6 +24,10 @@ harness = false
 name = "dma_drop"
 harness = false
 
+[[test]]
+name = "dma_dyn"
+harness = false
+
 [dependencies]
 cortex-m = "0.7"
 cortex-m-rt = "0.7"
