@@ -1,7 +1,10 @@
 use rp2040_pac::DMA;
 
 use super::{Channel, ChannelIndex, Pace, ReadTarget, WriteTarget};
-use crate::dma::ChannelRegs;
+use crate::{
+    atomic_register_access::{write_bitmask_clear, write_bitmask_set},
+    dma::ChannelRegs,
+};
 use core::mem;
 
 /// Trait which implements low-level functionality for transfers using a single DMA channel.
@@ -15,27 +18,17 @@ pub trait SingleChannel {
 
     /// Enables the DMA_IRQ_0 signal for this channel.
     fn listen_irq0(&mut self) {
-        const ATOMIC_SET_OFFSET: usize = 0x2000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            (*DMA::ptr())
-                .inte0
-                .as_ptr()
-                .add(ATOMIC_SET_OFFSET)
-                .write_volatile(1 << self.id());
+            write_bitmask_set((*DMA::ptr()).inte0.as_ptr(), 1 << self.id());
         }
     }
 
     /// Disables the DMA_IRQ_0 signal for this channel.
     fn unlisten_irq0(&mut self) {
-        const ATOMIC_CLEAR_OFFSET: usize = 0x3000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            (*DMA::ptr())
-                .inte0
-                .as_ptr()
-                .add(ATOMIC_CLEAR_OFFSET)
-                .write_volatile(1 << self.id());
+            write_bitmask_clear((*DMA::ptr()).inte0.as_ptr(), 1 << self.id());
         }
     }
 
@@ -57,27 +50,17 @@ pub trait SingleChannel {
 
     /// Enables the DMA_IRQ_0 signal for this channel.
     fn listen_irq1(&mut self) {
-        const ATOMIC_SET_OFFSET: usize = 0x2000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            (*DMA::ptr())
-                .inte1
-                .as_ptr()
-                .add(ATOMIC_SET_OFFSET)
-                .write_volatile(1 << self.id());
+            write_bitmask_set((*DMA::ptr()).inte1.as_ptr(), 1 << self.id());
         }
     }
 
     /// Disables the DMA_IRQ_1 signal for this channel.
     fn unlisten_irq1(&mut self) {
-        const ATOMIC_CLEAR_OFFSET: usize = 0x3000;
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            (*DMA::ptr())
-                .inte1
-                .as_ptr()
-                .add(ATOMIC_CLEAR_OFFSET)
-                .write_volatile(1 << self.id());
+            write_bitmask_clear((*DMA::ptr()).inte1.as_ptr(), 1 << self.id());
         }
     }
 
@@ -159,7 +142,10 @@ impl<CH: SingleChannel> ChannelConfig for CH {
         TO: WriteTarget<TransmittedWord = WORD>,
     {
         // Configure the DMA channel.
-        assert!(mem::size_of::<WORD>() != 8, "DMA does not support transferring 64bit data");
+        assert!(
+            mem::size_of::<WORD>() != 8,
+            "DMA does not support transferring 64bit data"
+        );
         let (src, src_count) = from.rx_address_count();
         let src_incr = from.rx_increment();
         let (dest, dest_count) = to.tx_address_count();
