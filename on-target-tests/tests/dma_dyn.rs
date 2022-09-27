@@ -34,8 +34,12 @@ mod testdata {
         65571, 65572, 65573, 65574, 65575, 65576, 65577, 65578, 65579, 65580,
     ];
     #[allow(dead_code)]
-    pub const ARRAY_U64: [u64; 10] = [
-        65571, 65572, 65573, 65574, 65575, 65576, 65577, 65578, 65579, 65580,
+    pub const ARRAY_I8: [i8; 10] = [-1, -2, -3, -4, -5, -6, -7, -8, -9, -10];
+    #[allow(dead_code)]
+    pub const ARRAY_I16: [i16; 10] = [-270, -271, -272, -273, -274, -275, -276, -277, -278, -279];
+    #[allow(dead_code)]
+    pub const ARRAY_I32: [i32; 10] = [
+        -65571, -65572, -65573, -65574, -65575, -65576, -65577, -65578, -65579, -65580,
     ];
 }
 
@@ -76,14 +80,16 @@ mod tests {
 
         let dma = pac.DMA.dyn_split(&mut pac.RESETS);
 
-        State {
-            channels: dma,
-        }
+        State { channels: dma }
     }
 
     #[test]
     fn dyn_m2m_u8(state: &mut State) {
-        let ch0 = state.channels.ch0.take().expect("Could not take Dyn DMA channel");
+        let ch0 = state
+            .channels
+            .ch0
+            .take()
+            .expect("Could not take Dyn DMA channel");
         let rx_buffer = cortex_m::singleton!(: [u8; 10] = [0; 10]).unwrap();
         let tx_buffer = cortex_m::singleton!(: [u8; 10] = testdata::ARRAY_U8).unwrap();
         let tx_transfer = hal::dma::SingleBufferingConfig::new(ch0, tx_buffer, rx_buffer);
@@ -99,7 +105,11 @@ mod tests {
 
     #[test]
     fn dyn_m2m_u16(state: &mut State) {
-        let ch0 = state.channels.ch0.take().expect("Could not take Dyn DMA channel");
+        let ch0 = state
+            .channels
+            .ch0
+            .take()
+            .expect("Could not take Dyn DMA channel");
         let rx_buffer = cortex_m::singleton!(: [u16; 10] = [0; 10]).unwrap();
         let tx_buffer = cortex_m::singleton!(: [u16; 10] = testdata::ARRAY_U16).unwrap();
         let tx_transfer = hal::dma::SingleBufferingConfig::new(ch0, tx_buffer, rx_buffer);
@@ -115,7 +125,11 @@ mod tests {
 
     #[test]
     fn dyn_m2m_u32(state: &mut State) {
-        let ch0 = state.channels.ch0.take().expect("Could not take Dyn DMA channel");
+        let ch0 = state
+            .channels
+            .ch0
+            .take()
+            .expect("Could not take Dyn DMA channel");
         let rx_buffer = cortex_m::singleton!(: [u32; 10] = [0; 10]).unwrap();
         let tx_buffer = cortex_m::singleton!(: [u32; 10] = testdata::ARRAY_U32).unwrap();
         let tx_transfer = hal::dma::SingleBufferingConfig::new(ch0, tx_buffer, rx_buffer);
@@ -129,4 +143,63 @@ mod tests {
         state.channels.ch0.replace(newch0);
     }
 
+    #[test]
+    fn dyn_m2m_i8(state: &mut State) {
+        let ch0 = state
+            .channels
+            .ch0
+            .take()
+            .expect("Could not take Dyn DMA channel");
+        let rx_buffer = cortex_m::singleton!(: [i8; 10] = [0; 10]).unwrap();
+        let tx_buffer = cortex_m::singleton!(: [i8; 10] = testdata::ARRAY_I8).unwrap();
+        let tx_transfer = hal::dma::SingleBufferingConfig::new(ch0, tx_buffer, rx_buffer);
+        let tx_started = tx_transfer.start();
+        let (newch0, tx_buffer, rx_buffer) = tx_started.wait();
+        let first = tx_buffer.iter();
+        let second = rx_buffer.iter();
+        for (x, y) in first.zip(second) {
+            assert_eq!(x, y);
+        }
+        state.channels.ch0.replace(newch0);
+    }
+
+    #[test]
+    fn dyn_m2m_i16(state: &mut State) {
+        let ch0 = state
+            .channels
+            .ch0
+            .take()
+            .expect("Could not take Dyn DMA channel");
+        let rx_buffer = cortex_m::singleton!(: [i16; 10] = [0; 10]).unwrap();
+        let tx_buffer = cortex_m::singleton!(: [i16; 10] = testdata::ARRAY_I16).unwrap();
+        let tx_transfer = hal::dma::SingleBufferingConfig::new(ch0, tx_buffer, rx_buffer);
+        let tx_started = tx_transfer.start();
+        let (newch0, tx_buffer, rx_buffer) = tx_started.wait();
+        let first = tx_buffer.iter();
+        let second = rx_buffer.iter();
+        for (x, y) in first.zip(second) {
+            assert_eq!(x, y);
+        }
+        state.channels.ch0.replace(newch0);
+    }
+
+    #[test]
+    fn dyn_m2m_i32(state: &mut State) {
+        let ch0 = state
+            .channels
+            .ch0
+            .take()
+            .expect("Could not take Dyn DMA channel");
+        let rx_buffer = cortex_m::singleton!(: [i32; 10] = [0; 10]).unwrap();
+        let tx_buffer = cortex_m::singleton!(: [i32; 10] = testdata::ARRAY_I32).unwrap();
+        let tx_transfer = hal::dma::SingleBufferingConfig::new(ch0, tx_buffer, rx_buffer);
+        let tx_started = tx_transfer.start();
+        let (newch0, tx_buffer, rx_buffer) = tx_started.wait();
+        let first = tx_buffer.iter();
+        let second = rx_buffer.iter();
+        for (x, y) in first.zip(second) {
+            assert_eq!(x, y);
+        }
+        state.channels.ch0.replace(newch0);
+    }
 }
