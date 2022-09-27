@@ -77,6 +77,7 @@ mod tests {
     }
 
     #[test]
+    #[should_error]
     fn dma_mem2mem_u64(state: &mut State) {
         if let Some(dma) = state.channels.take() {
             let rx_buffer = cortex_m::singleton!(: [u64; 10] = [0; 10]).unwrap();

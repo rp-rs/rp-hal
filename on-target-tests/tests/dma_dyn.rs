@@ -129,19 +129,4 @@ mod tests {
         state.channels.ch0.replace(newch0);
     }
 
-    #[test]
-    fn dyn_m2m_u64(state: &mut State) {
-        let ch0 = state.channels.ch0.take().expect("Could not take Dyn DMA channel");
-        let rx_buffer = cortex_m::singleton!(: [u64; 10] = [0; 10]).unwrap();
-        let tx_buffer = cortex_m::singleton!(: [u64; 10] = testdata::ARRAY_U64).unwrap();
-        let tx_transfer = hal::dma::SingleBufferingConfig::new(ch0, tx_buffer, rx_buffer);
-        let tx_started = tx_transfer.start();
-        let (newch0, tx_buffer, rx_buffer) = tx_started.wait();
-        let first = tx_buffer.iter();
-        let second = rx_buffer.iter();
-        for (x, y) in first.zip(second) {
-            assert_eq!(x, y);
-        }
-        state.channels.ch0.replace(newch0);
-    }
 }
