@@ -116,26 +116,3 @@ impl Default for UartConfig {
         }
     }
 }
-
-/// Same as core::convert::Infallible, but implementing serial::Error
-///
-/// For eh 1.0.0-alpha.6, Infallible doesn't implement serial::Error,
-/// so use a locally defined type instead.
-/// This should be removed with the next release of e-h.
-/// (https://github.com/rust-embedded/embedded-hal/pull/328)
-#[cfg(feature = "eh1_0_alpha")]
-pub enum SerialInfallible {}
-
-#[cfg(feature = "eh1_0_alpha")]
-impl core::fmt::Debug for SerialInfallible {
-    fn fmt(&self, _f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match *self {}
-    }
-}
-
-#[cfg(feature = "eh1_0_alpha")]
-impl eh1_0_alpha::serial::Error for SerialInfallible {
-    fn kind(&self) -> eh1_0_alpha::serial::ErrorKind {
-        match *self {}
-    }
-}

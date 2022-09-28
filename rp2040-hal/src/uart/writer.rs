@@ -184,7 +184,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for Writer<D, P> {
 
 #[cfg(feature = "eh1_0_alpha")]
 impl<D: UartDevice, P: ValidUartPinout<D>> eh1::ErrorType for Writer<D, P> {
-    type Error = super::utils::SerialInfallible;
+    type Error = core::convert::Infallible;
 }
 
 /* disabled for now - nb was migrated to separate crate
