@@ -253,6 +253,7 @@ macro_rules! impl_write {
             type Error = SpiInfallible;
         }
 
+/* disabled for now - nb was migrated to separate crate
         #[cfg(feature = "eh1_0_alpha")]
         impl<D: SpiDevice> eh1::nb::FullDuplex<$type> for Spi<Enabled, D, $nr> {
             fn read(&mut self) -> Result<$type, nb::Error<SpiInfallible>> {
@@ -276,6 +277,7 @@ macro_rules! impl_write {
                 Ok(())
             }
         }
+*/
 
     )+
 

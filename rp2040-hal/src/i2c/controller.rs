@@ -279,7 +279,7 @@ impl<T: Deref<Target = Block>, PINS> eh1::ErrorType for I2C<T, PINS, Controller>
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<T: Deref<Target = Block>, PINS> eh1::blocking::I2c for I2C<T, PINS, Controller> {
+impl<T: Deref<Target = Block>, PINS> eh1::I2c for I2C<T, PINS, Controller> {
     fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Self::Error> {
         Write::write(self, addr, bytes)
     }
@@ -330,15 +330,15 @@ impl<T: Deref<Target = Block>, PINS> eh1::blocking::I2c for I2C<T, PINS, Control
     fn transaction<'a>(
         &mut self,
         address: u8,
-        operations: &mut [eh1::blocking::Operation<'a>],
+        operations: &mut [eh1::Operation<'a>],
     ) -> Result<(), Self::Error> {
         let addr: u16 = address.into();
         self.setup(addr);
         for i in 0..operations.len() {
             let last = i == operations.len() - 1;
             match &mut operations[i] {
-                eh1::blocking::Operation::Read(buf) => self.read_internal(buf, false, last)?,
-                eh1::blocking::Operation::Write(buf) => self.write_internal(buf, last)?,
+                eh1::Operation::Read(buf) => self.read_internal(buf, false, last)?,
+                eh1::Operation::Write(buf) => self.write_internal(buf, last)?,
             }
         }
         Ok(())
@@ -346,7 +346,7 @@ impl<T: Deref<Target = Block>, PINS> eh1::blocking::I2c for I2C<T, PINS, Control
 
     fn transaction_iter<'a, O>(&mut self, address: u8, operations: O) -> Result<(), Self::Error>
     where
-        O: IntoIterator<Item = eh1::blocking::Operation<'a>>,
+        O: IntoIterator<Item = eh1::Operation<'a>>,
     {
         let addr: u16 = address.into();
         self.setup(addr);
@@ -354,8 +354,8 @@ impl<T: Deref<Target = Block>, PINS> eh1::blocking::I2c for I2C<T, PINS, Control
         while let Some(operation) = peekable.next() {
             let last = peekable.peek().is_none();
             match operation {
-                eh1::blocking::Operation::Read(buf) => self.read_internal(buf, false, last)?,
-                eh1::blocking::Operation::Write(buf) => self.write_internal(buf, last)?,
+                eh1::Operation::Read(buf) => self.read_internal(buf, false, last)?,
+                eh1::Operation::Write(buf) => self.write_internal(buf, last)?,
             }
         }
         Ok(())

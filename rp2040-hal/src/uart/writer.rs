@@ -187,6 +187,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::ErrorType for Writer<D, P> {
     type Error = super::utils::SerialInfallible;
 }
 
+/* disabled for now - nb was migrated to separate crate
 #[cfg(feature = "eh1_0_alpha")]
 impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Write<u8> for Writer<D, P> {
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
@@ -204,6 +205,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Write<u8> for Writer<D, P> {
         })
     }
 }
+*/
 
 impl<D: UartDevice, P: ValidUartPinout<D>> fmt::Write for Writer<D, P> {
     fn write_str(&mut self, s: &str) -> fmt::Result {

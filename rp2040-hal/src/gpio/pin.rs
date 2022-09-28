@@ -881,7 +881,7 @@ where
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<I, C> eh1::blocking::OutputPin for Pin<I, Output<C>>
+impl<I, C> eh1::OutputPin for Pin<I, Output<C>>
 where
     I: PinId,
     C: OutputConfig,
@@ -899,7 +899,7 @@ where
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<I> eh1::blocking::InputPin for Pin<I, ReadableOutput>
+impl<I> eh1::InputPin for Pin<I, ReadableOutput>
 where
     I: PinId,
 {
@@ -923,7 +923,7 @@ where
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<I, C> eh1::blocking::InputPin for Pin<I, Input<C>>
+impl<I, C> eh1::InputPin for Pin<I, Input<C>>
 where
     I: PinId,
     C: InputConfig,
@@ -939,7 +939,7 @@ where
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<I, C> eh1::blocking::ToggleableOutputPin for Pin<I, Output<C>>
+impl<I, C> eh1::ToggleableOutputPin for Pin<I, Output<C>>
 where
     I: PinId,
     C: OutputConfig,
@@ -952,7 +952,7 @@ where
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<I, C> eh1::blocking::StatefulOutputPin for Pin<I, Output<C>>
+impl<I, C> eh1::StatefulOutputPin for Pin<I, Output<C>>
 where
     I: PinId,
     C: OutputConfig,
