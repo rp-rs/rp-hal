@@ -97,13 +97,13 @@ fn main() -> ! {
 
     // Configure button inputs
     // 12 - A button
-    let _a_pin = pins.gpio12.into_floating_input();
+    let _a_pin = pins.gpio12.into_pull_up_input();
     // 13 - B button
-    let _b_pin = pins.gpio13.into_floating_input();
+    let _b_pin = pins.gpio13.into_pull_up_input();
     // 14 - X button
-    let _x_pin = pins.gpio14.into_floating_input();
+    let _x_pin = pins.gpio14.into_pull_up_input();
     // 15 - Y button
-    let _y_pin = pins.gpio15.into_floating_input();
+    let _y_pin = pins.gpio15.into_pull_up_input();
 
     // 6 (PWM 3A) - LED red
     let r_channel = &mut pwm3.channel_a;
