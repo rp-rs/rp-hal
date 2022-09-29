@@ -9,16 +9,13 @@
 #![no_std]
 #![no_main]
 
-// The macro for our start-up function
-use cortex_m_rt::entry;
-
 use cortex_m::prelude::*;
 
 // GPIO traits
 use embedded_hal::PwmPin;
 
 // Traits for converting integers to amounts of time
-use embedded_time::duration::Extensions;
+use fugit::ExtU32;
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
@@ -34,12 +31,12 @@ use rp_pico::hal;
 
 /// Entry point to our bare-metal application.
 ///
-/// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
-/// as soon as all global variables are initialised.
+/// The `#[rp2040_hal::entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables and the spinlock are initialised.
 ///
 /// The function configures the RP2040 peripherals, then fades the LED in an
 /// infinite loop.
-#[entry]
+#[rp2040_hal::entry]
 fn main() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
@@ -96,22 +93,22 @@ fn main() -> ! {
     loop {
         // move to 0°
         channel.set_duty(2500);
-        count_down.start(400.milliseconds());
+        count_down.start(400.millis());
         let _ = nb::block!(count_down.wait());
 
         // 0° to 90°
         channel.set_duty(3930);
-        count_down.start(400.milliseconds());
+        count_down.start(400.millis());
         let _ = nb::block!(count_down.wait());
 
         // 90° to 180°
         channel.set_duty(7860);
-        count_down.start(400.milliseconds());
+        count_down.start(400.millis());
         let _ = nb::block!(count_down.wait());
 
         // 180° to 90°
         channel.set_duty(3930);
-        count_down.start(400.milliseconds());
+        count_down.start(400.millis());
         let _ = nb::block!(count_down.wait());
     }
 }

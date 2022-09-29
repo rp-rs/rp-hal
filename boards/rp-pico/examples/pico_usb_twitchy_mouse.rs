@@ -1,6 +1,6 @@
 //! # Pico USB 'Twitchy' Mouse Example
 //!
-//! Creates a USB HID Class Poiting device (i.e. a virtual mouse) on a Pico
+//! Creates a USB HID Class Pointing device (i.e. a virtual mouse) on a Pico
 //! board, with the USB driver running in the main thread.
 //!
 //! It generates movement reports which will twitch the cursor up and down by a
@@ -25,7 +25,6 @@ use rp_pico::hal::pac::interrupt;
 use panic_halt as _;
 
 // Pull in any important traits
-use embedded_time::fixed_point::FixedPoint;
 use rp_pico::hal::prelude::*;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
@@ -83,6 +82,17 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
+    #[cfg(feature = "rp2040-e5")]
+    {
+        let sio = hal::Sio::new(pac.SIO);
+        let _pins = rp_pico::Pins::new(
+            pac.IO_BANK0,
+            pac.PADS_BANK0,
+            sio.gpio_bank0,
+            &mut pac.RESETS,
+        );
+    }
+
     // Set up the USB driver
     let usb_bus = UsbBusAllocator::new(hal::usb::UsbBus::new(
         pac.USBCTRL_REGS,
@@ -125,7 +135,7 @@ fn main() -> ! {
         pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
     };
     let core = pac::CorePeripherals::take().unwrap();
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // Move the cursor up and down every 200ms
     loop {
@@ -157,7 +167,7 @@ fn main() -> ! {
 ///
 /// We do this with interrupts disabled, to avoid a race hazard with the USB IRQ.
 fn push_mouse_movement(report: MouseReport) -> Result<usize, usb_device::UsbError> {
-    cortex_m::interrupt::free(|_| unsafe {
+    critical_section::with(|_| unsafe {
         // Now interrupts are disabled, grab the global variable and, if
         // available, send it a HID report
         USB_HID.as_mut().map(|hid| hid.push_input(&report))

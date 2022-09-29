@@ -2,23 +2,26 @@
 #![no_std]
 #![no_main]
 
-use cortex_m_rt::entry;
 use defmt::*;
 use defmt_rtt as _;
 use embedded_hal::digital::v2::OutputPin;
-use embedded_time::fixed_point::FixedPoint;
 use panic_halt as _;
 
 use pimoroni_plasma_2040 as bsp;
 
 use bsp::hal::{
     clocks::{init_clocks_and_plls, Clock},
+    gpio::PinState,
     pac,
     sio::Sio,
     watchdog::Watchdog,
 };
 
-#[entry]
+/// Entry point to our bare-metal application.
+///
+/// The `#[rp2040_hal::entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables and the spinlock are initialised.
+#[rp2040_hal::entry]
 fn main() -> ! {
     info!("Program start");
     let mut pac = pac::Peripherals::take().unwrap();
@@ -38,7 +41,7 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     let pins = bsp::Pins::new(
         pac.IO_BANK0,
@@ -47,12 +50,11 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    let mut led_green = pins.led_green.into_push_pull_output();
-    let mut led_red = pins.led_red.into_push_pull_output();
-    let mut led_blue = pins.led_blue.into_push_pull_output();
-    led_green.set_high().unwrap();
-    led_red.set_high().unwrap();
-    led_blue.set_high().unwrap();
+    let mut led_green = pins
+        .led_green
+        .into_push_pull_output_in_state(PinState::High);
+    let mut led_red = pins.led_red.into_push_pull_output_in_state(PinState::High);
+    let mut led_blue = pins.led_blue.into_push_pull_output_in_state(PinState::High);
 
     loop {
         led_green.set_low().unwrap();

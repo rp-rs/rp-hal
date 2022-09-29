@@ -1,6 +1,6 @@
 [package]
 name = "seeeduino-xiao-rp2040"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Philip L. McMahon <plm@users.noreply.github.com>", "The rp-rs Developers"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/seeeduino-xiao-rp02040"
@@ -12,17 +12,18 @@ repository = "https://github.com/rp-rs/rp-hal.git"
 
 [dependencies]
 cortex-m = "0.7.2"
-rp2040-hal = { path = "../../rp2040-hal", version = "0.5.0" }
+rp2040-hal = { path = "../../rp2040-hal", version = "0.6.0" }
 cortex-m-rt = { version = "0.7", optional = true }
 rp2040-boot2 = { version = "0.2.0", optional = true }
 
 [dev-dependencies]
-embedded-time = "0.12.0"
+fugit = "0.3.5"
 panic-halt= "0.2.0"
 embedded-hal ="0.2.5"
 nb = "1.0"
 
 [features]
-default = ["boot2", "rt"]
+default = ["boot2", "rt", "critical-section-impl"]
+critical-section-impl = ["rp2040-hal/critical-section-impl"]
 boot2 = ["rp2040-boot2"]
 rt = ["cortex-m-rt","rp2040-hal/rt"]

@@ -8,40 +8,60 @@
 //!
 //! See [Chapter 4 Section 6](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) of the datasheet for more details.
 
-use embedded_time::duration::Microseconds;
+use fugit::{MicrosDurationU32, MicrosDurationU64, TimerInstantU64};
 
 use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
 use crate::pac::{RESETS, TIMER};
 use crate::resets::SubsystemReset;
 use core::marker::PhantomData;
+use core::sync::atomic::{AtomicU8, Ordering};
 
+/// Instant type used by the Timer & Alarm methods.
+pub type Instant = TimerInstantU64<1_000_000>;
+
+static ALARMS: AtomicU8 = AtomicU8::new(0x0F);
+fn take_alarm(mask: u8) -> bool {
+    critical_section::with(|_| {
+        let alarms = ALARMS.load(Ordering::Relaxed);
+        ALARMS.store(alarms & !mask, Ordering::Relaxed);
+        (alarms & mask) != 0
+    })
+}
+fn release_alarm(mask: u8) {
+    critical_section::with(|_| {
+        let alarms = ALARMS.load(Ordering::Relaxed);
+        ALARMS.store(alarms | mask, Ordering::Relaxed);
+    });
+}
+
+fn get_counter(timer: &crate::pac::timer::RegisterBlock) -> Instant {
+    let mut hi0 = timer.timerawh.read().bits();
+    let timestamp = loop {
+        let low = timer.timerawl.read().bits();
+        let hi1 = timer.timerawh.read().bits();
+        if hi0 == hi1 {
+            break (u64::from(hi0) << 32) | u64::from(low);
+        }
+        hi0 = hi1;
+    };
+    TimerInstantU64::from_ticks(timestamp)
+}
 /// Timer peripheral
 pub struct Timer {
     timer: TIMER,
-    alarms: [bool; 4],
 }
 
 impl Timer {
     /// Create a new [`Timer`]
     pub fn new(timer: TIMER, resets: &mut RESETS) -> Self {
+        timer.reset_bring_down(resets);
         timer.reset_bring_up(resets);
-        Self {
-            timer,
-            alarms: [true; 4],
-        }
+        Self { timer }
     }
 
     /// Get the current counter value.
-    pub fn get_counter(&self) -> u64 {
-        let mut hi0 = self.timer.timerawh.read().bits();
-        loop {
-            let low = self.timer.timerawl.read().bits();
-            let hi1 = self.timer.timerawh.read().bits();
-            if hi0 == hi1 {
-                break (u64::from(hi0) << 32) | u64::from(low);
-            }
-            hi0 = hi1;
-        }
+    pub fn get_counter(&self) -> Instant {
+        get_counter(&self.timer)
     }
 
     /// Get the value of the least significant word of the counter.
@@ -53,102 +73,81 @@ impl Timer {
     pub fn count_down(&self) -> CountDown<'_> {
         CountDown {
             timer: self,
-            period: Microseconds::new(0),
+            period: MicrosDurationU64::nanos(0),
             next_end: None,
         }
     }
-
     /// Retrieve a reference to alarm 0. Will only return a value the first time this is called
     pub fn alarm_0(&mut self) -> Option<Alarm0> {
-        cortex_m::interrupt::free(|_| {
-            if self.alarms[0] {
-                self.alarms[0] = false;
-                Some(Alarm0(PhantomData))
-            } else {
-                None
-            }
-        })
+        take_alarm(1 << 0).then_some(Alarm0(PhantomData))
     }
 
     /// Retrieve a reference to alarm 1. Will only return a value the first time this is called
     pub fn alarm_1(&mut self) -> Option<Alarm1> {
-        cortex_m::interrupt::free(|_| {
-            if self.alarms[1] {
-                self.alarms[1] = false;
-                Some(Alarm1(PhantomData))
-            } else {
-                None
-            }
-        })
+        take_alarm(1 << 1).then_some(Alarm1(PhantomData))
     }
 
     /// Retrieve a reference to alarm 2. Will only return a value the first time this is called
     pub fn alarm_2(&mut self) -> Option<Alarm2> {
-        cortex_m::interrupt::free(|_| {
-            if self.alarms[2] {
-                self.alarms[2] = false;
-                Some(Alarm2(PhantomData))
-            } else {
-                None
-            }
-        })
+        take_alarm(1 << 2).then_some(Alarm2(PhantomData))
     }
 
     /// Retrieve a reference to alarm 3. Will only return a value the first time this is called
     pub fn alarm_3(&mut self) -> Option<Alarm3> {
-        cortex_m::interrupt::free(|_| {
-            if self.alarms[3] {
-                self.alarms[3] = false;
-                Some(Alarm3(PhantomData))
-            } else {
-                None
-            }
-        })
+        take_alarm(1 << 3).then_some(Alarm3(PhantomData))
     }
 }
+
+// safety: all write operations are synchronised and all reads are atomic
+unsafe impl Sync for Timer {}
 
 /// Implementation of the embedded_hal::Timer traits using rp2040_hal::timer counter
 ///
 /// ## Usage
 /// ```no_run
 /// use embedded_hal::timer::{CountDown, Cancel};
-/// use embedded_time::duration::Extensions;
+/// use fugit::ExtU32;
 /// use rp2040_hal;
 /// let mut pac = rp2040_hal::pac::Peripherals::take().unwrap();
 /// // Configure the Timer peripheral in count-down mode
 /// let timer = rp2040_hal::Timer::new(pac.TIMER, &mut pac.RESETS);
 /// let mut count_down = timer.count_down();
 /// // Create a count_down timer for 500 milliseconds
-/// count_down.start(500.milliseconds());
+/// count_down.start(500.millis());
 /// // Block until timer has elapsed
 /// let _ = nb::block!(count_down.wait());
 /// // Restart the count_down timer with a period of 100 milliseconds
-/// count_down.start(100.milliseconds());
+/// count_down.start(100.millis());
 /// // Cancel it immediately
 /// count_down.cancel();
 /// ```
 pub struct CountDown<'timer> {
     timer: &'timer Timer,
-    period: embedded_time::duration::Microseconds<u64>,
+    period: MicrosDurationU64,
     next_end: Option<u64>,
 }
 
 impl embedded_hal::timer::CountDown for CountDown<'_> {
-    type Time = embedded_time::duration::Microseconds<u64>;
+    type Time = MicrosDurationU64;
 
     fn start<T>(&mut self, count: T)
     where
         T: Into<Self::Time>,
     {
         self.period = count.into();
-        self.next_end = Some(self.timer.get_counter().wrapping_add(self.period.0));
+        self.next_end = Some(
+            self.timer
+                .get_counter()
+                .ticks()
+                .wrapping_add(self.period.to_micros()),
+        );
     }
 
     fn wait(&mut self) -> nb::Result<(), void::Void> {
         if let Some(end) = self.next_end {
-            let ts = self.timer.get_counter();
+            let ts = self.timer.get_counter().ticks();
             if ts >= end {
-                self.next_end = Some(end.wrapping_add(self.period.0));
+                self.next_end = Some(end.wrapping_add(self.period.to_micros()));
                 Ok(())
             } else {
                 Err(nb::Error::WouldBlock)
@@ -194,14 +193,17 @@ pub trait Alarm {
     /// Schedule the alarm to be finished after `countdown`. If [enable_interrupt] is called,
     /// this will trigger interrupt whenever this time elapses.
     ///
-    /// The RP2040 has been observed to take a little while to schedule an alarm. For this
-    /// reason, the minimum time that this function accepts is `10.microseconds()`
+    /// [enable_interrupt]: #method.enable_interrupt
+    fn schedule(&mut self, countdown: MicrosDurationU32) -> Result<(), ScheduleAlarmError>;
+
+    /// Schedule the alarm to be finished at the given timestamp. If [enable_interrupt] is
+    /// called, this will trigger interrupt whenever this timestamp is reached.
+    ///
+    /// The RP2040 is unable to schedule an event taking place in more than
+    /// `u32::max_value()` microseconds.
     ///
     /// [enable_interrupt]: #method.enable_interrupt
-    fn schedule<TIME: Into<Microseconds>>(
-        &mut self,
-        countdown: TIME,
-    ) -> Result<(), ScheduleAlarmError>;
+    fn schedule_at(&mut self, timestamp: Instant) -> Result<(), ScheduleAlarmError>;
 
     /// Return true if this alarm is finished.
     fn finished(&self) -> bool;
@@ -211,6 +213,37 @@ macro_rules! impl_alarm {
     ($name:ident  { rb: $timer_alarm:ident, int: $int_alarm:ident, int_name: $int_name:tt, armed_bit_mask: $armed_bit_mask: expr }) => {
         /// An alarm that can be used to schedule events in the future. Alarms can also be configured to trigger interrupts.
         pub struct $name(PhantomData<()>);
+        impl $name {
+            fn schedule_internal(
+                &mut self,
+                timer: &crate::pac::timer::RegisterBlock,
+                timestamp: Instant,
+            ) -> Result<(), ScheduleAlarmError> {
+                let timestamp_low = (timestamp.ticks() & 0xFFFF_FFFF) as u32;
+
+                // This lock is for time-criticality
+                cortex_m::interrupt::free(|_| {
+                    let alarm = &timer.$timer_alarm;
+
+                    // safety: This is the only code in the codebase that accesses memory address $timer_alarm
+                    alarm.write(|w| unsafe { w.bits(timestamp_low) });
+
+                    // If it is not set, it has already triggered.
+                    let now = get_counter(timer);
+                    if now > timestamp && (timer.armed.read().bits() & $armed_bit_mask) != 0 {
+                        // timestamp was set in the past
+
+                        // safety: TIMER.armed is a write-clear register, and there can only be
+                        // 1 instance of AlarmN so we can safely atomically clear this bit.
+                        unsafe {
+                            timer.armed.write_with_zero(|w| w.bits($armed_bit_mask));
+                        }
+                        return Err(ScheduleAlarmError::AlarmTooSoon);
+                    }
+                    Ok(())
+                })
+            }
+        }
 
         impl Alarm for $name {
             /// Clear the interrupt flag. This should be called after interrupt `
@@ -259,38 +292,39 @@ macro_rules! impl_alarm {
                 }
             }
 
-            /// Schedule the alarm to be finished after `countdown`. If [enable_interrupt] is called, this will trigger interrupt `
+            /// Schedule the alarm to be finished after `countdown`. If [enable_interrupt] is called,
+            /// this will trigger interrupt `
             #[doc = $int_name]
             /// ` whenever this time elapses.
             ///
-            /// The RP2040 has been observed to take a little while to schedule an alarm. For this reason, the minimum time that this function accepts is `10.microseconds()`
+            /// [enable_interrupt]: #method.enable_interrupt
+            fn schedule(&mut self, countdown: MicrosDurationU32) -> Result<(), ScheduleAlarmError> {
+                // safety: Only read operations are made on the timer and they should not have any UB
+                let timer = unsafe { &*TIMER::ptr() };
+                let timestamp = get_counter(timer) + countdown;
+
+                self.schedule_internal(timer, timestamp)
+            }
+
+            /// Schedule the alarm to be finished at the given timestamp. If [enable_interrupt] is
+            /// called, this will trigger interrupt `
+            #[doc = $int_name]
+            /// ` whenever this timestamp is reached.
+            ///
+            /// The RP2040 is unable to schedule an event taking place in more than
+            /// `u32::max_value()` microseconds.
             ///
             /// [enable_interrupt]: #method.enable_interrupt
-            fn schedule<TIME: Into<Microseconds>>(
-                &mut self,
-                countdown: TIME,
-            ) -> Result<(), ScheduleAlarmError> {
-                let duration = countdown.into().0;
-
-                const MIN_MICROSECONDS: u32 = 10;
-                if duration < MIN_MICROSECONDS {
-                    return Err(ScheduleAlarmError::AlarmTooSoon);
-                } else {
-                    cortex_m::interrupt::free(|_| {
-                        // safety: This is a read action and should not have any UB
-                        let target_time = unsafe { &*TIMER::ptr() }
-                            .timelr
-                            .read()
-                            .bits()
-                            .wrapping_add(duration);
-
-                        // safety: This is the only code in the codebase that accesses memory address $timer_alarm
-                        unsafe { &*TIMER::ptr() }
-                            .$timer_alarm
-                            .write(|w| unsafe { w.bits(target_time) });
-                    });
-                    Ok(())
+            fn schedule_at(&mut self, timestamp: Instant) -> Result<(), ScheduleAlarmError> {
+                // safety: Only read operations are made on the timer and they should not have any UB
+                let timer = unsafe { &*TIMER::ptr() };
+                let now = get_counter(timer);
+                let duration = timestamp.ticks().saturating_sub(now.ticks());
+                if duration > u32::max_value().into() {
+                    return Err(ScheduleAlarmError::AlarmTooLate);
                 }
+
+                self.schedule_internal(timer, timestamp)
             }
 
             /// Return true if this alarm is finished.
@@ -298,6 +332,13 @@ macro_rules! impl_alarm {
                 // safety: This is a read action and should not have any UB
                 let bits: u32 = unsafe { &*TIMER::ptr() }.armed.read().bits();
                 (bits & $armed_bit_mask) == 0
+            }
+        }
+
+        impl Drop for $name {
+            fn drop(&mut self) {
+                self.disable_interrupt();
+                release_alarm($armed_bit_mask)
             }
         }
     };
@@ -309,6 +350,8 @@ macro_rules! impl_alarm {
 pub enum ScheduleAlarmError {
     /// Alarm time is too low. Should be at least 10 microseconds.
     AlarmTooSoon,
+    /// Alarm time is too high. Should not be more than `u32::max_value()` in the future.
+    AlarmTooLate,
 }
 
 impl_alarm!(Alarm0 {

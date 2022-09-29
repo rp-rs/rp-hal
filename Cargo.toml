@@ -14,6 +14,7 @@ members = [
     "boards/pimoroni-pico-explorer",
     "boards/pimoroni-pico-lipo-16mb",
     "boards/pimoroni-plasma-2040",
+    "boards/pimoroni-servo2040",
     "boards/pimoroni-tiny2040",
     "boards/rp-pico",
     "boards/seeeduino-xiao-rp2040",
@@ -24,7 +25,8 @@ members = [
 ]
 
 [patch.'https://github.com/rp-rs/rp-hal.git']
-rp2040-hal = { path ="./rp2040-hal" }
+rp2040-hal = { path = "./rp2040-hal" }
 
 [patch.crates-io]
-rp2040-hal = { path ="./rp2040-hal" }
+rp2040-hal = { path = "./rp2040-hal" }
+i2c-pio = { git = "https://github.com/ithinuel/i2c-pio-rs", branch = "fix-pio-exec-instruction" }

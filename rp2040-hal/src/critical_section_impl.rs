@@ -1,7 +1,10 @@
 use core::sync::atomic::{AtomicU8, Ordering};
 
 struct RpSpinlockCs;
-critical_section::custom_impl!(RpSpinlockCs);
+#[cfg(feature = "critical-section-impl")]
+critical_section_0_2::custom_impl!(RpSpinlockCs);
+#[cfg(feature = "critical-section-impl")]
+critical_section::set_impl!(RpSpinlockCs);
 
 /// Marker value to indicate no-one has the lock.
 ///
@@ -21,7 +24,29 @@ static mut LOCK_OWNER: AtomicU8 = AtomicU8::new(LOCK_UNOWNED);
 /// The value 2 indicates that we aren't the outermost call, and should not release the spinlock or re-enable interrupts in `release`
 const LOCK_ALREADY_OWNED: u8 = 2;
 
+#[cfg(feature = "critical-section-impl")]
+unsafe impl critical_section_0_2::Impl for RpSpinlockCs {
+    unsafe fn acquire() -> u8 {
+        RpSpinlockCs::acquire()
+    }
+
+    unsafe fn release(token: u8) {
+        RpSpinlockCs::release(token);
+    }
+}
+
+#[cfg(feature = "critical-section-impl")]
 unsafe impl critical_section::Impl for RpSpinlockCs {
+    unsafe fn acquire() -> u8 {
+        RpSpinlockCs::acquire()
+    }
+
+    unsafe fn release(token: u8) {
+        RpSpinlockCs::release(token);
+    }
+}
+
+impl RpSpinlockCs {
     unsafe fn acquire() -> u8 {
         // Store the initial interrupt state and current core id in stack variables
         let interrupts_active = cortex_m::register::primask::read().is_active();

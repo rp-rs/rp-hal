@@ -19,7 +19,7 @@ use cortex_m::prelude::*;
 use embedded_hal::digital::v2::OutputPin;
 
 // Traits for converting integers to amounts of time
-use embedded_time::duration::Extensions;
+use fugit::ExtU32;
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
@@ -77,12 +77,12 @@ fn main() -> ! {
     loop {
         // LED on, and wait for 500ms
         led_pin.set_high().unwrap();
-        count_down.start(500.milliseconds());
+        count_down.start(500.millis());
         let _ = nb::block!(count_down.wait());
 
         // LED off, and wait for 500ms
         led_pin.set_low().unwrap();
-        count_down.start(500.milliseconds());
+        count_down.start(500.millis());
         let _ = nb::block!(count_down.wait());
     }
 }

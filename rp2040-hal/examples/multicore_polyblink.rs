@@ -9,10 +9,7 @@
 #![no_main]
 
 use cortex_m::delay::Delay;
-// The macro for our start-up function
-use cortex_m_rt::entry;
 
-use embedded_time::fixed_point::FixedPoint;
 use hal::clocks::Clock;
 use hal::gpio::Pins;
 use hal::multicore::{Multicore, Stack};
@@ -33,9 +30,11 @@ use embedded_hal::digital::v2::ToggleableOutputPin;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
+/// Note: This boot block is not necessary when using a rp-hal based BSP
+/// as the BSPs already perform this step.
 #[link_section = ".boot2"]
 #[used]
-pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
 
 /// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz. Adjust
 /// if your board has a different frequency
@@ -64,9 +63,9 @@ static mut CORE1_STACK: Stack<4096> = Stack::new();
 
 /// Entry point to our bare-metal application.
 ///
-/// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
-/// as soon as all global variables are initialised.
-#[entry]
+/// The `#[rp2040_hal::entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables and the spinlock are initialised.
+#[rp2040_hal::entry]
 fn main() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
@@ -100,7 +99,7 @@ fn main() -> ! {
     let mut led2 = pins.gpio3.into_push_pull_output();
 
     // Set up the delay for the first core.
-    let sys_freq = clocks.system_clock.freq().integer();
+    let sys_freq = clocks.system_clock.freq().to_Hz();
     let mut delay = Delay::new(core.SYST, sys_freq);
 
     // Start up the second core to blink the second LED

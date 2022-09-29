@@ -1,6 +1,6 @@
 [package]
 name = "adafruit-macropad"
-version = "0.3.1"
+version = "0.4.0"
 authors = ["Andrea Nall <anall@andreanal.com>", "The rp-rs Developers"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/adafruit_macropad"
@@ -13,15 +13,16 @@ repository = "https://github.com/rp-rs/rp-hal.git"
 [dependencies]
 cortex-m = "0.7.2"
 rp2040-boot2 = { version = "0.2.0", optional = true }
-rp2040-hal = { path = "../../rp2040-hal", version = "0.5.0" }
+rp2040-hal = { path = "../../rp2040-hal", version = "0.6.0" }
 cortex-m-rt = { version = "0.7", optional = true }
+
 [dev-dependencies]
-embedded-time = "0.12.0"
 panic-halt= "0.2.0"
 embedded-hal ="0.2.5"
 
 [features]
-default = ["rt", "boot2"]
+default = ["boot2", "rt", "critical-section-impl"]
+critical-section-impl = ["rp2040-hal/critical-section-impl"]
 boot2 = ["rp2040-boot2"]
 rt = ["cortex-m-rt","rp2040-hal/rt"]
 

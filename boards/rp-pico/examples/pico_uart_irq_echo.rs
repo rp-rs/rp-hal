@@ -22,9 +22,6 @@ use embedded_hal::{
     serial::{Read, Write},
 };
 
-// We need this for the 'Delay' object to work.
-use embedded_time::fixed_point::FixedPoint;
-
 // We also need this for the 'Delay' object to work.
 use rp2040_hal::Clock;
 
@@ -47,7 +44,7 @@ use hal::pac::interrupt;
 
 // Some short-cuts to useful types
 use core::cell::RefCell;
-use cortex_m::interrupt::Mutex;
+use critical_section::Mutex;
 
 /// Import the GPIO pins we use
 use hal::gpio::pin::bank0::{Gpio0, Gpio1};
@@ -98,7 +95,7 @@ fn main() -> ! {
     .unwrap();
 
     // Lets us wait for fixed periods of time
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);
@@ -122,7 +119,7 @@ fn main() -> ! {
     let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
             hal::uart::common_configs::_9600_8_N_1,
-            clocks.peripheral_clock.into(),
+            clocks.peripheral_clock.freq(),
         )
         .unwrap();
 
@@ -142,7 +139,7 @@ fn main() -> ! {
 
     // Now we give away the entire UART peripheral, via the variable
     // `GLOBAL_UART`. We can no longer access the UART from this main thread.
-    cortex_m::interrupt::free(|cs| {
+    critical_section::with(|cs| {
         GLOBAL_UART.borrow(cs).replace(Some(uart));
     });
 
@@ -177,7 +174,7 @@ fn UART0_IRQ() {
     // This is one-time lazy initialisation. We steal the variable given to us
     // via `GLOBAL_UART`.
     if UART.is_none() {
-        cortex_m::interrupt::free(|cs| {
+        critical_section::with(|cs| {
             *UART = GLOBAL_UART.borrow(cs).take();
         });
     }

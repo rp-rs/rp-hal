@@ -21,9 +21,6 @@
 // objects as generic embedded devices.
 use embedded_hal::{digital::v2::OutputPin, serial::Write as UartWrite};
 
-// We need this for the 'Delay' object to work.
-use embedded_time::fixed_point::FixedPoint;
-
 // The writeln! trait.
 use core::fmt::Write;
 
@@ -49,7 +46,7 @@ use pac::interrupt;
 
 // Some short-cuts to useful types
 use core::cell::RefCell;
-use cortex_m::interrupt::Mutex;
+use critical_section::Mutex;
 use heapless::spsc::Queue;
 
 /// Import the GPIO pins we use
@@ -114,7 +111,7 @@ fn main() -> ! {
     .unwrap();
 
     // Lets us wait for fixed periods of time
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);
@@ -138,7 +135,7 @@ fn main() -> ! {
     let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
             hal::uart::common_configs::_9600_8_N_1,
-            clocks.peripheral_clock.into(),
+            clocks.peripheral_clock.freq(),
         )
         .unwrap();
 
@@ -148,7 +145,7 @@ fn main() -> ! {
 
     // Now we give away the entire UART peripheral, via the variable
     // `GLOBAL_UART`. We can no longer access the UART from this main thread.
-    cortex_m::interrupt::free(|cs| {
+    critical_section::with(|cs| {
         GLOBAL_UART.borrow(cs).replace(Some(uart));
     });
 
@@ -180,7 +177,7 @@ fn main() -> ! {
 impl UartQueue {
     /// Try and get some data out of the UART Queue. Returns None if queue empty.
     fn read_byte(&self) -> Option<u8> {
-        cortex_m::interrupt::free(|cs| {
+        critical_section::with(|cs| {
             let cell_queue = self.mutex_cell_queue.borrow(cs);
             let mut queue = cell_queue.borrow_mut();
             queue.dequeue()
@@ -189,7 +186,7 @@ impl UartQueue {
 
     /// Peek at the next byte in the queue without removing it.
     fn peek_byte(&self) -> Option<u8> {
-        cortex_m::interrupt::free(|cs| {
+        critical_section::with(|cs| {
             let cell_queue = self.mutex_cell_queue.borrow(cs);
             let queue = cell_queue.borrow_mut();
             queue.peek().cloned()
@@ -208,7 +205,7 @@ impl UartQueue {
                 // Grab the mutex, by turning interrupts off. NOTE: This
                 // doesn't work if you are using Core 1 as we only turn
                 // interrupts off on one core.
-                cortex_m::interrupt::free(|cs| {
+                critical_section::with(|cs| {
                     // Grab the mutex contents.
                     let cell_queue = self.mutex_cell_queue.borrow(cs);
                     // Grab mutable access to the queue. This can't fail
@@ -262,7 +259,7 @@ fn UART0_IRQ() {
     // This is one-time lazy initialisation. We steal the variable given to us
     // via `GLOBAL_UART`.
     if UART.is_none() {
-        cortex_m::interrupt::free(|cs| {
+        critical_section::with(|cs| {
             *UART = GLOBAL_UART.borrow(cs).take();
         });
     }

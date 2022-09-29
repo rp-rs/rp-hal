@@ -9,16 +9,13 @@
 #![no_std]
 #![no_main]
 
-// The macro for our start-up function
-use cortex_m_rt::entry;
-
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
 
 // Some traits we need
 use embedded_hal::blocking::i2c::Write;
-use embedded_time::rate::Extensions;
+use fugit::RateExtU32;
 
 // Alias for our HAL crate
 use rp2040_hal as hal;
@@ -29,9 +26,11 @@ use hal::pac;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
+/// Note: This boot block is not necessary when using a rp-hal based BSP
+/// as the BSPs already perform this step.
 #[link_section = ".boot2"]
 #[used]
-pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
 
 /// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz. Adjust
 /// if your board has a different frequency
@@ -39,12 +38,12 @@ const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
 /// Entry point to our bare-metal application.
 ///
-/// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
-/// as soon as all global variables are initialised.
+/// The `#[rp2040_hal::entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables and the spinlock are initialised.
 ///
 /// The function configures the RP2040 peripherals, then performs a single I²C
 /// write to a fixed address.
-#[entry]
+#[rp2040_hal::entry]
 fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
 
@@ -89,7 +88,7 @@ fn main() -> ! {
         scl_pin, // Try `not_an_scl_pin` here
         400.kHz(),
         &mut pac.RESETS,
-        clocks.peripheral_clock,
+        &clocks.system_clock,
     );
 
     // Write three bytes to the I²C device with 7-bit address 0x2C
@@ -97,9 +96,8 @@ fn main() -> ! {
 
     // Demo finish - just loop until reset
 
-    #[allow(clippy::empty_loop)]
     loop {
-        // Empty loop
+        cortex_m::asm::wfi();
     }
 }
 

@@ -6,7 +6,7 @@
 //!
 //! See [examples/uart.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/uart.rs) for a more complete example
 //! ```no_run
-//! use rp2040_hal::{clocks::init_clocks_and_plls, gpio::{Pins, FunctionUart}, pac, sio::Sio, uart::{self, UartPeripheral}, watchdog::Watchdog};
+//! use rp2040_hal::{Clock, clocks::init_clocks_and_plls, gpio::{Pins, FunctionUart}, pac, sio::Sio, uart::{self, UartPeripheral}, watchdog::Watchdog};
 //!
 //! const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates
 //!
@@ -25,7 +25,7 @@
 //! let uart = UartPeripheral::new(peripherals.UART0, pins, &mut peripherals.RESETS)
 //!     .enable(
 //!         uart::common_configs::_9600_8_N_1,
-//!         clocks.peripheral_clock.into(),
+//!         clocks.peripheral_clock.freq(),
 //!     ).unwrap();
 //!
 //! uart.write_full_blocking(b"Hello World!\r\n");

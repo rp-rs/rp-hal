@@ -4,13 +4,7 @@
 use core::convert::TryInto;
 use core::{convert::Infallible, ops::RangeInclusive};
 
-use embedded_time::{
-    duration::{Duration, Milliseconds},
-    fixed_point::FixedPoint,
-    fraction::Fraction,
-    rate::{Hertz, Megahertz, Rate},
-};
-
+use fugit::HertzU32;
 use nb::Error::WouldBlock;
 
 /// State of the Crystal Oscillator (typestate trait)
@@ -21,12 +15,12 @@ pub struct Disabled;
 
 /// XOSC is initialized, ie we've given parameters (typestate)
 pub struct Initialized {
-    freq_hz: Hertz,
+    freq_hz: HertzU32,
 }
 
 /// Stable state (typestate)
 pub struct Stable {
-    freq_hz: Hertz,
+    freq_hz: HertzU32,
 }
 
 /// XOSC is in dormant mode (see Chapter 2, Section 16, §5)
@@ -49,7 +43,7 @@ pub enum Error {
 /// Blocking helper method to setup the XOSC without going through all the steps.
 pub fn setup_xosc_blocking(
     xosc_dev: rp2040_pac::XOSC,
-    frequency: Hertz,
+    frequency: HertzU32,
 ) -> Result<CrystalOscillator<Stable>, Error> {
     let initialized_xosc = CrystalOscillator::new(xosc_dev).initialize(frequency)?;
 
@@ -89,15 +83,14 @@ impl CrystalOscillator<Disabled> {
     }
 
     /// Initializes the XOSC : frequency range is set, startup delay is calculated and set.
-    pub fn initialize(self, frequency: Hertz) -> Result<CrystalOscillator<Initialized>, Error> {
-        const ALLOWED_FREQUENCY_RANGE: RangeInclusive<Megahertz<u32>> =
-            Megahertz(1)..=Megahertz(15);
-        const STABLE_DELAY: Milliseconds = Milliseconds(1_u32);
-        const DIVIDER: Fraction = Fraction::new(256, 1);
+    pub fn initialize(self, frequency: HertzU32) -> Result<CrystalOscillator<Initialized>, Error> {
+        const ALLOWED_FREQUENCY_RANGE: RangeInclusive<HertzU32> =
+            HertzU32::MHz(1)..=HertzU32::MHz(15);
+        //1 ms = 10e-3 sec and Freq = 1/T where T is in seconds so 1ms converts to 1000Hz
+        const STABLE_DELAY_AS_HZ: HertzU32 = HertzU32::Hz(1000);
+        const DIVIDER: u32 = 256;
 
-        let freq_mhz: Megahertz = frequency.into();
-
-        if !ALLOWED_FREQUENCY_RANGE.contains(&freq_mhz) {
+        if !ALLOWED_FREQUENCY_RANGE.contains(&frequency) {
             return Err(Error::FrequencyOutOfRange);
         }
 
@@ -106,21 +99,14 @@ impl CrystalOscillator<Disabled> {
             w
         });
 
-        //1 ms = 10e-3 sec and Freq = 1/T where T is in seconds so 1ms converts to 1000Hz
-        let delay_to_hz: Hertz = STABLE_DELAY.to_rate().map_err(|_| Error::BadArgument)?;
-
-        //startup_delay = ((freq_hz * 10e-3) / 256) = ((freq_hz / 1000) / 256)
+        //startup_delay = ((freq_hz * STABLE_DELAY) / 256) = ((freq_hz / delay_to_hz) / 256)
+        //              = freq_hz / (delay_to_hz * 256)
         //See Chapter 2, Section 16, §3)
         //We do the calculation first.
-        let startup_delay = frequency
-            .checked_div(&delay_to_hz.integer())
-            .and_then(|r| r.to_generic::<u32>(DIVIDER).ok())
-            .ok_or(Error::BadArgument)?;
+        let startup_delay = frequency.to_Hz() / (STABLE_DELAY_AS_HZ.to_Hz() * DIVIDER);
 
         //Then we check if it fits into an u16.
-        let startup_delay: u16 = (startup_delay.integer())
-            .try_into()
-            .map_err(|_| Error::BadArgument)?;
+        let startup_delay: u16 = startup_delay.try_into().map_err(|_| Error::BadArgument)?;
 
         self.device.startup.write(|w| unsafe {
             w.delay().bits(startup_delay);
@@ -160,7 +146,7 @@ impl CrystalOscillator<Initialized> {
 
 impl CrystalOscillator<Stable> {
     /// Operating frequency of the XOSC in hertz
-    pub fn operating_frequency(&self) -> Hertz {
+    pub fn operating_frequency(&self) -> HertzU32 {
         self.state.freq_hz
     }
 

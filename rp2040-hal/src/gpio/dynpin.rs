@@ -87,7 +87,8 @@ use hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin, ToggleableOutputP
 //==============================================================================
 
 /// Value-level `enum` for disabled configurations
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[allow(missing_docs)]
 pub enum DynDisabled {
     Floating,
@@ -97,7 +98,8 @@ pub enum DynDisabled {
 }
 
 /// Value-level `enum` for input configurations
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[allow(missing_docs)]
 pub enum DynInput {
     Floating,
@@ -107,7 +109,8 @@ pub enum DynInput {
 }
 
 /// Value-level `enum` for output configurations
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[allow(missing_docs)]
 pub enum DynOutput {
     PushPull,
@@ -115,7 +118,8 @@ pub enum DynOutput {
 }
 
 /// Value-level `enum` for output configurations
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[allow(missing_docs)]
 pub enum DynFunction {
     Spi,
@@ -134,7 +138,8 @@ pub enum DynFunction {
 //==============================================================================
 
 /// Value-level `enum` representing pin modes
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[allow(missing_docs)]
 pub enum DynPinMode {
     Disabled(DynDisabled),
@@ -210,20 +215,20 @@ dyn_function!(Spi, Xip, Uart, I2C, Pwm, Pio0, Pio1, Clock, UsbAux);
 //==============================================================================
 
 /// Value-level `enum` for pin groups
-#[derive(PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[allow(missing_docs)]
 pub enum DynGroup {
-    /// .
     Bank0,
-    /// .
     Qspi,
 }
 
 /// Value-level `struct` representing pin IDs
-#[derive(PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[allow(missing_docs)]
 pub struct DynPinId {
-    /// .
     pub group: DynGroup,
-    /// .
     pub num: u8,
 }
 
@@ -270,6 +275,7 @@ impl DynRegisters {
 /// [`DynPin`]s are not tracked and verified at compile-time, so run-time
 /// operations are fallible. This `enum` represents the corresponding errors.
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {
     /// The pin did not have the correct ID or mode for the requested operation
     InvalidPinType,

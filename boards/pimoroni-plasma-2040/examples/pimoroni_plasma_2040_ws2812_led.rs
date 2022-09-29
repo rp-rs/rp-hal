@@ -6,18 +6,12 @@
 #![no_std]
 #![no_main]
 
-// The macro for our start-up function
-use cortex_m_rt::entry;
-
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
 
 // Pull in any important traits
 use pimoroni_plasma_2040::hal::prelude::*;
-
-// Embed the `Hz` function/trait:
-use embedded_time::rate::*;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
@@ -44,7 +38,11 @@ use ws2812_pio::Ws2812;
 // to keep the power draw compatible with USB:
 const STRIP_LEN: usize = 3;
 
-#[entry]
+/// Entry point to our bare-metal application.
+///
+/// The `#[pimoroni_plasma_2040::entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables and the spinlock are initialised.
+#[pimoroni_plasma_2040::entry]
 fn main() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
@@ -81,7 +79,7 @@ fn main() -> ! {
 
     // Setup a delay for the LED blink signals:
     let mut frame_delay =
-        cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+        cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // Import the `sin` function for a smooth hue animation from the
     // Pico rp2040 ROM:

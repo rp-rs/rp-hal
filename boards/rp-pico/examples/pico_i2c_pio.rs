@@ -21,7 +21,7 @@ use rp_pico::entry;
 use embedded_hal::blocking::i2c::{Operation, Read, Transactional, Write};
 
 // Time handling traits
-use embedded_time::rate::*;
+use fugit::RateExtU32;
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
@@ -98,7 +98,7 @@ fn main() -> ! {
     let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
             hal::uart::common_configs::_115200_8_N_1,
-            clocks.peripheral_clock.into(),
+            clocks.peripheral_clock.freq(),
         )
         .unwrap();
 
@@ -109,7 +109,7 @@ fn main() -> ! {
         pins.gpio20,
         pins.gpio21,
         sm0,
-        100_000.Hz(),
+        100.kHz(),
         clocks.system_clock.freq(),
     );
 
@@ -149,7 +149,7 @@ fn main() -> ! {
     print_temperature(&mut uart, temp);
 
     loop {
-        cortex_m::asm::nop();
+        cortex_m::asm::wfi();
     }
 }
 

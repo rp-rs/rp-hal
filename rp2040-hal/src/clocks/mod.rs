@@ -14,7 +14,7 @@
 //!
 //! ## Usage extended
 //! ```no_run
-//! use embedded_time::rate::*;
+//! use fugit::RateExtU32;
 //! use rp2040_hal::{clocks::{Clock, ClocksManager, ClockSource, InitError}, gpio::Pins, pac, pll::{common_configs::{PLL_SYS_125MHZ, PLL_USB_48MHZ}, setup_pll_blocking}, Sio, watchdog::Watchdog, xosc::setup_xosc_blocking};
 //!
 //! # fn func() -> Result<(), InitError> {
@@ -22,12 +22,13 @@
 //! let mut watchdog = Watchdog::new(peripherals.WATCHDOG);
 //! const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates
 //!
-//! // Start tick in watchdog
-//! watchdog.enable_tick_generation(XOSC_CRYSTAL_FREQ as u8);
-//!
-//! let mut clocks = ClocksManager::new(peripherals.CLOCKS);
 //! // Enable the xosc
 //! let xosc = setup_xosc_blocking(peripherals.XOSC, XOSC_CRYSTAL_FREQ.Hz()).map_err(InitError::XoscErr)?;
+//!
+//! // Start tick in watchdog
+//! watchdog.enable_tick_generation((XOSC_CRYSTAL_FREQ / 1_000_000) as u8);
+//!
+//! let mut clocks = ClocksManager::new(peripherals.CLOCKS);
 //!
 //! // Configure PLLs
 //! //                   REF     FBDIV VCO            POSTDIV
@@ -71,7 +72,8 @@ use crate::{
     xosc::{setup_xosc_blocking, CrystalOscillator, Error as XoscError, Stable},
 };
 use core::{convert::Infallible, marker::PhantomData};
-use embedded_time::rate::*;
+use fugit::HertzU32;
+use fugit::RateExtU32;
 use pac::{CLOCKS, PLL_SYS, PLL_USB, RESETS, XOSC};
 
 #[macro_use]
@@ -116,13 +118,13 @@ pub trait Clock: Sealed + Sized {
     type Variant;
 
     /// Get operating frequency
-    fn freq(&self) -> Hertz;
+    fn freq(&self) -> HertzU32;
 
     /// Configure this clock based on a clock source and desired frequency
     fn configure_clock<S: ValidSrc<Self>>(
         &mut self,
         src: &S,
-        freq: Hertz,
+        freq: HertzU32,
     ) -> Result<(), ClockError>;
 }
 
@@ -169,7 +171,7 @@ pub trait ClockSource: Sealed {
     /// Get the operating frequency for this source
     ///
     /// Used to determine the divisor
-    fn get_freq(&self) -> Hertz;
+    fn get_freq(&self) -> HertzU32;
 }
 
 /// Trait to contrain which ClockSource is valid for which Clock
@@ -335,7 +337,7 @@ pub fn init_clocks_and_plls(
 
     let pll_sys = setup_pll_blocking(
         pll_sys_dev,
-        xosc.operating_frequency().into(),
+        xosc.operating_frequency(),
         PLL_SYS_125MHZ,
         &mut clocks,
         resets,
@@ -343,7 +345,7 @@ pub fn init_clocks_and_plls(
     .map_err(InitError::PllError)?;
     let pll_usb = setup_pll_blocking(
         pll_usb_dev,
-        xosc.operating_frequency().into(),
+        xosc.operating_frequency(),
         PLL_USB_48MHZ,
         &mut clocks,
         resets,

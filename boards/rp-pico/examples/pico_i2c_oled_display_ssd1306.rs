@@ -48,8 +48,7 @@ use core::fmt::Write;
 use rp_pico::entry;
 
 // Time handling traits:
-use embedded_time::duration::*;
-use embedded_time::rate::Extensions;
+use fugit::{ExtU32, RateExtU32};
 
 // CountDown timer for the counter on the display:
 use embedded_hal::timer::CountDown;
@@ -134,7 +133,7 @@ fn main() -> ! {
         scl_pin,
         400.kHz(),
         &mut pac.RESETS,
-        clocks.peripheral_clock,
+        &clocks.peripheral_clock,
     );
 
     // Create the I²C display interface:
@@ -182,7 +181,7 @@ fn main() -> ! {
         display.flush().unwrap();
 
         // Wait a bit:
-        delay.start(500.milliseconds());
+        delay.start(500.millis());
         let _ = nb::block!(delay.wait());
     }
 }

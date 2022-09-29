@@ -6,7 +6,6 @@
 #![no_std]
 #![no_main]
 
-use cortex_m_rt::entry;
 use hal::gpio::{FunctionPio0, Pin};
 use hal::pac;
 use hal::pio::PIOExt;
@@ -14,11 +13,19 @@ use hal::Sio;
 use panic_halt as _;
 use rp2040_hal as hal;
 
+/// The linker will place this boot block at the start of our program image. We
+/// need this to help the ROM bootloader get our code up and running.
+/// Note: This boot block is not necessary when using a rp-hal based BSP
+/// as the BSPs already perform this step.
 #[link_section = ".boot2"]
 #[used]
-pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
 
-#[entry]
+/// Entry point to our bare-metal application.
+///
+/// The `#[rp2040_hal::entry]` macro ensures the Cortex-M start-up code calls this function
+/// as soon as all global variables and the spinlock are initialised.
+#[rp2040_hal::entry]
 fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
 
@@ -54,12 +61,12 @@ fn main() -> ! {
     // then through a LED. If there is a clock offset, there will be a
     // short time with a voltage between the pins, so the LED will flash up.
     // With a slow clock this is not visible, so use a reasonably fast clock.
-    let div = 256f32;
+    let (int, frac) = (256, 0);
 
     let installed = pio.install(&program.program).unwrap();
     let (mut sm0, _, _) = rp2040_hal::pio::PIOBuilder::from_program(installed)
         .set_pins(pin0, 1)
-        .clock_divisor(div)
+        .clock_divisor_fixed_point(int, frac)
         .build(sm0);
     // The GPIO pin needs to be configured as an output.
     sm0.set_pindirs([(pin0, hal::pio::PinDir::Output)]);
@@ -69,7 +76,7 @@ fn main() -> ! {
     let installed = pio.install(&program.program).unwrap();
     let (mut sm1, _, _) = rp2040_hal::pio::PIOBuilder::from_program(installed)
         .set_pins(pin1, 1)
-        .clock_divisor(div)
+        .clock_divisor_fixed_point(int, frac)
         .build(sm1);
     // The GPIO pin needs to be configured as an output.
     sm1.set_pindirs([(pin1, hal::pio::PinDir::Output)]);
@@ -91,6 +98,7 @@ fn main() -> ! {
     cortex_m::asm::delay(10_000_000);
     let _sm2 = sm2.stop();
 
-    #[allow(clippy::empty_loop)]
-    loop {}
+    loop {
+        cortex_m::asm::wfi();
+    }
 }

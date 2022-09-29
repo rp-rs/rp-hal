@@ -1,7 +1,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
-  <a href="https://github.com/rp-rs/rp2040-hal">
+  <a href="https://github.com/rp-rs/rp-hal">
     <img src="https://www.svgrepo.com/show/281119/microchip.svg" alt="Logo" width="140" height="140">
   </a>
 
@@ -104,6 +104,11 @@ embedded-hal 0.2: Traits of both versions are implemented and can be used
 at the same time.
 The new blocking [SPI traits](https://docs.rs/embedded-hal/1.0.0-alpha.8/embedded_hal/spi/blocking/index.html)
 are not yet implemented.
+
+### Support for critical-section 0.2
+
+While `rp2040-hal` uses critical-section 1.0, it still provides support for version 0.2.
+That version is deprecated, and support will be removed in a future release. Please upgrade.
 
 <!-- CONTRIBUTING -->
 ## Contributing

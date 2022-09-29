@@ -140,7 +140,8 @@ macro_rules! clock {
                         w.src().variant(self.get_default_clock_source())
                     });
 
-                    self.frequency = 12_000_000.Hz(); //TODO Get actual clock source.. Most likely 12 MHz though
+                    use fugit::RateExtU32;
+                    self.frequency = 12.MHz(); //TODO Get actual clock source.. Most likely 12 MHz though
 
                     self.await_select(&ChangingClockToken{clock_nr:0, clock: PhantomData::<Self>})
                 }
@@ -174,19 +175,19 @@ macro_rules! clock {
                 type Variant = [<$reg:camel SrcType>];
 
                 #[doc = "Get operating frequency for `"$name"`"]
-                fn freq(&self) -> Hertz {
+                fn freq(&self) -> HertzU32 {
                     self.frequency
                 }
 
                 #[doc = "Configure `"$name"`"]
-                fn configure_clock<S: ValidSrc<$name>>(&mut self, src: &S, freq: Hertz) -> Result<(), ClockError>{
-                    let src_freq: Hertz<u32> = src.get_freq().into();
+                fn configure_clock<S: ValidSrc<$name>>(&mut self, src: &S, freq: HertzU32) -> Result<(), ClockError>{
+                    let src_freq: HertzU32 = src.get_freq().into();
 
                     if freq.gt(&src_freq){
                         return Err(ClockError::CantIncreaseFreq);
                     }
 
-                    let div = fractional_div(src_freq.integer(), freq.integer()).ok_or(ClockError::FrequencyTooLow)?;
+                    let div = fractional_div(src_freq.to_Hz(), freq.to_Hz()).ok_or(ClockError::FrequencyTooLow)?;
 
                     // If increasing divisor, set divisor before source. Otherwise set source
                     // before divisor. This avoids a momentary overspeed when e.g. switching
@@ -217,7 +218,8 @@ macro_rules! clock {
                     self.set_div(div);
 
                     // Store the configured frequency
-                    self.frequency = fractional_div(src_freq.integer(), div).ok_or(ClockError::FrequencyTooHigh)?.Hz();
+                    use fugit::RateExtU32;
+                    self.frequency = fractional_div(src_freq.to_Hz(), div).ok_or(ClockError::FrequencyTooHigh)?.Hz();
 
                     Ok(())
                 }
@@ -324,19 +326,19 @@ macro_rules! stoppable_clock {
                 type Variant = [<$reg:camel SrcType>];
 
                 #[doc = "Get operating frequency for `"$name"`"]
-                fn freq(&self) -> Hertz {
+                fn freq(&self) -> HertzU32 {
                     self.frequency
                 }
 
                 #[doc = "Configure `"$name"`"]
-                fn configure_clock<S: ValidSrc<$name>>(&mut self, src: &S, freq: Hertz) -> Result<(), ClockError>{
-                    let src_freq: Hertz<u32> = src.get_freq().into();
+                fn configure_clock<S: ValidSrc<$name>>(&mut self, src: &S, freq: HertzU32) -> Result<(), ClockError>{
+                    let src_freq: HertzU32 = src.get_freq().into();
 
                     if freq.gt(&src_freq){
                         return Err(ClockError::CantIncreaseFreq);
                     }
 
-                    let div = fractional_div(src_freq.integer(), freq.integer()).ok_or(ClockError::FrequencyTooLow)?;
+                    let div = fractional_div(src_freq.to_Hz(), freq.to_Hz()).ok_or(ClockError::FrequencyTooLow)?;
 
                     // If increasing divisor, set divisor before source. Otherwise set source
                     // before divisor. This avoids a momentary overspeed when e.g. switching
@@ -352,12 +354,12 @@ macro_rules! stoppable_clock {
                     // Disable clock. On clk_ref and clk_sys this does nothing,
                     // all other clocks have the ENABLE bit in the same position.
                     self.disable();
-                    if (self.frequency > 0u32.Hz()) {
+                    if self.frequency > HertzU32::Hz(0) {
                         // Delay for 3 cycles of the target clock, for ENABLE propagation.
                         // Note XOSC_COUNT is not helpful here because XOSC is not
                         // necessarily running, nor is timer... so, 3 cycles per loop:
                         let sys_freq = 125_000_000; // TODO get actual sys_clk frequency
-                        let delay_cyc = sys_freq / self.frequency.integer() + 1u32;
+                        let delay_cyc = sys_freq / self.frequency.to_Hz() + 1u32;
                         cortex_m::asm::delay(delay_cyc);
                     }
 
@@ -373,7 +375,8 @@ macro_rules! stoppable_clock {
                     self.set_div(div);
 
                     // Store the configured frequency
-                    self.frequency = fractional_div(src_freq.integer(), div).ok_or(ClockError::FrequencyTooHigh)?.Hz();
+                    use fugit::RateExtU32;
+                    self.frequency = fractional_div(src_freq.to_Hz(), div).ok_or(ClockError::FrequencyTooHigh)?.Hz();
 
                     Ok(())
                 }
@@ -402,7 +405,7 @@ macro_rules! base_clock {
             $(#[$attr])*
             pub struct $name {
                 shared_dev: ShareableClocks,
-                frequency: Hertz,
+                frequency: HertzU32,
             }
 
             impl $name {
@@ -417,9 +420,9 @@ macro_rules! base_clock {
 
             impl Sealed for $name {}
 
-            impl From<$name> for Hertz
+            impl From<&$name> for HertzU32
              {
-                fn from(value: $name) -> Hertz {
+                fn from(value: &$name) -> HertzU32 {
                     value.frequency
                 }
             }

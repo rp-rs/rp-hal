@@ -9,9 +9,8 @@
 #![no_main]
 
 use core::iter::once;
-use cortex_m_rt::entry;
 use embedded_hal::timer::CountDown;
-use embedded_time::duration::Extensions;
+use fugit::ExtU32;
 use panic_halt as _;
 
 use smart_leds::{brightness, SmartLedsWrite, RGB8};
@@ -30,12 +29,12 @@ use ws2812_pio::Ws2812;
 
 /// Entry point to our bare-metal application.
 ///
-/// The `#[entry]` macro ensures the Cortex-M start-up code calls this
+/// The `#[sparkfun_thing_plus_rp2040::entry]` macro ensures the Cortex-M start-up code calls this
 /// function as soon as all global variables are initialised.
 ///
 /// The function configures the RP2040 peripherals, then the LED, then runs
 /// the colour wheel in an infinite loop.
-#[entry]
+#[sparkfun_thing_plus_rp2040::entry]
 fn main() -> ! {
     // Configure the RP2040 peripherals
 
@@ -83,7 +82,7 @@ fn main() -> ! {
         ws.write(brightness(once(wheel(n)), 32)).unwrap();
         n = n.wrapping_add(1);
 
-        delay.start(25.milliseconds());
+        delay.start(25.millis());
         let _ = nb::block!(delay.wait());
     }
 }

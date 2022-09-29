@@ -1,6 +1,6 @@
 [package]
 name = "pimoroni-pico-explorer"
-version = "0.3.1"
+version = "0.4.0"
 authors = ["Hmvp <hmvp@users.noreply.github.com>", "The rp-rs Developers"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni-pico-explorer"
@@ -12,12 +12,12 @@ repository = "https://github.com/rp-rs/rp-hal.git"
 
 [dependencies]
 cortex-m = "0.7.2"
-rp2040-hal = { path = "../../rp2040-hal", version = "0.5.0" }
+rp2040-hal = { path = "../../rp2040-hal", version = "0.6.0" }
 cortex-m-rt = { version = "0.7", optional = true }
 embedded-hal = { version = "0.2.4", features = ["unproven"] }
 st7789 = "0.6.1"
 display-interface-spi = "0.4.1"
-embedded-time = "0.12.0"
+fugit = "0.3.5"
 embedded-graphics = "0.7.1"
 rp2040-boot2 = { version = "0.2.0", optional = true }
 
@@ -28,6 +28,7 @@ arrayvec = { version="0.7.1", default-features=false }
 nb = "1.0.0"
 
 [features]
-default = ["boot2", "rt"]
+default = ["boot2", "rt", "critical-section-impl"]
+critical-section-impl = ["rp2040-hal/critical-section-impl"]
 boot2 = ["rp2040-boot2"]
 rt = ["cortex-m-rt","rp2040-hal/rt"]

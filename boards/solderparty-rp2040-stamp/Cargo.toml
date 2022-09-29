@@ -1,6 +1,6 @@
 [package]
 name = "solderparty-rp2040-stamp"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["The rp-rs Developers"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal/tree/main/boards/solderparty-rp2040-stamp"
@@ -13,11 +13,12 @@ repository = "https://github.com/rp-rs/rp-hal.git"
 [dependencies]
 cortex-m = "0.7.2"
 rp2040-boot2 = { version = "0.2.0", optional = true }
-rp2040-hal = { path = "../../rp2040-hal", version = "0.5.0" }
+rp2040-hal = { path = "../../rp2040-hal", version = "0.6.0" }
 cortex-m-rt = { version = "0.7", optional = true }
 
 [features]
-default = ["rt", "boot2"]
+default = ["boot2", "rt", "critical-section-impl"]
+critical-section-impl = ["rp2040-hal/critical-section-impl"]
 boot2 = ["rp2040-boot2"]
 rt = ["cortex-m-rt","rp2040-hal/rt"]
 
@@ -26,6 +27,6 @@ panic-halt= "0.2.0"
 embedded-hal ="0.2.5"
 nb = "1.0.0"
 smart-leds = "0.3.0"
-pio = "0.1.0"
-ws2812-pio = "0.3.0"
-embedded-time = "0.12.0"
+pio = "0.2.0"
+ws2812-pio = "0.4.0"
+fugit = "0.3.5"

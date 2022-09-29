@@ -1,9 +1,13 @@
 on: [push, pull_request]
 name: Build and Test check
 jobs:
-  check:
-    name: cargo-check
+  builds:
+    name: Build checks
     runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        features: ["", "--features eh1_0_alpha", "--features chrono", "--features rp2040-e5"]
+        mode: ["", "--release"]
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -12,43 +16,41 @@ jobs:
           target: thumbv6m-none-eabi
           override: true
           profile: minimal
-      - uses: actions-rs/cargo@v1
+      - name: Build workspace
+        uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --workspace
-      - uses: actions-rs/cargo@v1
+          args: ${{ matrix.mode }} --workspace ${{ matrix.features }}
+      - name: Build workspace and examples
+        uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --workspace --examples
-      - run: echo "Debug examples built:" && ls target/thumbv6m-none-eabi/debug/examples/ |grep -v '-' |grep -v '\.d'
-      - run: rm target/thumbv6m-none-eabi/debug/examples/ -rf
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --workspace --examples --features eh1_0_alpha
-      - run: echo "Debug eh1_0 examples built:" && ls target/thumbv6m-none-eabi/debug/examples/ |grep -v '-' |grep -v '\.d'
-      - run: rm target/thumbv6m-none-eabi/debug/examples/ -rf
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --workspace --examples
-      - run: echo "Release examples built:" && ls target/thumbv6m-none-eabi/release/examples/ |grep -v '-' |grep -v '\.d'
-      - run: rm target/thumbv6m-none-eabi/release/examples/ -rf
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --workspace --examples --features eh1_0_alpha
-      - run: echo "Release eh1_0 examples built:" && ls target/thumbv6m-none-eabi/release/examples/ |grep -v '-' |grep -v '\.d'
-      - run: rm target/thumbv6m-none-eabi/release/examples/ -rf
-      - uses: actions-rs/cargo@v1
+          args: ${{ matrix.mode }} --workspace --examples ${{ matrix.features }}
+      - name: List built examples and clean
+        run: rm -vrf target/thumbv6m-none-eabi/*/examples/* | sed -e "s/removed '\(.*\)'/\1/" | xargs -l basename | grep -Ev '(-|\.d)'
+      - name: Test
+        uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --doc --target x86_64-unknown-linux-gnu
-      - uses: actions-rs/cargo@v1
+          args: --tests --target x86_64-unknown-linux-gnu ${{ matrix.features }}
+      - name: Test docs
+        uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --doc --target x86_64-unknown-linux-gnu --features chrono
-      - uses: actions-rs/cargo@v1
+          args: --doc --target x86_64-unknown-linux-gnu ${{ matrix.features }}
+      - name: Clean
+        uses: actions-rs/cargo@v1
         with:
-          command: test
-          args: --tests --target x86_64-unknown-linux-gnu
+          command: clean
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          target: thumbv6m-none-eabi
+          override: true
+          profile: minimal
+      - name: Check unused deps
+        uses: aig787/cargo-udeps-action@v1
+        with:
+          version: latest
+          args: ${{ matrix.mode }} --workspace ${{ matrix.features }}
+

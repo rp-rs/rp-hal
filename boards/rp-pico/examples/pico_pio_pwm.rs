@@ -17,9 +17,6 @@ use defmt_rtt as _;
 // The macro for our start-up function
 use rp_pico::entry;
 
-// Time handling traits
-use embedded_time::rate::*;
-
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
@@ -37,7 +34,7 @@ use rp_pico::hal;
 
 // Import pio crates
 use hal::pio::{PIOBuilder, Running, StateMachine, Tx, ValidStateMachine, SM0};
-use pio::{InstructionOperands, OutDestination};
+use pio::{Instruction, InstructionOperands, OutDestination};
 use pio_proc::pio_file;
 
 /// Set pio pwm period
@@ -56,20 +53,22 @@ fn pio_pwm_set_period<T: ValidStateMachine>(
 
     let mut sm = sm.stop();
     tx.write(period);
-    sm.exec_instruction(
-        InstructionOperands::PULL {
+    sm.exec_instruction(Instruction {
+        operands: InstructionOperands::PULL {
             if_empty: false,
             block: false,
-        }
-        .encode(),
-    );
-    sm.exec_instruction(
-        InstructionOperands::OUT {
+        },
+        delay: 0,
+        side_set: None,
+    });
+    sm.exec_instruction(Instruction {
+        operands: InstructionOperands::OUT {
             destination: OutDestination::ISR,
             bit_count: 32,
-        }
-        .encode(),
-    );
+        },
+        delay: 0,
+        side_set: None,
+    });
     sm.start()
 }
 
@@ -125,7 +124,7 @@ fn main() -> ! {
 
     // The delay object lets us wait for specified amounts of time (in
     // milliseconds)
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     let (mut pio0, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
 

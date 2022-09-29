@@ -2,7 +2,7 @@
 //!
 //! This module is for receiving data with a UART.
 
-use super::{UartDevice, ValidUartPinout};
+use super::{FifoWatermark, UartDevice, ValidUartPinout};
 use rp2040_pac::uart0::RegisterBlock;
 
 use embedded_hal::serial::Read;
@@ -52,16 +52,37 @@ pub(crate) fn is_readable<D: UartDevice>(device: &D) -> bool {
     device.uartfr.read().rxfe().bit_is_clear()
 }
 
+/// Enable/disable the rx/tx FIFO
+///
+/// Unfortunately, it's not possible to enable/disable rx/tx
+/// independently on this chip
+/// Default is false
+pub fn set_fifos(rb: &RegisterBlock, enable: bool) {
+    if enable {
+        rb.uartlcr_h.modify(|_r, w| w.fen().set_bit())
+    } else {
+        rb.uartlcr_h.modify(|_r, w| w.fen().clear_bit())
+    }
+}
+
+/// Set rx FIFO watermark
+///
+/// See DS: Table 423
+pub fn set_rx_watermark(rb: &RegisterBlock, watermark: FifoWatermark) {
+    let wm = match watermark {
+        FifoWatermark::Bytes4 => 0,
+        FifoWatermark::Bytes8 => 1,
+        FifoWatermark::Bytes16 => 2,
+        FifoWatermark::Bytes24 => 3,
+        FifoWatermark::Bytes28 => 4,
+    };
+    rb.uartifls.modify(|_r, w| unsafe { w.rxiflsel().bits(wm) });
+}
+
 /// Enables the Receive Interrupt.
 ///
 /// The relevant UARTx IRQ will fire when there is data in the receive register.
 pub(crate) fn enable_rx_interrupt(rb: &RegisterBlock) {
-    // Access the UART FIFO Level Select. We set the RX FIFO trip level
-    // to be half-full.
-
-    // 2 means '>= 1/2 full'.
-    rb.uartifls.modify(|_r, w| unsafe { w.rxiflsel().bits(2) });
-
     // Access the UART Interrupt Mask Set/Clear register. Setting a bit
     // high enables the interrupt.
 

@@ -18,7 +18,6 @@ use panic_halt as _;
 
 // Some traits we need
 use embedded_hal::digital::v2::OutputPin;
-use embedded_time::fixed_point::FixedPoint;
 
 use adafruit_itsy_bitsy_rp2040::{
     hal::{
@@ -61,7 +60,7 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let mut delay = Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // The single-cycle I/O block controls our GPIO pins
     let sio = Sio::new(pac.SIO);

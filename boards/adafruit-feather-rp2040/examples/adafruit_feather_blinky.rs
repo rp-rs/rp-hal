@@ -15,7 +15,6 @@ use adafruit_feather_rp2040::{
     Pins, XOSC_CRYSTAL_FREQ,
 };
 use embedded_hal::digital::v2::OutputPin;
-use embedded_time::rate::*;
 use panic_halt as _;
 
 #[entry]
@@ -37,7 +36,7 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     let sio = Sio::new(pac.SIO);
     let pins = Pins::new(

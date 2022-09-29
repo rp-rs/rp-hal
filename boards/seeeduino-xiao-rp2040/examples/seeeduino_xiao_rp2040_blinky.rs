@@ -17,9 +17,6 @@ use seeeduino_xiao_rp2040::entry;
 use embedded_hal::digital::v2::OutputPin;
 use embedded_hal::PwmPin;
 
-// Time handling traits
-use embedded_time::rate::*;
-
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
@@ -34,6 +31,8 @@ use seeeduino_xiao_rp2040::hal::pac;
 // A shorter alias for the Hardware Abstraction Layer, which provides
 // higher-level drivers.
 use seeeduino_xiao_rp2040::hal;
+
+use hal::gpio::PinState;
 
 // The minimum PWM value (i.e. LED brightness) we want
 const LOW: u16 = 0;
@@ -85,7 +84,7 @@ fn main() -> ! {
 
     // The delay object lets us wait for specified amounts of time (in
     // milliseconds)
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // Init PWMs
     let mut pwm_slices = hal::pwm::Slices::new(pac.PWM, &mut pac.RESETS);
@@ -101,12 +100,12 @@ fn main() -> ! {
     channel.set_duty(u16::MAX);
 
     // Set the blue LED to be an output, initially off
-    let mut led_blue_pin = pins.led_blue.into_push_pull_output();
-    led_blue_pin.set_high().unwrap();
+    let mut led_blue_pin = pins.led_blue.into_push_pull_output_in_state(PinState::High);
 
     // Turn off the green LED
-    let mut led_green_pin = pins.led_green.into_push_pull_output();
-    led_green_pin.set_high().unwrap();
+    let mut _led_green_pin = pins
+        .led_green
+        .into_push_pull_output_in_state(PinState::High);
 
     loop {
         // Blink blue LED at 1 Hz
