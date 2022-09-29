@@ -13,7 +13,7 @@
 use rp_pico::entry;
 
 // Time handling traits
-use embedded_time::rate::*;
+use fugit::RateExtU32;
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
@@ -71,7 +71,7 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);
