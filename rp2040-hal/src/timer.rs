@@ -352,7 +352,6 @@ macro_rules! impl_alarm {
 }
 
 /// Errors that can be returned from any of the `AlarmX::schedule` methods.
-#[non_exhaustive]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ScheduleAlarmError {
     /// Alarm time is too low. Should be at least 10 microseconds.
