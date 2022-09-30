@@ -237,8 +237,11 @@ macro_rules! impl_alarm {
                         // 1 instance of AlarmN so we can safely atomically clear this bit.
                         unsafe {
                             timer.armed.write_with_zero(|w| w.bits($armed_bit_mask));
+                            crate::atomic_register_access::write_bitmask_set(
+                                timer.intf.as_ptr(),
+                                $armed_bit_mask,
+                            );
                         }
-                        return Err(ScheduleAlarmError::AlarmTooSoon);
                     }
                     Ok(())
                 })
@@ -258,6 +261,10 @@ macro_rules! impl_alarm {
                 // of the TIMER.inte register
                 unsafe {
                     let timer = &(*pac::TIMER::ptr());
+                    crate::atomic_register_access::write_bitmask_clear(
+                        timer.intf.as_ptr(),
+                        $armed_bit_mask,
+                    );
                     timer.intr.write_with_zero(|w| w.$int_alarm().set_bit());
                 }
             }
