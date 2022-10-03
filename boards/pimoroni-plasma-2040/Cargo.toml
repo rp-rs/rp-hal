@@ -29,7 +29,7 @@ defmt-rtt = "0.3.0"
 
 [features]
 # This is the set of features we enable by default
-default = ["boot2", "rt", "critical-section-impl"]
+default = ["boot2", "rt", "critical-section-impl", "rom-func-cache"]
 
 # critical section that is safe for multicore use
 critical-section-impl = ["rp2040-hal/critical-section-impl"]
