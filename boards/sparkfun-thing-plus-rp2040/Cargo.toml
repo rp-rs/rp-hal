@@ -26,7 +26,27 @@ ws2812-pio = "0.4.0"
 fugit = "0.3.5"
 
 [features]
+# This is the set of features we enable by default
 default = ["boot2", "rt", "critical-section-impl"]
+
+# critical section that is safe for multicore use
 critical-section-impl = ["rp2040-hal/critical-section-impl"]
+
+# 2nd stage bootloaders for rp2040
 boot2 = ["rp2040-boot2"]
+
+# Minimal startup / runtime for Cortex-M microcontrollers
 rt = ["cortex-m-rt","rp2040-hal/rt"]
+
+# This enables a fix for USB errata 5: USB device fails to exit RESET state on busy USB bus.
+# Only required for RP2040 B0 and RP2040 B1, but it also works for RP2040 B2 and above
+rp2040-e5 = ["rp2040-hal/rp2040-e5"]
+
+# Memoize(cache) ROM function pointers on first use to improve performance
+rom-func-cache = ["rp2040-hal/rom-func-cache"]
+
+# Disable automatic mapping of language features (like floating point math) to ROM functions
+disable-intrinsics = ["rp2040-hal/disable-intrinsics"]
+
+# This enables ROM functions for f64 math that were not present in the earliest RP2040s
+rom-v2-intrinsics = ["rp2040-hal/rom-v2-intrinsics"]
