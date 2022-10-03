@@ -44,11 +44,23 @@ pio-proc = "0.2.0"
 dht-sensor = "0.2.1"
 
 [features]
+# Minimal startup / runtime for Cortex-M microcontrollers
 rt = ["rp2040-pac/rt"]
+
+# Memoize(cache) ROM function pointers on first use to improve performance
 rom-func-cache = []
+
+# Disable automatic mapping of language features (like floating point math) to ROM functions
 disable-intrinsics = []
+
+# This enables ROM functions for f64 math that were not present in the earliest RP2040s
 rom-v2-intrinsics = []
-rp2040-e5 = [] # USB errata 5: USB device fails to exit RESET state on busy USB bus.
+
+# This enables a fix for USB errata 5: USB device fails to exit RESET state on busy USB bus.
+# Only required for RP2040 B0 and RP2040 B1, but it also works for RP2040 B2 and above
+rp2040-e5 = []
+
+# critical section that is safe for multicore use
 critical-section-impl = ["critical-section/restore-state-u8"]
 
 [[example]]
