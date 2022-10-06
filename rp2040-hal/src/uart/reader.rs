@@ -239,6 +239,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::ErrorType for Reader<D, P> {
     type Error = ReadErrorType;
 }
 
+/* disabled for now - nb was migrated to separate crate
 #[cfg(feature = "eh1_0_alpha")]
 impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Read<u8> for Reader<D, P> {
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
@@ -253,3 +254,4 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Read<u8> for Reader<D, P> {
         }
     }
 }
+*/

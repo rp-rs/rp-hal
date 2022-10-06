@@ -556,7 +556,7 @@ impl eh1::ErrorType for DynPin {
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl eh1::blocking::OutputPin for DynPin {
+impl eh1::OutputPin for DynPin {
     #[inline]
     fn set_high(&mut self) -> Result<(), Self::Error> {
         self._set_high()
@@ -568,7 +568,7 @@ impl eh1::blocking::OutputPin for DynPin {
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl eh1::blocking::InputPin for DynPin {
+impl eh1::InputPin for DynPin {
     #[inline]
     fn is_high(&self) -> Result<bool, Self::Error> {
         self._is_high()
@@ -580,7 +580,7 @@ impl eh1::blocking::InputPin for DynPin {
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl eh1::blocking::ToggleableOutputPin for DynPin {
+impl eh1::ToggleableOutputPin for DynPin {
     #[inline]
     fn toggle(&mut self) -> Result<(), Self::Error> {
         self._toggle()
@@ -588,7 +588,7 @@ impl eh1::blocking::ToggleableOutputPin for DynPin {
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl eh1::blocking::StatefulOutputPin for DynPin {
+impl eh1::StatefulOutputPin for DynPin {
     #[inline]
     fn is_set_high(&self) -> Result<bool, Self::Error> {
         self._is_set_high()
