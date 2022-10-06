@@ -67,3 +67,7 @@ disable-intrinsics = ["rp2040-hal/disable-intrinsics"]
 
 # This enables ROM functions for f64 math that were not present in the earliest RP2040s
 rom-v2-intrinsics = ["rp2040-hal/rom-v2-intrinsics"]
+
+[[example]]
+name = "pico_rtic_monotonic"
+required-features = ["rp2040-hal/rtic-monotonic"]
