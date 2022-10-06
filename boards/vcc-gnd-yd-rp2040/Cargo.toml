@@ -17,7 +17,6 @@ rp2040-hal = { path = "../../rp2040-hal", version = "0.6.0" }
 cortex-m-rt = { version = "0.7", optional = true }
 fugit = "0.3.5"
 usb-device= "0.2.9"
-futures = { version = "0.3", default-features = false, optional = true }
 
 [dev-dependencies]
 panic-halt= "0.2.0"

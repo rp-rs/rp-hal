@@ -30,7 +30,6 @@ rand_core = "0.6.3"
 critical-section_0_2 = { package = "critical-section", version = "0.2.4", features = ["custom-impl"] }
 critical-section = { version = "1.0.0" }
 
-futures = { version = "0.3", default-features = false, optional = true }
 chrono = { version = "0.4", default-features = false, optional = true }
 
 defmt = { version = ">=0.2.0, <0.4", optional = true }
