@@ -36,8 +36,9 @@ mod single_channel;
 
 // Export these types for easier use by external code
 pub use crate::dma::bidirectional::BidirectionalConfig;
-pub use crate::dma::double_buffering::DoubleBufferingConfig;
-pub use crate::dma::single_buffering::SingleBufferingConfig;
+pub use crate::dma::double_buffering::{DoubleBuffering, DoubleBufferingConfig, ReadNext};
+pub use crate::dma::single_buffering::{SingleBuffering, SingleBufferingConfig};
+pub use crate::dma::single_channel::SingleChannel;
 
 /// DMA unit.
 pub trait DMAExt {

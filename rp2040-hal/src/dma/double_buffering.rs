@@ -97,6 +97,24 @@ where
     FROM: ReadTarget<ReceivedWord = WORD>,
     TO: WriteTarget<TransmittedWord = WORD>,
 {
+    /// Check if an interrupt is pending for the active channel and clear the corresponding pending bit
+    pub fn check_irq0(&mut self) -> bool {
+        if self.second_ch {
+            self.ch.1.check_irq0()
+        } else {
+            self.ch.0.check_irq0()
+        }
+    }
+
+    /// Check if an interrupt is pending for the active channel and clear the corresponding pending bit
+    pub fn check_irq1(&mut self) -> bool {
+        if self.second_ch {
+            self.ch.1.check_irq1()
+        } else {
+            self.ch.0.check_irq1()
+        }
+    }
+
     /// Check if the transfer is completed
     pub fn is_done(&self) -> bool {
         if self.second_ch {
