@@ -72,7 +72,7 @@ impl PIOExt for PIO0 {
 }
 impl PIOExt for PIO1 {
     fn id() -> usize {
-        0
+        1
     }
 }
 
