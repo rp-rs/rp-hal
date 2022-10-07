@@ -48,7 +48,7 @@ pub trait SingleChannel {
         }
     }
 
-    /// Enables the DMA_IRQ_0 signal for this channel.
+    /// Enables the DMA_IRQ_1 signal for this channel.
     fn listen_irq1(&mut self) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
