@@ -78,6 +78,9 @@ impl<S: State, D: SpiDevice, const DS: u8> Spi<S, D, DS> {
     /// Set baudrate based on peripheral clock
     ///
     /// Typically the peripheral clock is set to 125_000_000
+    ///
+    /// Note that this takes ~100us on rp2040 at runtime. If that's too slow for you, see
+    /// [calc_spi_clock_divider_settings_for_baudrate]
     pub fn set_baudrate<F: Into<HertzU32>, B: Into<HertzU32>>(
         &mut self,
         peri_frequency: F,
@@ -85,54 +88,121 @@ impl<S: State, D: SpiDevice, const DS: u8> Spi<S, D, DS> {
     ) -> HertzU32 {
         let freq_in = peri_frequency.into().to_Hz();
         let baudrate = baudrate.into().to_Hz();
-        let mut prescale: u8 = u8::MAX;
-        let mut postdiv: u8 = 0;
 
-        // Find smallest prescale value which puts output frequency in range of
-        // post-divide. Prescale is an even number from 2 to 254 inclusive.
-        for prescale_option in (2u32..=254).step_by(2) {
-            // We need to use an saturating_mul here because with a high baudrate certain invalid prescale
-            // values might not fit in u32. However we can be sure those values exeed the max sys_clk frequency
-            // So clamping a u32::MAX is fine here...
-            if freq_in < ((prescale_option + 2) * 256).saturating_mul(baudrate) {
-                prescale = prescale_option as u8;
-                break;
-            }
-        }
+        let settings = calc_spi_clock_divider_settings_for_baudrate(freq_in, baudrate);
 
         // We might not find a prescale value that lowers the clock freq enough, so we leave it at max
-        debug_assert_ne!(prescale, u8::MAX);
+        debug_assert_ne!(settings.prescale, u8::MAX);
 
-        // Find largest post-divide which makes output <= baudrate. Post-divide is
-        // an integer in the range 0 to 255 inclusive.
-        for postdiv_option in (1..=255u8).rev() {
-            if freq_in / (prescale as u32 * postdiv_option as u32) > baudrate {
-                postdiv = postdiv_option;
-                break;
-            }
-        }
-
-        self.device
-            .sspcpsr
-            .write(|w| unsafe { w.cpsdvsr().bits(prescale) });
-        self.device
-            .sspcr0
-            .modify(|_, w| unsafe { w.scr().bits(postdiv) });
+        self.set_baudrate_from_settings(&settings);
 
         // Return the frequency we were able to achieve
         use fugit::RateExtU32;
-        (freq_in / (prescale as u32 * (1 + postdiv as u32))).Hz()
+        (freq_in / (settings.prescale as u32 * (1 + settings.postdiv as u32))).Hz()
+    }
+
+    /// Set the baudrate using a previously calculated [SpiClockDividerSettings]
+    pub fn set_baudrate_from_settings(&mut self, settings: &SpiClockDividerSettings) {
+        self.device
+            .sspcpsr
+            .write(|w| unsafe { w.cpsdvsr().bits(settings.prescale) });
+        self.device
+            .sspcr0
+            .modify(|_, w| unsafe { w.scr().bits(settings.postdiv) });
     }
 
     /// Set the mode
+    ///
+    /// Momentarily disables / enables the device so be careful of truncating ongoing transfers.
     pub fn set_mode(&mut self, mode: Mode) {
+        // disable the device
+        self.device.sspcr1.modify(|_, w| w.sse().clear_bit());
+
+        // Set the polarity and phase
         self.device.sspcr0.modify(|_, w| {
             w.spo()
                 .bit(mode.polarity == Polarity::IdleHigh)
                 .sph()
                 .bit(mode.phase == Phase::CaptureOnSecondTransition)
         });
+
+        // enable the device
+        self.device.sspcr1.modify(|_, w| w.sse().set_bit());
     }
+
+    /// Checks if all transmission buffers are empty.
+    ///
+    /// Useful when you need to wait to de-assert a chipselect or reconfigure the device after sending some bytes.
+    pub fn complete_transfers(&self) -> Result<(), nb::Error<Infallible>> {
+        if self.device.sspsr.read().bsy().bit() {
+            Err(nb::Error::WouldBlock)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+/// Clock divider settings
+pub struct SpiClockDividerSettings {
+    /// The prescaler for writing to sspcpsr
+    pub prescale: u8,
+    /// The postdiv for writing to sspcr0
+    pub postdiv: u8,
+}
+
+/// Calculate the prescale and post divider settings for a required baudrate that can then be
+/// passed to [Spi::set_baudrate_from_settings]
+///
+/// This calculation takes ~100us on rp2040 at runtime and is used by [set_baudrate] every time
+/// it's called. That might not be acceptable in
+/// situations where you need to change the baudrate often.
+///
+/// Note that this is a const function so you can use it in a static context if you don't change your
+/// peripheral clock frequency at runtime.
+///
+/// If you do change your peripheral clock at runtime you can store the [SpiClockDividerSettings] and only re-calculate it
+/// when the peripheral clock frequency changes.
+pub const fn calc_spi_clock_divider_settings_for_baudrate(
+    peri_frequency_hz: u32,
+    baudrate_hz: u32,
+) -> SpiClockDividerSettings {
+    let mut prescale: u8 = u8::MAX;
+    let mut postdiv: u8 = 0;
+
+    // Find smallest prescale value which puts output frequency in range of
+    // post-divide. Prescale is an even number from 2 to 254 inclusive.
+    let mut prescale_option: u32 = 0;
+    loop {
+        prescale_option += 2;
+        if prescale_option >= 254 {
+            break;
+        }
+
+        // We need to use a saturating_mul here because with a high baudrate certain invalid prescale
+        // values might not fit in u32. However we can be sure those values exeed the max sys_clk frequency
+        // So clamping a u32::MAX is fine here...
+        if peri_frequency_hz < ((prescale_option + 2) * 256).saturating_mul(baudrate_hz) {
+            prescale = prescale_option as u8;
+            break;
+        }
+    }
+
+    // Find largest post-divide which makes output <= baudrate. Post-divide is
+    // an integer in the range 0 to 255 inclusive.
+    let mut postdiv_option = 255u8;
+    loop {
+        if peri_frequency_hz / (prescale as u32 * postdiv_option as u32) > baudrate_hz {
+            postdiv = postdiv_option;
+            break;
+        }
+
+        postdiv_option -= 1;
+        if postdiv_option < 1 {
+            break;
+        }
+    }
+
+    SpiClockDividerSettings { prescale, postdiv }
 }
 
 impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
