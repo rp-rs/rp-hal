@@ -123,6 +123,16 @@ impl<S: State, D: SpiDevice, const DS: u8> Spi<S, D, DS> {
         use fugit::RateExtU32;
         (freq_in / (prescale as u32 * (1 + postdiv as u32))).Hz()
     }
+
+    /// Set the mode
+    pub fn set_mode(&mut self, mode: Mode) {
+        self.device.sspcr0.modify(|_, w| {
+            w.spo()
+                .bit(mode.polarity == Polarity::IdleHigh)
+                .sph()
+                .bit(mode.phase == Phase::CaptureOnSecondTransition)
+        });
+    }
 }
 
 impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
