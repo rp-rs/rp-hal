@@ -41,7 +41,7 @@ use fugit::MicrosDurationU32;
 /// Watchdog peripheral
 pub struct Watchdog {
     watchdog: WATCHDOG,
-    delay_us: u32,
+    load_value: u32, // decremented by 2 per tick (µs)
 }
 
 impl Watchdog {
@@ -49,7 +49,7 @@ impl Watchdog {
     pub fn new(watchdog: WATCHDOG) -> Self {
         Self {
             watchdog,
-            delay_us: 0,
+            load_value: 0,
         }
     }
 
@@ -110,7 +110,7 @@ impl Watchdog {
 
 impl watchdog::Watchdog for Watchdog {
     fn feed(&mut self) {
-        self.load_counter(self.delay_us)
+        self.load_counter(self.load_value)
     }
 }
 
@@ -120,19 +120,23 @@ impl watchdog::WatchdogEnable for Watchdog {
     fn start<T: Into<Self::Time>>(&mut self, period: T) {
         const MAX_PERIOD: u32 = 0xFFFFFF;
 
+        let delay_us = period.into().to_micros();
+        if delay_us > MAX_PERIOD / 2 {
+            panic!(
+                "Period cannot exceed maximum load value of {} ({} microseconds))",
+                MAX_PERIOD,
+                MAX_PERIOD / 2
+            );
+        }
         // Due to a logic error, the watchdog decrements by 2 and
         // the load value must be compensated; see RP2040-E1
-        self.delay_us = period.into().to_micros() * 2;
-
-        if self.delay_us > MAX_PERIOD {
-            panic!("Period cannot exceed maximum load value of {}", MAX_PERIOD);
-        }
+        self.load_value = delay_us * 2;
 
         self.enable(false);
         unsafe {
             self.configure_wdog_reset_triggers();
         }
-        self.load_counter(self.delay_us);
+        self.load_counter(self.load_value);
         self.enable(true);
     }
 }
