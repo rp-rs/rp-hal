@@ -130,10 +130,8 @@ impl<S: State, D: SpiDevice, const DS: u8> Spi<S, D, DS> {
         self.device.sspcr1.modify(|_, w| w.sse().set_bit());
     }
 
-    /// Checks if all transmission buffers are empty.
-    ///
-    /// Useful when you need to wait to de-assert a chipselect or reconfigure the device after sending some bytes.
-    pub fn complete_transfers(&self) -> Result<(), nb::Error<Infallible>> {
+    /// Wait until all operations have completed and the bus is idle.
+    pub fn flush(&self) -> Result<(), nb::Error<Infallible>> {
         if self.device.sspsr.read().bsy().bit() {
             Err(nb::Error::WouldBlock)
         } else {
