@@ -85,7 +85,7 @@ pub struct UartConfig {
 
 impl UartConfig {
     /// Create a new instance of UartConfig
-    pub fn new(
+    pub const fn new(
         baudrate: HertzU32,
         data_bits: DataBits,
         parity: Option<Parity>,
