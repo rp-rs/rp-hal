@@ -45,4 +45,5 @@ pub use self::utils::*;
 pub use self::writer::Writer;
 
 /// Common configurations for UART.
+#[deprecated(note = "Use UartConfig::new(...) instead.")]
 pub mod common_configs;
