@@ -1,8 +1,7 @@
-use fugit::HertzU32;
-
 use crate::pac::{uart0::RegisterBlock, UART0, UART1};
 use crate::resets::SubsystemReset;
 use core::ops::Deref;
+use fugit::HertzU32;
 
 /// Error type for UART operations.
 #[derive(Debug)]
@@ -82,6 +81,23 @@ pub struct UartConfig {
 
     /// The parity that this uart should have
     pub parity: Option<Parity>,
+}
+
+impl UartConfig {
+    /// Create a new instance of UartConfig
+    pub const fn new(
+        baudrate: HertzU32,
+        data_bits: DataBits,
+        parity: Option<Parity>,
+        stop_bits: StopBits,
+    ) -> UartConfig {
+        UartConfig {
+            baudrate,
+            data_bits,
+            stop_bits,
+            parity,
+        }
+    }
 }
 
 /// Rx/Tx FIFO Watermark

@@ -20,7 +20,11 @@ use rp2040_hal as hal;
 // Some traits we need
 use core::fmt::Write;
 use embedded_hal::adc::OneShot;
+use fugit::RateExtU32;
 use rp2040_hal::Clock;
+
+// UART related types
+use hal::uart::{DataBits, StopBits, UartConfig};
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
@@ -91,7 +95,7 @@ fn main() -> ! {
     // Create a UART driver
     let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
-            hal::uart::common_configs::_9600_8_N_1,
+            UartConfig::new(9600.Hz(), DataBits::Eight, None, StopBits::One),
             clocks.peripheral_clock.freq(),
         )
         .unwrap();
