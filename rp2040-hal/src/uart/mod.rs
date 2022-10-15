@@ -6,7 +6,8 @@
 //!
 //! See [examples/uart.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/uart.rs) for a more complete example
 //! ```no_run
-//! use rp2040_hal::{Clock, clocks::init_clocks_and_plls, gpio::{Pins, FunctionUart}, pac, sio::Sio, uart::{self, UartPeripheral}, watchdog::Watchdog};
+//! use rp2040_hal::{Clock, clocks::init_clocks_and_plls, gpio::{Pins, FunctionUart}, pac, sio::Sio, uart::{self, DataBits, StopBits, UartConfig, UartPeripheral}, watchdog::Watchdog};
+//! use fugit::RateExtU32;
 //!
 //! const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // Typically found in BSP crates
 //!
@@ -24,7 +25,7 @@
 //! // Need to perform clock init before using UART or it will freeze.
 //! let uart = UartPeripheral::new(peripherals.UART0, pins, &mut peripherals.RESETS)
 //!     .enable(
-//!         uart::common_configs::_9600_8_N_1,
+//!         UartConfig::new(9600.Hz(), DataBits::Eight, None, StopBits::One),
 //!         clocks.peripheral_clock.freq(),
 //!     ).unwrap();
 //!

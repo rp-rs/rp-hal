@@ -30,6 +30,9 @@ use rp2040_hal::Clock;
 // The macro for our start-up function
 use rp_pico::entry;
 
+// Time handling traits
+use fugit::RateExtU32;
+
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
@@ -51,6 +54,9 @@ use heapless::spsc::Queue;
 
 /// Import the GPIO pins we use
 use hal::gpio::pin::bank0::{Gpio0, Gpio1};
+
+// UART related types
+use hal::uart::{DataBits, StopBits, UartConfig};
 
 /// Alias the type for our UART pins to make things clearer.
 type UartPins = (
@@ -134,7 +140,7 @@ fn main() -> ! {
     // Make a UART on the given pins
     let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
-            hal::uart::common_configs::_9600_8_N_1,
+            UartConfig::new(9600.Hz(), DataBits::Eight, None, StopBits::One),
             clocks.peripheral_clock.freq(),
         )
         .unwrap();
