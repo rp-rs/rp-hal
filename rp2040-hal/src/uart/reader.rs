@@ -16,8 +16,8 @@ pub struct ReadError<'err> {
     /// The type of error
     pub err_type: ReadErrorType,
 
-    /// Reference to the data that was read but eventually discared because of the error.
-    pub discared: &'err [u8],
+    /// Reference to the data that was read but eventually discarded because of the error.
+    pub discarded: &'err [u8],
 }
 
 /// Possible types of read errors. See Chapter 4, Section 2 §8 - Table 436: "UARTDR Register"
@@ -149,7 +149,7 @@ pub(crate) fn read_raw<'b, D: UartDevice>(
             if let Some(err_type) = error {
                 return Err(Other(ReadError {
                     err_type,
-                    discared: buffer,
+                    discarded: &buffer[..bytes_read],
                 }));
             }
 
