@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (Non-blocking traits were moved to embedded-hal-nb, which is not yet supported)
 - Implement UartConfig::new constructor method - @jannic
 - Deprecate uart::common_configs - @jannic
+- Fix spelling error in UART error discarded field - @Sizurka
 
 ## [0.6.0] - 2022-08-26
 
