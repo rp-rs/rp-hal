@@ -15,15 +15,15 @@ cortex-m = "0.7.2"
 rp2040-boot2 = { version = "0.2.0", optional = true }
 rp2040-hal = { path = "../../rp2040-hal", version = "0.6.0" }
 cortex-m-rt = { version = "0.7", optional = true }
-smart-leds = "0.3.0"
-ws2812-pio = "0.4.0"
-sh1106 = "0.4.0"
-embedded-graphics = "0.7.1"
 
 [dev-dependencies]
 panic-halt= "0.2.0"
 embedded-hal ="0.2.5"
 fugit = "0.3.5"
+smart-leds = "0.3.0"
+ws2812-pio = "0.4.0"
+sh1106 = "0.4.0"
+embedded-graphics = "0.7.1"
 
 [features]
 # This is the set of features we enable by default
