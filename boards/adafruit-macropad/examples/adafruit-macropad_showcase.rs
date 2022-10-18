@@ -28,7 +28,6 @@ use adafruit_macropad::{
 };
 use cortex_m_rt::entry;
 use embedded_hal::digital::v2::ToggleableOutputPin;
-use embedded_time::rate::*;
 use panic_halt as _;
 
 // Import useful traits to handle the ws2812 LEDs:
@@ -36,6 +35,7 @@ use smart_leds::{brightness, SmartLedsWrite, RGB, RGB8};
 
 // Import the actual crate to handle the Ws2812 protocol:
 use embedded_hal::digital::v2::OutputPin;
+use fugit::RateExtU32;
 use ws2812_pio::Ws2812;
 
 // There are 12 RGB leds in the strip, one for each key
@@ -72,7 +72,7 @@ fn main() -> ! {
     .unwrap();
 
     // Setup a delay for the LED blink signals
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
     // Create a count down timer for the Ws2812 instance
     let timer = Timer::new(pac.TIMER, &mut pac.RESETS);
 
