@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Update dependency on rp2040-pac to 0.4.0 - @jannic
 - Update embedded-hal alpha support to version 1.0.0-alpha.9 - @jannic
   (Non-blocking traits were moved to embedded-hal-nb, which is not yet supported)
 - Implement UartConfig::new constructor method - @jannic
