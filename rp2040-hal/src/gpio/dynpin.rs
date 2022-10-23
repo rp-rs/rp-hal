@@ -305,7 +305,7 @@ impl DynPin {
     /// must be at most one corresponding [`DynPin`] in existence at any given
     /// time.  Violating this requirement is `unsafe`.
     #[inline]
-    unsafe fn new(id: DynPinId, mode: DynPinMode) -> Self {
+    pub unsafe fn new(id: DynPinId, mode: DynPinMode) -> Self {
         DynPin {
             regs: DynRegisters::new(id),
             mode,
