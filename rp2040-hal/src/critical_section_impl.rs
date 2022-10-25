@@ -14,7 +14,7 @@ const LOCK_UNOWNED: u8 = 0;
 /// Indicates which core owns the lock so that we can call critical_section recursively.
 ///
 /// 0 = no one has the lock, 1 = core0 has the lock, 2 = core1 has the lock
-static mut LOCK_OWNER: AtomicU8 = AtomicU8::new(LOCK_UNOWNED);
+static LOCK_OWNER: AtomicU8 = AtomicU8::new(LOCK_UNOWNED);
 
 /// Marker value to indicate that we already owned the lock when we started the `critical_section`.
 ///
