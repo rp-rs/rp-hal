@@ -64,16 +64,16 @@ fn main() -> ! {
     let (int, frac) = (256, 0);
 
     let installed = pio.install(&program.program).unwrap();
-    let (mut sm0, _, _) = rp2040_hal::pio::PIOBuilder::from_program(installed)
-        .set_pins(pin0, 1)
-        .clock_divisor_fixed_point(int, frac)
-        .build(sm0);
+    let (mut sm0, _, _) = rp2040_hal::pio::PIOBuilder::from_program(
+        // Safety: We won't uninstall the program, ever
+        unsafe { installed.share() },
+    )
+    .set_pins(pin0, 1)
+    .clock_divisor_fixed_point(int, frac)
+    .build(sm0);
     // The GPIO pin needs to be configured as an output.
     sm0.set_pindirs([(pin0, hal::pio::PinDir::Output)]);
 
-    // NOTE: with the current rp-hal, I need to call pio.install() twice. This
-    // should be investigated further as it seems wrong.
-    let installed = pio.install(&program.program).unwrap();
     let (mut sm1, _, _) = rp2040_hal::pio::PIOBuilder::from_program(installed)
         .set_pins(pin1, 1)
         .clock_divisor_fixed_point(int, frac)
