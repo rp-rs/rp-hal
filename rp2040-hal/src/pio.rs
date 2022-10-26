@@ -303,7 +303,7 @@ impl<P: PIOExt> InstalledProgram<P> {
     /// * [`Err`] containing the old program if the provided wrap was invalid (outside the bounds of
     ///   the program length)
     pub fn set_wrap(self, wrap: Wrap) -> Result<Self, Self> {
-        if (self.offset + wrap.source) < self.length && (self.offset + wrap.target) < self.length {
+        if wrap.source < self.length && wrap.target < self.length {
             Ok(InstalledProgram { wrap, ..self })
         } else {
             Err(self)
