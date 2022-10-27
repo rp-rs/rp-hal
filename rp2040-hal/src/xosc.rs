@@ -32,6 +32,8 @@ impl State for Stable {}
 impl State for Dormant {}
 
 /// Possible errors when initializing the CrystalOscillator
+#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {
     /// Frequency is out of the 1-15MHz range (see datasheet)
     FrequencyOutOfRange,

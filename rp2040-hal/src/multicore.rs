@@ -43,6 +43,7 @@ use crate::Sio;
 
 /// Errors for multicore operations.
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {
     /// Operation is invalid on this core.
     InvalidCore,

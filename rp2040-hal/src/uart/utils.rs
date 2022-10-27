@@ -5,6 +5,7 @@ use fugit::HertzU32;
 
 /// Error type for UART operations.
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {
     /// Bad argument : when things overflow, ...
     BadArgument,
