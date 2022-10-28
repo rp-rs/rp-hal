@@ -67,9 +67,9 @@ critical-section-impl = ["critical-section/restore-state-u8"]
 [[example]]
 # irq example uses cortex-m-rt::interrupt, need rt feature for that
 name = "gpio_irq_example"
-required-features = ["rt"]
+required-features = ["rt", "critical-section-impl"]
 
 [[example]]
 # vector_table example uses cortex-m-rt::interrupt, need rt feature for that
 name = "vector_table"
-required-features = ["rt"]
+required-features = ["rt", "critical-section-impl"]
