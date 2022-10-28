@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix spelling error in UART error discarded field - @Sizurka
 - Fix contents of UART error discarded field - @Sizurka
 - Fix watchdog counter load value - @Sizurka
-- Fix concurrent accesses to sm_execctrl and sm_instr when sideset isn't optional - @ihtinuel
+- Fix concurrent accesses to sm_execctrl and sm_instr when sideset isn't optional - @ithinuel
 - pio: Move interrupt related (en|dis)abling/forcing methods to the statemachine - @ithinuel
 - Mark Timer & Alarm* Send and Sync - @ithinuel
 - The feature critical-section-impl is now enabled by default from the BSP crates - @jannic
