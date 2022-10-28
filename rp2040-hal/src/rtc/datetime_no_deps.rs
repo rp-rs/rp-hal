@@ -4,6 +4,7 @@ use rp2040_pac::rtc::{rtc_0, rtc_1, setup_0, setup_1};
 ///
 /// [`DateTimeFilter`]: struct.DateTimeFilter.html
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {
     /// The [DateTime] contains an invalid year value. Must be between `0..=4095`.
     InvalidYear,
