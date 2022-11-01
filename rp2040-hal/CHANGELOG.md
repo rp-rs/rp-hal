@@ -15,6 +15,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implement UartConfig::new constructor method - @jannic
 - Deprecate uart::common_configs - @jannic
 - Fix spelling error in UART error discarded field - @Sizurka
+- Fix contents of UART error discarded field - @Sizurka
+- Fix watchdog counter load value - @Sizurka
+- Fix concurrent accesses to sm_execctrl and sm_instr when sideset isn't optional - @ithinuel
+- pio: Move interrupt related (en|dis)abling/forcing methods to the statemachine - @ithinuel
+- Mark Timer & Alarm* Send and Sync - @ithinuel
+- The feature critical-section-impl is now enabled by default from the BSP crates - @jannic
+- Simplify signature of Alarm::schedule, removing generic parameter - @ithinuel
+- USB: Use the dedicated write_bitmask_* functions - @ithinuel
+
+### Added
+
+- Add rtic-monotonic support for timer & alarms (feature gated) - @ithinuel
+- Add SPI is_busy function - @papyDoctor
+- Add set_fifos/set_rx_watermark/set_tx_watermark - @papyDoctor
+- Add a method to allow setting the PIO's clock divisor without floats - @ithinuel
+- Use TimerInstant in Timer::GetCounter & add Alarm::schedule_at - @ithinuel
 
 ## [0.6.0] - 2022-08-26
 
@@ -46,10 +62,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Align USB synchronisation requirements with the manual & pico-sdk - @ithinuel
 - Update dependencies on usb-device to 0.2.9 - @ithinuel
 - Use wfi in otherwise empty infinite loops in examples. - @jannic
-- Use generic bootloader in examples - @jannic
+- Use generic bootloader in examples - @jannic & @ithinuel
 - Use `rp2040-hal`'s entry function. - @ithinuel
 - Migrate from `embedded-time` to `fugit` - @ithinuel
 - Fix PIO's `set_pins` and `set_pindirs` when `out_sticky` is set. - @jannic & @ithinuel
+- Clarify usage of boot2 section - @a-gavin
 
 ### Removed
 
@@ -174,7 +191,8 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.54.
 
 - Initial release
 
-[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/rp-rs/rp-hal/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/rp-rs/rp-hal/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/rp-rs/rp-hal/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rp-rs/rp-hal/compare/v0.2.0...v0.3.0
