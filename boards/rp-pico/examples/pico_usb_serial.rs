@@ -33,6 +33,10 @@ use usb_device::{class_prelude::*, prelude::*};
 // USB Communications Class Device support
 use usbd_serial::SerialPort;
 
+// Used to demonstrate writing formatted strings
+use core::fmt::Write;
+use heapless::String;
+
 /// Entry point to our bare-metal application.
 ///
 /// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
@@ -101,6 +105,16 @@ fn main() -> ! {
         if !said_hello && timer.get_counter().ticks() >= 2_000_000 {
             said_hello = true;
             let _ = serial.write(b"Hello, World!\r\n");
+
+            let time = timer.get_counter().ticks();
+            let mut text: String<64> = String::new();
+            writeln!(&mut text, "Current timer ticks: {}", time).unwrap();
+
+            // This only works reliably because the number of bytes written to
+            // the serial port is smaller than the buffers available to the USB
+            // peripheral. In general, the return value should be handled, so that
+            // bytes not transferred yet don't get lost.
+            let _ = serial.write(text.as_bytes());
         }
 
         // Check for new data
