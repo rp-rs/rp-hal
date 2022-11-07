@@ -292,7 +292,25 @@ pub struct InstalledProgram<P> {
 }
 
 impl<P: PIOExt> InstalledProgram<P> {
-    /// Get the warp target (entry point) of the instaled program.
+    /// Change the source and/or target for automatic program wrapping.
+    ///
+    /// This replaces the current wrap bounds with a new set. This can be useful if you are running
+    /// multiple state machines with the same program but using different wrap bounds.
+    ///
+    /// # Returns
+    ///
+    /// * [`Ok`] containing a new program with the provided wrap bounds
+    /// * [`Err`] containing the old program if the provided wrap was invalid (outside the bounds of
+    ///   the program length)
+    pub fn set_wrap(self, wrap: Wrap) -> Result<Self, Self> {
+        if wrap.source < self.length && wrap.target < self.length {
+            Ok(InstalledProgram { wrap, ..self })
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Get the wrap target (entry point) of the installed program.
     pub fn wrap_target(&self) -> u8 {
         self.offset + self.wrap.target
     }
