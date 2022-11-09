@@ -636,6 +636,20 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
             }
         }
     }
+
+    /// Change the clock divider of a state machine.
+    pub fn set_clock_divisor(&mut self, divisor: f32) {
+        // sm frequency = clock freq / (CLKDIV_INT + CLKDIV_FRAC / 256)
+        let int = divisor as u16;
+        let frac = ((divisor - int as f32) * 256.0) as u8;
+
+        self.sm.set_clock_divisor(int, frac);
+    }
+
+    /// Change the clock divider of a state machine using a 16.8 fixed point value.
+    pub fn clock_divisor_fixed_point(&mut self, int: u16, frac: u8) {
+        self.sm.set_clock_divisor(int, frac);
+    }
 }
 
 // Safety: All shared register accesses are atomic.
@@ -654,20 +668,6 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
             program: self.program,
             _phantom: core::marker::PhantomData,
         }
-    }
-
-    /// Change the clock divider of a stopped state machine.
-    pub fn set_clock_divisor(&mut self, divisor: f32) {
-        // sm frequency = clock freq / (CLKDIV_INT + CLKDIV_FRAC / 256)
-        let int = divisor as u16;
-        let frac = ((divisor - int as f32) * 256.0) as u8;
-
-        self.sm.set_clock_divisor(int, frac);
-    }
-
-    /// Change the clock divider of a stopped state machine using a 16.8 fixed point value.
-    pub fn clock_divisor_fixed_point(&mut self, int: u16, frac: u8) {
-        self.sm.set_clock_divisor(int, frac);
     }
 
     /// Sets the pin state for the specified pins.
