@@ -638,6 +638,10 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     }
 
     /// Change the clock divider of a state machine.
+    ///
+    /// Changing the clock divider of a running state machine is allowed
+    /// and guaranteed to not cause any glitches, but the exact timing of
+    /// clock pulses during the change is not specified.
     pub fn set_clock_divisor(&mut self, divisor: f32) {
         // sm frequency = clock freq / (CLKDIV_INT + CLKDIV_FRAC / 256)
         let int = divisor as u16;
@@ -647,6 +651,10 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     }
 
     /// Change the clock divider of a state machine using a 16.8 fixed point value.
+    ///
+    /// Changing the clock divider of a running state machine is allowed
+    /// and guaranteed to not cause any glitches, but the exact timing of
+    /// clock pulses during the change is not specified.
     pub fn clock_divisor_fixed_point(&mut self, int: u16, frac: u8) {
         self.sm.set_clock_divisor(int, frac);
     }
