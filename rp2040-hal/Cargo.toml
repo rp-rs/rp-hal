@@ -7,6 +7,10 @@ homepage = "https://github.com/rp-rs/rp-hal"
 description = "A Rust Embeded-HAL impl for the rp2040 microcontroller"
 license = "MIT OR Apache-2.0"
 
+[package.metadata.docs.rs]
+features = ["rt", "rom-v2-intrinsics", "defmt", "rtic-monotonic"]
+targets = ["thumbv6m-none-eabi"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
