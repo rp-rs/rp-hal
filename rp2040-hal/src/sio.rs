@@ -638,7 +638,12 @@ pub type Spinlock30 = Spinlock<30>;
 impl SpinlockValid for Spinlock<30> {}
 
 /// Spinlock number 31 - used by critical section implementation
+#[cfg(feature = "critical-section-impl")]
 pub(crate) type Spinlock31 = Spinlock<31>;
+
+/// Spinlock number 31 - only public if critical-section-impl is not enabled
+#[cfg(not(feature = "critical-section-impl"))]
+pub type Spinlock31 = Spinlock<31>;
 
 impl SpinlockValid for Spinlock<31> {}
 
