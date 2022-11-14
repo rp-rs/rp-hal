@@ -302,6 +302,28 @@ macro_rules! hal {
                     Self::new_controller(i2c, sda_pin, scl_pin, freq.into(), resets, system_clock.into())
                 }
             }
+
+            impl I2C<$I2CX, ()> {
+                $crate::paste::paste! {
+                    /// Configures the I2C peripheral to work in master mode
+                    ///
+                    /// This constructor variant doesn't take the sda/scl pins as
+                    /// parameters. It's the callers responsibility to configure
+                    /// some GPIOs to the right function mode to actually connect the
+                    /// peripheral to some physical pins.
+                    pub fn [<$i2cX _without_pins>]<F, SystemF>(
+                        i2c: $I2CX,
+                        freq: F,
+                        resets: &mut RESETS,
+                        system_clock: SystemF) -> Self
+                    where
+                        F: Into<HertzU32>,
+                        SystemF: Into<HertzU32>,
+                    {
+                        Self::new_controller_without_pins(i2c, freq.into(), resets, system_clock.into())
+                    }
+                }
+            }
         )+
     }
 }
