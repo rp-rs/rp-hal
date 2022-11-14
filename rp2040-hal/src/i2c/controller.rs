@@ -14,17 +14,14 @@ use eh1_0_alpha::i2c as eh1;
 
 use super::{i2c_reserved_addr, Controller, Error, SclPin, SdaPin, I2C};
 
-impl<T: SubsystemReset + Deref<Target = Block>>
-    I2C<T, (), Controller>
-{
+impl<T: SubsystemReset + Deref<Target = Block>> I2C<T, (), Controller> {
     /// Configures the I2C peripheral to work in controller mode
     pub fn new_controller_without_pins(
         i2c: T,
         freq: HertzU32,
         resets: &mut RESETS,
         system_clock: HertzU32,
-    ) -> Self
-    {
+    ) -> Self {
         let freq = freq.to_Hz();
         assert!(freq <= 1_000_000);
         assert!(freq > 0);
