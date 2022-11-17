@@ -19,6 +19,7 @@ mod intrinsics;
 pub mod adc;
 pub(crate) mod atomic_register_access;
 pub mod clocks;
+#[cfg(feature = "critical-section-impl")]
 mod critical_section_impl;
 pub mod dma;
 mod float;

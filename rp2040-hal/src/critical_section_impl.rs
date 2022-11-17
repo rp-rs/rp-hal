@@ -1,9 +1,7 @@
 use core::sync::atomic::{AtomicU8, Ordering};
 
 struct RpSpinlockCs;
-#[cfg(feature = "critical-section-impl")]
 critical_section_0_2::custom_impl!(RpSpinlockCs);
-#[cfg(feature = "critical-section-impl")]
 critical_section::set_impl!(RpSpinlockCs);
 
 /// Marker value to indicate no-one has the lock.
@@ -14,7 +12,7 @@ const LOCK_UNOWNED: u8 = 0;
 /// Indicates which core owns the lock so that we can call critical_section recursively.
 ///
 /// 0 = no one has the lock, 1 = core0 has the lock, 2 = core1 has the lock
-static mut LOCK_OWNER: AtomicU8 = AtomicU8::new(LOCK_UNOWNED);
+static LOCK_OWNER: AtomicU8 = AtomicU8::new(LOCK_UNOWNED);
 
 /// Marker value to indicate that we already owned the lock when we started the `critical_section`.
 ///
@@ -24,7 +22,6 @@ static mut LOCK_OWNER: AtomicU8 = AtomicU8::new(LOCK_UNOWNED);
 /// The value 2 indicates that we aren't the outermost call, and should not release the spinlock or re-enable interrupts in `release`
 const LOCK_ALREADY_OWNED: u8 = 2;
 
-#[cfg(feature = "critical-section-impl")]
 unsafe impl critical_section_0_2::Impl for RpSpinlockCs {
     unsafe fn acquire() -> u8 {
         RpSpinlockCs::acquire()
@@ -35,7 +32,6 @@ unsafe impl critical_section_0_2::Impl for RpSpinlockCs {
     }
 }
 
-#[cfg(feature = "critical-section-impl")]
 unsafe impl critical_section::Impl for RpSpinlockCs {
     unsafe fn acquire() -> u8 {
         RpSpinlockCs::acquire()

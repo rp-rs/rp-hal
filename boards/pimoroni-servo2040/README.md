@@ -55,9 +55,24 @@ $ cargo install elf2uf2-rs
 ```
 then try repeating the `cargo run` command above.
 
-### [pimorono_servo2040_rainbow](./examples/pimorono_servo2040_rainbow.rs)
+### [pimoroni_servo2040_rainbow](./examples/pimoroni_servo2040_rainbow.rs)
 
 Animates a rainbow wheel on the Servo2040's six on-board LEDs in sequence.
+
+![Servo 2040 Rainbow LED Animation](
+    https://user-images.githubusercontent.com/1673130/190923083-4cd9794a-6775-4f9e-92c3-64d6d25c61dd.gif)
+
+### [pimoroni_servo2040_pwm_servo](./examples/pimoroni_servo2040_pwm_servo.rs)
+
+Moves a micro servo connected to pin Servo 1 on a Servo2040 board using the PWM
+peripheral.
+
+![Servo 2040 Servo Animation](
+    https://user-images.githubusercontent.com/1673130/190923094-1e7dc85d-2742-4d2f-9b9d-f3337b03cda2.gif)
+![Servo 2040 Oscilloscope Waveform Animation](
+    https://user-images.githubusercontent.com/1673130/190923098-f725bf4a-541b-4e4c-9f79-eb435e8d2d27.gif)
+![Servo 2040 Oscilloscope Waveform Image with Frequency](
+    https://user-images.githubusercontent.com/1673130/190923130-43bab8aa-8773-42f8-90cb-9bc684368027.jpg)
 
 ## Contributing
 

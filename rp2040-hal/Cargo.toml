@@ -7,17 +7,21 @@ homepage = "https://github.com/rp-rs/rp-hal"
 description = "A Rust Embeded-HAL impl for the rp2040 microcontroller"
 license = "MIT OR Apache-2.0"
 
+[package.metadata.docs.rs]
+features = ["rt", "rom-v2-intrinsics", "defmt", "rtic-monotonic"]
+targets = ["thumbv6m-none-eabi"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 cortex-m = "0.7.2"
 cortex-m-rt = ">=0.6.15,<0.8"
 embedded-hal = { version = "0.2.5", features = ["unproven"] }
-eh1_0_alpha = { package = "embedded-hal", version = "=1.0.0-alpha.8",  optional = true }
+eh1_0_alpha = { package = "embedded-hal", version = "=1.0.0-alpha.9",  optional = true }
 fugit = "0.3.6"
 itertools = { version = "0.10.1", default-features = false }
 nb = "1.0"
-rp2040-pac = "0.3.0"
+rp2040-pac = "0.4.0"
 paste = "1.0"
 pio = "0.2.0"
 rp2040-hal-macros = { version = "0.1.0", path = "../rp2040-hal-macros" }
@@ -30,10 +34,11 @@ rand_core = "0.6.3"
 critical-section_0_2 = { package = "critical-section", version = "0.2.4", features = ["custom-impl"] }
 critical-section = { version = "1.0.0" }
 
-futures = { version = "0.3", default-features = false, optional = true }
 chrono = { version = "0.4", default-features = false, optional = true }
 
 defmt = { version = ">=0.3.0, <0.4", optional = true }
+
+rtic-monotonic = { version = "1.0.0", optional = true }
 
 [dev-dependencies]
 cortex-m-rt = "0.7"
@@ -44,19 +49,31 @@ pio-proc = "0.2.0"
 dht-sensor = "0.2.1"
 
 [features]
+# Minimal startup / runtime for Cortex-M microcontrollers
 rt = ["rp2040-pac/rt"]
+
+# Memoize(cache) ROM function pointers on first use to improve performance
 rom-func-cache = []
+
+# Disable automatic mapping of language features (like floating point math) to ROM functions
 disable-intrinsics = []
+
+# This enables ROM functions for f64 math that were not present in the earliest RP2040s
 rom-v2-intrinsics = []
-rp2040-e5 = [] # USB errata 5: USB device fails to exit RESET state on busy USB bus.
+
+# This enables a fix for USB errata 5: USB device fails to exit RESET state on busy USB bus.
+# Only required for RP2040 B0 and RP2040 B1, but it also works for RP2040 B2 and above
+rp2040-e5 = []
+
+# critical section that is safe for multicore use
 critical-section-impl = ["critical-section/restore-state-u8"]
 
 [[example]]
 # irq example uses cortex-m-rt::interrupt, need rt feature for that
 name = "gpio_irq_example"
-required-features = ["rt"]
+required-features = ["rt", "critical-section-impl"]
 
 [[example]]
 # vector_table example uses cortex-m-rt::interrupt, need rt feature for that
 name = "vector_table"
-required-features = ["rt"]
+required-features = ["rt", "critical-section-impl"]

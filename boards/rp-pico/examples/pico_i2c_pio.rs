@@ -38,6 +38,9 @@ use rp_pico::hal::pac;
 // higher-level drivers.
 use rp_pico::hal;
 
+// UART related types
+use hal::uart::{DataBits, StopBits, UartConfig};
+
 /// Prints the temperature received from the sensor
 fn print_temperature(serial: &mut impl FmtWrite, temp: [u8; 2]) {
     let temp_i16 = i16::from_be_bytes(temp) >> 5;
@@ -97,7 +100,7 @@ fn main() -> ! {
 
     let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
-            hal::uart::common_configs::_115200_8_N_1,
+            UartConfig::new(115_200.Hz(), DataBits::Eight, None, StopBits::One),
             clocks.peripheral_clock.freq(),
         )
         .unwrap();

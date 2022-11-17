@@ -1,11 +1,11 @@
-use fugit::HertzU32;
-
 use crate::pac::{uart0::RegisterBlock, UART0, UART1};
 use crate::resets::SubsystemReset;
 use core::ops::Deref;
+use fugit::HertzU32;
 
 /// Error type for UART operations.
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {
     /// Bad argument : when things overflow, ...
     BadArgument,
@@ -84,6 +84,23 @@ pub struct UartConfig {
     pub parity: Option<Parity>,
 }
 
+impl UartConfig {
+    /// Create a new instance of UartConfig
+    pub const fn new(
+        baudrate: HertzU32,
+        data_bits: DataBits,
+        parity: Option<Parity>,
+        stop_bits: StopBits,
+    ) -> UartConfig {
+        UartConfig {
+            baudrate,
+            data_bits,
+            stop_bits,
+            parity,
+        }
+    }
+}
+
 /// Rx/Tx FIFO Watermark
 ///
 /// Determine the FIFO level that trigger DMA/Interrupt
@@ -114,28 +131,5 @@ impl Default for UartConfig {
             stop_bits: StopBits::One,
             parity: None,
         }
-    }
-}
-
-/// Same as core::convert::Infallible, but implementing serial::Error
-///
-/// For eh 1.0.0-alpha.6, Infallible doesn't implement serial::Error,
-/// so use a locally defined type instead.
-/// This should be removed with the next release of e-h.
-/// (https://github.com/rust-embedded/embedded-hal/pull/328)
-#[cfg(feature = "eh1_0_alpha")]
-pub enum SerialInfallible {}
-
-#[cfg(feature = "eh1_0_alpha")]
-impl core::fmt::Debug for SerialInfallible {
-    fn fmt(&self, _f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match *self {}
-    }
-}
-
-#[cfg(feature = "eh1_0_alpha")]
-impl eh1_0_alpha::serial::Error for SerialInfallible {
-    fn kind(&self) -> eh1_0_alpha::serial::ErrorKind {
-        match *self {}
     }
 }

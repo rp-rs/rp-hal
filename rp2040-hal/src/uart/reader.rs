@@ -16,8 +16,8 @@ pub struct ReadError<'err> {
     /// The type of error
     pub err_type: ReadErrorType,
 
-    /// Reference to the data that was read but eventually discared because of the error.
-    pub discared: &'err [u8],
+    /// Reference to the data that was read but eventually discarded because of the error.
+    pub discarded: &'err [u8],
 }
 
 /// Possible types of read errors. See Chapter 4, Section 2 §8 - Table 436: "UARTDR Register"
@@ -149,7 +149,7 @@ pub(crate) fn read_raw<'b, D: UartDevice>(
             if let Some(err_type) = error {
                 return Err(Other(ReadError {
                     err_type,
-                    discared: buffer,
+                    discarded: &buffer[..bytes_read],
                 }));
             }
 
@@ -239,6 +239,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::ErrorType for Reader<D, P> {
     type Error = ReadErrorType;
 }
 
+/* disabled for now - nb was migrated to separate crate
 #[cfg(feature = "eh1_0_alpha")]
 impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Read<u8> for Reader<D, P> {
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
@@ -253,3 +254,4 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Read<u8> for Reader<D, P> {
         }
     }
 }
+*/

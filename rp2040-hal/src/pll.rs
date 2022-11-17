@@ -73,6 +73,8 @@ impl<S: State, D: PhaseLockedLoopDevice> PhaseLockedLoop<S, D> {
 
 /// Error type for the PLL module.
 /// See Chapter 2, Section 18 §2 for details on constraints triggering these errors.
+#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {
     /// Proposed VCO frequency is out of range.
     VcoFreqOutOfRange,

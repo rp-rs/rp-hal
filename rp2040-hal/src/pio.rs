@@ -156,7 +156,7 @@ impl<P: PIOExt> PIO<P> {
     }
 
     /// Tries to find an appropriate offset for the instructions, in range 0..=31.
-    fn find_offset_for_instructions(&self, i: &[u16], origin: Option<u8>) -> Option<usize> {
+    fn find_offset_for_instructions(&self, i: &[u16], origin: Option<u8>) -> Option<u8> {
         if i.len() > PIO_INSTRUCTION_COUNT || i.is_empty() {
             None
         } else {
@@ -167,10 +167,10 @@ impl<P: PIOExt> PIO<P> {
                 {
                     None
                 } else {
-                    Some(origin as usize)
+                    Some(origin)
                 }
             } else {
-                for i in (0..=32 - i.len()).rev() {
+                for i in (0..=32 - (i.len() as u8)).rev() {
                     if self.used_instruction_space & (mask << i) == 0 {
                         return Some(i);
                     }
@@ -195,32 +195,24 @@ impl<P: PIOExt> PIO<P> {
                 .iter()
                 .cloned()
                 .map(|instr| {
-                    if let Some(Instruction {
-                        operands: InstructionOperands::JMP { condition, address },
-                        delay,
-                        side_set,
-                    }) = Instruction::decode(instr, p.side_set)
-                    {
-                        // JMP instruction. We need to apply offset here
-                        let address = address + offset as u8;
+                    if instr & 0b1110_0000_0000_0000 == 0 {
+                        // this is a JMP instruction -> add offset to address
+                        let address = (instr & 0b11111) as u8;
+                        let address = address + offset;
                         assert!(
                             address < pio::RP2040_MAX_PROGRAM_SIZE as u8,
                             "Invalid JMP out of the program after offset addition"
                         );
-
-                        Instruction {
-                            operands: InstructionOperands::JMP { condition, address },
-                            delay,
-                            side_set,
-                        }
-                        .encode(p.side_set)
+                        instr & (!0b11111) | address as u16
                     } else {
+                        // this is not a JMP instruction -> keep it unchanged
                         instr
                     }
                 })
                 .enumerate()
                 .for_each(|(i, instr)| {
-                    self.pio.instr_mem[i + offset].write(|w| unsafe { w.instr_mem0().bits(instr) })
+                    self.pio.instr_mem[i + offset as usize]
+                        .write(|w| unsafe { w.instr_mem0().bits(instr) })
                 });
             self.used_instruction_space |= Self::instruction_mask(p.code.len()) << offset;
             Ok(InstalledProgram {
@@ -300,7 +292,25 @@ pub struct InstalledProgram<P> {
 }
 
 impl<P: PIOExt> InstalledProgram<P> {
-    /// Get the warp target (entry point) of the instaled program.
+    /// Change the source and/or target for automatic program wrapping.
+    ///
+    /// This replaces the current wrap bounds with a new set. This can be useful if you are running
+    /// multiple state machines with the same program but using different wrap bounds.
+    ///
+    /// # Returns
+    ///
+    /// * [`Ok`] containing a new program with the provided wrap bounds
+    /// * [`Err`] containing the old program if the provided wrap was invalid (outside the bounds of
+    ///   the program length)
+    pub fn set_wrap(self, wrap: Wrap) -> Result<Self, Self> {
+        if wrap.source < self.length && wrap.target < self.length {
+            Ok(InstalledProgram { wrap, ..self })
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Get the wrap target (entry point) of the installed program.
     pub fn wrap_target(&self) -> u8 {
         self.offset + self.wrap.target
     }
