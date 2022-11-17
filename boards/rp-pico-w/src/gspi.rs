@@ -13,9 +13,9 @@ use crate::hal;
 
 use embedded_hal::digital::v2::InputPin;
 use embedded_hal::digital::v2::OutputPin;
+use embedded_hal_1::spi::ErrorType;
 use embedded_hal_1::spi::SpiBusFlush;
 use embedded_hal_1::spi::{SpiBusRead, SpiBusWrite};
-use embedded_hal_1::spi::ErrorType;
 
 pub struct GSpi {
     /// SPI clock

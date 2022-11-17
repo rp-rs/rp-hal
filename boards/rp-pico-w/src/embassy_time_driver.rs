@@ -127,8 +127,7 @@ impl TimerDriver {
         use fugit::MicrosDurationU32;
         let mut alarm = self.alarm.borrow(cs).borrow_mut();
         let alarm = alarm.deref_mut().as_mut().unwrap();
-        match alarm.schedule_at(min_timestamp)
-        {
+        match alarm.schedule_at(min_timestamp) {
             Result::Err(ScheduleAlarmError::AlarmTooLate) => {
                 // Duration >72 minutes. Reschedule 1 hour later.
                 trace!("reschedule in 1h");
@@ -161,7 +160,11 @@ impl TimerDriver {
             if timestamp.const_cmp(now) == core::cmp::Ordering::Less {
                 self.trigger_alarm(n, cs)
             } else {
-                warn!("Alarm in future, {} < {} re-arm", now.ticks(), timestamp.ticks());
+                warn!(
+                    "Alarm in future, {} < {} re-arm",
+                    now.ticks(),
+                    timestamp.ticks()
+                );
             }
             // next alarm could have changed - rearm
             self.arm(cs);
