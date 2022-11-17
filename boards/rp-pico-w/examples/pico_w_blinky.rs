@@ -21,8 +21,6 @@ use rp_pico_w::hal::pac;
 use rp_pico_w::gspi::GSpi;
 use rp_pico_w::hal;
 
-use embedded_hal_1 as eh_1;
-
 use embedded_hal::digital::v2::OutputPin;
 
 use embassy_executor::raw::TaskPool;
@@ -119,7 +117,7 @@ async fn run(spawner: Spawner, pins: rp_pico_w::Pins, state: &'static cyw43::Sta
     spi_mosi_miso.set_low().unwrap();
 
     let bus = GSpi::new(spi_clk, spi_mosi_miso);
-    let spi = eh_1::spi::blocking::ExclusiveDevice::new(bus, spi_cs);
+    let spi = embedded_hal_bus::spi::ExclusiveDevice::new(bus, spi_cs);
 
     let pwr = pins.wl_on.into_push_pull_output();
 

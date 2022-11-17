@@ -81,19 +81,20 @@ impl Driver for TimerDriver {
         })
     }
 
-    fn set_alarm(&self, alarm: AlarmHandle, timestamp: u64) {
+    fn set_alarm(&self, alarm: AlarmHandle, timestamp: u64) -> bool {
         let n = alarm.id() as usize;
         critical_section::with(|cs| {
             let alarms = self.alarms.borrow(cs);
             let alarm = &alarms[n];
             if alarm.timestamp.get().ticks() == timestamp {
                 // redundant set_alarm - ignore
-                return;
+                return true;
             }
             alarm.timestamp.set(Instant::from_ticks(timestamp));
 
             self.arm(cs);
             trace!("set alarm {} to {}", n, timestamp);
+            true
         })
     }
 }
@@ -111,7 +112,7 @@ impl TimerDriver {
     }
 
     fn arm(&self, cs: CriticalSection) {
-        let (n, min_timestamp) = self.next_scheduled_alarm();
+        let (_, min_timestamp) = self.next_scheduled_alarm();
         if min_timestamp == NO_ALARM {
             // no alarm set
             trace!("Trying to arm non-existing alarm");
@@ -124,42 +125,18 @@ impl TimerDriver {
         // it is checked if the alarm time has passed.
         let now = self.now_instant();
         use fugit::MicrosDurationU32;
-        match self
-            .alarm
-            .borrow(cs)
-            .borrow_mut()
-            .deref_mut()
-            .as_mut()
-            .unwrap()
-            .schedule_at(min_timestamp)
+        let mut alarm = self.alarm.borrow(cs).borrow_mut();
+        let alarm = alarm.deref_mut().as_mut().unwrap();
+        match alarm.schedule_at(min_timestamp)
         {
-            Result::Err(ScheduleAlarmError::AlarmTooSoon) => {
-                // If alarm timestamp has passed, trigger it instantly.
-                // This disarms it.
-                trace!(
-                    "timestamp has passed, trigger now! timestamp {} <= now {}",
-                    min_timestamp.ticks(),
-                    now.ticks()
-                );
-                self.trigger_alarm(n, cs);
-            }
             Result::Err(ScheduleAlarmError::AlarmTooLate) => {
                 // Duration >72 minutes. Reschedule 1 hour later.
                 trace!("reschedule in 1h");
-                self.alarm
-                    .borrow(cs)
-                    .borrow_mut()
-                    .deref_mut()
-                    .as_mut()
-                    .unwrap()
-                    .schedule(MicrosDurationU32::hours(1))
-                    .unwrap();
+                alarm.schedule(MicrosDurationU32::hours(1)).unwrap();
             }
             Ok(_) => {
-                trace!("min: {}, now: {}", min_timestamp.ticks(), now.ticks());
-                trace!("alarm armed for {}", (min_timestamp - now).ticks());
+                debug!("min: {}, now: {}", min_timestamp.ticks(), now.ticks());
             }
-            Err(_) => core::panic!("Unknown error scheduling an alarm"),
         }
     }
 
@@ -181,8 +158,10 @@ impl TimerDriver {
             let (n, timestamp) = next;
             let now = self.now_instant();
             // alarm peripheral has only 32 bits, so might have triggered early
-            if timestamp.const_cmp(now) != core::cmp::Ordering::Less {
+            if timestamp.const_cmp(now) == core::cmp::Ordering::Less {
                 self.trigger_alarm(n, cs)
+            } else {
+                warn!("Alarm in future, {} < {} re-arm", now.ticks(), timestamp.ticks());
             }
             // next alarm could have changed - rearm
             self.arm(cs);
@@ -190,7 +169,7 @@ impl TimerDriver {
     }
 
     fn trigger_alarm(&self, n: usize, cs: CriticalSection) {
-        trace!("triggered alarm {}", n);
+        debug!("triggered alarm {}", n);
         // disarm
         // ignore... for now unsafe { pac::TIMER.armed().write(|w| w.set_armed(1 << n)) }
 
