@@ -29,9 +29,6 @@ usb-device = "0.2.9"
 vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
 rand_core = "0.6.3"
-# Always set the custom-impl feature of legacy critical-section, even if we don't provide our own,
-# as the default implementation should no longer be used.
-critical-section_0_2 = { package = "critical-section", version = "0.2.4", features = ["custom-impl"] }
 critical-section = { version = "1.0.0" }
 
 chrono = { version = "0.4", default-features = false, optional = true }
