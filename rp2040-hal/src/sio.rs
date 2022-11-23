@@ -157,7 +157,7 @@ impl SioFifo {
 
         // Write the value to the FIFO - the other core will now be able to
         // pop it off its end of the FIFO.
-        self.write(value as u32);
+        self.write(value);
 
         // Fire off an event to the other core
         cortex_m::asm::sev();
