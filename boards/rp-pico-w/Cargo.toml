@@ -29,7 +29,7 @@ fugit = "0.3.6"
 [dev-dependencies]
 panic-probe = { version = "0.3", features = ["print-defmt"] }
 cyw43 = { version = "0.1.0", git = "https://github.com/jannic-dev-forks/cyw43", branch = "stable", features=["defmt"] }
-embassy-executor = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", features=["integrated-timers"], rev = "2528f451387e6c7b27c3140cd87d47521d1971a2" }
+embassy-executor = { version = "0.1.1", features=["integrated-timers"] }
 embassy-futures = { version = "0.1.0" }
 embassy-net = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "2528f451387e6c7b27c3140cd87d47521d1971a2",  features = ["defmt", "tcp", "dhcpv4", "medium-ethernet", "pool-16"] }
 defmt-rtt = "0.3"
