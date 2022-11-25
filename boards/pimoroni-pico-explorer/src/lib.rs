@@ -270,15 +270,7 @@ impl PicoExplorer {
     pub fn get_adc<Pin: Channel<Adc, ID = u8>>(&mut self, channel: &mut Pin) -> f32 {
         // scale raw 12-bit adc value to 0 .. 1 float
         let adc_value: u16 = self.adc.read(channel).unwrap();
-        let mut result: f32 = f32::from(adc_value) / f32::from(1u16 << 12);
-        // clamp result to 0 .. 1
-        if result > 1.0 {
-            result = 1.0
-        }
-
-        if result < 0.0 {
-            result = 0.0
-        }
-        result
+        let result: f32 = f32::from(adc_value) / f32::from(1u16 << 12);
+        result.clamp(0.0, 1.0)
     }
 }

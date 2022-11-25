@@ -216,7 +216,7 @@ impl<P: PIOExt> PIO<P> {
                 });
             self.used_instruction_space |= Self::instruction_mask(p.code.len()) << offset;
             Ok(InstalledProgram {
-                offset: offset as u8,
+                offset,
                 length: p.code.len() as u8,
                 side_set: p.side_set,
                 wrap: p.wrap,
@@ -2028,9 +2028,8 @@ impl<P: PIOExt> PIOBuilder<P> {
 
                 w.out_sticky().bit(self.out_sticky);
 
-                w.wrap_top().bits(offset as u8 + self.program.wrap.source);
-                w.wrap_bottom()
-                    .bits(offset as u8 + self.program.wrap.target);
+                w.wrap_top().bits(offset + self.program.wrap.source);
+                w.wrap_bottom().bits(offset + self.program.wrap.target);
 
                 let n = match self.mov_status {
                     MovStatusConfig::Tx(n) => {
@@ -2085,7 +2084,7 @@ impl<P: PIOExt> PIOBuilder<P> {
         // to the beginning of the program we loaded in.
         let instr = InstructionOperands::JMP {
             condition: pio::JmpCondition::Always,
-            address: offset as u8,
+            address: offset,
         }
         .encode();
         // Safety: Only instance owning the SM
