@@ -2029,8 +2029,7 @@ impl<P: PIOExt> PIOBuilder<P> {
                 w.out_sticky().bit(self.out_sticky);
 
                 w.wrap_top().bits(offset + self.program.wrap.source);
-                w.wrap_bottom()
-                    .bits(offset + self.program.wrap.target);
+                w.wrap_bottom().bits(offset + self.program.wrap.target);
 
                 let n = match self.mov_status {
                     MovStatusConfig::Tx(n) => {
