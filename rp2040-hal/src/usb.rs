@@ -615,12 +615,12 @@ impl UsbBusTrait for UsbBus {
             }
 
             // check for bus reset and/or suspended states.
-            let sie_status = inner.ctrl_reg.sie_status.read();
+            let ints = inner.ctrl_reg.ints.read();
             let mut buff_status = inner.ctrl_reg.buff_status.read().bits();
 
-            if sie_status.bus_reset().bit_is_set() {
+            if ints.bus_reset().bit_is_set() {
                 #[cfg(feature = "rp2040-e5")]
-                if sie_status.connected().bit_is_clear() {
+                if inner.ctrl_reg.sie_status.read().connected().bit_is_clear() {
                     inner.errata5_state = Some(errata5::Errata5State::start());
                     return PollResult::None;
                 } else {
@@ -629,11 +629,11 @@ impl UsbBusTrait for UsbBus {
 
                 #[cfg(not(feature = "rp2040-e5"))]
                 return PollResult::Reset;
-            } else if buff_status == 0 && sie_status.setup_rec().bit_is_clear() {
-                if sie_status.suspended().bit_is_set() {
+            } else if buff_status == 0 && ints.setup_req().bit_is_clear() {
+                if ints.dev_suspend().bit_is_set() {
                     inner.ctrl_reg.sie_status.write(|w| w.suspended().set_bit());
                     return PollResult::Suspend;
-                } else if sie_status.resume().bit_is_set() {
+                } else if ints.dev_resume_from_host().bit_is_set() {
                     inner.ctrl_reg.sie_status.write(|w| w.resume().set_bit());
                     return PollResult::Resume;
                 }
@@ -664,7 +664,7 @@ impl UsbBusTrait for UsbBus {
             }
 
             // check for setup request
-            if sie_status.setup_rec().bit_is_set() {
+            if ints.setup_req().bit_is_set() {
                 // Small max_packet_size_ep0 Work-Around
                 inner.ctrl_dpram.ep_buffer_control[0].modify(|_, w| w.available_0().clear_bit());
 
