@@ -5,13 +5,25 @@ pub extern crate rp2040_hal as hal;
 #[cfg(feature = "rt")]
 pub use rp2040_hal::entry;
 
-//// The linker will place this boot block at the start of our program image. We
-//// need this to help the ROM bootloader get our code up and running.
+/// The linker will place this boot block at the start of our program image. We
+/// need this to help the ROM bootloader get our code up and running.
+///
+/// According to
+/// https://store.arduino.cc/products/arduino-nano-rp2040-connect
+/// the board should contain a AT25SF128A flash chip. But
+/// there are reports of board with different flash chips,
+/// where the boot loader BOOT_LOADER_AT25SF128A does not
+/// work. (https://github.com/rp-rs/rp-hal/issues/503)
+///
+/// Therefore, the generic boot loader is used by default. For a specific
+/// board, the flash performance can be increased by switching to the
+/// matching boot loader.
 #[cfg(feature = "boot2")]
 #[link_section = ".boot2"]
 #[no_mangle]
 #[used]
-pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_AT25SF128A;
+pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
+// pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_AT25SF128A;
 
 pub use hal::pac;
 
