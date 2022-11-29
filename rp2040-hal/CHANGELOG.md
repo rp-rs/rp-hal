@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2022-11-09
+
+### Changed
+
+- Upgraded dependency on critical-section 0.2 to 0.2.8 - @jannic
+  (There is also a dependency on version 1.0.0)
+- Remove critical-section impl for version 0.2 - @jannic
+  Both 0.2.8 and 1.x use the same symbols internally to implement the
+  critical sections, so one impl is sufficient, and having both causes
+  compilation errors
+
 ## [0.6.0] - 2022-08-26
 
 ### Added
