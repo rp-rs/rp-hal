@@ -1,6 +1,6 @@
 [package]
 name = "rp2040-hal"
-version = "0.6.0"
+version = "0.6.1"
 authors = ["The rp-rs Developers"]
 edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal"
@@ -27,7 +27,7 @@ void = { version = "1.0.2", default-features = false }
 rand_core = "0.6.3"
 # Always set the custom-impl feature of legacy critical-section, even if we don't provide our own,
 # as the default implementation should no longer be used.
-critical-section_0_2 = { package = "critical-section", version = "0.2.4", features = ["custom-impl"] }
+critical-section_0_2 = { package = "critical-section", version = "0.2.8" }
 critical-section = { version = "1.0.0" }
 
 futures = { version = "0.3", default-features = false, optional = true }
