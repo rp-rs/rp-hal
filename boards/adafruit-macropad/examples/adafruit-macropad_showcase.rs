@@ -53,6 +53,10 @@ use embedded_graphics::{
 // The display driver:
 use sh1106::{prelude::*, Builder};
 
+use arrayvec::ArrayString;
+use core::fmt::Write;
+use rotary_encoder_embedded::{self, Direction, RotaryEncoder};
+
 #[entry]
 fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
@@ -101,6 +105,10 @@ fn main() -> ! {
         pins.key11.into_pull_up_input().into(),
         pins.key12.into_pull_up_input().into(),
     ];
+
+    let a = pins.encoder_rota.into_pull_up_input();
+    let b = pins.encoder_rotb.into_pull_up_input();
+    let mut rotary_encoder = RotaryEncoder::new(b, a).into_standard_mode();
 
     // Split PIO state machine 0 into individual objects, so that Ws2812 can use it
     let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
@@ -187,6 +195,8 @@ fn main() -> ! {
     let mut timer_60hz = timer_init;
     let mut timer_1000hz = timer_init;
 
+    let mut screen_text_buffer = ArrayString::<100>::new();
+    let mut rotary_counter: i32 = 1;
     loop {
         let now = timer.get_counter_low();
 
@@ -219,10 +229,13 @@ fn main() -> ! {
 
         // Updating the screen and the RGB LEDs should be pretty fast. 60hz works well
         if elapsed_60hz {
-            Text::with_baseline("Hello Rust!", Point::new(0, 16), text_style, Baseline::Top)
+            writeln!(&mut buf, "Hello Rust!\nRotary: {:.1}", temp).unwrap();
+            display.clear();
+            Text::with_baseline(buf.as_str(), Point::new(0, 16), text_style, Baseline::Top)
                 .draw(&mut display)
                 .unwrap();
             display.flush().unwrap();
+            buf.clear();
             // Update the rainbow effect of the key backlight LEDS
             update_leds(t, &mut leds);
             ws.write(brightness(leds.iter().copied(), strip_brightness))
@@ -246,6 +259,23 @@ fn main() -> ! {
             } else {
                 speaker_triggered = false;
                 speaker.set_high().unwrap();
+            }
+
+            rotary_encoder.update();
+            match rotary_encoder.direction() {
+                Direction::Clockwise => {
+                    speaker.toggle().unwrap();
+                    // Increment some value
+                    temp += 1;
+                }
+                Direction::Anticlockwise => {
+                    speaker.toggle().unwrap();
+                    // Decrement some value
+                    temp -= 1;
+                }
+                Direction::None => {
+                    // Do nothing
+                }
             }
         }
     }

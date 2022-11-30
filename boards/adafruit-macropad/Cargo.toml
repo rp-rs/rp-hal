@@ -24,6 +24,8 @@ smart-leds = "0.3.0"
 ws2812-pio = "0.4.0"
 sh1106 = "0.4.0"
 embedded-graphics = "0.7.1"
+rotary-encoder-embedded = "0.2.0"
+arrayvec = { version="0.7.1", default-features=false }
 
 [features]
 # This is the set of features we enable by default
