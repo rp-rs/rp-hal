@@ -27,7 +27,7 @@ use adafruit_macropad::{
     Pins, XOSC_CRYSTAL_FREQ,
 };
 use cortex_m_rt::entry;
-use embedded_hal::digital::v2::ToggleableOutputPin;
+use embedded_hal::digital::v2::{InputPin, ToggleableOutputPin};
 use panic_halt as _;
 
 // Import useful traits to handle the ws2812 LEDs:
@@ -84,6 +84,7 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
     let mut led_pin = pins.led.into_push_pull_output();
+    let button1 = pins.key1.into_pull_up_input();
 
     // Split PIO state machine 0 into individual objects, so that Ws2812 can use it
     let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
@@ -153,7 +154,7 @@ fn main() -> ! {
 
     // Enable buzzer output
     speaker_shutdown.set_high().unwrap();
-
+    let mut speaker_triggered: bool = false;
     loop {
         Text::with_baseline("Hello Rust!", Point::new(0, 16), text_style, Baseline::Top)
             .draw(&mut display)
@@ -179,7 +180,15 @@ fn main() -> ! {
             t -= 1.0;
         }
         // Generate an annoying 30hz buzz
-        speaker.toggle().unwrap();
+        if button1.is_low().unwrap() {
+            if !speaker_triggered {
+                speaker.set_low().unwrap();
+            }
+            speaker_triggered = true;
+        } else {
+            speaker_triggered = false;
+            speaker.set_high().unwrap();
+        }
     }
 }
 
