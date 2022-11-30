@@ -86,6 +86,7 @@ fn main() -> ! {
     );
     let mut led_pin = pins.led.into_push_pull_output();
 
+    // Our key switches
     let buttons: [DynPin; 12] = [
         pins.key1.into_pull_up_input().into(),
         pins.key2.into_pull_up_input().into(),
@@ -170,40 +171,82 @@ fn main() -> ! {
     // Enable buzzer output
     speaker_shutdown.set_high().unwrap();
     let mut speaker_triggered: bool = false;
+
+    // We'll spin on several period-elapsed timers
+    // Rather than using delays or interrupts we're going to use the timer-counter as a free-running timer.
+    // By keeping track of time since the last capture in a local variable you can run things at many different time intervals,
+    // at the cost of one u32 and one comparison per loop, and one update per interval.
+    // This does lead to a bit of boilerplate, but sometimes that's okay!
+    const TIMER_1HZ_PERIOD: u32 = (1_000_000.0 / 1.0) as u32;
+    const TIMER_60HZ_PERIOD: u32 = (1_000_000.0 / 60.0) as u32;
+    const TIMER_1000HZ_PERIOD: u32 = (1_000_000.0 / 1_000.0) as u32;
+
+    // We don't know how long the system has been running at this point, so get a fresh counter value now
+    let timer_init = timer.get_counter_low();
+    let mut timer_1hz = timer_init;
+    let mut timer_60hz = timer_init;
+    let mut timer_1000hz = timer_init;
+
     loop {
-        Text::with_baseline("Hello Rust!", Point::new(0, 16), text_style, Baseline::Top)
-            .draw(&mut display)
-            .unwrap();
-        display.flush().unwrap();
-        led_pin.toggle().unwrap();
+        let now = timer.get_counter_low();
 
-        // Update the rainbow effect of the key backlight LEDS
-        update_leds(t, &mut leds);
-
-        // Here the magic happens and the `leds` buffer is written to the
-        // ws2812 LEDs:
-        ws.write(brightness(leds.iter().copied(), strip_brightness))
-            .unwrap();
-
-        // Wait a bit until calculating the next frame:
-        delay.delay_ms(16); // ~60 FPS
-
-        // Increase the time counter variable and make sure it
-        // stays inbetween 0.0 to 1.0 range:
-        t += (16.0 / 1000.0) * animation_speed;
-        while t > 1.0 {
-            t -= 1.0;
+        // Update our periodic timers
+        // Check if our 1hz timer has elapsed
+        let elapsed_1hz = now - timer_1hz > TIMER_1HZ_PERIOD;
+        if elapsed_1hz {
+            // Update the 1hz timer so we don't trigger again for a second
+            timer_1hz = now;
+        }
+        // do the same for the remaining timers
+        let elapsed_60hz = now - timer_60hz > TIMER_60HZ_PERIOD;
+        if now - timer_60hz > TIMER_60HZ_PERIOD {
+            timer_60hz = now;
+        }
+        let elapsed_1000hz = now - timer_1000hz > TIMER_1000HZ_PERIOD;
+        if elapsed_1000hz {
+            timer_1000hz = now;
         }
 
-        // Click the buzzer once if any key is pressed
-        if buttons.iter().any(|key| key.is_low().unwrap()) {
-            if !speaker_triggered {
-                speaker.set_low().unwrap();
+        // Perform any on-timer-elapse events now.
+        // Anything that is not inside one of these timer checks will run as often as the main loop does, which can be good for reacting to things quickly
+        // but the exact timing will depend on what else executed in the main loop
+
+        // Things that are okay to update once per second go here
+        if elapsed_1hz {
+            // Nice slow LED blink is a good choice
+            led_pin.toggle().unwrap();
+        }
+
+        // Updating the screen and the RGB LEDs should be pretty fast. 60hz works well
+        if elapsed_60hz {
+            Text::with_baseline("Hello Rust!", Point::new(0, 16), text_style, Baseline::Top)
+                .draw(&mut display)
+                .unwrap();
+            display.flush().unwrap();
+            // Update the rainbow effect of the key backlight LEDS
+            update_leds(t, &mut leds);
+            ws.write(brightness(leds.iter().copied(), strip_brightness))
+                .unwrap();
+            // Increase the time counter variable and make sure it
+            // stays inbetween 0.0 to 1.0 range:
+            t += (16.0 / 1000.0) * animation_speed;
+            while t > 1.0 {
+                t -= 1.0;
             }
-            speaker_triggered = true;
-        } else {
-            speaker_triggered = false;
-            speaker.set_high().unwrap();
+        }
+
+        // 1khz is a nice interval for polling switches
+        if elapsed_1000hz {
+            // Click the buzzer once if any key is pressed
+            if buttons.iter().any(|key| key.is_low().unwrap()) {
+                if !speaker_triggered {
+                    speaker.set_low().unwrap();
+                }
+                speaker_triggered = true;
+            } else {
+                speaker_triggered = false;
+                speaker.set_high().unwrap();
+            }
         }
     }
 }
