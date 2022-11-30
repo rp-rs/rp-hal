@@ -28,6 +28,7 @@ use adafruit_macropad::{
 };
 use cortex_m_rt::entry;
 use embedded_hal::digital::v2::{InputPin, ToggleableOutputPin};
+use hal::gpio::DynPin;
 use panic_halt as _;
 
 // Import useful traits to handle the ws2812 LEDs:
@@ -84,7 +85,21 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
     let mut led_pin = pins.led.into_push_pull_output();
-    let button1 = pins.key1.into_pull_up_input();
+
+    let buttons: [DynPin; 12] = [
+        pins.key1.into_pull_up_input().into(),
+        pins.key2.into_pull_up_input().into(),
+        pins.key3.into_pull_up_input().into(),
+        pins.key4.into_pull_up_input().into(),
+        pins.key5.into_pull_up_input().into(),
+        pins.key6.into_pull_up_input().into(),
+        pins.key7.into_pull_up_input().into(),
+        pins.key8.into_pull_up_input().into(),
+        pins.key9.into_pull_up_input().into(),
+        pins.key10.into_pull_up_input().into(),
+        pins.key11.into_pull_up_input().into(),
+        pins.key12.into_pull_up_input().into(),
+    ];
 
     // Split PIO state machine 0 into individual objects, so that Ws2812 can use it
     let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
@@ -179,8 +194,9 @@ fn main() -> ! {
         while t > 1.0 {
             t -= 1.0;
         }
-        // Generate an annoying 30hz buzz
-        if button1.is_low().unwrap() {
+
+        // Click the buzzer once if any key is pressed
+        if buttons.iter().any(|key| key.is_low().unwrap()) {
             if !speaker_triggered {
                 speaker.set_low().unwrap();
             }
