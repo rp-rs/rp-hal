@@ -30,7 +30,6 @@ use rp2040_pac::DMA;
 // Bring in our submodules
 mod bidirectional;
 mod double_buffering;
-mod ring_transfer;
 mod single_buffering;
 mod single_channel;
 
