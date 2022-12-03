@@ -307,7 +307,7 @@ impl Inner {
                     w.length_0().bits(ep.max_packet_size)
                 });
                 cortex_m::asm::delay(12);
-                buf_control.write(|w| w.available_0().set_bit());
+                buf_control.modify(|_, w| w.available_0().set_bit());
             }
         }
     }
