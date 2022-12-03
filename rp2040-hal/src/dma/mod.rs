@@ -237,20 +237,6 @@ impl<B: WriteBuffer> WriteTarget for B {
     }
 }
 
-/*
-
-BidiDoubleBuffered<(CH1, CH2), FROM, BIDI, TO, (), ()> {
-    config(...) -> BidirectionalConfig;
-    from_is_done() -> bool
-    to_is_done() -> bool
-    is_done() -> bool
-    wait() -> (CH1, CH2, FROM, BIDI, TO)
-}
-
-Endless<(CH1, CH2), RX, TX> {
-    stop() -> bool
-}*/
-
 /// Pacing for DMA transfers.
 ///
 /// Generally, while memory-to-memory DMA transfers can operate at maximum possible throughput,
