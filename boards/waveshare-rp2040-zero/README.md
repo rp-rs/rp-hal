@@ -1,13 +1,13 @@
-# [rp-pico] - Board Support for the [Raspberry Pi Pico]
+# [waveshare-rp2040-zero] - Board Support for the [Waveshare RP2040 Zero]
 
 You should include this crate if you are writing code that you want to run on
-a [Raspberry Pi Pico] - the original launch PCB for the RP2040 chip.
+an [Waveshare RP2040 Zero] - a very small RP2040 breakout board with USB-C and a RGB led from Waveshare.
 
 This crate includes the [rp2040-hal], but also configures each pin of the
-RP2040 chip according to how it is connected up on the Pico.
+RP2040 chip according to how it is connected up on the Feather.
 
-[Raspberry Pi Pico]: https://www.raspberrypi.org/products/raspberry-pi-pico/
-[rp-pico]: https://github.com/rp-rs/rp-hal/tree/main/boards/rp-pico
+[Waveshare RP2040 Zero]: https://www.waveshare.com/wiki/RP2040-Zero
+[waveshare-rp2040-zero]: https://github.com/rp-rs/rp-hal/tree/main/boards/waveshare-rp2040-zero
 [rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
 [Raspberry Silicon RP2040]: https://www.raspberrypi.org/products/rp2040/
 
@@ -16,10 +16,10 @@ RP2040 chip according to how it is connected up on the Pico.
 To use this crate, your `Cargo.toml` file should contain:
 
 ```toml
-rp-pico = "0.5.0"
+waveshare-rp2040-zero = "0.4.0"
 ```
 
-In your program, you will need to call `rp_pico::Pins::new` to create
+In your program, you will need to call `waveshare_rp2040_zero::Pins::new` to create
 a new `Pins` structure. This will set up all the GPIOs for any on-board
 devices. See the [examples](./examples) folder for more details.
 
@@ -30,7 +30,7 @@ devices. See the [examples](./examples) folder for more details.
 To compile an example, clone the _rp-hal_ repository and run:
 
 ```console
-rp-hal/boards/rp-pico $ cargo build --release --example <name>
+rp-hal/boards/waveshare-rp2040-zero $ cargo build --release --example <name>
 ```
 
 You will get an ELF file called
@@ -44,70 +44,23 @@ USB drive exported by the RP2040 bootloader, simply boot your board into
 bootloader mode and run:
 
 ```console
-rp-hal/boards/rp-pico $ cargo run --release --example <name>
+rp-hal/boards/waveshare-rp2040-zero $ cargo run --release --example <name>
 ```
 
 If you get an error about not being able to find `elf2uf2-rs`, try:
 
 ```console
-$ cargo install elf2uf2-rs
+$ cargo install elf2uf2-rs, then repeating the `cargo run` command above.
 ```
-then try repeating the `cargo run` command above.
 
-### [pico_blinky](./examples/pico_blinky.rs)
+### [waveshare_rp2040_zero_neopixel_rainbow](./examples/waveshare_rp2040_zero_neopixel_rainbow.rs)
 
-Flashes the Pico's on-board LED on and off.
-
-### [pico_gpio_in_out](./examples/pico_gpio_in_out.rs)
-
-Reads a push button attached to GPIO 15 and drives the on-board LED to match it (i.e. on when pressed, off when not pressed).
-
-### [pico_rtic](./examples/pico_rtic.rs)
-
-Demonstrates the use of the [Real-Time Interrupt-driven Concurrency Framework] on the Raspberry Pi Pico.
-
-[Real-Time Interrupt-driven Concurrency Framework]: https://rtic.rs
-
-### [pico_countdown_blinky](./examples/pico_countdown_blinky.rs)
-
-Another LED blinking example, but using a Timer in count-down mode.
-
-### [pico_pwm_blink](./examples/pico_pwm_blink.rs)
-
-Puts out an analog 'triangle wave' on GPIO 25, using the PWM hardware.
-
-### [pico_pwm_servo](./examples/pico_pwm_servo.rs)
-
-Demonstrates handling a micro servo, using the PWM hardware.
-
-### [pico_usb_serial](./examples/pico_usb_serial.rs)
-
-Creates a USB Serial device on a Pico board.
-
-The USB Serial device will print `HelloWorld` on start-up, and then echo any
-incoming characters - except that any lower-case ASCII characters are
-converted to the upper-case equivalent.
-
-### [pico_usb_serial_interrupt](./examples/pico_usb_serial_interrupt.rs)
-
-Creates a USB Serial device on a Pico board, but demonstrating handling
-interrupts when USB data arrives.
-
-### [pico_usb_twitchy_mouse](./examples/pico_usb_twitchy_mouse.rs)
-
-Demonstrates emulating a USB Human Input Device (HID) Mouse. The mouse
-cursor will jiggle up and down.
-
-### [pico_spi_sd_card](./examples/pico_spi_sd_card.rs)
-
-Example that shows how to use the
-[embedded_sdmmc crate](https://github.com/rust-embedded-community/embedded-sdmmc-rs)
-with the Raspberry Pi Pico.
+Flows smoothly through various colors on the onboard NeoPixel LED.
 
 ## Contributing
 
 Contributions are what make the open source community such an amazing place to
-be learn, inspire, and create. Any contributions you make are **greatly
+be, learn, inspire, and create. Any contributions you make are **greatly
 appreciated**.
 
 The steps are:

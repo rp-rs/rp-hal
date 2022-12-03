@@ -68,7 +68,7 @@ https://github.com/rp-rs/rp-hal/ for more details.
 To include this crate in your project, amend your `Cargo.toml` file to include
 
 ```toml
-rp2040-hal = "0.5.0"
+rp2040-hal = "0.6.0"
 ```
 
 To obtain a copy of the source code (e.g. if you want to propose a bug-fix or
@@ -104,11 +104,6 @@ embedded-hal 0.2: Traits of both versions are implemented and can be used
 at the same time.
 The new blocking [SPI traits](https://docs.rs/embedded-hal/1.0.0-alpha.8/embedded_hal/spi/blocking/index.html)
 are not yet implemented.
-
-### Support for critical-section 0.2
-
-While `rp2040-hal` uses critical-section 1.0, it still provides support for version 0.2.
-That version is deprecated, and support will be removed in a future release. Please upgrade.
 
 <!-- CONTRIBUTING -->
 ## Contributing

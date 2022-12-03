@@ -22,7 +22,11 @@ use hal::pac;
 
 // Some traits we need
 use core::fmt::Write;
+use fugit::RateExtU32;
 use hal::Clock;
+
+// UART related types
+use hal::uart::{DataBits, StopBits, UartConfig};
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -88,7 +92,7 @@ fn main() -> ! {
     );
     let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
-            hal::uart::common_configs::_9600_8_N_1,
+            UartConfig::new(9600.Hz(), DataBits::Eight, None, StopBits::One),
             clocks.peripheral_clock.freq(),
         )
         .unwrap();

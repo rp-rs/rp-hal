@@ -157,7 +157,7 @@ impl SioFifo {
 
         // Write the value to the FIFO - the other core will now be able to
         // pop it off its end of the FIFO.
-        self.write(value as u32);
+        self.write(value);
 
         // Fire off an event to the other core
         cortex_m::asm::sev();
@@ -638,7 +638,12 @@ pub type Spinlock30 = Spinlock<30>;
 impl SpinlockValid for Spinlock<30> {}
 
 /// Spinlock number 31 - used by critical section implementation
+#[cfg(feature = "critical-section-impl")]
 pub(crate) type Spinlock31 = Spinlock<31>;
+
+/// Spinlock number 31 - only public if critical-section-impl is not enabled
+#[cfg(not(feature = "critical-section-impl"))]
+pub type Spinlock31 = Spinlock<31>;
 
 impl SpinlockValid for Spinlock<31> {}
 

@@ -8,7 +8,6 @@ mod app {
 
     use embedded_hal::digital::v2::OutputPin;
     use fugit::ExtU64;
-    use fugit::MicrosDurationU32;
     use rp_pico::{
         hal::{
             self,
@@ -19,8 +18,6 @@ mod app {
         },
         XOSC_CRYSTAL_FREQ,
     };
-
-    const SCAN_TIME_US: MicrosDurationU32 = MicrosDurationU32::secs(1);
 
     #[shared]
     struct Shared {

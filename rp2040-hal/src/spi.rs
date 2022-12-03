@@ -178,7 +178,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
         self.device.reset_bring_up(resets);
 
         self.set_baudrate(peri_frequency, baudrate);
-        self.set_format(DS as u8, mode);
+        self.set_format(DS, mode);
         // Always enable DREQ signals -- harmless if DMA is not listening
         self.device
             .sspdmacr
@@ -250,7 +250,91 @@ macro_rules! impl_write {
             type Error = Infallible;
         }
 
-/* disabled for now - nb was migrated to separate crate
+        #[cfg(feature = "eh1_0_alpha")]
+        impl<D: SpiDevice> eh1::SpiBusFlush for Spi<Enabled, D, $nr> {
+            fn flush(&mut self) -> Result<(), Self::Error> {
+                while self.is_busy() {}
+                Ok(())
+            }
+        }
+
+        #[cfg(feature = "eh1_0_alpha")]
+        impl<D: SpiDevice> eh1::SpiBusRead<$type> for Spi<Enabled, D, $nr> {
+            fn read(&mut self, words: &mut [$type]) -> Result<(), Self::Error> {
+                for word in words.iter_mut() {
+                    // write empty word
+                    while !self.is_writable() {}
+                    self.device
+                        .sspdr
+                        .write(|w| unsafe { w.data().bits(0) });
+
+                    // read one word
+                    while !self.is_readable() {}
+                    *word = self.device.sspdr.read().data().bits() as $type;
+                }
+                Ok(())
+            }
+        }
+
+        #[cfg(feature = "eh1_0_alpha")]
+        impl<D: SpiDevice> eh1::SpiBusWrite<$type> for Spi<Enabled, D, $nr> {
+            fn write(&mut self, words: &[$type]) -> Result<(), Self::Error> {
+                for word in words.iter() {
+                    // write one word
+                    while !self.is_writable() {}
+                    self.device
+                        .sspdr
+                        .write(|w| unsafe { w.data().bits(*word as u16) });
+
+                    // drop read wordd
+                    while !self.is_readable() {}
+                    let _ = self.device.sspdr.read().data().bits();
+                }
+                Ok(())
+            }
+        }
+
+        #[cfg(feature = "eh1_0_alpha")]
+        impl<D: SpiDevice> eh1::SpiBus<$type> for Spi<Enabled, D, $nr> {
+            fn transfer(&mut self, read: &mut [$type], write: &[$type]) -> Result<(), Self::Error>{
+                let len = read.len().max(write.len());
+                for i in 0..len {
+                    // write one word. Send empty word if buffer is empty.
+                    let wb = write.get(i).copied().unwrap_or(0);
+                    while !self.is_writable() {}
+                    self.device
+                        .sspdr
+                        .write(|w| unsafe { w.data().bits(wb as u16) });
+
+                    // read one word. Drop extra words if buffer is full.
+                    while !self.is_readable() {}
+                    let rb = self.device.sspdr.read().data().bits() as $type;
+                    if let Some(r) = read.get_mut(i) {
+                        *r = rb;
+                    }
+                }
+
+                Ok(())
+            }
+
+            fn transfer_in_place(&mut self, words: &mut [$type]) -> Result<(), Self::Error>{
+                for word in words.iter_mut() {
+                    // write one word
+                    while !self.is_writable() {}
+                    self.device
+                        .sspdr
+                        .write(|w| unsafe { w.data().bits(*word as u16) });
+
+                    // read one word
+                    while !self.is_readable() {}
+                    *word = self.device.sspdr.read().data().bits() as $type;
+                }
+
+                Ok(())
+            }
+        }
+
+        /* disabled for now - nb was migrated to separate crate
         #[cfg(feature = "eh1_0_alpha")]
         impl<D: SpiDevice> eh1::nb::FullDuplex<$type> for Spi<Enabled, D, $nr> {
             fn read(&mut self) -> Result<$type, nb::Error<Infallible>> {

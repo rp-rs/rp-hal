@@ -228,7 +228,7 @@ impl<P: PIOExt> PIO<P> {
                 });
             self.used_instruction_space |= Self::instruction_mask(p.code.len()) << offset;
             Ok(InstalledProgram {
-                offset: offset as u8,
+                offset,
                 length: p.code.len() as u8,
                 side_set: p.side_set,
                 wrap: p.wrap,
@@ -304,7 +304,25 @@ pub struct InstalledProgram<P> {
 }
 
 impl<P: PIOExt> InstalledProgram<P> {
-    /// Get the warp target (entry point) of the instaled program.
+    /// Change the source and/or target for automatic program wrapping.
+    ///
+    /// This replaces the current wrap bounds with a new set. This can be useful if you are running
+    /// multiple state machines with the same program but using different wrap bounds.
+    ///
+    /// # Returns
+    ///
+    /// * [`Ok`] containing a new program with the provided wrap bounds
+    /// * [`Err`] containing the old program if the provided wrap was invalid (outside the bounds of
+    ///   the program length)
+    pub fn set_wrap(self, wrap: Wrap) -> Result<Self, Self> {
+        if wrap.source < self.length && wrap.target < self.length {
+            Ok(InstalledProgram { wrap, ..self })
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Get the wrap target (entry point) of the installed program.
     pub fn wrap_target(&self) -> u8 {
         self.offset + self.wrap.target
     }
@@ -640,6 +658,28 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
             }
         }
     }
+
+    /// Change the clock divider of a state machine.
+    ///
+    /// Changing the clock divider of a running state machine is allowed
+    /// and guaranteed to not cause any glitches, but the exact timing of
+    /// clock pulses during the change is not specified.
+    pub fn set_clock_divisor(&mut self, divisor: f32) {
+        // sm frequency = clock freq / (CLKDIV_INT + CLKDIV_FRAC / 256)
+        let int = divisor as u16;
+        let frac = ((divisor - int as f32) * 256.0) as u8;
+
+        self.sm.set_clock_divisor(int, frac);
+    }
+
+    /// Change the clock divider of a state machine using a 16.8 fixed point value.
+    ///
+    /// Changing the clock divider of a running state machine is allowed
+    /// and guaranteed to not cause any glitches, but the exact timing of
+    /// clock pulses during the change is not specified.
+    pub fn clock_divisor_fixed_point(&mut self, int: u16, frac: u8) {
+        self.sm.set_clock_divisor(int, frac);
+    }
 }
 
 // Safety: All shared register accesses are atomic.
@@ -658,20 +698,6 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
             program: self.program,
             _phantom: core::marker::PhantomData,
         }
-    }
-
-    /// Change the clock divider of a stopped state machine.
-    pub fn set_clock_divisor(&mut self, divisor: f32) {
-        // sm frequency = clock freq / (CLKDIV_INT + CLKDIV_FRAC / 256)
-        let int = divisor as u16;
-        let frac = ((divisor - int as f32) * 256.0) as u8;
-
-        self.sm.set_clock_divisor(int, frac);
-    }
-
-    /// Change the clock divider of a stopped state machine using a 16.8 fixed point value.
-    pub fn clock_divisor_fixed_point(&mut self, int: u16, frac: u8) {
-        self.sm.set_clock_divisor(int, frac);
     }
 
     /// Sets the pin state for the specified pins.
@@ -2067,9 +2093,8 @@ impl<P: PIOExt> PIOBuilder<P> {
 
                 w.out_sticky().bit(self.out_sticky);
 
-                w.wrap_top().bits(offset as u8 + self.program.wrap.source);
-                w.wrap_bottom()
-                    .bits(offset as u8 + self.program.wrap.target);
+                w.wrap_top().bits(offset + self.program.wrap.source);
+                w.wrap_bottom().bits(offset + self.program.wrap.target);
 
                 let n = match self.mov_status {
                     MovStatusConfig::Tx(n) => {
@@ -2124,7 +2149,7 @@ impl<P: PIOExt> PIOBuilder<P> {
         // to the beginning of the program we loaded in.
         let instr = InstructionOperands::JMP {
             condition: pio::JmpCondition::Always,
-            address: offset as u8,
+            address: offset,
         }
         .encode();
         // Safety: Only instance owning the SM

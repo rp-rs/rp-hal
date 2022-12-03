@@ -280,7 +280,7 @@ fn configure_baudrate(
 
     // First we load the integer part of the divider.
     device.uartibrd.write(|w| unsafe {
-        w.baud_divint().bits(baud_div_int as u16);
+        w.baud_divint().bits(baud_div_int);
         w
     });
 
