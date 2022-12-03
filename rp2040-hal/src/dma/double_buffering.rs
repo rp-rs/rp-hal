@@ -294,23 +294,3 @@ where
         )
     }
 }
-
-/*
-
-DoubleBuffered<(CH1, CH2), RX, TX, ()> {
-    config(...) -> SingleBufferedConfig;
-    is_done() -> bool
-    read_next(BUF) -> DoubleReadBuffer<CH, RX, TX, BUF>
-    write_next(BUF) -> DoubleWriteBuffer<CH, RX, TX, BUF>
-    wait() -> ((CH1, CH2), RX, TX)
-}
-DoubleBuffered<CH, RX, TX, ReadNext<RX2>> {
-    is_done() -> bool
-    wait() -> (DoubleBuffered<CH, RX2, TX>, RX)
-}
-DoubleBuffered<CH, RX, TX, WriteNext<TX2>> {
-    is_done() -> bool
-    wait() -> (DoubleBuffered<CH, RX2, TX>, RX)
-}
-
-*/
