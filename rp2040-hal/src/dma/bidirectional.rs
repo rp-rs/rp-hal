@@ -97,17 +97,3 @@ where
         panic!("Not yet implemented.");
     }
 }
-
-/*
-
-Bidirectional<(CH1, CH2), FROM, BIDI, TO> {
-    config(...) -> BidirectionalConfig;
-    from_is_done() -> bool
-    to_is_done() -> bool
-    is_done() -> bool
-    from_wait() -> (CH1, FROM, SingleBuffered<CH2, BIDI, TO>)
-    to_wait() -> (CH2, SingleBuffered<CH2, FROM, BIDI>, TO)
-    wait() -> (CH1, CH2, FROM, BIDI, TO)
-}
-
-*/
