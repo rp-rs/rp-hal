@@ -11,6 +11,7 @@
 
 use cortex_m::singleton;
 use cortex_m_rt::entry;
+use embedded_hal::digital::v2::OutputPin;
 use fugit::RateExtU32;
 use hal::dma::{BidirectionalConfig, DMAExt};
 use hal::pac;
@@ -31,6 +32,7 @@ const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 #[entry]
 fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
+    let core = pac::CorePeripherals::take().unwrap();
 
     // Setup clocks and the watchdog.
     let mut watchdog = hal::watchdog::Watchdog::new(pac.WATCHDOG);
@@ -71,6 +73,9 @@ fn main() -> ! {
 
     // Initialize DMA.
     let dma = pac.DMA.split(&mut pac.RESETS);
+    // Configure GPIO25 as an output
+    let mut led_pin = pins.gpio25.into_push_pull_output();
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // Use DMA to transfer some bytes (single buffering).
     let tx_buf = singleton!(: [u8; 16] = [0x42; 16]).unwrap();
@@ -79,15 +84,21 @@ fn main() -> ! {
     let ((_ch0, _ch1), tx_buf, _spi, rx_buf) = transfer.wait();
     for i in 0..rx_buf.len() {
         if rx_buf[i] != tx_buf[i] {
-            // TODO: Signal failure using an LED.
+            // Fast blink on error
+            loop {
+                led_pin.set_high().unwrap();
+                delay.delay_ms(100);
+                led_pin.set_low().unwrap();
+                delay.delay_ms(100);
+            }
         }
     }
 
-    // Use DMA to continuously transfer data (double buffering).
-    // TODO
-
-    #[allow(clippy::empty_loop)]
+    // Slow blink on success
     loop {
-        // Empty loop
+        led_pin.set_high().unwrap();
+        delay.delay_ms(500);
+        led_pin.set_low().unwrap();
+        delay.delay_ms(500);
     }
 }
