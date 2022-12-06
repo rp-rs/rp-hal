@@ -1,4 +1,9 @@
-use super::{single_channel::SingleChannel, Pace, ReadTarget, WriteTarget};
+use core::sync::atomic::{compiler_fence, Ordering};
+
+use super::{
+    single_channel::{ChannelConfig, SingleChannel},
+    Pace, ReadTarget, WriteTarget,
+};
 
 /// DMA configuration for sending and receiving data simultaneously
 pub struct BidirectionalConfig<CH1, CH2, FROM, BIDI, TO>
@@ -53,13 +58,25 @@ where
     }
 
     /// Start the DMA transfer
-    pub fn start(self) -> Bidirectional<CH1, CH2, FROM, BIDI, TO> {
-        // TODO
-        let _ch = self.ch;
-        let _from = self.from;
-        let _bidi = self.bidi;
-        let _to = self.to;
-        panic!("Not yet implemented.");
+    pub fn start(mut self) -> Bidirectional<CH1, CH2, FROM, BIDI, TO> {
+        cortex_m::asm::dsb();
+        compiler_fence(Ordering::SeqCst);
+
+        // Configure the DMA channel and start it.
+        self.ch
+            .0
+            .config(&self.from, &mut self.bidi, self.from_pace, None, false);
+        self.ch
+            .1
+            .config(&self.bidi, &mut self.to, self.to_pace, None, false);
+        self.ch.0.start_both(&mut self.ch.1);
+
+        Bidirectional {
+            ch: self.ch,
+            from: self.from,
+            bidi: self.bidi,
+            to: self.to,
+        }
     }
 }
 
@@ -86,14 +103,36 @@ where
     BIDI: ReadTarget<ReceivedWord = WORD> + WriteTarget<TransmittedWord = WORD>,
     TO: WriteTarget<TransmittedWord = WORD>,
 {
+    /// Check if an interrupt is pending for either channel and clear the corresponding pending bit
+    pub fn check_irq0(&mut self) -> bool {
+        let a = self.ch.0.check_irq0();
+        let b = self.ch.1.check_irq1();
+        a | b
+    }
+
+    /// Check if an interrupt is pending for either channel and clear the corresponding pending bit
+    pub fn check_irq1(&mut self) -> bool {
+        let a = self.ch.0.check_irq1();
+        let b = self.ch.1.check_irq1();
+        a | b
+    }
+
+    /// Check if the transfer is completed
+    pub fn is_done(&self) -> bool {
+        let a = self.ch.1.ch().ch_ctrl_trig.read().busy().bit_is_set();
+        let b = self.ch.0.ch().ch_ctrl_trig.read().busy().bit_is_set();
+        !(a | b)
+    }
+
     /// Block until transfer is complete
     pub fn wait(self) -> ((CH1, CH2), FROM, BIDI, TO) {
-        // TODO
-        // Reading self.value to satisfy clippy. Remove once implemented
-        let _ch = self.ch;
-        let _from = self.from;
-        let _bidi = self.bidi;
-        let _to = self.to;
-        panic!("Not yet implemented.");
+        while !self.is_done() {}
+
+        // Make sure that memory contents reflect what the user intended.
+        cortex_m::asm::dsb();
+        compiler_fence(Ordering::SeqCst);
+
+        // TODO: Use a tuple type?
+        ((self.ch.0, self.ch.1), self.from, self.bidi, self.to)
     }
 }
