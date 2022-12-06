@@ -9,7 +9,6 @@ use panic_probe as _;
 use rp2040_hal as hal; // memory layout // panic handler
 use rp2040_hal::spi;
 use rp2040_hal::pac::SPI0;
-// use rp2040_hal::spi::Spi::SPI0;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -45,20 +44,18 @@ mod testdata {
 
 #[defmt_test::tests]
 mod tests {
-    use fugit::RateExtU32;
     use crate::testdata;
     use crate::State;
     use crate::XTAL_FREQ_HZ;
     use defmt::assert_eq;
     use defmt_rtt as _;
+    use fugit::RateExtU32;
+    use hal::{clocks::init_clocks_and_plls, pac, watchdog::Watchdog};
     use panic_probe as _;
     use rp2040_hal as hal;
+    use rp2040_hal::dma::BidirectionalConfig;
+    use rp2040_hal::dma::DMAExt;
     use rp2040_hal::Clock;
-    use hal::spi::Enabled;
-    use pac::SPI0;
-    use hal::{clocks::init_clocks_and_plls, pac, watchdog::Watchdog};
-    use rp2040_hal::dma::{SingleBufferingConfig, BidirectionalConfig, DMAExt};
-
 
     #[init]
     fn setup() -> State {
@@ -83,7 +80,7 @@ mod tests {
 
         let dma = pac.DMA.split(&mut pac.RESETS);
 
-         // Setup the pins.
+        // Setup the pins.
         let sio = hal::sio::Sio::new(pac.SIO);
         let pins = hal::gpio::Pins::new(
             pac.IO_BANK0,
@@ -107,7 +104,8 @@ mod tests {
         );
 
         State {
-            channels: Some(dma), spi: Some(spi),
+            channels: Some(dma),
+            spi: Some(spi),
         }
     }
 
@@ -117,25 +115,9 @@ mod tests {
             if let Some(spi) = state.spi.take() {
                 let rx_buf = cortex_m::singleton!(: [u8; 10] = [0; 10]).unwrap();
                 let tx_buf = cortex_m::singleton!(: [u8; 10] = testdata::ARRAY_U8).unwrap();
-    
-                // let transfer = BidirectionalConfig::new((dma.ch0, dma.ch1), tx_buf, spi, rx_buf).start();
-                // let ((_ch0, _ch1), tx_buf, _spi, rx_buf) = transfer.wait();
 
-                // We can't pass the same spi peripheral to 2 dma channels, so fabricate a token to use for this
-                let spi_rx: hal::spi::Spi<Enabled, SPI0, 8> = unsafe { core::mem::transmute(()) };
-
-                // We need these to start at the same time or they'll be desync'd.
-                // Having interrupts disabled seems to work from a cold boot. I suspect it is sufficiently racy that we can't trust it
-                let (transfer_tx, transfer_rx) = cortex_m::interrupt::free(|_t| {
-                    let transfer_rx = SingleBufferingConfig::new(dma.ch1, spi_rx, rx_buf).start();
-                    let transfer_tx = SingleBufferingConfig::new(dma.ch0, tx_buf, spi).start();
-                    (transfer_tx, transfer_rx)
-                });
-
-                // Wait for both DMA channels to finish
-                let (_ch0, tx_buf, _spi) = transfer_tx.wait();
-                let (_ch1, _spi_rx, rx_buf) = transfer_rx.wait();
-
+                let transfer = BidirectionalConfig::new((dma.ch0, dma.ch1), tx_buf, spi, rx_buf).start();
+                let ((_ch0, _ch1), tx_buf, _spi, rx_buf) = transfer.wait();
 
                 let first = tx_buf.iter();
                 let second = rx_buf.iter();
