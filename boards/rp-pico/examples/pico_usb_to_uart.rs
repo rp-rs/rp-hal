@@ -11,11 +11,11 @@
 #![no_main]
 
 use panic_halt as _;
-#[rtic::app(device = rp_pico::hal::pac, peripherals = true, dispatchers = [I2C0_IRQ])]
+#[rtic::app(device = rp_pico::hal::pac, peripherals = true, dispatchers = [I2C0_IRQ, I2C1_IRQ])]
 mod app {
 
     // GPIO traits
-    use fugit::RateExtU32;
+    use fugit::{MicrosDurationU32, RateExtU32};
     use fugit::ExtU64;
 
     // Ensure we halt the program on panic (if we don't mention this crate it won't
@@ -58,13 +58,14 @@ mod app {
     type Uart = hal::uart::UartPeripheral<hal::uart::Enabled, pac::UART0, UartPins>;
 
     use heapless::spsc::{Consumer, Producer, Queue};
+
     use rp_pico::{
         hal::{
             self,
             clocks::init_clocks_and_plls,
             watchdog::Watchdog,
             Sio,
-            timer::{monotonic::Monotonic, Alarm0},
+            timer::Alarm
         },
         XOSC_CRYSTAL_FREQ,
     };
@@ -78,11 +79,15 @@ mod app {
     static mut USB_QUEUE: Queue<u8, DOUBLE_BUF_SIZE> = Queue::new();
     static mut UART_QUEUE: Queue<u8, DOUBLE_BUF_SIZE> = Queue::new();
 
+    const SCAN_TIME_US: MicrosDurationU32 = MicrosDurationU32::secs(1);
+
     #[shared]
     struct Shared {
         led: hal::gpio::Pin<hal::gpio::pin::bank0::Gpio25, hal::gpio::PushPullOutput>,
         uart: Uart,
         serial: SerialPort<'static, hal::usb::UsbBus>,
+        timer: hal::Timer,
+        alarm: hal::timer::Alarm0,
     }
 
     #[local]
@@ -94,11 +99,8 @@ mod app {
         uart_consumer: Consumer<'static, u8, DOUBLE_BUF_SIZE>,
     }
 
-    #[monotonic(binds = TIMER_IRQ_0, default = true)]
-    type MyMono = Monotonic<Alarm0>;
-
     #[init]
-    fn init(c: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(mut c: init::Context) -> (Shared, Local, init::Monotonics) {
         // Soft-reset does not release the hardware spinlocks
         // Release them now to avoid a deadlock after debug or watchdog reset
         unsafe {
@@ -181,14 +183,19 @@ mod app {
         let (uart_producer, uart_consumer) = unsafe { UART_QUEUE.split() };
 
         let mut timer = hal::Timer::new(c.device.TIMER, &mut resets);
-        let alarm = timer.alarm_0().unwrap();
-        blink_led::spawn_after(500.millis()).unwrap();
+        let mut alarm = timer.alarm_0().unwrap();
+        let _ = alarm.schedule(SCAN_TIME_US);
+        alarm.enable_interrupt();
+
+        c.core.SCB.set_sleepdeep();
 
         (
             Shared {
                 led,
                 serial,
                 uart,
+                timer,
+                alarm
             },
             Local {
                 usb_producer,
@@ -197,8 +204,18 @@ mod app {
                 uart_consumer,
                 usb_device,
             },
-            init::Monotonics(Monotonic::new(timer, alarm)),
+            init::Monotonics()
         )
+    }
+
+    #[idle]
+    fn idle(cx: idle::Context) -> ! {
+        loop {
+            // Now Wait For Interrupt is used instead of a busy-wait loop
+            // to allow MCU to sleep between interrupts
+            // https://developer.arm.com/documentation/ddi0406/c/Application-Level-Architecture/Instruction-Details/Alphabetical-list-of-instructions/WFI
+            rtic::export::wfi()
+        }
     }
 
     #[task(
@@ -222,18 +239,18 @@ mod app {
 
             let len = c.local.usb_producer.len();
             if len > BUF_SIZE {
-                usb_write::spawn_after(0.millis()).unwrap();
+                usb_write::spawn().unwrap();
             } else if len == DOUBLE_BUF_SIZE {
                 // Queue is full. Retry again
                 pac::NVIC::pend(hal::pac::Interrupt::UART0_IRQ);
             }
         }
-        usb_write::spawn_after(0.millis()).unwrap();
+        usb_write::spawn().unwrap();
     }
 
     #[task(
         binds = USBCTRL_IRQ,
-        priority = 1,
+        priority = 2,
         shared = [serial],
         local = [usb_device, uart_producer]
     )]
@@ -258,7 +275,7 @@ mod app {
                             buf.iter().take(count).for_each(|b|
                                 uart_producer.enqueue(*b).ok().unwrap()
                             );
-                            uart_write::spawn_after(0.millis()).unwrap();
+                            uart_write::spawn().unwrap();
                             count
                         }
                         _ => 0
@@ -275,7 +292,7 @@ mod app {
     }
 
     #[task(
-        priority = 1,
+        priority = 3,
         shared = [uart],
         local = [uart_consumer]
     )]
@@ -286,7 +303,7 @@ mod app {
     }
 
     #[task(
-        priority = 1,
+        priority = 4,
         shared = [serial],
         local = [usb_consumer]
     )]
@@ -308,10 +325,12 @@ mod app {
     }
 
     #[task(
-        shared = [led],
+        binds = TIMER_IRQ_0,
+        priority = 1,
+        shared = [timer, alarm, led],
         local = [tog: bool = true],
     )]
-    fn blink_led(mut c: blink_led::Context) {
+    fn timer_irq(mut c: timer_irq::Context) {
         if *c.local.tog {
             c.shared.led.lock(|l| l.set_high().unwrap());
         } else {
@@ -319,6 +338,10 @@ mod app {
         }
         *c.local.tog = !*c.local.tog;
 
-        blink_led::spawn_after(500.millis()).unwrap();
+        let mut alarm = c.shared.alarm;
+        (alarm).lock(|a| {
+            a.clear_interrupt();
+            let _ = a.schedule(SCAN_TIME_US);
+        });
     }
 }
