@@ -27,6 +27,7 @@ use eh1_0_alpha::spi as eh1;
 use embedded_hal::blocking::spi;
 use embedded_hal::spi::{FullDuplex, Mode, Phase, Polarity};
 use fugit::HertzU32;
+use pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
 use pac::RESETS;
 
 /// State of the SPI
@@ -55,18 +56,18 @@ pub trait SpiDevice: Deref<Target = pac::spi0::RegisterBlock> + SubsystemReset {
 
 impl SpiDevice for pac::SPI0 {
     fn tx_dreq() -> u8 {
-        16
+        TREQ_SEL_A::SPI0_TX.into()
     }
     fn rx_dreq() -> u8 {
-        17
+        TREQ_SEL_A::SPI0_RX.into()
     }
 }
 impl SpiDevice for pac::SPI1 {
     fn tx_dreq() -> u8 {
-        18
+        TREQ_SEL_A::SPI1_TX.into()
     }
     fn rx_dreq() -> u8 {
-        19
+        TREQ_SEL_A::SPI1_RX.into()
     }
 }
 
