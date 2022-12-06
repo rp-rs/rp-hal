@@ -127,6 +127,7 @@ pub(crate) trait ChannelConfig {
 
     fn set_chain_to_enabled<CH: SingleChannel>(&mut self, other: &mut CH);
     fn start(&mut self);
+    fn start_both<CH: SingleChannel>(&mut self, other: &mut CH);
 }
 
 impl<CH: SingleChannel> ChannelConfig for CH {
@@ -204,5 +205,14 @@ impl<CH: SingleChannel> ChannelConfig for CH {
         unsafe { &*rp2040_pac::DMA::ptr() }
             .multi_chan_trigger
             .write(|w| unsafe { w.bits(1 << self.id()) });
+    }
+
+    fn start_both<CH2: SingleChannel>(&mut self, other: &mut CH2) {
+        // Safety: The write does not interfere with any other writes, it only affects this
+        // channel and other (which we have an exclusive borrow of).
+        let channel_flags = 1 << self.id() | 1 << other.id();
+        unsafe { &*rp2040_pac::DMA::ptr() }
+            .multi_chan_trigger
+            .write(|w| unsafe { w.bits(channel_flags) });
     }
 }
