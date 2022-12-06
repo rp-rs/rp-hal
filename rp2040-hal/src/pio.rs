@@ -6,6 +6,7 @@ use crate::{
     resets::SubsystemReset,
 };
 use pio::{Instruction, InstructionOperands, Program, SideSet, Wrap};
+use rp2040_pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
 use rp2040_pac::{PIO0, PIO1};
 
 const PIO_INSTRUCTION_COUNT: usize = 32;
@@ -1289,9 +1290,9 @@ impl<SM: ValidStateMachine> Rx<SM> {
     /// each PIO has a unique value.
     pub fn dreq_value(&self) -> u8 {
         if self.block as usize == 0x5020_0000usize {
-            crate::dma::DREQ_PIO0_RX0 + (SM::id() as u8)
+            TREQ_SEL_A::PIO0_RX0 as u8 + (SM::id() as u8)
         } else {
-            crate::dma::DREQ_PIO1_RX0 + (SM::id() as u8)
+            TREQ_SEL_A::PIO1_RX0 as u8 + (SM::id() as u8)
         }
     }
 
@@ -1439,9 +1440,9 @@ impl<SM: ValidStateMachine> Tx<SM> {
     /// each PIO has a unique value.
     pub fn dreq_value(&self) -> u8 {
         if self.block as usize == 0x5020_0000usize {
-            crate::dma::DREQ_PIO0_TX0 + (SM::id() as u8)
+            TREQ_SEL_A::PIO0_TX0 as u8 + (SM::id() as u8)
         } else {
-            crate::dma::DREQ_PIO1_TX0 + (SM::id() as u8)
+            TREQ_SEL_A::PIO1_TX0 as u8 + (SM::id() as u8)
         }
     }
 
