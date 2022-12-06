@@ -15,8 +15,8 @@ use panic_halt as _;
 mod app {
 
     // GPIO traits
-    use fugit::{MicrosDurationU32, RateExtU32};
     use fugit::ExtU64;
+    use fugit::{MicrosDurationU32, RateExtU32};
 
     // Ensure we halt the program on panic (if we don't mention this crate it won't
     // be linked)
@@ -60,13 +60,7 @@ mod app {
     use heapless::spsc::{Consumer, Producer, Queue};
 
     use rp_pico::{
-        hal::{
-            self,
-            clocks::init_clocks_and_plls,
-            watchdog::Watchdog,
-            Sio,
-            timer::Alarm
-        },
+        hal::{self, clocks::init_clocks_and_plls, timer::Alarm, watchdog::Watchdog, Sio},
         XOSC_CRYSTAL_FREQ,
     };
     const BUF_SIZE: usize = 64;
@@ -117,8 +111,8 @@ mod app {
             &mut resets,
             &mut watchdog,
         )
-            .ok()
-            .unwrap();
+        .ok()
+        .unwrap();
 
         let sio = Sio::new(c.device.SIO);
         let pins = rp_pico::Pins::new(
@@ -195,7 +189,7 @@ mod app {
                 serial,
                 uart,
                 timer,
-                alarm
+                alarm,
             },
             Local {
                 usb_producer,
@@ -204,7 +198,7 @@ mod app {
                 uart_consumer,
                 usb_device,
             },
-            init::Monotonics()
+            init::Monotonics(),
         )
     }
 
@@ -272,13 +266,13 @@ mod app {
                 if usb_device.poll(&mut [serial]) {
                     match serial.read(&mut buf) {
                         Ok(count) => {
-                            buf.iter().take(count).for_each(|b|
-                                uart_producer.enqueue(*b).ok().unwrap()
-                            );
+                            buf.iter()
+                                .take(count)
+                                .for_each(|b| uart_producer.enqueue(*b).ok().unwrap());
                             uart_write::spawn().unwrap();
                             count
                         }
-                        _ => 0
+                        _ => 0,
                     }
                 } else {
                     0
