@@ -1,7 +1,7 @@
-# [waveshare-rp2040-lcd-0-96] - Board Support for the [Waveshare RP2040 LCD 0.96"]
+# [waveshare-rp2040-lcd-0-96] - Board Support for the [Waveshare RP2040 LCD 0.96]
 
 You should include this crate if you are writing code that you want to run on
-an [Waveshare RP2040 LCD 0.96"] - a very small RP2040 breakout board with USB-C, 
+an [Waveshare RP2040 LCD 0.96] - a very small RP2040 breakout board with USB-C, 
 a 65K IPS LCD 160x80, 16MBit Flash and 1A battery charger from Waveshare.
 
 This crate includes the [rp2040-hal], but also configures each pin of the
