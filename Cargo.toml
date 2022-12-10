@@ -22,7 +22,8 @@ members = [
     "boards/sparkfun-pro-micro-rp2040",
     "boards/sparkfun-thing-plus-rp2040",
     "boards/vcc-gnd-yd-rp2040",
-    "boards/waveshare-rp2040-zero"
+    "boards/waveshare-rp2040-zero",
+    "boards/waveshare-rp2040-lcd-0-96",
 ]
 
 [patch.'https://github.com/rp-rs/rp-hal.git']

@@ -333,7 +333,6 @@ RP2040 chip according to how it is connected up on the YD-RP2040.
 [VCC-GND Studio YD-RP2040]: http://152.32.187.208:8080/yd-data/YD-RP2040/
 [vcc-gnd-yd-rp2040]: https://github.com/rp-rs/rp-hal/tree/main/boards/vcc-gnd-yd-rp2040
 
-
 ### [waveshare-rp2040-zero] - Board Support for the [Waveshare RP2040 Zero]
 
 You should include this crate if you are writing code that you want to run on
@@ -344,6 +343,18 @@ RP2040 chip according to how it is connected up on the Feather.
 
 [Waveshare RP2040 Zero]: https://www.waveshare.com/wiki/RP2040-Zero
 [waveshare-rp2040-zero]: https://github.com/rp-rs/rp-hal/tree/main/boards/waveshare-rp2040-zero
+
+### [waveshare-rp2040-lcd-0_96] - Board Support for the [Waveshare RP2040 LCD 0.96"]
+
+You should include this crate if you are writing code that you want to run on
+an [Waveshare RP2040 LCD 0.96"] - a very small RP2040 breakout board with USB-C, 
+a 65K IPS LCD 160x80, 16MBit Flash and 1A battery charger from Waveshare.
+
+This crate includes the [rp2040-hal], but also configures each pin of the
+RP2040 chip according to how it is connected up on the Feather.
+
+[Waveshare RP2040 LCD 0.96"]: https://www.waveshare.com/wiki/RP2040-LCD-0.96
+[waveshare-rp2040-lcd-0_96]: https://github.com/rp-rs/rp-hal/tree/main/boards/waveshare-rp2040-lcd-0_96
 
 <!-- PROGRAMMING -->
 ## Programming
