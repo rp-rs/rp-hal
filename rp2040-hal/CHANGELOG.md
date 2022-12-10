@@ -32,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add a method to allow setting the PIO's clock divisor without floats - @ithinuel
 - Use TimerInstant in Timer::GetCounter & add Alarm::schedule_at - @ithinuel
 
+### Removed
+
+- Removed support for critical-section 0.2 (was already deprecated) - @jannic
+
 ## [0.6.0] - 2022-08-26
 
 ### Added

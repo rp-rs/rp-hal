@@ -158,7 +158,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
         self.device.reset_bring_up(resets);
 
         self.set_baudrate(peri_frequency, baudrate);
-        self.set_format(DS as u8, mode);
+        self.set_format(DS, mode);
         // Always enable DREQ signals -- harmless if DMA is not listening
         self.device
             .sspdmacr

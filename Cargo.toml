@@ -23,6 +23,7 @@ members = [
     "boards/sparkfun-pro-micro-rp2040",
     "boards/sparkfun-thing-plus-rp2040",
     "boards/vcc-gnd-yd-rp2040",
+    "boards/waveshare-rp2040-zero"
 ]
 
 [patch.'https://github.com/rp-rs/rp-hal.git']
@@ -30,4 +31,4 @@ rp2040-hal = { path = "./rp2040-hal" }
 
 [patch.crates-io]
 rp2040-hal = { path = "./rp2040-hal" }
-i2c-pio = { git = "https://github.com/ithinuel/i2c-pio-rs", branch = "fix-pio-exec-instruction" }
+i2c-pio = { git = "https://github.com/rp-rs/i2c-pio-rs" }
