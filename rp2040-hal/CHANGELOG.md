@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Avoid losing USB status events by reading ints rather than sie_status in poll - @ithinuel
+- Allow setting clock divisors on running state machines - @jannic
+- Remove unnecessary `mut` from `static mut LOCK_OWNER: AtomicU8` in critical section impl - @zachs18
 - Update dependency on rp2040-pac to 0.4.0 - @jannic
 - Update embedded-hal alpha support to version 1.0.0-alpha.9 - @jannic
   (Non-blocking traits were moved to embedded-hal-nb, which is not yet supported)
@@ -26,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add docs.rs metadata - @icedrocket
+- Implement embedded-hal aplha SPI traits - @ptpaterson
+- Add derive(Debug) and derive(defmt::Format) to error types - @9names
+- Add ability to modify installed PIO program wrap bounds - @davidcole1340
 - Add rtic-monotonic support for timer & alarms (feature gated) - @ithinuel
 - Add SPI is_busy function - @papyDoctor
 - Add set_fifos/set_rx_watermark/set_tx_watermark - @papyDoctor
