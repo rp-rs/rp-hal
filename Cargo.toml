@@ -3,27 +3,6 @@ resolver = "2"
 members = [
     "rp2040-hal",
     "rp2040-hal-macros",
-    "boards/adafruit-feather-rp2040",
-    "boards/adafruit-itsy-bitsy-rp2040",
-    "boards/adafruit-kb2040",
-    "boards/adafruit-macropad",
-    "boards/adafruit-qt-py-rp2040",
-    "boards/adafruit-trinkey-qt2040",
-    "boards/arduino_nano_connect",
-    "boards/pimoroni-badger2040",
-    "boards/pimoroni-pico-explorer",
-    "boards/pimoroni-pico-lipo-16mb",
-    "boards/pimoroni-plasma-2040",
-    "boards/pimoroni-servo2040",
-    "boards/pimoroni-tiny2040",
-    "boards/rp-pico",
-    "boards/seeeduino-xiao-rp2040",
-    "boards/solderparty-rp2040-stamp",
-    "boards/sparkfun-pro-micro-rp2040",
-    "boards/sparkfun-thing-plus-rp2040",
-    "boards/vcc-gnd-yd-rp2040",
-    "boards/waveshare-rp2040-zero",
-    "boards/waveshare-rp2040-lcd-0-96",
 ]
 
 [patch.'https://github.com/rp-rs/rp-hal.git']
@@ -31,4 +10,3 @@ rp2040-hal = { path = "./rp2040-hal" }
 
 [patch.crates-io]
 rp2040-hal = { path = "./rp2040-hal" }
-i2c-pio = { git = "https://github.com/rp-rs/i2c-pio-rs" }
