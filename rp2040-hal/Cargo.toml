@@ -15,7 +15,6 @@ targets = ["thumbv6m-none-eabi"]
 
 [dependencies]
 cortex-m = "0.7.2"
-cortex-m-rt = ">=0.6.15,<0.8"
 embedded-hal = { version = "0.2.5", features = ["unproven"] }
 eh1_0_alpha = { package = "embedded-hal", version = "=1.0.0-alpha.9",  optional = true }
 fugit = "0.3.6"
