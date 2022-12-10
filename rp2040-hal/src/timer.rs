@@ -230,7 +230,9 @@ macro_rules! impl_alarm {
 
                     // If it is not set, it has already triggered.
                     let now = get_counter(timer);
-                    if now > timestamp && (timer.armed.read().bits() & $armed_bit_mask) != 0 {
+                    if now.const_cmp(timestamp) == core::cmp::Ordering::Greater
+                        && (timer.armed.read().bits() & $armed_bit_mask) != 0
+                    {
                         // timestamp was set in the past
 
                         // safety: TIMER.armed is a write-clear register, and there can only be
