@@ -55,12 +55,14 @@ the fact that many of the drivers included implement the generic
 hardware-abstraction interfaces defined in the Rust Embedded Working Group's
 [embedded-hal](https://github.com/rust-embedded/embedded-hal) crate.
 
-We also provide a series of *Board Support Package* (BSP) crates, which take
+We also provide a series of [*Board Support Package* (BSP) crates][BSPs], which take
 this HAL crate and pre-configure the pins according to a specific PCB design. If
 you are using one of the supported boards, you should use one of those crates in
 preference, and return here to see documentation about specific peripherals on
 the RP2040 and how to use them. See the `boards` folder in
-https://github.com/rp-rs/rp-hal/ for more details.
+https://github.com/rp-rs/rp-hal-boards/ for more details.
+
+[BSPs]: https://github.com/rp-rs/rp-hal-boards/
 
 <!-- GETTING STARTED -->
 ## Getting Started
