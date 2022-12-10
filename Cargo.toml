@@ -31,4 +31,3 @@ rp2040-hal = { path = "./rp2040-hal" }
 
 [patch.crates-io]
 rp2040-hal = { path = "./rp2040-hal" }
-i2c-pio = { git = "https://github.com/rp-rs/i2c-pio-rs" }

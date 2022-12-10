@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Removed
+
+- Removed pico_i2c_pio example
+
 ## 0.5.0 - 2022-08-26
 
 ### Added
