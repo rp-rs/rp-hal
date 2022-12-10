@@ -72,24 +72,6 @@ fn main() -> ! {
     sm.set_pindirs([(led_pin_id, hal::pio::PinDir::Output)]);
     sm.start();
 
-    // Read and write without DMA.
-    /*let mut failure = false;
-    for i in 0..message.len() {
-        tx.write(message[i]);
-        let mut value = None;
-        while value.is_none() {
-            value = rx.read();
-        }
-        if value.unwrap() != message[i] {
-            failure = true;
-        }
-    }
-    if failure {
-        // Abort.
-        #[allow(clippy::empty_loop)]
-        loop {}
-    }*/
-
     let dma = pac.DMA.split(&mut pac.RESETS);
 
     // Transfer a single message via DMA.
@@ -107,7 +89,7 @@ fn main() -> ! {
         }
     }
 
-    // Chain some buffers together.
+    // Chain some buffers together for continuous transfers
     let tx_buf2 = singleton!(: [u32; 4] = message).unwrap();
     let rx_buf2 = singleton!(: [u32; 4] = [0; 4]).unwrap();
     let tx_transfer = DoubleBufferingConfig::new((ch0, ch1), tx_buf, tx).start();
@@ -115,7 +97,7 @@ fn main() -> ! {
     let rx_transfer = DoubleBufferingConfig::new((dma.ch2, dma.ch3), rx, rx_buf).start();
     let mut rx_transfer = rx_transfer.write_next(rx_buf2);
     loop {
-        // We simply immediately enqueue the buffers again.
+        // When a transfer is done we immediately enqueue the buffers again.
         if tx_transfer.is_done() {
             let (tx_buf, next_tx_transfer) = tx_transfer.wait();
             tx_transfer = next_tx_transfer.read_next(tx_buf);
@@ -132,23 +114,4 @@ fn main() -> ! {
             rx_transfer = next_rx_transfer.write_next(rx_buf);
         }
     }
-
-    /*// Endless transfer from a ring buffer via DMA - note that unaligned ring buffers require three
-    // (!) DMA channels, one for each buffer and one to control the other two channels.
-    // TODO: The API should use two buffers, so that the transfer can then return one half of the
-    // buffer while the other one is in progress of being transferred.
-    let tx_buf = singleton!(: AlignedBuffer = AlignedBuffer(message)).unwrap();
-    let rx_buf = singleton!(: AlignedBuffer = AlignedBuffer([0; 4])).unwrap();
-    Endless::new((ch0, ch1), &tx_buf.0, tx)
-        .start_ring()
-        .unwrap();
-    Endless::new((dma.ch2, dma.ch3), rx, &mut rx_buf.0)
-        .start_ring()
-        .unwrap();
-
-    #[allow(clippy::empty_loop)]
-    loop {}*/
 }
-
-/*#[repr(align(16))]
-struct AlignedBuffer([u32; 4]);*/
