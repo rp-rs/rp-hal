@@ -13,7 +13,7 @@
     <a href="https://docs.rs/rp2040-hal"><strong>Explore the API docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/rp-rs/rp-hal/tree/main/boards/pico/examples">View Demos</a>
+    <a href="https://github.com/rp-rs/rp-hal-boards/tree/main/boards/rp-pico/examples">View Demos</a>
     ·
     <a href="https://github.com/rp-rs/rp-hal/issues">Report a Bug</a>
     ·
@@ -70,7 +70,7 @@ https://github.com/rp-rs/rp-hal-boards/ for more details.
 To include this crate in your project, amend your `Cargo.toml` file to include
 
 ```toml
-rp2040-hal = "0.6.0"
+rp2040-hal = "0.7.0"
 ```
 
 To obtain a copy of the source code (e.g. if you want to propose a bug-fix or

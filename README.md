@@ -13,7 +13,7 @@
     <a href="https://docs.rs/rp2040-hal"><strong>Explore the API docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/rp-rs/rp-hal/tree/main/boards/rp-pico/examples">View Demos</a>
+    <a href="https://github.com/rp-rs/rp-hal-boards/tree/main/boards/rp-pico/examples">View Demos</a>
     ·
     <a href="https://github.com/rp-rs/rp-hal/issues">Report a Bug</a>
     ·
