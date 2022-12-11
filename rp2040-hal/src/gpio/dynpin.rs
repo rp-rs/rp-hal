@@ -74,8 +74,7 @@
 //! error. If the [`DynPin`] is not in the correct [`DynPinMode`] for the
 //! operation, the trait functions will return
 //! [`InvalidPinType`](Error::InvalidPinType).
-use super::Interrupt;
-use super::InterruptOverride;
+use super::{Interrupt, InterruptOverride};
 use super::pin::{Pin, PinId, PinMode, ValidPinMode};
 use super::reg::RegisterInterface;
 use core::convert::TryFrom;
