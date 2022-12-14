@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Fixed: First frame is getting lost on a USB-CDC device - @MuratUrsavas
 - Moved BSP crates to separate repo at https://github.com/rp-rs/rp-hal-boards - @jannic
 - Avoid losing USB status events by reading ints rather than sie_status in poll - @ithinuel
 - Allow setting clock divisors on running state machines - @jannic
