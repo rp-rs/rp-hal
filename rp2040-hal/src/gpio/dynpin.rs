@@ -76,6 +76,7 @@
 //! [`InvalidPinType`](Error::InvalidPinType).
 use super::pin::{Pin, PinId, PinMode, ValidPinMode};
 use super::reg::RegisterInterface;
+use super::{Interrupt, InterruptOverride};
 use core::convert::TryFrom;
 
 #[cfg(feature = "eh1_0_alpha")]
@@ -338,6 +339,48 @@ impl DynPin {
         } else {
             Err(Error::InvalidPinMode)
         }
+    }
+
+    /// Clear interrupt.
+    #[inline]
+    pub fn clear_interrupt(&self, interrupt: Interrupt) {
+        self.regs.clear_interrupt(interrupt)
+    }
+
+    /// Interrupt status.
+    #[inline]
+    pub fn interrupt_status(&self, interrupt: Interrupt) -> bool {
+        self.regs.interrupt_status(interrupt)
+    }
+
+    /// Is interrupt enabled.
+    #[inline]
+    pub fn is_interrupt_enabled(&self, interrupt: Interrupt) -> bool {
+        self.regs.is_interrupt_enabled(interrupt)
+    }
+
+    /// Enable or disable interrupt
+    #[inline]
+    pub fn set_interrupt_enabled(&self, interrupt: Interrupt, enabled: bool) {
+        self.regs.set_interrupt_enabled(interrupt, enabled)
+    }
+
+    /// Is interrupt forced.
+    #[inline]
+    pub fn is_interrupt_forced(&self, interrupt: Interrupt) -> bool {
+        self.regs.is_interrupt_forced(interrupt)
+    }
+
+    /// Force or release interrupt.
+    #[inline]
+    pub fn set_interrupt_forced(&self, interrupt: Interrupt, forced: bool) {
+        self.regs.set_interrupt_forced(interrupt, forced);
+    }
+
+    /// Set the interrupt override.
+    #[inline]
+    pub fn set_interrupt_override(&mut self, override_value: InterruptOverride) {
+        self.regs.set_interrupt_override(override_value);
     }
 
     /// Disable the pin and set it to float
