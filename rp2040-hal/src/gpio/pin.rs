@@ -476,6 +476,21 @@ where
         }
     }
 
+    /// Return the [`DynPinId`] corresponding to this pin.
+    ///
+    /// To get the numeric pin number, access the num field
+    /// directly:
+    ///
+    /// ```no_run
+    /// # fn get_id<I: PinId, M> (pin: Pin<I, M>) -> u8 {
+    ///      pin.id().num
+    /// # }
+    /// ````
+    #[inline]
+    pub fn id(&self) -> DynPinId {
+        I::DYN
+    }
+
     /// Convert the pin to the requested [`PinMode`]
     #[inline]
     pub fn into_mode<N: PinMode + ValidPinMode<I>>(mut self) -> Pin<I, N> {
