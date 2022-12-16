@@ -482,7 +482,8 @@ where
     /// directly:
     ///
     /// ```no_run
-    /// # fn get_id<I: PinId, M> (pin: Pin<I, M>) -> u8 {
+    /// # use rp2040_hal::gpio::{Pin, PinId, PinMode, ValidPinMode};
+    /// # fn get_id<I: PinId, M: PinMode + ValidPinMode<I>> (pin: Pin<I, M>) -> u8 {
     ///      pin.id().num
     /// # }
     /// ````
