@@ -163,7 +163,7 @@ pub trait ReadTarget {
     ///
     /// # Safety
     ///
-    /// This function has the same safety guarantees as `StaticReadBuffer::static_read_buffer`.
+    /// This function has the same safety guarantees as `ReadBuffer::read_buffer`.
     fn rx_address_count(&self) -> (u32, u32);
 
     /// Returns whether the address shall be incremented after each transfer.
