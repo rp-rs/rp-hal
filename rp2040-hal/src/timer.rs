@@ -231,7 +231,7 @@ macro_rules! impl_alarm {
                     // If it is not set, it has already triggered.
                     let now = get_counter(timer);
                     if now > timestamp && (timer.armed.read().bits() & $armed_bit_mask) != 0 {
-                        // timestamp was set in the past
+                        // timestamp was set to a value in the past
 
                         // safety: TIMER.armed is a write-clear register, and there can only be
                         // 1 instance of AlarmN so we can safely atomically clear this bit.
