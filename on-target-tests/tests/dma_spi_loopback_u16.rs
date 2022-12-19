@@ -53,7 +53,7 @@ mod tests {
     use hal::{clocks::init_clocks_and_plls, pac, watchdog::Watchdog};
     use panic_probe as _;
     use rp2040_hal as hal;
-    use rp2040_hal::dma::{DMAExt, BidirectionalConfig};
+    use rp2040_hal::dma::{bidirectional, DMAExt};
     use rp2040_hal::Clock;
 
     #[init]
@@ -115,7 +115,8 @@ mod tests {
                 let rx_buf = cortex_m::singleton!(: [u16; 10] = [0; 10]).unwrap();
                 let tx_buf = cortex_m::singleton!(: [u16; 10] = testdata::ARRAY_U16).unwrap();
 
-                let transfer = BidirectionalConfig::new((dma.ch0, dma.ch1), tx_buf, spi, rx_buf).start();
+                let transfer =
+                    bidirectional::Config::new((dma.ch0, dma.ch1), tx_buf, spi, rx_buf).start();
                 let ((_ch0, _ch1), tx_buf, _spi, rx_buf) = transfer.wait();
 
                 let first = tx_buf.iter();

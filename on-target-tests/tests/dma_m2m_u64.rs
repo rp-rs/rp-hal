@@ -82,7 +82,7 @@ mod tests {
         if let Some(dma) = state.channels.take() {
             let rx_buffer = cortex_m::singleton!(: [u64; 10] = [0; 10]).unwrap();
             let tx_buffer = cortex_m::singleton!(: [u64; 10] = testdata::ARRAY_U64).unwrap();
-            let tx_transfer = hal::dma::SingleBufferingConfig::new(dma.ch0, tx_buffer, rx_buffer);
+            let tx_transfer = hal::dma::single_buffer::Config::new(dma.ch0, tx_buffer, rx_buffer);
             let tx_started = tx_transfer.start();
             let (_ch0, tx_buffer, rx_buffer) = tx_started.wait();
             let first = tx_buffer.iter();

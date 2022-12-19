@@ -7,8 +7,8 @@ use defmt_rtt as _; // defmt transport
 use defmt_test as _;
 use panic_probe as _;
 use rp2040_hal as hal; // memory layout // panic handler
-use rp2040_hal::spi;
 use rp2040_hal::pac::SPI0;
+use rp2040_hal::spi;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -53,7 +53,7 @@ mod tests {
     use hal::{clocks::init_clocks_and_plls, pac, watchdog::Watchdog};
     use panic_probe as _;
     use rp2040_hal as hal;
-    use rp2040_hal::dma::BidirectionalConfig;
+    use rp2040_hal::dma::bidirectional;
     use rp2040_hal::dma::DMAExt;
     use rp2040_hal::Clock;
 
@@ -116,7 +116,8 @@ mod tests {
                 let rx_buf = cortex_m::singleton!(: [u8; 10] = [0; 10]).unwrap();
                 let tx_buf = cortex_m::singleton!(: [u8; 10] = testdata::ARRAY_U8).unwrap();
 
-                let transfer = BidirectionalConfig::new((dma.ch0, dma.ch1), tx_buf, spi, rx_buf).start();
+                let transfer =
+                    bidirectional::Config::new((dma.ch0, dma.ch1), tx_buf, spi, rx_buf).start();
                 let ((_ch0, _ch1), tx_buf, _spi, rx_buf) = transfer.wait();
 
                 let first = tx_buf.iter();

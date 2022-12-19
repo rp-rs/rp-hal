@@ -92,7 +92,7 @@ mod tests {
             .expect("Could not take Dyn DMA channel");
         let rx_buffer = cortex_m::singleton!(: [u8; 10] = [0; 10]).unwrap();
         let tx_buffer = cortex_m::singleton!(: [u8; 10] = testdata::ARRAY_U8).unwrap();
-        let tx_transfer = hal::dma::SingleBufferingConfig::new(ch0, tx_buffer, rx_buffer);
+        let tx_transfer = hal::dma::single_buffer::Config::new(ch0, tx_buffer, rx_buffer);
         let tx_started = tx_transfer.start();
         let (newch0, tx_buffer, rx_buffer) = tx_started.wait();
         let first = tx_buffer.iter();
@@ -112,7 +112,7 @@ mod tests {
             .expect("Could not take Dyn DMA channel");
         let rx_buffer = cortex_m::singleton!(: [u16; 10] = [0; 10]).unwrap();
         let tx_buffer = cortex_m::singleton!(: [u16; 10] = testdata::ARRAY_U16).unwrap();
-        let tx_transfer = hal::dma::SingleBufferingConfig::new(ch0, tx_buffer, rx_buffer);
+        let tx_transfer = hal::dma::single_buffer::Config::new(ch0, tx_buffer, rx_buffer);
         let tx_started = tx_transfer.start();
         let (newch0, tx_buffer, rx_buffer) = tx_started.wait();
         let first = tx_buffer.iter();
@@ -132,7 +132,7 @@ mod tests {
             .expect("Could not take Dyn DMA channel");
         let rx_buffer = cortex_m::singleton!(: [u32; 10] = [0; 10]).unwrap();
         let tx_buffer = cortex_m::singleton!(: [u32; 10] = testdata::ARRAY_U32).unwrap();
-        let tx_transfer = hal::dma::SingleBufferingConfig::new(ch0, tx_buffer, rx_buffer);
+        let tx_transfer = hal::dma::single_buffer::Config::new(ch0, tx_buffer, rx_buffer);
         let tx_started = tx_transfer.start();
         let (newch0, tx_buffer, rx_buffer) = tx_started.wait();
         let first = tx_buffer.iter();
@@ -152,7 +152,7 @@ mod tests {
             .expect("Could not take Dyn DMA channel");
         let rx_buffer = cortex_m::singleton!(: [i8; 10] = [0; 10]).unwrap();
         let tx_buffer = cortex_m::singleton!(: [i8; 10] = testdata::ARRAY_I8).unwrap();
-        let tx_transfer = hal::dma::SingleBufferingConfig::new(ch0, tx_buffer, rx_buffer);
+        let tx_transfer = hal::dma::single_buffer::Config::new(ch0, tx_buffer, rx_buffer);
         let tx_started = tx_transfer.start();
         let (newch0, tx_buffer, rx_buffer) = tx_started.wait();
         let first = tx_buffer.iter();
@@ -172,7 +172,7 @@ mod tests {
             .expect("Could not take Dyn DMA channel");
         let rx_buffer = cortex_m::singleton!(: [i16; 10] = [0; 10]).unwrap();
         let tx_buffer = cortex_m::singleton!(: [i16; 10] = testdata::ARRAY_I16).unwrap();
-        let tx_transfer = hal::dma::SingleBufferingConfig::new(ch0, tx_buffer, rx_buffer);
+        let tx_transfer = hal::dma::single_buffer::Config::new(ch0, tx_buffer, rx_buffer);
         let tx_started = tx_transfer.start();
         let (newch0, tx_buffer, rx_buffer) = tx_started.wait();
         let first = tx_buffer.iter();
@@ -192,7 +192,7 @@ mod tests {
             .expect("Could not take Dyn DMA channel");
         let rx_buffer = cortex_m::singleton!(: [i32; 10] = [0; 10]).unwrap();
         let tx_buffer = cortex_m::singleton!(: [i32; 10] = testdata::ARRAY_I32).unwrap();
-        let tx_transfer = hal::dma::SingleBufferingConfig::new(ch0, tx_buffer, rx_buffer);
+        let tx_transfer = hal::dma::single_buffer::Config::new(ch0, tx_buffer, rx_buffer);
         let tx_started = tx_transfer.start();
         let (newch0, tx_buffer, rx_buffer) = tx_started.wait();
         let first = tx_buffer.iter();
