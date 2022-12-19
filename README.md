@@ -168,7 +168,7 @@ specified 'runner'. As the 'runner' is the elf2uf2-rs tool, it will build a UF2
 file and copy it to your RP2040.
 
 ```console
-$ cargo run --release --example pico_pwm_blink
+$ cargo run --release --example pico_blink
 ```
 
 ### Loading with probe-run
