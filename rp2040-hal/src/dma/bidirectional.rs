@@ -6,7 +6,7 @@ use super::{
 };
 
 /// DMA configuration for sending and receiving data simultaneously
-pub struct BidirectionalConfig<CH1, CH2, FROM, BIDI, TO>
+pub struct Config<CH1, CH2, FROM, BIDI, TO>
 where
     CH1: SingleChannel,
     CH2: SingleChannel,
@@ -22,7 +22,7 @@ where
     to_pace: Pace,
 }
 
-impl<CH1, CH2, FROM, BIDI, TO, WORD> BidirectionalConfig<CH1, CH2, FROM, BIDI, TO>
+impl<CH1, CH2, FROM, BIDI, TO, WORD> Config<CH1, CH2, FROM, BIDI, TO>
 where
     CH1: SingleChannel,
     CH2: SingleChannel,
@@ -31,13 +31,8 @@ where
     TO: WriteTarget<TransmittedWord = WORD>,
 {
     /// Create a DMA configuration for sending and receiving data simultaneously
-    pub fn new(
-        ch: (CH1, CH2),
-        from: FROM,
-        bidi: BIDI,
-        to: TO,
-    ) -> BidirectionalConfig<CH1, CH2, FROM, BIDI, TO> {
-        BidirectionalConfig {
+    pub fn new(ch: (CH1, CH2), from: FROM, bidi: BIDI, to: TO) -> Config<CH1, CH2, FROM, BIDI, TO> {
+        Config {
             ch,
             from,
             bidi,
@@ -58,7 +53,7 @@ where
     }
 
     /// Start the DMA transfer
-    pub fn start(mut self) -> Bidirectional<CH1, CH2, FROM, BIDI, TO> {
+    pub fn start(mut self) -> Transfer<CH1, CH2, FROM, BIDI, TO> {
         cortex_m::asm::dsb();
         compiler_fence(Ordering::SeqCst);
 
@@ -71,7 +66,7 @@ where
             .config(&self.bidi, &mut self.to, self.to_pace, None, false);
         self.ch.0.start_both(&mut self.ch.1);
 
-        Bidirectional {
+        Transfer {
             ch: self.ch,
             from: self.from,
             bidi: self.bidi,
@@ -81,7 +76,7 @@ where
 }
 
 /// Instance of a bidirectional DMA transfer
-pub struct Bidirectional<CH1, CH2, FROM, BIDI, TO>
+pub struct Transfer<CH1, CH2, FROM, BIDI, TO>
 where
     CH1: SingleChannel,
     CH2: SingleChannel,
@@ -95,7 +90,7 @@ where
     to: TO,
 }
 
-impl<CH1, CH2, FROM, BIDI, TO, WORD> Bidirectional<CH1, CH2, FROM, BIDI, TO>
+impl<CH1, CH2, FROM, BIDI, TO, WORD> Transfer<CH1, CH2, FROM, BIDI, TO>
 where
     CH1: SingleChannel,
     CH2: SingleChannel,

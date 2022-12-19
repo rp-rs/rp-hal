@@ -5,22 +5,22 @@ use super::{
 };
 
 /// Configuration for single-buffered DMA transfer
-pub struct SingleBufferingConfig<CH: SingleChannel, FROM: ReadTarget, TO: WriteTarget> {
+pub struct Config<CH: SingleChannel, FROM: ReadTarget, TO: WriteTarget> {
     ch: CH,
     from: FROM,
     to: TO,
     pace: Pace,
 }
 
-impl<CH, FROM, TO, WORD> SingleBufferingConfig<CH, FROM, TO>
+impl<CH, FROM, TO, WORD> Config<CH, FROM, TO>
 where
     CH: SingleChannel,
     FROM: ReadTarget<ReceivedWord = WORD>,
     TO: WriteTarget<TransmittedWord = WORD>,
 {
     /// Create a new configuration for single-buffered DMA transfer
-    pub fn new(ch: CH, from: FROM, to: TO) -> SingleBufferingConfig<CH, FROM, TO> {
-        SingleBufferingConfig {
+    pub fn new(ch: CH, from: FROM, to: TO) -> Config<CH, FROM, TO> {
+        Config {
             ch,
             from,
             to,
@@ -38,7 +38,7 @@ where
     }
 
     /// Start the DMA transfer
-    pub fn start(mut self) -> SingleBuffering<CH, FROM, TO> {
+    pub fn start(mut self) -> Transfer<CH, FROM, TO> {
         // TODO: Do we want to call any callbacks to configure source/sink?
 
         // Make sure that memory contents reflect what the user intended.
@@ -50,7 +50,7 @@ where
         self.ch
             .config(&self.from, &mut self.to, self.pace, None, true);
 
-        SingleBuffering {
+        Transfer {
             ch: self.ch,
             from: self.from,
             to: self.to,
@@ -60,13 +60,13 @@ where
 
 // TODO: Drop for most of these structs
 /// Instance of a single-buffered DMA transfer
-pub struct SingleBuffering<CH: SingleChannel, FROM: ReadTarget, TO: WriteTarget> {
+pub struct Transfer<CH: SingleChannel, FROM: ReadTarget, TO: WriteTarget> {
     ch: CH,
     from: FROM,
     to: TO,
 }
 
-impl<CH, FROM, TO, WORD> SingleBuffering<CH, FROM, TO>
+impl<CH, FROM, TO, WORD> Transfer<CH, FROM, TO>
 where
     CH: SingleChannel,
     FROM: ReadTarget<ReceivedWord = WORD>,

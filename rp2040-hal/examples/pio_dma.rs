@@ -10,7 +10,10 @@
 
 use cortex_m::singleton;
 use cortex_m_rt::entry;
-use hal::dma::{DMAExt, DoubleBufferingConfig, SingleBufferingConfig};
+use hal::dma::{
+    double_buffer::Config as DoubleBufferingConfig, single_buffer::Config as SingleBufferingConfig,
+    DMAExt,
+};
 use hal::gpio::{FunctionPio0, Pin};
 use hal::pac;
 use hal::pio::PIOExt;

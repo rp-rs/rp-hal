@@ -28,15 +28,12 @@ use embedded_dma::{ReadBuffer, WriteBuffer};
 use rp2040_pac::DMA;
 
 // Bring in our submodules
-mod bidirectional;
-mod double_buffer;
-mod single_buffer;
+pub mod bidirectional;
+pub mod double_buffer;
+pub mod single_buffer;
 mod single_channel;
 
 // Export these types for easier use by external code
-pub use crate::dma::bidirectional::BidirectionalConfig;
-pub use crate::dma::double_buffer::{DoubleBuffering, DoubleBufferingConfig, ReadNext};
-pub use crate::dma::single_buffer::{SingleBuffering, SingleBufferingConfig};
 pub use crate::dma::single_channel::SingleChannel;
 
 /// DMA unit.

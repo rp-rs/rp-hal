@@ -6,19 +6,14 @@ use super::{
 };
 
 /// Configuration for double-buffered DMA transfer
-pub struct DoubleBufferingConfig<
-    CH1: SingleChannel,
-    CH2: SingleChannel,
-    FROM: ReadTarget,
-    TO: WriteTarget,
-> {
+pub struct Config<CH1: SingleChannel, CH2: SingleChannel, FROM: ReadTarget, TO: WriteTarget> {
     ch: (CH1, CH2),
     from: FROM,
     to: TO,
     pace: Pace,
 }
 
-impl<CH1, CH2, FROM, TO, WORD> DoubleBufferingConfig<CH1, CH2, FROM, TO>
+impl<CH1, CH2, FROM, TO, WORD> Config<CH1, CH2, FROM, TO>
 where
     CH1: SingleChannel,
     CH2: SingleChannel,
@@ -26,8 +21,8 @@ where
     TO: WriteTarget<TransmittedWord = WORD>,
 {
     /// Create a new configuration for double-buffered DMA transfer
-    pub fn new(ch: (CH1, CH2), from: FROM, to: TO) -> DoubleBufferingConfig<CH1, CH2, FROM, TO> {
-        DoubleBufferingConfig {
+    pub fn new(ch: (CH1, CH2), from: FROM, to: TO) -> Config<CH1, CH2, FROM, TO> {
+        Config {
             ch,
             from,
             to,
@@ -45,7 +40,7 @@ where
     }
 
     /// Start the DMA transfer
-    pub fn start(mut self) -> DoubleBuffering<CH1, CH2, FROM, TO, ()> {
+    pub fn start(mut self) -> Transfer<CH1, CH2, FROM, TO, ()> {
         // TODO: Do we want to call any callbacks to configure source/sink?
 
         // Make sure that memory contents reflect what the user intended.
@@ -58,7 +53,7 @@ where
             .0
             .config(&self.from, &mut self.to, self.pace, None, true);
 
-        DoubleBuffering {
+        Transfer {
             ch: self.ch,
             from: self.from,
             to: self.to,
@@ -75,7 +70,7 @@ pub struct ReadNext<BUF: ReadTarget>(BUF);
 pub struct WriteNext<BUF: WriteTarget>(BUF);
 
 /// Instance of a double-buffered DMA transfer
-pub struct DoubleBuffering<CH1, CH2, FROM, TO, STATE>
+pub struct Transfer<CH1, CH2, FROM, TO, STATE>
 where
     CH1: SingleChannel,
     CH2: SingleChannel,
@@ -90,7 +85,7 @@ where
     second_ch: bool,
 }
 
-impl<CH1, CH2, FROM, TO, WORD, STATE> DoubleBuffering<CH1, CH2, FROM, TO, STATE>
+impl<CH1, CH2, FROM, TO, WORD, STATE> Transfer<CH1, CH2, FROM, TO, STATE>
 where
     CH1: SingleChannel,
     CH2: SingleChannel,
@@ -125,7 +120,7 @@ where
     }
 }
 
-impl<CH1, CH2, FROM, TO, WORD> DoubleBuffering<CH1, CH2, FROM, TO, ()>
+impl<CH1, CH2, FROM, TO, WORD> Transfer<CH1, CH2, FROM, TO, ()>
 where
     CH1: SingleChannel,
     CH2: SingleChannel,
@@ -145,7 +140,7 @@ where
     }
 }
 
-impl<CH1, CH2, FROM, TO, WORD> DoubleBuffering<CH1, CH2, FROM, TO, ()>
+impl<CH1, CH2, FROM, TO, WORD> Transfer<CH1, CH2, FROM, TO, ()>
 where
     CH1: SingleChannel,
     CH2: SingleChannel,
@@ -156,7 +151,7 @@ where
     pub fn read_next<BUF: ReadTarget<ReceivedWord = WORD>>(
         mut self,
         buf: BUF,
-    ) -> DoubleBuffering<CH1, CH2, FROM, TO, ReadNext<BUF>> {
+    ) -> Transfer<CH1, CH2, FROM, TO, ReadNext<BUF>> {
         // Make sure that memory contents reflect what the user intended.
         // TODO: How much of the following is necessary?
         cortex_m::asm::dsb();
@@ -176,7 +171,7 @@ where
             self.ch.0.set_chain_to_enabled(&mut self.ch.1);
         }
 
-        DoubleBuffering {
+        Transfer {
             ch: self.ch,
             from: self.from,
             to: self.to,
@@ -187,7 +182,7 @@ where
     }
 }
 
-impl<CH1, CH2, FROM, TO, WORD> DoubleBuffering<CH1, CH2, FROM, TO, ()>
+impl<CH1, CH2, FROM, TO, WORD> Transfer<CH1, CH2, FROM, TO, ()>
 where
     CH1: SingleChannel,
     CH2: SingleChannel,
@@ -198,7 +193,7 @@ where
     pub fn write_next<BUF: WriteTarget<TransmittedWord = WORD>>(
         mut self,
         mut buf: BUF,
-    ) -> DoubleBuffering<CH1, CH2, FROM, TO, WriteNext<BUF>> {
+    ) -> Transfer<CH1, CH2, FROM, TO, WriteNext<BUF>> {
         // Make sure that memory contents reflect what the user intended.
         // TODO: How much of the following is necessary?
         cortex_m::asm::dsb();
@@ -222,7 +217,7 @@ where
             self.ch.0.set_chain_to_enabled(&mut self.ch.1);
         }
 
-        DoubleBuffering {
+        Transfer {
             ch: self.ch,
             from: self.from,
             to: self.to,
@@ -233,7 +228,7 @@ where
     }
 }
 
-impl<CH1, CH2, FROM, TO, NEXT, WORD> DoubleBuffering<CH1, CH2, FROM, TO, ReadNext<NEXT>>
+impl<CH1, CH2, FROM, TO, NEXT, WORD> Transfer<CH1, CH2, FROM, TO, ReadNext<NEXT>>
 where
     CH1: SingleChannel,
     CH2: SingleChannel,
@@ -242,7 +237,7 @@ where
     NEXT: ReadTarget<ReceivedWord = WORD>,
 {
     /// Block until the the transfer is complete
-    pub fn wait(self) -> (FROM, DoubleBuffering<CH1, CH2, NEXT, TO, ()>) {
+    pub fn wait(self) -> (FROM, Transfer<CH1, CH2, NEXT, TO, ()>) {
         while !self.is_done() {}
 
         // Make sure that memory contents reflect what the user intended.
@@ -252,7 +247,7 @@ where
         // Invert second_ch as now the other channel is the "active" channel.
         (
             self.from,
-            DoubleBuffering {
+            Transfer {
                 ch: self.ch,
                 from: self.state.0,
                 to: self.to,
@@ -264,7 +259,7 @@ where
     }
 }
 
-impl<CH1, CH2, FROM, TO, NEXT, WORD> DoubleBuffering<CH1, CH2, FROM, TO, WriteNext<NEXT>>
+impl<CH1, CH2, FROM, TO, NEXT, WORD> Transfer<CH1, CH2, FROM, TO, WriteNext<NEXT>>
 where
     CH1: SingleChannel,
     CH2: SingleChannel,
@@ -273,7 +268,7 @@ where
     NEXT: WriteTarget<TransmittedWord = WORD>,
 {
     /// Block until transfer is complete
-    pub fn wait(self) -> (TO, DoubleBuffering<CH1, CH2, FROM, NEXT, ()>) {
+    pub fn wait(self) -> (TO, Transfer<CH1, CH2, FROM, NEXT, ()>) {
         while !self.is_done() {}
 
         // Make sure that memory contents reflect what the user intended.
@@ -283,7 +278,7 @@ where
         // Invert second_ch as now the other channel is the "active" channel.
         (
             self.to,
-            DoubleBuffering {
+            Transfer {
                 ch: self.ch,
                 from: self.from,
                 to: self.state.0,
