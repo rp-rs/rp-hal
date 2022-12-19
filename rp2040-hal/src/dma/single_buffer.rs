@@ -1,3 +1,5 @@
+//! Single-buffered or peripheral-peripheral DMA Transfers
+
 use core::sync::atomic::{compiler_fence, Ordering};
 
 use super::{

@@ -1,3 +1,5 @@
+//! Double-buffered DMA Transfers
+
 use core::sync::atomic::{compiler_fence, Ordering};
 
 use super::{

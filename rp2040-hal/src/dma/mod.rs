@@ -102,7 +102,7 @@ macro_rules! channels {
             }
         )+
 
-        /// Set of DMA channels.
+        /// Set of DMA channels with runtime ownership.
         pub struct DynChannels {
             $(
                 /// DMA channel.
