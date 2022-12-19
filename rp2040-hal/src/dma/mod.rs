@@ -184,7 +184,6 @@ impl<B: ReadBuffer> ReadTarget for B {
     }
 
     fn rx_address_count(&self) -> (u32, u32) {
-        // Safety: We only call the function once per buffer.
         let (ptr, len) = unsafe { self.read_buffer() };
         (ptr as u32, len as u32)
     }
@@ -227,7 +226,6 @@ impl<B: WriteBuffer> WriteTarget for B {
     }
 
     fn tx_address_count(&mut self) -> (u32, u32) {
-        // Safety: We only call the function once per buffer.
         let (ptr, len) = unsafe { self.write_buffer() };
         (ptr as u32, len as u32)
     }
