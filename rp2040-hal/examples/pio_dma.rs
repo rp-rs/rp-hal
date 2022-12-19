@@ -10,10 +10,7 @@
 
 use cortex_m::singleton;
 use cortex_m_rt::entry;
-use hal::dma::{
-    double_buffer::Config as DoubleBufferingConfig, single_buffer::Config as SingleBufferingConfig,
-    DMAExt,
-};
+use hal::dma::{double_buffer, single_buffer, DMAExt};
 use hal::gpio::{FunctionPio0, Pin};
 use hal::pac;
 use hal::pio::PIOExt;
@@ -80,8 +77,8 @@ fn main() -> ! {
     // Transfer a single message via DMA.
     let tx_buf = singleton!(: [u32; 4] = message).unwrap();
     let rx_buf = singleton!(: [u32; 4] = [0; 4]).unwrap();
-    let tx_transfer = SingleBufferingConfig::new(dma.ch0, tx_buf, tx).start();
-    let rx_transfer = SingleBufferingConfig::new(dma.ch1, rx, rx_buf).start();
+    let tx_transfer = single_buffer::Config::new(dma.ch0, tx_buf, tx).start();
+    let rx_transfer = single_buffer::Config::new(dma.ch1, rx, rx_buf).start();
     let (ch0, tx_buf, tx) = tx_transfer.wait();
     let (ch1, rx, rx_buf) = rx_transfer.wait();
     for i in 0..rx_buf.len() {
@@ -95,9 +92,9 @@ fn main() -> ! {
     // Chain some buffers together for continuous transfers
     let tx_buf2 = singleton!(: [u32; 4] = message).unwrap();
     let rx_buf2 = singleton!(: [u32; 4] = [0; 4]).unwrap();
-    let tx_transfer = DoubleBufferingConfig::new((ch0, ch1), tx_buf, tx).start();
+    let tx_transfer = double_buffer::Config::new((ch0, ch1), tx_buf, tx).start();
     let mut tx_transfer = tx_transfer.read_next(tx_buf2);
-    let rx_transfer = DoubleBufferingConfig::new((dma.ch2, dma.ch3), rx, rx_buf).start();
+    let rx_transfer = double_buffer::Config::new((dma.ch2, dma.ch3), rx, rx_buf).start();
     let mut rx_transfer = rx_transfer.write_next(rx_buf2);
     loop {
         // When a transfer is done we immediately enqueue the buffers again.

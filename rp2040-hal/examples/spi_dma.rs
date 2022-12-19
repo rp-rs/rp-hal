@@ -13,7 +13,7 @@ use cortex_m::singleton;
 use cortex_m_rt::entry;
 use embedded_hal::digital::v2::OutputPin;
 use fugit::RateExtU32;
-use hal::dma::{bidirectional::Config as BidirectionalConfig, DMAExt};
+use hal::dma::{bidirectional, DMAExt};
 use hal::pac;
 use panic_halt as _;
 use rp2040_hal as hal;
@@ -82,7 +82,7 @@ fn main() -> ! {
     let rx_buf = singleton!(: [u8; 16] = [0; 16]).unwrap();
 
     // Use BidirectionalConfig to simultaneously write to spi from tx_buf and read into rx_buf
-    let transfer = BidirectionalConfig::new((dma.ch0, dma.ch1), tx_buf, spi, rx_buf).start();
+    let transfer = bidirectional::Config::new((dma.ch0, dma.ch1), tx_buf, spi, rx_buf).start();
     // Wait for both DMA channels to finish
     let ((_ch0, _ch1), tx_buf, _spi, rx_buf) = transfer.wait();
 
