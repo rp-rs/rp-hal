@@ -4,6 +4,9 @@ members = [
     "rp2040-hal",
     "rp2040-hal-macros",
 ]
+exclude = [
+    "on-target-tests"
+]
 
 [patch.'https://github.com/rp-rs/rp-hal.git']
 rp2040-hal = { path = "./rp2040-hal" }

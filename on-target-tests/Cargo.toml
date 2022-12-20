@@ -1,0 +1,78 @@
+[package]
+edition = "2021"
+name = "rp2040-hal-on-target-tests"
+version = "0.1.0"
+publish = false
+
+[[test]]
+name = "dma_m2m_u8"
+harness = false
+
+[[test]]
+name = "dma_m2m_u16"
+harness = false
+
+[[test]]
+name = "dma_m2m_u32"
+harness = false
+
+[[test]]
+name = "dma_m2m_u64"
+harness = false
+
+[[test]]
+name = "dma_spi_loopback_u8"
+harness = false
+
+[[test]]
+name = "dma_spi_loopback_u16"
+harness = false
+
+[[test]]
+name = "dma_drop"
+harness = false
+
+[[test]]
+name = "dma_dyn"
+harness = false
+
+[dependencies]
+cortex-m = "0.7"
+cortex-m-rt = "0.7"
+embedded-hal = { version = "0.2.5", features = ["unproven"] }
+
+defmt = "0.3"
+defmt-rtt = "0.4"
+defmt-test = "0.3"
+panic-probe = { version = "0.3", features = ["print-defmt"] }
+
+rp2040-hal = { path = "../rp2040-hal", version = "0.6", features = [
+    "defmt",
+    "critical-section-impl",
+] }
+# Needed to set spi frequencies
+fugit = "0.3.6"
+
+rp2040-boot2 = "0.2"
+critical-section = "1.0.0"
+
+
+[features]
+default = ['defmt-trace']
+defmt-trace = []
+defmt-debug = []
+defmt-info = []
+defmt-warn = []
+defmt-error = []
+
+[profile.dev]
+codegen-units = 1
+incremental = false
+lto = 'fat'
+opt-level = 's'
+
+[profile.test]
+codegen-units = 1
+incremental = false
+lto = 'fat'
+opt-level = 's'

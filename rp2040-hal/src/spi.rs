@@ -19,6 +19,7 @@
 //! let spi = Spi::<_, _, 8>::new(peripherals.SPI0).init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), &MODE_0);
 //! ```
 
+use crate::dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget};
 use crate::resets::SubsystemReset;
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
 #[cfg(feature = "eh1_0_alpha")]
@@ -26,6 +27,7 @@ use eh1_0_alpha::spi as eh1;
 use embedded_hal::blocking::spi;
 use embedded_hal::spi::{FullDuplex, Mode, Phase, Polarity};
 use fugit::HertzU32;
+use pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
 use pac::RESETS;
 
 /// State of the SPI
@@ -45,10 +47,29 @@ impl State for Disabled {}
 impl State for Enabled {}
 
 /// Pac SPI device
-pub trait SpiDevice: Deref<Target = pac::spi0::RegisterBlock> + SubsystemReset {}
+pub trait SpiDevice: Deref<Target = pac::spi0::RegisterBlock> + SubsystemReset {
+    /// The DREQ number for which TX DMA requests are triggered.
+    fn tx_dreq() -> u8;
+    /// The DREQ number for which RX DMA requests are triggered.
+    fn rx_dreq() -> u8;
+}
 
-impl SpiDevice for pac::SPI0 {}
-impl SpiDevice for pac::SPI1 {}
+impl SpiDevice for pac::SPI0 {
+    fn tx_dreq() -> u8 {
+        TREQ_SEL_A::SPI0_TX.into()
+    }
+    fn rx_dreq() -> u8 {
+        TREQ_SEL_A::SPI0_RX.into()
+    }
+}
+impl SpiDevice for pac::SPI1 {
+    fn tx_dreq() -> u8 {
+        TREQ_SEL_A::SPI1_TX.into()
+    }
+    fn rx_dreq() -> u8 {
+        TREQ_SEL_A::SPI1_RX.into()
+    }
+}
 
 /// Data size used in spi
 pub trait DataSize {}
@@ -340,6 +361,47 @@ macro_rules! impl_write {
         }
 */
 
+        impl<D: SpiDevice> ReadTarget for Spi<Enabled, D, $nr> {
+            type ReceivedWord = $type;
+
+            fn rx_treq() -> Option<u8> {
+                Some(D::rx_dreq())
+            }
+
+            fn rx_address_count(&self) -> (u32, u32) {
+                (
+                    &self.device.sspdr as *const _ as u32,
+                    u32::MAX,
+                )
+            }
+
+            fn rx_increment(&self) -> bool {
+                false
+            }
+        }
+
+        impl<D: SpiDevice> EndlessReadTarget for Spi<Enabled, D, $nr> {}
+
+        impl<D: SpiDevice> WriteTarget for Spi<Enabled, D, $nr> {
+            type TransmittedWord = $type;
+
+            fn tx_treq() -> Option<u8> {
+                Some(D::tx_dreq())
+            }
+
+            fn tx_address_count(&mut self) -> (u32, u32) {
+                (
+                    &self.device.sspdr as *const _ as u32,
+                    u32::MAX,
+                )
+            }
+
+            fn tx_increment(&self) -> bool {
+                false
+            }
+        }
+
+        impl<D: SpiDevice> EndlessWriteTarget for Spi<Enabled, D, $nr> {}
     )+
 
     };
