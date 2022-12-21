@@ -7,12 +7,10 @@ jobs:
       RUSTFLAGS: "-D warnings"
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
           target: thumbv6m-none-eabi
-          override: true
-          profile: minimal
           components: clippy
       - uses: actions-rs/cargo@v1
         with:

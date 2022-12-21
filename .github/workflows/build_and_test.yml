@@ -10,12 +10,10 @@ jobs:
         mode: ["", "--release"]
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
           target: thumbv6m-none-eabi
-          override: true
-          profile: minimal
       - name: Build workspace
         uses: actions-rs/cargo@v1
         with:
@@ -42,12 +40,10 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clean
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly
           target: thumbv6m-none-eabi
-          override: true
-          profile: minimal
       - name: Check unused deps
         uses: aig787/cargo-udeps-action@v1
         with:
