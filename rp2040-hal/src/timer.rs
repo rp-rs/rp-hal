@@ -207,6 +207,9 @@ pub trait Alarm {
 
     /// Return true if this alarm is finished.
     fn finished(&self) -> bool;
+
+    /// Cancel an activated alarm.
+    fn cancel(&mut self) -> Result<(), ScheduleAlarmError>;
 }
 
 macro_rules! impl_alarm {
@@ -339,6 +342,22 @@ macro_rules! impl_alarm {
                 // safety: This is a read action and should not have any UB
                 let bits: u32 = unsafe { &*TIMER::ptr() }.armed.read().bits();
                 (bits & $armed_bit_mask) == 0
+            }
+
+            /// Cancel an activated Alarm. No negative effects if it's already disabled.
+            /// Unlike `timer::cancel` trait, this only cancels the alarm and keeps the timer running
+            /// if it's already active.
+            fn cancel(&mut self) -> Result<(), ScheduleAlarmError> {
+                unsafe {
+                    let timer = &*TIMER::ptr();
+                    timer.armed.write_with_zero(|w| w.bits($armed_bit_mask));
+                    crate::atomic_register_access::write_bitmask_clear(
+                        timer.intf.as_ptr(),
+                        $armed_bit_mask,
+                    );
+                }
+
+                Ok(())
             }
         }
 
