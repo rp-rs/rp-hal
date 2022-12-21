@@ -38,9 +38,9 @@ fn main() -> ! {
     );
 
     // configure LED pin for Pio0.
-    let _led: Pin<_, FunctionPio0> = pins.gpio25.into_mode();
+    let led: Pin<_, FunctionPio0> = pins.gpio25.into_mode();
     // PIN id for use inside of PIO
-    let led_pin_id = 25;
+    let led_pin_id = led.id().num;
 
     // Define some simple PIO program.
     let program = pio_proc::pio_asm!(
