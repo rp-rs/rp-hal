@@ -12,7 +12,4 @@ jobs:
           toolchain: stable
           target: thumbv6m-none-eabi
           components: clippy
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --workspace --examples -- -Dwarnings
+      - run: cargo clippy --workspace --examples -- -Dwarnings

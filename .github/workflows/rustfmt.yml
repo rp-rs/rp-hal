@@ -13,7 +13,4 @@ jobs:
           toolchain: stable
           target: thumbv6m-none-eabi
           components: rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -- --check
+      - run: cargo fmt -- --check
