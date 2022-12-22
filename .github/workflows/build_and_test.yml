@@ -28,9 +28,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           target: thumbv6m-none-eabi
+      - name: Install cargo-udeps
+        run: cargo install cargo-udeps --locked
       - name: Check unused deps
-        uses: aig787/cargo-udeps-action@v1
-        with:
-          version: latest
-          args: ${{ matrix.mode }} --workspace ${{ matrix.features }}
-
+        run: cargo udeps ${{ matrix.mode }} --workspace ${{ matrix.features }}
