@@ -28,9 +28,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           target: thumbv6m-none-eabi
+      - name: Install cargo-udeps
+        run: curl --location "https://github.com/est31/cargo-udeps/releases/download/v0.1.35/cargo-udeps-v0.1.35-x86_64-unknown-linux-gnu.tar.gz" --output - | tar --strip-components=2 -C ~/.cargo/bin -xzvvf - ./cargo-udeps-v0.1.35-x86_64-unknown-linux-gnu/cargo-udeps
       - name: Check unused deps
-        uses: aig787/cargo-udeps-action@v1
-        with:
-          version: latest
-          args: ${{ matrix.mode }} --workspace ${{ matrix.features }}
-
+        run: cargo udeps ${{ matrix.mode }} --workspace ${{ matrix.features }}
