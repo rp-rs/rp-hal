@@ -1,7 +1,7 @@
-//! # UART Example
+//! # UART DMA Example
 //!
-//! This application demonstrates how to use the UART Driver to talk to a serial
-//! connection.
+//! This application demonstrates how to use the UART peripheral with the
+//! DMA controller.
 //!
 //! It may need to be adapted to your particular board layout and/or pin
 //! assignment.
