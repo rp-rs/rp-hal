@@ -3,10 +3,10 @@
 //! This module is for receiving data with a UART.
 
 use super::{FifoWatermark, UartDevice, ValidUartPinout};
-use rp2040_pac::uart0::RegisterBlock;
-
+use crate::dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget};
 use embedded_hal::serial::Read;
 use nb::Error::*;
+use rp2040_pac::uart0::RegisterBlock;
 
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::serial as eh1;
@@ -233,6 +233,24 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Read<u8> for Reader<D, P> {
         }
     }
 }
+
+impl<D: UartDevice, P: ValidUartPinout<D>> ReadTarget for Reader<D, P> {
+    type ReceivedWord = u8;
+
+    fn rx_treq() -> Option<u8> {
+        Some(D::tx_dreq())
+    }
+
+    fn rx_address_count(&self) -> (u32, u32) {
+        (&self.device.uartdr as *const _ as u32, u32::MAX)
+    }
+
+    fn rx_increment(&self) -> bool {
+        false
+    }
+}
+
+impl<D: UartDevice, P: ValidUartPinout<D>> EndlessReadTarget for Reader<D, P> {}
 
 #[cfg(feature = "eh1_0_alpha")]
 impl<D: UartDevice, P: ValidUartPinout<D>> eh1::ErrorType for Reader<D, P> {
