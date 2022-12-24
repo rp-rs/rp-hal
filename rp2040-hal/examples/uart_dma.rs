@@ -20,10 +20,9 @@ use rp2040_hal as hal;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
-use hal::{pac, dma::DMAExt};
+use hal::{dma::DMAExt, pac};
 
 // Some traits we need
-use core::fmt::Write;
 use fugit::RateExtU32;
 use rp2040_hal::clocks::Clock;
 
@@ -105,6 +104,7 @@ fn main() -> ! {
 
     loop {
         // everything should be handled by DMA, nothing else to do
+        delay.delay_ms(1000);
     }
 }
 
