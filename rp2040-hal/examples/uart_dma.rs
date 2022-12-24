@@ -11,6 +11,7 @@
 #![no_std]
 #![no_main]
 
+use cortex_m::singleton;
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
@@ -99,8 +100,34 @@ fn main() -> ! {
     let dma = pac.DMA.split(&mut pac.RESETS);
 
     uart.write_full_blocking(b"UART DMA echo example\r\n");
+
+    // In order to use DMA we need to split the UART into a RX (receive) and TX (transmit) pair
     let (rx, tx) = uart.split();
-    let _tx_transfer = hal::dma::single_buffer::Config::new(dma.ch0, rx, tx).start();
+
+    // We can still write to the tx side of the UART after splitting
+    tx.write_full_blocking(b"Regular UART write\r\n");
+
+    // And we can DMA from a buffer into the UART
+    let teststring = b"DMA UART write\r\n";
+    let tx_transfer = hal::dma::single_buffer::Config::new(dma.ch0, teststring, tx).start();
+
+    // Wait for the DMA transfer to finish so we can reuse the tx and the dma channel
+    let (ch0, _teststring, tx) = tx_transfer.wait();
+
+    // Let's test DMA RX into a buffer.
+    tx.write_full_blocking(b"Waiting for you to type 5 letters...\r\n");
+    let rx_buf = singleton!(: [u8; 5] = [0; 5]).unwrap();
+    let rx_transfer = hal::dma::single_buffer::Config::new(ch0, rx, rx_buf).start();
+    let (ch0, rx, rx_buf) = rx_transfer.wait();
+
+    // Echo back the 5 characters the user typed
+    tx.write_full_blocking(b"You wrote \"");
+    tx.write_full_blocking(rx_buf);
+    tx.write_full_blocking(b"\"\r\n");
+
+    // Now just keep echoing anything that is received back out of TX
+    tx.write_full_blocking(b"Now echoing any character you write...\r\n");
+    let _tx_transfer = hal::dma::single_buffer::Config::new(ch0, rx, tx).start();
 
     loop {
         // everything should be handled by DMA, nothing else to do
