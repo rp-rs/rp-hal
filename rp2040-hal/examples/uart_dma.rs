@@ -99,7 +99,7 @@ fn main() -> ! {
     // Initialize DMA.
     let dma = pac.DMA.split(&mut pac.RESETS);
 
-    uart.write_full_blocking(b"UART DMA echo example\r\n");
+    uart.write_full_blocking(b"\r\n\r\nUART DMA echo example\r\n\r\n");
 
     // In order to use DMA we need to split the UART into a RX (receive) and TX (transmit) pair
     let (rx, tx) = uart.split();
