@@ -3,7 +3,7 @@
 //! This module is for transmitting data with a UART.
 
 use super::{FifoWatermark, UartDevice, ValidUartPinout};
-use crate::dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget};
+use crate::dma::{EndlessWriteTarget, WriteTarget};
 use core::fmt;
 use core::{convert::Infallible, marker::PhantomData};
 #[cfg(feature = "eh1_0_alpha")]
