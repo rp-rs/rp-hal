@@ -238,7 +238,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> ReadTarget for Reader<D, P> {
     type ReceivedWord = u8;
 
     fn rx_treq() -> Option<u8> {
-        Some(D::tx_dreq())
+        Some(D::rx_dreq())
     }
 
     fn rx_address_count(&self) -> (u32, u32) {
