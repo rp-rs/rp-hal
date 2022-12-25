@@ -22,12 +22,15 @@ use rp2040_hal as hal;
 
 // Some traits we need
 use core::fmt::Write;
-use embedded_time::fixed_point::FixedPoint;
+use fugit::RateExtU32;
 use pac::interrupt;
-use rp2040_hal::Clock;
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
-use hal::pac;
+use hal::{
+    pac,
+    uart::{DataBits, StopBits, UartConfig},
+    Adc, Clock,
+};
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -41,8 +44,7 @@ const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
 use core::cell::RefCell;
 use cortex_m::interrupt::Mutex;
-use rp2040_hal::Adc as RpAdc;
-static ADC_OBJ: Mutex<RefCell<Option<RpAdc>>> = Mutex::new(RefCell::new(None));
+static ADC_OBJ: Mutex<RefCell<Option<Adc>>> = Mutex::new(RefCell::new(None));
 static mut ADC_READING: u16 = 0;
 static mut ADC_READING_GOOD: bool = false;
 
@@ -77,7 +79,7 @@ fn main() -> ! {
 
     // The delay object lets us wait for specified amounts of time (in
     // milliseconds)
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);
@@ -99,8 +101,8 @@ fn main() -> ! {
     // Create a UART driver
     let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
-            hal::uart::common_configs::_9600_8_N_1,
-            clocks.peripheral_clock.into(),
+            UartConfig::new(9600.Hz(), DataBits::Eight, None, StopBits::One),
+            clocks.peripheral_clock.freq(),
         )
         .unwrap();
 
@@ -116,7 +118,11 @@ fn main() -> ! {
         // Start our ADC in round-robin mode, sampling our set of channels 1000 times per second
         adc.start_many_round_robin(0b1, 1000);
         ADC_OBJ.borrow(cs).replace(Some(adc));
+        unsafe {
+            pac::NVIC::unmask(pac::Interrupt::ADC_IRQ_FIFO);
+        }
     });
+
     loop {
         unsafe {
             if ADC_READING_GOOD {
@@ -155,6 +161,7 @@ fn ADC_IRQ_FIFO() {
                     ADC_READING_GOOD = true;
                 }
             }
+            ADC_OBJ.borrow(cs).replace(Some(adc));
         } else {
             panic!("Interrupt fired while refcell didn't contain an Adc instance");
         }
