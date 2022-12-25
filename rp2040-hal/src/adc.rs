@@ -41,8 +41,10 @@ use core::convert::TryInto;
 use hal::adc::{Channel, OneShot};
 use num_traits::float::FloatCore;
 use pac::{ADC, RESETS};
+use rp2040_pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
 
 use crate::{
+    dma::{EndlessReadTarget, ReadTarget},
     gpio::Pin,
     gpio::{
         bank0::{Gpio26, Gpio27, Gpio28, Gpio29},
@@ -63,7 +65,6 @@ impl Adc {
     pub fn new(device: ADC, resets: &mut RESETS) -> Self {
         device.reset_bring_down(resets);
         device.reset_bring_up(resets);
-
         // Enable adc
         device.cs.write(|w| w.en().set_bit());
 
@@ -216,6 +217,8 @@ impl Adc {
             w.under().set_bit();
             // Set the FIFO threshold that will trigger an interrupt
             w.thresh().bits(threshold);
+            // Enable DMA DREQ generation
+            w.dreq_en().set_bit();
             // Write the ADC capture result to the FIFO when ready
             w.en().set_bit();
             w
@@ -308,3 +311,21 @@ where
         Ok(self.device.result.read().result().bits().into())
     }
 }
+
+impl ReadTarget for Adc {
+    type ReceivedWord = u8;
+
+    fn rx_treq() -> Option<u8> {
+        Some(TREQ_SEL_A::ADC.into())
+    }
+
+    fn rx_address_count(&self) -> (u32, u32) {
+        (&self.device.fifo as *const _ as u32, u32::MAX)
+    }
+
+    fn rx_increment(&self) -> bool {
+        false
+    }
+}
+
+impl EndlessReadTarget for Adc {}
