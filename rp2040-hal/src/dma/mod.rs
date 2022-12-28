@@ -240,7 +240,8 @@ impl<B: WriteBuffer> WriteTarget for B {
 /// transfers involving peripherals commonly have to wait for data to be available or for available
 /// space in write queues. This type defines whether the sink or the source shall pace the transfer
 /// for peripheral-to-peripheral transfers.
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Pace {
     /// The DREQ signal from the source is used, if available. If not, the sink's DREQ signal is
     /// used.
@@ -252,7 +253,8 @@ pub enum Pace {
 }
 
 /// Error during DMA configuration.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum DMAError {
     /// Buffers were not aligned to their size even though they needed to be.
     Alignment,
