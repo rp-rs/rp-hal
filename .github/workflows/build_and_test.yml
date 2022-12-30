@@ -1,6 +1,25 @@
 on: [push, pull_request]
 name: Build and Test check
 jobs:
+  rp2040-hal-builds:
+    name: Build rp2040-hal examples without bsp
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        mode: ["", "--release"]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: thumbv6m-none-eabi
+          override: true
+          profile: minimal
+      - name: Build rp2040-hal's examples
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: -p rp2040-hal ${{ matrix.mode }} --examples --features rt,critical-section-impl
   builds:
     name: Build checks
     runs-on: ubuntu-20.04
