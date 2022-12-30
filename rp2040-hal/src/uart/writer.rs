@@ -3,14 +3,14 @@
 //! This module is for transmitting data with a UART.
 
 use super::{FifoWatermark, UartDevice, ValidUartPinout};
+use crate::dma::{EndlessWriteTarget, WriteTarget};
 use core::fmt;
 use core::{convert::Infallible, marker::PhantomData};
+#[cfg(feature = "eh1_0_alpha")]
+use eh1_0_alpha::serial as eh1;
 use embedded_hal::serial::Write;
 use nb::Error::*;
 use rp2040_pac::uart0::RegisterBlock;
-
-#[cfg(feature = "eh1_0_alpha")]
-use eh1_0_alpha::serial as eh1;
 
 /// Set tx FIFO watermark
 ///
@@ -181,6 +181,24 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for Writer<D, P> {
         transmit_flushed(&self.device)
     }
 }
+
+impl<D: UartDevice, P: ValidUartPinout<D>> WriteTarget for Writer<D, P> {
+    type TransmittedWord = u8;
+
+    fn tx_treq() -> Option<u8> {
+        Some(D::tx_dreq())
+    }
+
+    fn tx_address_count(&mut self) -> (u32, u32) {
+        (&self.device.uartdr as *const _ as u32, u32::MAX)
+    }
+
+    fn tx_increment(&self) -> bool {
+        false
+    }
+}
+
+impl<D: UartDevice, P: ValidUartPinout<D>> EndlessWriteTarget for Writer<D, P> {}
 
 #[cfg(feature = "eh1_0_alpha")]
 impl<D: UartDevice, P: ValidUartPinout<D>> eh1::ErrorType for Writer<D, P> {

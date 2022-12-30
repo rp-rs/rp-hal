@@ -2,6 +2,7 @@ use crate::pac::{uart0::RegisterBlock, UART0, UART1};
 use crate::resets::SubsystemReset;
 use core::ops::Deref;
 use fugit::HertzU32;
+use rp2040_pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
 
 /// Error type for UART operations.
 #[derive(Debug)]
@@ -14,10 +15,37 @@ pub enum Error {
 pub trait State {}
 
 /// Trait to handle both underlying devices (UART0 & UART1)
-pub trait UartDevice: Deref<Target = RegisterBlock> + SubsystemReset + 'static {}
+pub trait UartDevice: Deref<Target = RegisterBlock> + SubsystemReset + 'static {
+    /// The DREQ number for which TX DMA requests are triggered.
+    fn tx_dreq() -> u8
+    where
+        Self: Sized;
+    /// The DREQ number for which RX DMA requests are triggered.
+    fn rx_dreq() -> u8
+    where
+        Self: Sized;
+}
 
-impl UartDevice for UART0 {}
-impl UartDevice for UART1 {}
+impl UartDevice for UART0 {
+    /// The DREQ number for which TX DMA requests are triggered.
+    fn tx_dreq() -> u8 {
+        TREQ_SEL_A::UART0_TX.into()
+    }
+    /// The DREQ number for which RX DMA requests are triggered.
+    fn rx_dreq() -> u8 {
+        TREQ_SEL_A::UART0_RX.into()
+    }
+}
+impl UartDevice for UART1 {
+    /// The DREQ number for which TX DMA requests are triggered.
+    fn tx_dreq() -> u8 {
+        TREQ_SEL_A::UART1_TX.into()
+    }
+    /// The DREQ number for which RX DMA requests are triggered.
+    fn rx_dreq() -> u8 {
+        TREQ_SEL_A::UART1_RX.into()
+    }
+}
 
 /// UART is enabled.
 pub struct Enabled;
