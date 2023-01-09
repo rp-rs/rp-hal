@@ -91,6 +91,7 @@ fn main() -> ! {
         clocks.peripheral_clock.freq(),
         16.MHz(),
         &embedded_hal::spi::MODE_0,
+        false,
     );
 
     // Write out 0, ignore return value

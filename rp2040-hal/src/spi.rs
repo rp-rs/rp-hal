@@ -167,6 +167,15 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
         });
     }
 
+    /// Set master/slave
+    fn set_slave(&mut self, slave: bool) {
+        if slave {
+            self.device.sspcr1.modify(|_, w| w.ms().set_bit());
+        } else {
+            self.device.sspcr1.modify(|_, w| w.ms().clear_bit());
+        }
+    }
+
     /// Initialize the SPI
     pub fn init<F: Into<HertzU32>, B: Into<HertzU32>>(
         mut self,
@@ -174,12 +183,14 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
         peri_frequency: F,
         baudrate: B,
         mode: &Mode,
+        slave: bool,
     ) -> Spi<Enabled, D, DS> {
         self.device.reset_bring_down(resets);
         self.device.reset_bring_up(resets);
 
         self.set_baudrate(peri_frequency, baudrate);
         self.set_format(DS, mode);
+        self.set_slave(slave);
         // Always enable DREQ signals -- harmless if DMA is not listening
         self.device
             .sspdmacr
