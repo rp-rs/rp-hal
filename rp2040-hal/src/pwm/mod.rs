@@ -490,9 +490,9 @@ pwm! {
     ]
 }
 
-/// Marker trait for valid output pins
-pub trait ValidPwmInputPin<S: SliceId>: Sealed {}
 /// Marker trait for valid input pins (Channel B only)
+pub trait ValidPwmInputPin<S: SliceId>: Sealed {}
+/// Marker trait for valid output pins
 pub trait ValidPwmOutputPin<S: SliceId, C: ChannelId>: Sealed {}
 
 /// Make sure we can't free an GPIO pin while still keeping it attached to pwm
