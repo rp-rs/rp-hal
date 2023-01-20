@@ -135,8 +135,7 @@ fn main() -> ! {
 
     // Connect to GPI O1 as the input to channel B on PWM0
     let channel = &mut pwm.channel_b;
-    let input_pin: gpio::Pin<_, gpio::PullUpDisabled> = channel.input_from(pins.gpio1).into_mode();
-    let input_pin: gpio::Pin<_, gpio::FunctionPwm> = input_pin.into_mode();
+    let input_pin = channel.input_from(pins.gpio1);
     channel.enable();
 
     // Enable an interrupt whenever GPI O1 goes from high to low (the end of a pulse)
