@@ -71,6 +71,11 @@ name = "gpio_irq_example"
 required-features = ["rt", "critical-section-impl"]
 
 [[example]]
+# pwm irq input example uses cortex-m-rt::interrupt, need rt feature for that
+name = "pwm_irq_input"
+required-features = ["rt", "critical-section-impl"]
+
+[[example]]
 # vector_table example uses cortex-m-rt::interrupt, need rt feature for that
 name = "vector_table"
 required-features = ["rt", "critical-section-impl"]
