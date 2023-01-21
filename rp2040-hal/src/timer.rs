@@ -205,7 +205,8 @@ pub trait Alarm {
     /// [enable_interrupt]: #method.enable_interrupt
     fn schedule_at(&mut self, timestamp: Instant) -> Result<(), ScheduleAlarmError>;
 
-    /// Return true if this alarm is finished.
+    /// Return true if this alarm is finished. The returned value is undefined if the alarm
+    /// has not been scheduled yet.
     fn finished(&self) -> bool;
 
     /// Cancel an activated alarm.
@@ -337,7 +338,8 @@ macro_rules! impl_alarm {
                 self.schedule_internal(timer, timestamp)
             }
 
-            /// Return true if this alarm is finished.
+            /// Return true if this alarm is finished. The returned value is undefined if the alarm
+            /// has not been scheduled yet.
             fn finished(&self) -> bool {
                 // safety: This is a read action and should not have any UB
                 let bits: u32 = unsafe { &*TIMER::ptr() }.armed.read().bits();
