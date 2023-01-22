@@ -204,7 +204,7 @@ The following devices were found:
 [0]: J-Link (J-Link) (VID: 1366, PID: 0101, Serial: 000099999999, JLink)
 ```
 
-There is a SEGGER J-Link connected in the example above - the mesage you see
+There is a SEGGER J-Link connected in the example above - the message you see
 will reflect the probe you have connected.
 
 *Step 4* - Use `cargo run`, which will compile the code and start the specified
