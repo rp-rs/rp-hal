@@ -26,7 +26,7 @@
 <details open="open">
   <summary><h2 style="display: inline-block">Table of Contents</h2></summary>
   <ol>
-    <li><a href="#gettting_started">Getting Started</a></li>
+    <li><a href="#getting_started">Getting Started</a></li>
     <li><a href="#programming">Programming</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
