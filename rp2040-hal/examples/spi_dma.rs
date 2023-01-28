@@ -69,7 +69,6 @@ fn main() -> ! {
         clocks.peripheral_clock.freq(),
         16_000_000u32.Hz(),
         &embedded_hal::spi::MODE_0,
-        false,
     );
 
     // Initialize DMA.

@@ -27,6 +27,7 @@ use eh1_0_alpha::spi as eh1;
 use embedded_hal::blocking::spi;
 use embedded_hal::spi::{FullDuplex, Mode, Phase, Polarity};
 use fugit::HertzU32;
+use fugit::RateExtU32;
 use pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
 use pac::RESETS;
 
@@ -141,7 +142,6 @@ impl<S: State, D: SpiDevice, const DS: u8> Spi<S, D, DS> {
             .modify(|_, w| unsafe { w.scr().bits(postdiv) });
 
         // Return the frequency we were able to achieve
-        use fugit::RateExtU32;
         (freq_in / (prescale as u32 * (1 + postdiv as u32))).Hz()
     }
 }
@@ -176,8 +176,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
         }
     }
 
-    /// Initialize the SPI
-    pub fn init<F: Into<HertzU32>, B: Into<HertzU32>>(
+    fn init_spi<F: Into<HertzU32>, B: Into<HertzU32>>(
         mut self,
         resets: &mut RESETS,
         peri_frequency: F,
@@ -200,6 +199,22 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
         self.device.sspcr1.modify(|_, w| w.sse().set_bit());
 
         self.transition(Enabled { __private: () })
+    }
+
+    /// Initialize the SPI in master mode
+    pub fn init<F: Into<HertzU32>, B: Into<HertzU32>>(
+        self,
+        resets: &mut RESETS,
+        peri_frequency: F,
+        baudrate: B,
+        mode: &Mode,
+    ) -> Spi<Enabled, D, DS> {
+        self.init_spi(resets, peri_frequency, baudrate, mode, false)
+    }
+
+    /// Initialize the SPI in slave mode
+    pub fn init_slave(self, resets: &mut RESETS, mode: &Mode) -> Spi<Enabled, D, DS> {
+        self.init_spi(resets, 0u32.Hz(), 0u32.Hz(), mode, true)
     }
 }
 
