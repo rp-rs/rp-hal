@@ -214,7 +214,10 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
 
     /// Initialize the SPI in slave mode
     pub fn init_slave(self, resets: &mut RESETS, mode: &Mode) -> Spi<Enabled, D, DS> {
-        self.init_spi(resets, 0u32.Hz(), 0u32.Hz(), mode, true)
+        // Use dummy values for frequency and baudrate.
+        // With both values 0, set_baudrate will set prescale == u8::MAX, which will break if debug assertions are enabled.
+        // u8::MAX is outside the allowed range 2..=254 for CPSDVSR, which might interfere with proper operation in slave mode.
+        self.init_spi(resets, 1000u32.Hz(), 1000u32.Hz(), mode, true)
     }
 }
 
