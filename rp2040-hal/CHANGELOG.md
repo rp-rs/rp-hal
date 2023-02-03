@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.0] - 2022-12-11
 
+### MSRV
+
+The Minimum-Supported Rust Version (MSRV) for this release is 1.62
+
 ### Changed
 
 - Fixed: First frame is getting lost on a USB-CDC device - @MuratUrsavas

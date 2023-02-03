@@ -6,7 +6,7 @@ edition = "2018"
 homepage = "https://github.com/rp-rs/rp-hal"
 description = "A Rust Embeded-HAL impl for the rp2040 microcontroller"
 license = "MIT OR Apache-2.0"
-rust-version = "1.61"
+rust-version = "1.62"
 
 [package.metadata.docs.rs]
 features = ["rt", "rom-v2-intrinsics", "defmt", "rtic-monotonic"]

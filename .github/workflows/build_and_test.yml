@@ -53,7 +53,7 @@ jobs:
         run: cargo udeps ${{ matrix.mode }} --workspace ${{ matrix.features }}
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.61
+          toolchain: 1.62
           target: thumbv6m-none-eabi
       - name: Verifiy MSRV
         run: cargo build --workspace --examples ${{ matrix.features }}
