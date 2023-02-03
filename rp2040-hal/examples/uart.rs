@@ -101,7 +101,7 @@ fn main() -> ! {
 
     let mut value = 0u32;
     loop {
-        writeln!(uart, "value: {:02}\r", value).unwrap();
+        writeln!(uart, "value: {value:02}\r").unwrap();
         delay.delay_ms(1000);
         value += 1
     }

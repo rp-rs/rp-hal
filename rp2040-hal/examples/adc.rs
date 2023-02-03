@@ -117,8 +117,7 @@ fn main() -> ! {
         let pin_adc_counts: u16 = adc.read(&mut adc_pin_0).unwrap();
         writeln!(
             uart,
-            "ADC readings: Temperature: {:02} Pin: {:02}\r\n",
-            temp_sens_adc_counts, pin_adc_counts
+            "ADC readings: Temperature: {temp_sens_adc_counts:02} Pin: {pin_adc_counts:02}\r\n"
         )
         .unwrap();
         delay.delay_ms(1000);
