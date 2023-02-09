@@ -816,6 +816,8 @@ pub trait Interp {
     fn set_base(&mut self, v: u32);
     ///Read the interpolator Base register (Base2 in the datasheet)
     fn get_base(&self) -> u32;
+    ///Write the lower 16 bits to BASE0 and the upper bits to BASE1 simultaneously. Each half is sign-extended to 32 bits if that lane's SIGNED flag is set
+    fn set_base_1and0(&mut self, v: u32);
 }
 
 macro_rules! interpolators {
@@ -905,7 +907,10 @@ macro_rules! interpolators {
                             let sio = unsafe { &*pac::SIO::ptr() };
                             sio.[<$interp:lower _base2>].read().bits()
                         }
-
+                        fn set_base_1and0(&mut self, v:u32){
+                            let sio = unsafe { &*pac::SIO::ptr() };
+                            sio.[<$interp:lower _base_1and0>].write(|w| unsafe { w.bits(v)});
+                        }
                     }
 
                 )+
