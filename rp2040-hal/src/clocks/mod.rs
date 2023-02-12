@@ -155,7 +155,7 @@ pub struct ChangingClockToken<G: Clock> {
 }
 
 /// For clocks that can be disabled
-pub trait StoppableClock {
+pub trait StoppableClock: Sealed {
     /// Enables the clock.
     fn enable(&mut self);
 

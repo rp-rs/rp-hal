@@ -4,11 +4,12 @@ use super::{Channel, ChannelIndex, Pace, ReadTarget, WriteTarget};
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
     dma::ChannelRegs,
+    typelevel::Sealed,
 };
 use core::mem;
 
 /// Trait which implements low-level functionality for transfers using a single DMA channel.
-pub trait SingleChannel {
+pub trait SingleChannel: Sealed {
     /// Returns the registers associated with this DMA channel.
     ///
     /// In the case of channel pairs, this returns the first channel.
@@ -85,7 +86,7 @@ pub trait SingleChannel {
 ///
 /// Anything that requires more than a single buffer exactly once requires two channels to be
 /// combined.
-pub trait ChannelPair: SingleChannel {
+pub trait ChannelPair: SingleChannel + Sealed {
     /// Returns the registers associated with the second DMA channel associated with this channel
     /// pair.
     fn ch2(&self) -> &rp2040_pac::dma::CH;
@@ -103,6 +104,8 @@ impl<CH: ChannelIndex> SingleChannel for Channel<CH> {
     }
 }
 
+impl<CH: ChannelIndex> Sealed for Channel<CH> {}
+
 impl<CH1: ChannelIndex, CH2: ChannelIndex> SingleChannel for (Channel<CH1>, Channel<CH2>) {
     fn ch(&self) -> &rp2040_pac::dma::CH {
         self.0.regs()
@@ -112,6 +115,8 @@ impl<CH1: ChannelIndex, CH2: ChannelIndex> SingleChannel for (Channel<CH1>, Chan
         CH1::id()
     }
 }
+
+impl<CH1: ChannelIndex, CH2: ChannelIndex> Sealed for (Channel<CH1>, Channel<CH2>) {}
 
 pub(crate) trait ChannelConfig {
     fn config<WORD, FROM, TO>(

@@ -386,7 +386,7 @@ macro_rules! pin_id {
 /// See the [`OptionalKind`] documentation for more details on the pattern.
 ///
 /// [`OptionalKind`]: crate::typelevel#optionalkind-trait-pattern
-pub trait OptionalPinId {}
+pub trait OptionalPinId: Sealed {}
 
 impl OptionalPinId for NoneT {}
 
@@ -397,7 +397,7 @@ impl<I: PinId> OptionalPinId for I {}
 /// See the [`OptionalKind`] documentation for more details on the pattern.
 ///
 /// [`OptionalKind`]: crate::typelevel#optionalkind-trait-pattern
-pub trait SomePinId: OptionalPinId + PinId {}
+pub trait SomePinId: OptionalPinId + PinId + Sealed {}
 
 impl<I: PinId> SomePinId for I {}
 
@@ -803,7 +803,7 @@ impl<P: AnyPin> OptionalPin for P {
 /// See the [`OptionalKind`] documentation for more details on the pattern.
 ///
 /// [`OptionalKind`]: crate::typelevel#optionalkind-trait-pattern
-pub trait SomePin: AnyPin {}
+pub trait SomePin: AnyPin + Sealed {}
 impl<P: AnyPin> SomePin for P {}
 
 //==============================================================================

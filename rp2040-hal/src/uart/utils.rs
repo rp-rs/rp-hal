@@ -1,5 +1,6 @@
 use crate::pac::{uart0::RegisterBlock, UART0, UART1};
 use crate::resets::SubsystemReset;
+use crate::typelevel::Sealed;
 use core::ops::Deref;
 use fugit::HertzU32;
 use rp2040_pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
@@ -12,10 +13,10 @@ pub enum Error {
     BadArgument,
 }
 /// State of the UART Peripheral.
-pub trait State {}
+pub trait State: Sealed {}
 
 /// Trait to handle both underlying devices (UART0 & UART1)
-pub trait UartDevice: Deref<Target = RegisterBlock> + SubsystemReset + 'static {
+pub trait UartDevice: Deref<Target = RegisterBlock> + SubsystemReset + Sealed + 'static {
     /// The DREQ number for which TX DMA requests are triggered.
     fn tx_dreq() -> u8
     where
@@ -36,6 +37,7 @@ impl UartDevice for UART0 {
         TREQ_SEL_A::UART0_RX.into()
     }
 }
+impl Sealed for UART0 {}
 impl UartDevice for UART1 {
     /// The DREQ number for which TX DMA requests are triggered.
     fn tx_dreq() -> u8 {
@@ -46,6 +48,7 @@ impl UartDevice for UART1 {
         TREQ_SEL_A::UART1_RX.into()
     }
 }
+impl Sealed for UART1 {}
 
 /// UART is enabled.
 pub struct Enabled;
@@ -54,7 +57,9 @@ pub struct Enabled;
 pub struct Disabled;
 
 impl State for Enabled {}
+impl Sealed for Enabled {}
 impl State for Disabled {}
+impl Sealed for Disabled {}
 
 /// Data bits
 pub enum DataBits {

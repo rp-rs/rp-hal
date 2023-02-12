@@ -22,7 +22,7 @@
 //! automatic continous ring buffers consisting of two aligned buffers being read or written
 //! alternatingly.
 
-use crate::resets::SubsystemReset;
+use crate::{resets::SubsystemReset, typelevel::Sealed};
 use core::marker::PhantomData;
 use embedded_dma::{ReadBuffer, WriteBuffer};
 use rp2040_pac::DMA;
@@ -37,7 +37,7 @@ mod single_channel;
 pub use crate::dma::single_channel::SingleChannel;
 
 /// DMA unit.
-pub trait DMAExt {
+pub trait DMAExt: Sealed {
     /// Splits the DMA unit into its individual channels.
     fn split(self, resets: &mut pac::RESETS) -> Channels;
     /// Splits the DMA unit into its individual channels with runtime ownership
@@ -50,7 +50,7 @@ pub struct Channel<CH: ChannelIndex> {
 }
 
 /// DMA channel identifier.
-pub trait ChannelIndex {
+pub trait ChannelIndex: Sealed {
     /// Numerical index of the DMA channel (0..11).
     fn id() -> u8;
 }
@@ -87,6 +87,8 @@ macro_rules! channels {
             }
         }
 
+        impl Sealed for DMA {}
+
         /// Set of DMA channels.
         pub struct Channels {
             $(
@@ -102,6 +104,8 @@ macro_rules! channels {
                     $x
                 }
             }
+
+            impl Sealed for $CHX {}
         )+
 
         /// Set of DMA channels with runtime ownership.

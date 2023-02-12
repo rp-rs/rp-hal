@@ -18,6 +18,8 @@
 //! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
 //! ```
 
+use crate::typelevel::Sealed;
+
 use super::*;
 use core::convert::Infallible;
 
@@ -380,7 +382,7 @@ intrinsics! {
 }
 
 /// This type is just used to limit us to Spinlocks `0..=31`
-pub trait SpinlockValid {}
+pub trait SpinlockValid: Sealed {}
 
 /// Hardware based spinlock.
 ///
@@ -482,160 +484,48 @@ where
     }
 }
 
-/// Spinlock number 0
-pub type Spinlock0 = Spinlock<0>;
+macro_rules! spinlock {
+    ($id:expr) => {
+        $crate::paste::paste! {
+            /// Spinlock number $id
+            pub type [<Spinlock $id>] = Spinlock<$id>;
+            impl SpinlockValid for Spinlock<$id> {}
+            impl Sealed for Spinlock<$id> {}
+        }
+    };
+}
 
-impl SpinlockValid for Spinlock<0> {}
-
-/// Spinlock number 1
-pub type Spinlock1 = Spinlock<1>;
-
-impl SpinlockValid for Spinlock<1> {}
-
-/// Spinlock number 2
-pub type Spinlock2 = Spinlock<2>;
-
-impl SpinlockValid for Spinlock<2> {}
-
-/// Spinlock number 3
-pub type Spinlock3 = Spinlock<3>;
-
-impl SpinlockValid for Spinlock<3> {}
-
-/// Spinlock number 4
-pub type Spinlock4 = Spinlock<4>;
-
-impl SpinlockValid for Spinlock<4> {}
-
-/// Spinlock number 5
-pub type Spinlock5 = Spinlock<5>;
-
-impl SpinlockValid for Spinlock<5> {}
-
-/// Spinlock number 6
-pub type Spinlock6 = Spinlock<6>;
-
-impl SpinlockValid for Spinlock<6> {}
-
-/// Spinlock number 7
-pub type Spinlock7 = Spinlock<7>;
-
-impl SpinlockValid for Spinlock<7> {}
-
-/// Spinlock number 8
-pub type Spinlock8 = Spinlock<8>;
-
-impl SpinlockValid for Spinlock<8> {}
-
-/// Spinlock number 9
-pub type Spinlock9 = Spinlock<9>;
-
-impl SpinlockValid for Spinlock<9> {}
-
-/// Spinlock number 10
-pub type Spinlock10 = Spinlock<10>;
-
-impl SpinlockValid for Spinlock<10> {}
-
-/// Spinlock number 11
-pub type Spinlock11 = Spinlock<11>;
-
-impl SpinlockValid for Spinlock<11> {}
-
-/// Spinlock number 12
-pub type Spinlock12 = Spinlock<12>;
-
-impl SpinlockValid for Spinlock<12> {}
-
-/// Spinlock number 13
-pub type Spinlock13 = Spinlock<13>;
-
-impl SpinlockValid for Spinlock<13> {}
-
-/// Spinlock number 14
-pub type Spinlock14 = Spinlock<14>;
-
-impl SpinlockValid for Spinlock<14> {}
-
-/// Spinlock number 15
-pub type Spinlock15 = Spinlock<15>;
-
-impl SpinlockValid for Spinlock<15> {}
-
-/// Spinlock number 16
-pub type Spinlock16 = Spinlock<16>;
-
-impl SpinlockValid for Spinlock<16> {}
-
-/// Spinlock number 17
-pub type Spinlock17 = Spinlock<17>;
-
-impl SpinlockValid for Spinlock<17> {}
-
-/// Spinlock number 18
-pub type Spinlock18 = Spinlock<18>;
-
-impl SpinlockValid for Spinlock<18> {}
-
-/// Spinlock number 19
-pub type Spinlock19 = Spinlock<19>;
-
-impl SpinlockValid for Spinlock<19> {}
-
-/// Spinlock number 20
-pub type Spinlock20 = Spinlock<20>;
-
-impl SpinlockValid for Spinlock<20> {}
-
-/// Spinlock number 21
-pub type Spinlock21 = Spinlock<21>;
-
-impl SpinlockValid for Spinlock<21> {}
-
-/// Spinlock number 22
-pub type Spinlock22 = Spinlock<22>;
-
-impl SpinlockValid for Spinlock<22> {}
-
-/// Spinlock number 23
-pub type Spinlock23 = Spinlock<23>;
-
-impl SpinlockValid for Spinlock<23> {}
-
-/// Spinlock number 24
-pub type Spinlock24 = Spinlock<24>;
-
-impl SpinlockValid for Spinlock<24> {}
-
-/// Spinlock number 25
-pub type Spinlock25 = Spinlock<25>;
-
-impl SpinlockValid for Spinlock<25> {}
-
-/// Spinlock number 26
-pub type Spinlock26 = Spinlock<26>;
-
-impl SpinlockValid for Spinlock<26> {}
-
-/// Spinlock number 27
-pub type Spinlock27 = Spinlock<27>;
-
-impl SpinlockValid for Spinlock<27> {}
-
-/// Spinlock number 28
-pub type Spinlock28 = Spinlock<28>;
-
-impl SpinlockValid for Spinlock<28> {}
-
-/// Spinlock number 29
-pub type Spinlock29 = Spinlock<29>;
-
-impl SpinlockValid for Spinlock<29> {}
-
-/// Spinlock number 30
-pub type Spinlock30 = Spinlock<30>;
-
-impl SpinlockValid for Spinlock<30> {}
+spinlock!(0);
+spinlock!(1);
+spinlock!(2);
+spinlock!(3);
+spinlock!(4);
+spinlock!(5);
+spinlock!(6);
+spinlock!(7);
+spinlock!(8);
+spinlock!(9);
+spinlock!(10);
+spinlock!(11);
+spinlock!(12);
+spinlock!(13);
+spinlock!(14);
+spinlock!(15);
+spinlock!(16);
+spinlock!(17);
+spinlock!(18);
+spinlock!(19);
+spinlock!(20);
+spinlock!(21);
+spinlock!(22);
+spinlock!(23);
+spinlock!(24);
+spinlock!(25);
+spinlock!(26);
+spinlock!(27);
+spinlock!(28);
+spinlock!(29);
+spinlock!(30);
 
 /// Spinlock number 31 - used by critical section implementation
 #[cfg(feature = "critical-section-impl")]
@@ -646,6 +536,7 @@ pub(crate) type Spinlock31 = Spinlock<31>;
 pub type Spinlock31 = Spinlock<31>;
 
 impl SpinlockValid for Spinlock<31> {}
+impl Sealed for Spinlock<31> {}
 
 /// Returns the current state of the spinlocks. Each index corresponds to the associated spinlock, e.g. if index `5` is set to `true`, it means that [`Spinlock5`] is currently locked.
 ///
@@ -760,7 +651,7 @@ impl LaneCtrl {
 }
 
 ///Trait representing the functionnality of a single lane of an interpolator.
-pub trait Lane {
+pub trait Lane: Sealed {
     ///Read the lane result, and simultaneously write lane results to both accumulators.
     fn pop(&mut self) -> u32;
     ///Read the lane result without altering any internal state
@@ -807,7 +698,7 @@ pub trait Lane {
 /// sio.interp0.get_lane0().pop();  // returns 2
 /// sio.interp0.get_lane0().pop();  // returns 3
 /// ```
-pub trait Interp {
+pub trait Interp: Sealed {
     ///Read the interpolator result (Result 2 in the datasheet), and simultaneously write lane results to both accumulators.
     fn pop(&mut self) -> u32;
     ///Read the interpolator result (Result 2 in the datasheet) without altering any internal state
@@ -875,6 +766,7 @@ macro_rules! interpolators {
                                 sio.[<$interp:lower _accum $lane_id _add>].read().bits()
                             }
                         }
+                        impl Sealed for [<$interp $lane>] {}
                     )+
                     #[doc = "Interpolator " $interp]
                     pub struct $interp {
@@ -912,7 +804,7 @@ macro_rules! interpolators {
                             sio.[<$interp:lower _base_1and0>].write(|w| unsafe { w.bits(v)});
                         }
                     }
-
+                    impl Sealed for $interp {}
                 )+
             }
         }

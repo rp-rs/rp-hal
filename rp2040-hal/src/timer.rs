@@ -13,6 +13,7 @@ use fugit::{MicrosDurationU32, MicrosDurationU64, TimerInstantU64};
 use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
 use crate::pac::{RESETS, TIMER};
 use crate::resets::SubsystemReset;
+use crate::typelevel::Sealed;
 use core::marker::PhantomData;
 use core::sync::atomic::{AtomicU8, Ordering};
 
@@ -174,7 +175,7 @@ impl embedded_hal::timer::Cancel for CountDown<'_> {
 }
 
 /// Alarm abstraction.
-pub trait Alarm {
+pub trait Alarm: Sealed {
     /// Clear the interrupt flag.
     ///
     /// The interrupt is unable to trigger a 2nd time until this interrupt is cleared.
@@ -362,6 +363,8 @@ macro_rules! impl_alarm {
                 Ok(())
             }
         }
+
+        impl Sealed for $name {}
 
         impl Drop for $name {
             fn drop(&mut self) {

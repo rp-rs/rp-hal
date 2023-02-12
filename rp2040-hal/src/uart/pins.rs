@@ -1,5 +1,6 @@
 use crate::gpio::{bank0, FunctionUart, Pin};
 use crate::pac::{UART0, UART1};
+use crate::typelevel::Sealed;
 
 use super::UartDevice;
 
@@ -141,22 +142,22 @@ impl<TX, RX, CTS, RTS> Pins<TX, RX, CTS, RTS> {
 }
 
 /// Indicates a valid TX pin for UART0 or UART1
-pub trait Tx<UART: UartDevice> {
+pub trait Tx<UART: UartDevice>: Sealed {
     #[allow(missing_docs)]
     const ENABLED: bool;
 }
 /// Indicates a valid RX pin for UART0 or UART1
-pub trait Rx<UART: UartDevice> {
+pub trait Rx<UART: UartDevice>: Sealed {
     #[allow(missing_docs)]
     const ENABLED: bool;
 }
 /// Indicates a valid CTS pin for UART0 or UART1
-pub trait Cts<UART: UartDevice> {
+pub trait Cts<UART: UartDevice>: Sealed {
     #[allow(missing_docs)]
     const ENABLED: bool;
 }
 /// Indicates a valid RTS pin for UART0 or UART1
-pub trait Rts<UART: UartDevice> {
+pub trait Rts<UART: UartDevice>: Sealed {
     #[allow(missing_docs)]
     const ENABLED: bool;
 }
@@ -173,6 +174,7 @@ impl<UART: UartDevice> Cts<UART> for () {
 impl<UART: UartDevice> Rts<UART> for () {
     const ENABLED: bool = false;
 }
+impl Sealed for () {}
 
 macro_rules! impl_valid_uart {
     ($($uart:ident: {
