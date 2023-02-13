@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add SPI slave support - @zaksabeast
+- Add set_base_1and0 to interpolator - @tomgilligan
+- Add DMA support, with implementations for SPI, PIO, UART - @9names, @mgottschlag, @Nashenas88
+- Add alarm cancellation feature - @MuratUrsavas
+- Add Pin::id() - @jannic
+- Add interrupt functions for DynPin - @larsarv
+
+### Changed
+
+- Several documentation improvements - @nmattia, @tianrking
+- CI improvements - @ithinuel, @jannic
+
 ## [0.7.0] - 2022-12-11
 
 ### MSRV
