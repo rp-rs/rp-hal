@@ -485,6 +485,10 @@ where
 }
 
 macro_rules! spinlock {
+    ($first:expr, $($rest:tt),+) => {
+        spinlock!($first);
+        spinlock!($($rest),+);
+    };
     ($id:expr) => {
         $crate::paste::paste! {
             /// Spinlock number $id
@@ -494,38 +498,10 @@ macro_rules! spinlock {
         }
     };
 }
-
-spinlock!(0);
-spinlock!(1);
-spinlock!(2);
-spinlock!(3);
-spinlock!(4);
-spinlock!(5);
-spinlock!(6);
-spinlock!(7);
-spinlock!(8);
-spinlock!(9);
-spinlock!(10);
-spinlock!(11);
-spinlock!(12);
-spinlock!(13);
-spinlock!(14);
-spinlock!(15);
-spinlock!(16);
-spinlock!(17);
-spinlock!(18);
-spinlock!(19);
-spinlock!(20);
-spinlock!(21);
-spinlock!(22);
-spinlock!(23);
-spinlock!(24);
-spinlock!(25);
-spinlock!(26);
-spinlock!(27);
-spinlock!(28);
-spinlock!(29);
-spinlock!(30);
+spinlock!(
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+    26, 27, 28, 29, 30
+);
 
 /// Spinlock number 31 - used by critical section implementation
 #[cfg(feature = "critical-section-impl")]
