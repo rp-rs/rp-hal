@@ -7,8 +7,10 @@ use core::{convert::Infallible, ops::RangeInclusive};
 use fugit::HertzU32;
 use nb::Error::WouldBlock;
 
+use crate::typelevel::Sealed;
+
 /// State of the Crystal Oscillator (typestate trait)
-pub trait State {}
+pub trait State: Sealed {}
 
 /// XOSC is disabled (typestate)
 pub struct Disabled;
@@ -27,9 +29,13 @@ pub struct Stable {
 pub struct Dormant;
 
 impl State for Disabled {}
+impl Sealed for Disabled {}
 impl State for Initialized {}
+impl Sealed for Initialized {}
 impl State for Stable {}
+impl Sealed for Stable {}
 impl State for Dormant {}
+impl Sealed for Dormant {}
 
 /// Possible errors when initializing the CrystalOscillator
 #[derive(Debug)]

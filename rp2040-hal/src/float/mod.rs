@@ -1,5 +1,7 @@
 use core::ops;
 
+use crate::typelevel::Sealed;
+
 // Borrowed and simplified from compiler-builtins so we can use bit ops
 // on floating point without macro soup.
 pub trait Int:
@@ -23,6 +25,7 @@ pub trait Int:
     + ops::BitXor<Output = Self>
     + ops::BitAnd<Output = Self>
     + ops::Not<Output = Self>
+    + Sealed
 {
     const ZERO: Self;
 }
@@ -32,6 +35,8 @@ macro_rules! int_impl {
         impl Int for $ty {
             const ZERO: Self = 0;
         }
+
+        impl Sealed for $ty {}
     };
 }
 
@@ -49,6 +54,7 @@ pub trait Float:
     + ops::Sub<Output = Self>
     + ops::Div<Output = Self>
     + ops::Rem<Output = Self>
+    + Sealed
 {
     /// A uint of the same with as the float
     type Int: Int;
@@ -132,6 +138,8 @@ macro_rules! float_impl {
                 -self
             }
         }
+
+        impl Sealed for $ty {}
     };
 }
 

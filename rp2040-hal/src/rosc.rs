@@ -3,8 +3,10 @@
 
 use fugit::HertzU32;
 
+use crate::typelevel::Sealed;
+
 /// State of the Ring Oscillator (typestate trait)
-pub trait State {}
+pub trait State: Sealed {}
 
 /// ROSC is disabled (typestate)
 pub struct Disabled;
@@ -18,8 +20,11 @@ pub struct Enabled {
 pub struct Dormant;
 
 impl State for Disabled {}
+impl Sealed for Disabled {}
 impl State for Enabled {}
+impl Sealed for Enabled {}
 impl State for Dormant {}
+impl Sealed for Dormant {}
 
 /// A Ring Oscillator.
 pub struct RingOscillator<S: State> {

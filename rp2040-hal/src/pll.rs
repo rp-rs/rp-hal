@@ -12,10 +12,10 @@ use fugit::{HertzU32, RateExtU32};
 use nb::Error::WouldBlock;
 use pac::RESETS;
 
-use crate::{clocks::ClocksManager, resets::SubsystemReset};
+use crate::{clocks::ClocksManager, resets::SubsystemReset, typelevel::Sealed};
 
 /// State of the PLL
-pub trait State {}
+pub trait State: Sealed {}
 
 /// PLL is disabled.
 pub struct Disabled {
@@ -39,17 +39,22 @@ pub struct Locked {
 }
 
 impl State for Disabled {}
+impl Sealed for Disabled {}
 impl State for Locked {}
+impl Sealed for Locked {}
 impl State for Locking {}
+impl Sealed for Locking {}
 
 /// Trait to handle both underlying devices from the PAC (PLL_SYS & PLL_USB)
 pub trait PhaseLockedLoopDevice:
-    Deref<Target = rp2040_pac::pll_sys::RegisterBlock> + SubsystemReset
+    Deref<Target = rp2040_pac::pll_sys::RegisterBlock> + SubsystemReset + Sealed
 {
 }
 
 impl PhaseLockedLoopDevice for rp2040_pac::PLL_SYS {}
+impl Sealed for rp2040_pac::PLL_SYS {}
 impl PhaseLockedLoopDevice for rp2040_pac::PLL_USB {}
+impl Sealed for rp2040_pac::PLL_USB {}
 
 /// A PLL.
 pub struct PhaseLockedLoop<S: State, D: PhaseLockedLoopDevice> {

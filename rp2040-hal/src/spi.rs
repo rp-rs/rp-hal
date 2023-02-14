@@ -21,6 +21,7 @@
 
 use crate::dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget};
 use crate::resets::SubsystemReset;
+use crate::typelevel::Sealed;
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::spi as eh1;
@@ -32,7 +33,7 @@ use pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
 use pac::RESETS;
 
 /// State of the SPI
-pub trait State {}
+pub trait State: Sealed {}
 
 /// Spi is disabled
 pub struct Disabled {
@@ -45,10 +46,12 @@ pub struct Enabled {
 }
 
 impl State for Disabled {}
+impl Sealed for Disabled {}
 impl State for Enabled {}
+impl Sealed for Enabled {}
 
 /// Pac SPI device
-pub trait SpiDevice: Deref<Target = pac::spi0::RegisterBlock> + SubsystemReset {
+pub trait SpiDevice: Deref<Target = pac::spi0::RegisterBlock> + SubsystemReset + Sealed {
     /// The DREQ number for which TX DMA requests are triggered.
     fn tx_dreq() -> u8;
     /// The DREQ number for which RX DMA requests are triggered.
@@ -63,6 +66,7 @@ impl SpiDevice for pac::SPI0 {
         TREQ_SEL_A::SPI0_RX.into()
     }
 }
+impl Sealed for pac::SPI0 {}
 impl SpiDevice for pac::SPI1 {
     fn tx_dreq() -> u8 {
         TREQ_SEL_A::SPI1_TX.into()
@@ -71,12 +75,15 @@ impl SpiDevice for pac::SPI1 {
         TREQ_SEL_A::SPI1_RX.into()
     }
 }
+impl Sealed for pac::SPI1 {}
 
 /// Data size used in spi
-pub trait DataSize {}
+pub trait DataSize: Sealed {}
 
 impl DataSize for u8 {}
 impl DataSize for u16 {}
+impl Sealed for u8 {}
+impl Sealed for u16 {}
 
 /// Spi
 pub struct Spi<S: State, D: SpiDevice, const DS: u8> {

@@ -4,6 +4,7 @@ use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
     dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget},
     resets::SubsystemReset,
+    typelevel::Sealed,
 };
 use pio::{Instruction, InstructionOperands, Program, SideSet, Wrap};
 use rp2040_pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
@@ -13,7 +14,7 @@ const PIO_INSTRUCTION_COUNT: usize = 32;
 
 /// PIO Instance
 pub trait PIOExt:
-    core::ops::Deref<Target = rp2040_pac::pio0::RegisterBlock> + SubsystemReset + Sized + Send
+    core::ops::Deref<Target = rp2040_pac::pio0::RegisterBlock> + SubsystemReset + Sized + Send + Sealed
 {
     /// Create a new PIO wrapper and split the state machines into individual objects.
     #[allow(clippy::type_complexity)] // Required for symmetry with PIO::free().
@@ -355,7 +356,7 @@ impl<P: PIOExt> InstalledProgram<P> {
 }
 
 /// State machine identifier (without a specified PIO block).
-pub trait StateMachineIndex: Send {
+pub trait StateMachineIndex: Send + Sealed {
     /// Numerical index of the state machine (0 to 3).
     fn id() -> usize;
 }
@@ -374,25 +375,36 @@ impl StateMachineIndex for SM0 {
         0
     }
 }
+
+impl Sealed for SM0 {}
+
 impl StateMachineIndex for SM1 {
     fn id() -> usize {
         1
     }
 }
+
+impl Sealed for SM1 {}
+
 impl StateMachineIndex for SM2 {
     fn id() -> usize {
         2
     }
 }
+
+impl Sealed for SM2 {}
+
 impl StateMachineIndex for SM3 {
     fn id() -> usize {
         3
     }
 }
 
+impl Sealed for SM3 {}
+
 /// Trait to identify a single state machine, as a generic type parameter to `UninitStateMachine`,
 /// `InitStateMachine`, etc.
-pub trait ValidStateMachine {
+pub trait ValidStateMachine: Sealed {
     /// The PIO block to which this state machine belongs.
     type PIO: PIOExt;
 
@@ -433,6 +445,8 @@ impl<P: PIOExt, SM: StateMachineIndex> ValidStateMachine for (P, SM) {
         ((P::id() << 3) | SM::id() | 0x4) as u8
     }
 }
+
+impl<P: PIOExt, SM: StateMachineIndex> Sealed for (P, SM) {}
 
 /// Pin State in the PIO
 ///
