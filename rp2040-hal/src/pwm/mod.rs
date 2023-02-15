@@ -79,11 +79,7 @@
 use core::marker::PhantomData;
 
 use crate::{
-    gpio::{
-        bank0::*, Disabled, DisabledConfig, FunctionClock, FunctionI2C, FunctionPio0, FunctionPio1,
-        FunctionPwm, FunctionSpi, FunctionUart, FunctionUsbAux, FunctionXip, Input, InputConfig,
-        Output, OutputConfig, Pin, PinId, PinMode, ValidPinMode,
-    },
+    gpio::{bank0::*, FunctionPwm, Pin, PinId, PinMode, ValidPinMode},
     resets::SubsystemReset,
     typelevel::Sealed,
 };
@@ -495,36 +491,6 @@ pub trait ValidPwmInputPin<S: SliceId>: Sealed {}
 /// Marker trait for valid output pins
 pub trait ValidPwmOutputPin<S: SliceId, C: ChannelId>: Sealed {}
 
-/// Make sure we can't free an GPIO pin while still keeping it attached to pwm
-/// TODO: Maybe FunctionPWM should be private?
-pub trait NonPwmPinMode: Sealed {}
-
-impl NonPwmPinMode for FunctionClock {}
-impl NonPwmPinMode for FunctionI2C {}
-impl NonPwmPinMode for FunctionPio0 {}
-impl NonPwmPinMode for FunctionPio1 {}
-impl NonPwmPinMode for FunctionSpi {}
-impl NonPwmPinMode for FunctionUart {}
-impl NonPwmPinMode for FunctionUsbAux {}
-impl NonPwmPinMode for FunctionXip {}
-impl<C: InputConfig> NonPwmPinMode for Input<C> {}
-impl<C: OutputConfig> NonPwmPinMode for Output<C> {}
-impl<C: DisabledConfig> NonPwmPinMode for Disabled<C> {}
-
-/// Stores the attached gpio pin.
-///
-/// This value can be ignored/dropped or stored to retrieve the original pin struct
-pub struct PwmPinToken<G: PinId + BankPinId> {
-    pin: Pin<G, FunctionPwm>,
-}
-
-impl<G: PinId + BankPinId> PwmPinToken<G> {
-    /// Retrieve the original pin while disconnecting it from the pwm
-    pub fn into_mode<N: PinMode + ValidPinMode<G> + NonPwmPinMode>(self) -> Pin<G, N> {
-        self.pin.into_mode::<N>()
-    }
-}
-
 impl Slices {
     /// Free the pwm registers from the pwm hal struct while consuming it.
     pub fn free(self) -> PWM {
@@ -678,10 +644,8 @@ impl<S: SliceId, M: SliceMode + ValidSliceMode<S>> Channel<S, M, A> {
     >(
         &mut self,
         pin: Pin<G, PM>,
-    ) -> PwmPinToken<G> {
-        PwmPinToken {
-            pin: pin.into_mode(),
-        }
+    ) -> Pin<G, FunctionPwm> {
+        pin.into_mode()
     }
 
     /// Invert channel output
@@ -705,10 +669,8 @@ impl<S: SliceId, M: SliceMode + ValidSliceMode<S>> Channel<S, M, B> {
     >(
         &mut self,
         pin: Pin<G, PM>,
-    ) -> PwmPinToken<G> {
-        PwmPinToken {
-            pin: pin.into_mode(),
-        }
+    ) -> Pin<G, FunctionPwm> {
+        pin.into_mode()
     }
 
     /// Invert channel output
@@ -729,10 +691,8 @@ impl<S: SliceId, M: SliceMode + ValidSliceInputMode<S>> Channel<S, M, B> {
     pub fn input_from<G: PinId + BankPinId + ValidPwmInputPin<S>, PM: PinMode + ValidPinMode<G>>(
         &mut self,
         pin: Pin<G, PM>,
-    ) -> PwmPinToken<G> {
-        PwmPinToken {
-            pin: pin.into_mode(),
-        }
+    ) -> Pin<G, FunctionPwm> {
+        pin.into_mode()
     }
 }
 
@@ -745,10 +705,8 @@ impl<S: SliceId, M: SliceMode + ValidSliceMode<S>> Slice<S, M> {
     >(
         &mut self,
         pin: Pin<G, PM>,
-    ) -> PwmPinToken<G> {
-        PwmPinToken {
-            pin: pin.into_mode(),
-        }
+    ) -> Pin<G, FunctionPwm> {
+        pin.into_mode()
     }
 }
 
@@ -757,9 +715,7 @@ impl<S: SliceId, M: SliceMode + ValidSliceInputMode<S>> Slice<S, M> {
     pub fn input_from<G: PinId + BankPinId + ValidPwmInputPin<S>, PM: PinMode + ValidPinMode<G>>(
         &mut self,
         pin: Pin<G, PM>,
-    ) -> PwmPinToken<G> {
-        PwmPinToken {
-            pin: pin.into_mode(),
-        }
+    ) -> Pin<G, FunctionPwm> {
+        pin.into_mode()
     }
 }
