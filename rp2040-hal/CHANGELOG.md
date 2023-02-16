@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2023-02-16
+
 ### Added
 
 - Add SPI slave support - @zaksabeast
@@ -237,7 +239,8 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.54.
 
 - Initial release
 
-[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.8.0...HEAD
+[0.7.0]: https://github.com/rp-rs/rp-hal/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/rp-rs/rp-hal/compare/v0.6.0...v0.7.0
 [0.6.1]: https://github.com/rp-rs/rp-hal/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/rp-rs/rp-hal/compare/v0.5.0...v0.6.0
