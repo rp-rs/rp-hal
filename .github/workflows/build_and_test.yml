@@ -8,18 +8,12 @@ jobs:
       matrix:
         mode: ["", "--release"]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           target: thumbv6m-none-eabi
-          override: true
-          profile: minimal
       - name: Build rp2040-hal's examples
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: -p rp2040-hal ${{ matrix.mode }} --examples --features rt,critical-section-impl
+        run: cargo build -p rp2040-hal ${{ matrix.mode }} --examples --features rt,critical-section-impl
   builds:
     name: Build checks
     runs-on: ubuntu-20.04
