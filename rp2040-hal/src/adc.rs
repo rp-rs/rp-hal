@@ -44,7 +44,7 @@ use crate::{
     gpio::Pin,
     gpio::{
         bank0::{Gpio26, Gpio27, Gpio28, Gpio29},
-        FloatingInput,
+        DynGroup, DynPin, FloatingInput,
     },
     resets::SubsystemReset,
 };
@@ -133,6 +133,50 @@ where
 
     fn read(&mut self, _pin: &mut PIN) -> nb::Result<WORD, Self::Error> {
         let chan = PIN::channel();
+
+        if chan == 4 {
+            self.device.cs.modify(|_, w| w.ts_en().set_bit())
+        }
+
+        while !self.device.cs.read().ready().bit_is_set() {
+            cortex_m::asm::nop();
+        }
+
+        self.device
+            .cs
+            .modify(|_, w| unsafe { w.ainsel().bits(chan).start_once().set_bit() });
+
+        while !self.device.cs.read().ready().bit_is_set() {
+            cortex_m::asm::nop();
+        }
+
+        Ok(self.device.result.read().result().bits().into())
+    }
+}
+
+impl Channel<Adc> for DynPin {
+    type ID = (); // ADC channels are identified numerically
+
+    fn channel() {}
+}
+
+impl<WORD> OneShot<Adc, WORD, DynPin> for Adc
+where
+    WORD: From<u16>,
+{
+    type Error = ();
+
+    fn read(&mut self, pin: &mut DynPin) -> nb::Result<WORD, Self::Error> {
+        if pin.id().group != DynGroup::Bank0 {
+            return Err(nb::Error::Other(()));
+        }
+        let chan = match pin.id().num {
+            26 => 0,
+            27 => 1,
+            28 => 2,
+            29 => 3,
+            _ => return Err(nb::Error::Other(())),
+        };
 
         if chan == 4 {
             self.device.cs.modify(|_, w| w.ts_en().set_bit())
