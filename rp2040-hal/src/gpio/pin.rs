@@ -108,10 +108,8 @@ use eh1_0_alpha::digital as eh1;
 pub use embedded_hal::digital::v2::PinState;
 use hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin};
 
-use core::mem::transmute;
-
 /// Type-level marker for tracking which pin modes are valid for which pins
-pub trait ValidPinMode<I: PinId>: Sealed {}
+pub trait ValidPinMode<I: PinId>: Sealed + PinMode {}
 
 //==============================================================================
 //  Disabled configurations
@@ -437,7 +435,7 @@ impl<I: PinId> Registers<I> {
     /// Provide a type-level equivalent for the
     /// [`RegisterInterface::change_mode`] method.
     #[inline]
-    fn change_mode<M: PinMode + ValidPinMode<I>>(&mut self) {
+    fn change_mode<M: ValidPinMode<I>>(&mut self) {
         RegisterInterface::do_change_mode(self, M::DYN);
     }
 }
@@ -450,7 +448,7 @@ impl<I: PinId> Registers<I> {
 pub struct Pin<I, M>
 where
     I: PinId,
-    M: PinMode + ValidPinMode<I>,
+    M: ValidPinMode<I>,
 {
     regs: Registers<I>,
     mode: PhantomData<M>,
@@ -459,7 +457,7 @@ where
 impl<I, M> Pin<I, M>
 where
     I: PinId,
-    M: PinMode + ValidPinMode<I>,
+    M: ValidPinMode<I>,
 {
     /// Create a new [`Pin`]
     ///
@@ -483,7 +481,7 @@ where
     ///
     /// ```no_run
     /// # use rp2040_hal::gpio::{Pin, PinId, PinMode, ValidPinMode};
-    /// # fn get_id<I: PinId, M: PinMode + ValidPinMode<I>> (pin: Pin<I, M>) -> u8 {
+    /// # fn get_id<I: PinId, M: ValidPinMode<I>> (pin: Pin<I, M>) -> u8 {
     ///      pin.id().num
     /// # }
     /// ````
@@ -494,7 +492,7 @@ where
 
     /// Convert the pin to the requested [`PinMode`]
     #[inline]
-    pub fn into_mode<N: PinMode + ValidPinMode<I>>(mut self) -> Pin<I, N> {
+    pub fn into_mode<N: ValidPinMode<I>>(mut self) -> Pin<I, N> {
         if N::DYN != M::DYN {
             self.regs.change_mode::<N>();
         }
@@ -733,14 +731,14 @@ where
 impl<I, M> Sealed for Pin<I, M>
 where
     I: PinId,
-    M: PinMode + ValidPinMode<I>,
+    M: ValidPinMode<I>,
 {
 }
 
 impl<I, M> AnyPin for Pin<I, M>
 where
     I: PinId,
-    M: PinMode + ValidPinMode<I>,
+    M: ValidPinMode<I>,
 {
     type Id = I;
     type Mode = M;
@@ -754,28 +752,6 @@ where
 /// [`AnyKind`]: crate::typelevel#anykind-trait-pattern
 pub type SpecificPin<P> = Pin<<P as AnyPin>::Id, <P as AnyPin>::Mode>;
 
-impl<P: AnyPin> AsRef<P> for SpecificPin<P> {
-    #[inline]
-    fn as_ref(&self) -> &P {
-        // SAFETY: This is guaranteed to be safe, because P == SpecificPin<P>
-        // Transmuting between `v1` and `v2` `Pin` types is also safe, because
-        // both are zero-sized, and single-field, newtype structs are guaranteed
-        // to have the same layout as the field anyway, even for repr(Rust).
-        unsafe { transmute(self) }
-    }
-}
-
-impl<P: AnyPin> AsMut<P> for SpecificPin<P> {
-    #[inline]
-    fn as_mut(&mut self) -> &mut P {
-        // SAFETY: This is guaranteed to be safe, because P == SpecificPin<P>
-        // Transmuting between `v1` and `v2` `Pin` types is also safe, because
-        // both are zero-sized, and single-field, newtype structs are guaranteed
-        // to have the same layout as the field anyway, ValidPinMode<P::Id> en for repr(Rust).
-        unsafe { transmute(self) }
-    }
-}
-
 //==============================================================================
 //  Optional pins
 //==============================================================================
@@ -785,17 +761,22 @@ impl<P: AnyPin> AsMut<P> for SpecificPin<P> {
 /// See the [`OptionalKind`] documentation for more details on the pattern.
 ///
 /// [`OptionalKind`]: crate::typelevel#optionalkind-trait-pattern
-pub trait OptionalPin: Sealed {
+pub trait OptionalPin<Mode: PinMode>: Sealed {
     #[allow(missing_docs)]
     type Id: OptionalPinId;
+    #[allow(missing_docs)]
+    const IS_NONE: bool;
 }
 
-impl OptionalPin for NoneT {
+impl<M: PinMode> OptionalPin<M> for NoneT {
     type Id = NoneT;
+    const IS_NONE: bool = true;
 }
 
-impl<P: AnyPin> OptionalPin for P {
+impl<P: AnyPin> OptionalPin<P::Mode> for P {
     type Id = P::Id;
+    /// Value-level translation of the Type-level equivalent of [`Option::is_none`].
+    const IS_NONE: bool = false;
 }
 
 /// Type-level equivalent of `Some(PinId)`
@@ -803,8 +784,13 @@ impl<P: AnyPin> OptionalPin for P {
 /// See the [`OptionalKind`] documentation for more details on the pattern.
 ///
 /// [`OptionalKind`]: crate::typelevel#optionalkind-trait-pattern
-pub trait SomePin: AnyPin + Sealed {}
-impl<P: AnyPin> SomePin for P {}
+pub trait SomePin<M: PinMode>: OptionalPin<M> + Sealed {
+    /// Value-level translation of the Type-level equivalent of [`Option::is_some`].
+    const IS_SOME: bool;
+}
+impl<M: PinMode, P: OptionalPin<M>> SomePin<M> for P {
+    const IS_SOME: bool = !P::IS_NONE;
+}
 
 //==============================================================================
 //  Embedded HAL traits
@@ -1048,7 +1034,7 @@ macro_rules! gpio {
                     }
                 }
 
-                $( impl<I: PinId + BankPinId> super::ValidPinMode<I> for super::[<Function $Func>] {} )+
+                $( impl<I: PinId> super::ValidPinMode<I> for super::[<Function $Func>] {} )+
             }
         }
     }

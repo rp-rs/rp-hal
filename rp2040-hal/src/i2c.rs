@@ -47,11 +47,11 @@ use core::{marker::PhantomData, ops::Deref};
 
 use crate::{
     gpio::pin::bank0::{
-        BankPinId, Gpio0, Gpio1, Gpio10, Gpio11, Gpio12, Gpio13, Gpio14, Gpio15, Gpio16, Gpio17,
-        Gpio18, Gpio19, Gpio2, Gpio20, Gpio21, Gpio22, Gpio23, Gpio24, Gpio25, Gpio26, Gpio27,
-        Gpio28, Gpio29, Gpio3, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8, Gpio9,
+        Gpio0, Gpio1, Gpio10, Gpio11, Gpio12, Gpio13, Gpio14, Gpio15, Gpio16, Gpio17, Gpio18,
+        Gpio19, Gpio2, Gpio20, Gpio21, Gpio22, Gpio23, Gpio24, Gpio25, Gpio26, Gpio27, Gpio28,
+        Gpio29, Gpio3, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8, Gpio9,
     },
-    gpio::pin::{FunctionI2C, Pin, PinId},
+    gpio::pin::{AnyPin, FunctionI2C},
     resets::SubsystemReset,
     typelevel::Sealed,
 };
@@ -223,19 +223,13 @@ fn i2c_reserved_addr(addr: u16) -> bool {
     (addr & 0x78) == 0 || (addr & 0x78) == 0x78
 }
 
-impl<Block, Sda, Scl, Mode> I2C<Block, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>), Mode>
+impl<Block, Sda, Scl, Mode> I2C<Block, (Sda, Scl), Mode>
 where
     Block: SubsystemReset + Deref<Target = I2CBlock>,
-    Sda: PinId + BankPinId,
-    Scl: PinId + BankPinId,
-    Mode: I2CMode,
 {
     /// Releases the I2C peripheral and associated pins
     #[allow(clippy::type_complexity)]
-    pub fn free(
-        self,
-        resets: &mut RESETS,
-    ) -> (Block, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)) {
+    pub fn free(self, resets: &mut RESETS) -> (Block, (Sda, Scl)) {
         self.i2c.reset_bring_down(resets);
 
         (self.i2c, self.pins)
@@ -283,20 +277,23 @@ impl<Block: Deref<Target = I2CBlock>, PINS, Mode> I2C<Block, PINS, Mode> {
 macro_rules! hal {
     ($($I2CX:ident: ($i2cX:ident),)+) => {
         $(
-            impl<Sda: PinId + BankPinId, Scl: PinId + BankPinId>
-                I2C<$I2CX, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)> {
+            impl<Sda, Scl> I2C<$I2CX, (Sda, Scl)>
+            where
+                Sda: AnyPin<Mode = FunctionI2C>,
+                Scl: AnyPin<Mode = FunctionI2C>,
+            {
                 /// Configures the I2C peripheral to work in master mode
                 pub fn $i2cX<F, SystemF>(
                     i2c: $I2CX,
-                    sda_pin: Pin<Sda, FunctionI2C>,
-                    scl_pin: Pin<Scl, FunctionI2C>,
+                    sda_pin: Sda,
+                    scl_pin: Scl,
                     freq: F,
                     resets: &mut RESETS,
                     system_clock: SystemF) -> Self
                 where
                     F: Into<HertzU32>,
-                    Sda: SdaPin<$I2CX>,
-                    Scl: SclPin<$I2CX>,
+                    Sda::Id: SdaPin<$I2CX>,
+                    Scl::Id: SclPin<$I2CX>,
                     SystemF: Into<HertzU32>,
                 {
                     Self::new_controller(i2c, sda_pin, scl_pin, freq.into(), resets, system_clock.into())

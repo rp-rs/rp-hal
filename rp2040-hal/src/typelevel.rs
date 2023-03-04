@@ -436,16 +436,16 @@
 //! With this new definition, we can rephrase our statement above. We need some
 //! way to tell the compiler that when `P` implements `AnyPin`,
 //! `P == SpecificPin<P>`. There's no way to do that exactly, but we can come
-//! close with some useful trait bounds: [`From`], [`Into`], [`AsRef`] and
-//! [`AsMut`].
+//! close with some useful trait bounds: [`From`], [`Into`], [`Borrow`] and
+//! [`BorrowMut`].
 //!
 //! ```ignore
 //! trait AnyPin
 //! where
 //!     Self: From<SpecificPin<Self>>,
 //!     Self: Into<SpecificPin<Self>>,
-//!     Self: AsRef<SpecificPin<Self>>,
-//!     Self: AsMut<SpecificPin<Self>>,
+//!     Self: Borrow<SpecificPin<Self>>,
+//!     Self: BorrowMut<SpecificPin<Self>>,
 //! {
 //!     type Id: PinId;
 //!     type Mode: PinMode;
@@ -476,15 +476,15 @@
 //! where
 //!     Self: From<IsType<Self>>,
 //!     Self: Into<IsType<Self>>,
-//!     Self: AsRef<IsType<Self>>,
-//!     Self: AsMut<IsType<Self>>,
+//!     Self: Borrow<IsType<Self>>,
+//!     Self: BorrowMut<IsType<Self>>,
 //! {
 //!     type Type;
 //! }
 //!
 //! type IsType<T> = <T as Is>::Type;
 //!
-//! impl<T: AsRef<T> + AsMut<T>> Is for T {
+//! impl<T: Borrow<T> + BorrowMut<T>> Is for T {
 //!     type Type = T;
 //! }
 //! ```
@@ -639,6 +639,8 @@ mod private {
     pub trait Sealed {}
 }
 
+use core::borrow::{Borrow, BorrowMut};
+
 pub(crate) use private::Sealed;
 
 /// Type-level version of the [None] variant
@@ -679,8 +681,8 @@ where
     Self: Sealed,
     Self: From<IsType<Self>>,
     Self: Into<IsType<Self>>,
-    Self: AsRef<IsType<Self>>,
-    Self: AsMut<IsType<Self>>,
+    Self: Borrow<IsType<Self>>,
+    Self: BorrowMut<IsType<Self>>,
 {
     #[allow(missing_docs)]
     type Type;
@@ -691,7 +693,7 @@ pub type IsType<T> = <T as Is>::Type;
 
 impl<T> Is for T
 where
-    T: Sealed + AsRef<T> + AsMut<T>,
+    T: Sealed + Borrow<T> + BorrowMut<T>,
 {
     type Type = T;
 }

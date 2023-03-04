@@ -4,6 +4,7 @@
 //! UartPeripheral object that can both read and write.
 
 use super::*;
+use crate::gpio::SomePin;
 use crate::pac::uart0::uartlcr_h::W as UART_LCR_H_Writer;
 use core::convert::Infallible;
 use core::fmt;
@@ -70,10 +71,10 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
         // Enable the UART, and the TX,RC,CTS and RTS based on the pins
         device.uartcr.write(|w| {
             w.uarten().set_bit();
-            w.txe().bit(P::TX_ENABLED);
-            w.rxe().bit(P::RX_ENABLED);
-            w.ctsen().bit(P::CTS_ENABLED);
-            w.rtsen().bit(P::RTS_ENABLED);
+            w.txe().bit(P::Tx::IS_SOME);
+            w.rxe().bit(P::Rx::IS_SOME);
+            w.ctsen().bit(P::Cts::IS_SOME);
+            w.rtsen().bit(P::Rts::IS_SOME);
 
             w
         });
