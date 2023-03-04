@@ -1,59 +1,69 @@
-use crate::gpio::{bank0, FunctionUart, Pin};
+use crate::gpio::{bank0, AnyPin, FunctionUart, OptionalPin};
 use crate::pac::{UART0, UART1};
-use crate::typelevel::Sealed;
+use crate::typelevel::{NoneT, Sealed};
 
 use super::UartDevice;
 
 /// Declares a valid UART pinout.
 pub trait ValidUartPinout<UART: UartDevice> {
-    /// Indicates TX should be enabled for this pinout
-    const TX_ENABLED: bool;
-    /// Indicates RX should be enabled for this pinout
-    const RX_ENABLED: bool;
-    /// Indicates CTS should be enabled for this pinout
-    const CTS_ENABLED: bool;
-    /// Indicates RTS should be enabled for this pinout
-    const RTS_ENABLED: bool;
+    #[allow(missing_docs)]
+    type Rx: OptionalPin<FunctionUart>;
+    #[allow(missing_docs)]
+    type Tx: OptionalPin<FunctionUart>;
+    #[allow(missing_docs)]
+    type Cts: OptionalPin<FunctionUart>;
+    #[allow(missing_docs)]
+    type Rts: OptionalPin<FunctionUart>;
 }
 
 impl<UART, TX, RX, CTS, RTS> ValidUartPinout<UART> for Pins<TX, RX, CTS, RTS>
 where
     UART: UartDevice,
-    TX: Tx<UART>,
-    RX: Rx<UART>,
-    CTS: Cts<UART>,
-    RTS: Rts<UART>,
+    TX: OptionalPin<FunctionUart>,
+    RX: OptionalPin<FunctionUart>,
+    CTS: OptionalPin<FunctionUart>,
+    RTS: OptionalPin<FunctionUart>,
+    TX::Id: ValidTxPin<UART>,
+    RX::Id: ValidRxPin<UART>,
+    CTS::Id: ValidCtsPin<UART>,
+    RTS::Id: ValidRtsPin<UART>,
 {
-    const TX_ENABLED: bool = TX::ENABLED;
-    const RX_ENABLED: bool = RX::ENABLED;
-    const CTS_ENABLED: bool = CTS::ENABLED;
-    const RTS_ENABLED: bool = RTS::ENABLED;
+    type Rx = RX;
+    type Tx = TX;
+    type Cts = CTS;
+    type Rts = RTS;
 }
 
 impl<UART, TX, RX> ValidUartPinout<UART> for (TX, RX)
 where
     UART: UartDevice,
-    TX: Tx<UART>,
-    RX: Rx<UART>,
+    TX: AnyPin<Mode = FunctionUart>,
+    RX: AnyPin<Mode = FunctionUart>,
+    TX::Id: ValidTxPin<UART>,
+    RX::Id: ValidRxPin<UART>,
 {
-    const TX_ENABLED: bool = TX::ENABLED;
-    const RX_ENABLED: bool = RX::ENABLED;
-    const CTS_ENABLED: bool = false;
-    const RTS_ENABLED: bool = false;
+    type Rx = RX;
+    type Tx = TX;
+    type Cts = NoneT;
+    type Rts = NoneT;
 }
 
 impl<UART, TX, RX, CTS, RTS> ValidUartPinout<UART> for (TX, RX, CTS, RTS)
 where
     UART: UartDevice,
-    TX: Tx<UART>,
-    RX: Rx<UART>,
-    CTS: Cts<UART>,
-    RTS: Rts<UART>,
+    TX: AnyPin<Mode = FunctionUart>,
+    RX: AnyPin<Mode = FunctionUart>,
+    CTS: AnyPin<Mode = FunctionUart>,
+    RTS: AnyPin<Mode = FunctionUart>,
+    TX::Id: ValidTxPin<UART>,
+    RX::Id: ValidRxPin<UART>,
+    CTS::Id: ValidCtsPin<UART>,
+    RTS::Id: ValidRtsPin<UART>,
 {
-    const TX_ENABLED: bool = TX::ENABLED;
-    const RX_ENABLED: bool = RX::ENABLED;
-    const CTS_ENABLED: bool = CTS::ENABLED;
-    const RTS_ENABLED: bool = RTS::ENABLED;
+    type Rx = RX;
+    type Tx = TX;
+    type Cts = CTS;
+    type Rts = RTS;
 }
 
 /// Customizable Uart pinout, allowing you to set the pins individually.
@@ -65,7 +75,7 @@ where
 /// |UART0|0, 12, 16, 28|1, 13, 17, 29|2, 14, 18    |3, 15, 19    |
 /// |UART1|4, 8, 20, 24 |5, 9, 21, 25 |6, 10, 22, 26|7, 11, 23, 27|
 ///
-/// Every field can be set to `()` to not configure them.
+/// Every field can be set to [`NoneT`] to not configure them.
 ///
 /// Note that you can also use tuples `(RX, TX)` or `(RX, TX, CTS, RTS)` instead of this type.
 ///
@@ -91,18 +101,24 @@ pub struct Pins<TX, RX, CTS, RTS> {
     pub cts: CTS,
 }
 
-impl Default for Pins<(), (), (), ()> {
+impl Default for Pins<NoneT, NoneT, NoneT, NoneT> {
     fn default() -> Self {
         Self {
-            tx: (),
-            rx: (),
-            rts: (),
-            cts: (),
+            tx: NoneT,
+            rx: NoneT,
+            rts: NoneT,
+            cts: NoneT,
         }
     }
 }
 
-impl<TX, RX, CTS, RTS> Pins<TX, RX, CTS, RTS> {
+impl<TX, RX, CTS, RTS> Pins<TX, RX, CTS, RTS>
+where
+    TX: OptionalPin<FunctionUart>,
+    RX: OptionalPin<FunctionUart>,
+    CTS: OptionalPin<FunctionUart>,
+    RTS: OptionalPin<FunctionUart>,
+{
     /// Set the TX pin
     pub fn tx<NTX>(self, tx: NTX) -> Pins<NTX, RX, CTS, RTS> {
         Pins {
@@ -142,39 +158,13 @@ impl<TX, RX, CTS, RTS> Pins<TX, RX, CTS, RTS> {
 }
 
 /// Indicates a valid TX pin for UART0 or UART1
-pub trait Tx<UART: UartDevice>: Sealed {
-    #[allow(missing_docs)]
-    const ENABLED: bool;
-}
+pub trait ValidTxPin<UART: UartDevice>: Sealed {}
 /// Indicates a valid RX pin for UART0 or UART1
-pub trait Rx<UART: UartDevice>: Sealed {
-    #[allow(missing_docs)]
-    const ENABLED: bool;
-}
+pub trait ValidRxPin<UART: UartDevice>: Sealed {}
 /// Indicates a valid CTS pin for UART0 or UART1
-pub trait Cts<UART: UartDevice>: Sealed {
-    #[allow(missing_docs)]
-    const ENABLED: bool;
-}
+pub trait ValidCtsPin<UART: UartDevice>: Sealed {}
 /// Indicates a valid RTS pin for UART0 or UART1
-pub trait Rts<UART: UartDevice>: Sealed {
-    #[allow(missing_docs)]
-    const ENABLED: bool;
-}
-
-impl<UART: UartDevice> Tx<UART> for () {
-    const ENABLED: bool = false;
-}
-impl<UART: UartDevice> Rx<UART> for () {
-    const ENABLED: bool = false;
-}
-impl<UART: UartDevice> Cts<UART> for () {
-    const ENABLED: bool = false;
-}
-impl<UART: UartDevice> Rts<UART> for () {
-    const ENABLED: bool = false;
-}
-impl Sealed for () {}
+pub trait ValidRtsPin<UART: UartDevice>: Sealed {}
 
 macro_rules! impl_valid_uart {
     ($($uart:ident: {
@@ -184,26 +174,14 @@ macro_rules! impl_valid_uart {
         rts: [$($rts:ident),*],
     }),*) => {
         $(
-            $(
-                impl Tx<$uart> for Pin<bank0::$tx, FunctionUart> {
-                    const ENABLED: bool = true;
-                }
-            )*
-            $(
-                impl Rx<$uart> for Pin<bank0::$rx, FunctionUart> {
-                    const ENABLED: bool = true;
-                }
-            )*
-            $(
-                impl Cts<$uart> for Pin<bank0::$cts, FunctionUart> {
-                    const ENABLED: bool = true;
-                }
-            )*
-            $(
-                impl Rts<$uart> for Pin<bank0::$rts, FunctionUart> {
-                    const ENABLED: bool = true;
-                }
-            )*
+            impl ValidRxPin<$uart> for NoneT {}
+            impl ValidTxPin<$uart> for NoneT {}
+            impl ValidCtsPin<$uart> for NoneT {}
+            impl ValidRtsPin<$uart> for NoneT {}
+            $(impl ValidTxPin<$uart> for bank0::$tx {})*
+            $(impl ValidRxPin<$uart> for bank0::$rx {})*
+            $(impl ValidCtsPin<$uart> for bank0::$cts {})*
+            $(impl ValidRtsPin<$uart> for bank0::$rts {})*
         )*
     };
 }

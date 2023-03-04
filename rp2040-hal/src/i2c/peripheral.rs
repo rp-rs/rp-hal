@@ -1,8 +1,7 @@
 use core::{marker::PhantomData, ops::Deref};
 
 use crate::{
-    gpio::pin::bank0::BankPinId,
-    gpio::pin::{FunctionI2C, Pin, PinId},
+    gpio::{pin::FunctionI2C, AnyPin},
     resets::SubsystemReset,
 };
 use pac::{i2c0::RegisterBlock as I2CBlock, RESETS};
@@ -38,11 +37,13 @@ pub struct I2CPeripheralEventIterator<Block, Pins> {
     state: State,
 }
 
-impl<T, Sda, Scl> I2C<T, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>), Peripheral>
+impl<T, Sda, Scl> I2C<T, (Sda, Scl), Peripheral>
 where
     T: SubsystemReset + Deref<Target = I2CBlock>,
-    Sda: PinId + BankPinId,
-    Scl: PinId + BankPinId,
+    Sda: AnyPin<Mode = FunctionI2C>,
+    Scl: AnyPin<Mode = FunctionI2C>,
+    Sda::Id: SdaPin<T>,
+    Scl::Id: SclPin<T>,
 {
     /// Configures the I2C peripheral to work in peripheral mode
     ///
@@ -50,15 +51,11 @@ where
     #[allow(clippy::type_complexity)]
     pub fn new_peripheral_event_iterator(
         i2c: T,
-        sda_pin: Pin<Sda, FunctionI2C>,
-        scl_pin: Pin<Scl, FunctionI2C>,
+        sda_pin: Sda,
+        scl_pin: Scl,
         resets: &mut RESETS,
         addr: u16,
-    ) -> I2CPeripheralEventIterator<T, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)>
-    where
-        Sda: SdaPin<T>,
-        Scl: SclPin<T>,
-    {
+    ) -> I2CPeripheralEventIterator<T, (Sda, Scl)> {
         i2c.reset_bring_down(resets);
         i2c.reset_bring_up(resets);
 
@@ -184,19 +181,13 @@ impl<T: Deref<Target = I2CBlock>, PINS> Iterator for I2CPeripheralEventIterator<
     }
 }
 
-impl<Block, Sda, Scl>
-    I2CPeripheralEventIterator<Block, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)>
+impl<Block, Sda, Scl> I2CPeripheralEventIterator<Block, (Sda, Scl)>
 where
     Block: SubsystemReset + Deref<Target = I2CBlock>,
-    Sda: PinId + BankPinId,
-    Scl: PinId + BankPinId,
 {
     /// Releases the I2C peripheral and associated pins
     #[allow(clippy::type_complexity)]
-    pub fn free(
-        self,
-        resets: &mut RESETS,
-    ) -> (Block, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)) {
+    pub fn free(self, resets: &mut RESETS) -> (Block, (Sda, Scl)) {
         self.i2c.free(resets)
     }
 }

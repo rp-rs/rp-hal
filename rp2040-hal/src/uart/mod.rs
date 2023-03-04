@@ -19,8 +19,8 @@
 //!
 //! // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
 //! let pins = (
-//!     pins.gpio0.into_mode::<FunctionUart>(),
-//!     pins.gpio1.into_mode::<FunctionUart>(),
+//!     pins.gpio0.into_mode(),
+//!     pins.gpio1.into_mode(),
 //! );
 //! // Need to perform clock init before using UART or it will freeze.
 //! let uart = UartPeripheral::new(peripherals.UART0, pins, &mut peripherals.RESETS)
