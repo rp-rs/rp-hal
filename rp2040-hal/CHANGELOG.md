@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Implement Channel<Adc> for DynPin - @jannic
+
 ### Changed
 
 - pwm::Slice::has_overflown() returns the raw interrupt flag, without masking/forcing. - @jannic
