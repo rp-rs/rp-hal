@@ -178,10 +178,6 @@ where
             _ => return Err(nb::Error::Other(())),
         };
 
-        if chan == 4 {
-            self.device.cs.modify(|_, w| w.ts_en().set_bit())
-        }
-
         while !self.device.cs.read().ready().bit_is_set() {
             cortex_m::asm::nop();
         }
