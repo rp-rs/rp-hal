@@ -395,10 +395,14 @@ where
     }
 
     /// Did this slice trigger an overflow interrupt?
+    ///
+    /// This reports the raw interrupt flag, without considering masking or
+    /// forcing bits. It may return true even if the interrupt is disabled
+    /// or false even if the interrupt is forced.
     #[inline]
     pub fn has_overflown(&self) -> bool {
         let mask = self.bitmask();
-        unsafe { (*pac::PWM::ptr()).ints.read().bits() & mask == mask }
+        unsafe { (*pac::PWM::ptr()).intr.read().bits() & mask == mask }
     }
 
     /// Mark the interrupt handled for this slice.
