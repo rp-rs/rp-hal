@@ -397,7 +397,8 @@ where
     /// Did this slice trigger an overflow interrupt?
     ///
     /// This reports the raw interrupt flag, without considering masking or
-    /// forcing bits. It may return true even if the interrupt is disabled.
+    /// forcing bits. It may return true even if the interrupt is disabled
+    /// or false even if the interrupt is forced.
     #[inline]
     pub fn has_overflown(&self) -> bool {
         let mask = self.bitmask();
