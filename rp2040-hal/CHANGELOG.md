@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- pwm::Slice::has_overflown() returns the raw interrupt flag, without masking/forcing. - @jannic
+
 ## [0.8.0] - 2023-02-16
 
 ### Added
