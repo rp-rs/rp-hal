@@ -1,6 +1,8 @@
 //! HAL for the RP2040 microcontroller
 //!
-//! This is an implementation of the [`embedded-hal`] traits for the RP2040 microcontroller
+//! This is an implementation of the [`embedded-hal`](https://crates.io/crates/embedded-hal)
+//! traits for the RP2040 microcontroller
+//!
 //! NOTE This HAL is still under active development. This API will remain volatile until 1.0.0
 
 #![warn(missing_docs)]
