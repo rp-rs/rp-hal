@@ -1930,6 +1930,15 @@ impl<P: PIOExt> PIOBuilder<P> {
         }
     }
 
+    /// Set the config for when the status register is set to true.
+    ///
+    /// See `MovStatusConfig` for more info.
+    pub fn set_mov_status_config(mut self, mov_status: MovStatusConfig) -> Self {
+        self.mov_status = mov_status;
+
+        self
+    }
+
     /// Set the pins asserted by `SET` instruction.
     ///
     /// The least-significant bit of `SET` instruction asserts the state of the pin indicated by `base`, the next bit
