@@ -1931,7 +1931,8 @@ impl<P: PIOExt> PIOBuilder<P> {
     }
 
     /// Set the config for when the status register is set to true.
-    /// See MovStatusConfig for more info.
+    ///
+    /// See `MovStatusConfig` for more info.
     pub fn set_mov_status_config(mut self, mov_status: MovStatusConfig) -> Self {
         self.mov_status = mov_status;
 
