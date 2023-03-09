@@ -154,6 +154,11 @@ where
     }
 }
 
+/// The pin was invalid for the requested operation
+#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct InvalidPinError;
+
 impl Channel<Adc> for DynPin {
     type ID = (); // ADC channels are identified numerically
 
@@ -164,18 +169,18 @@ impl<WORD> OneShot<Adc, WORD, DynPin> for Adc
 where
     WORD: From<u16>,
 {
-    type Error = ();
+    type Error = InvalidPinError;
 
     fn read(&mut self, pin: &mut DynPin) -> nb::Result<WORD, Self::Error> {
         if pin.id().group != DynGroup::Bank0 {
-            return Err(nb::Error::Other(()));
+            return Err(nb::Error::Other(InvalidPinError));
         }
         let chan = match pin.id().num {
             26 => 0,
             27 => 1,
             28 => 2,
             29 => 3,
-            _ => return Err(nb::Error::Other(())),
+            _ => return Err(nb::Error::Other(InvalidPinError)),
         };
 
         while !self.device.cs.read().ready().bit_is_set() {
