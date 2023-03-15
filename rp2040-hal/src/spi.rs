@@ -25,6 +25,8 @@ use crate::typelevel::Sealed;
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::spi as eh1;
+#[cfg(feature = "eh1_0_alpha")]
+use eh_nb_1_0_alpha::spi as eh1nb;
 use embedded_hal::blocking::spi;
 use embedded_hal::spi::{FullDuplex, Mode, Phase, Polarity};
 use fugit::HertzU32;
@@ -371,9 +373,8 @@ macro_rules! impl_write {
             }
         }
 
-        /* disabled for now - nb was migrated to separate crate
         #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice> eh1::nb::FullDuplex<$type> for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice> eh1nb::FullDuplex<$type> for Spi<Enabled, D, $nr> {
             fn read(&mut self) -> Result<$type, nb::Error<Infallible>> {
                 if !self.is_readable() {
                     return Err(nb::Error::WouldBlock);
@@ -395,7 +396,6 @@ macro_rules! impl_write {
                 Ok(())
             }
         }
-*/
 
         impl<D: SpiDevice> ReadTarget for Spi<Enabled, D, $nr> {
             type ReceivedWord = $type;

@@ -18,6 +18,7 @@ targets = ["thumbv6m-none-eabi"]
 cortex-m = "0.7.2"
 embedded-hal = { version = "0.2.5", features = ["unproven"] }
 eh1_0_alpha = { package = "embedded-hal", version = "=1.0.0-alpha.9",  optional = true }
+eh_nb_1_0_alpha = { package = "embedded-hal-nb", version = "=1.0.0-alpha.1",  optional = true }
 embedded-dma = "0.2.0"
 fugit = "0.3.6"
 itertools = { version = "0.10.1", default-features = false }
@@ -65,6 +66,9 @@ rp2040-e5 = []
 
 # critical section that is safe for multicore use
 critical-section-impl = ["critical-section/restore-state-u8"]
+
+# Support alpha release of embedded-hal
+eh1_0_alpha = [ "dep:eh1_0_alpha", "dep:eh_nb_1_0_alpha" ]
 
 [[example]]
 # irq example uses cortex-m-rt::interrupt, need rt feature for that
