@@ -134,7 +134,7 @@ where
     fn read(&mut self, _pin: &mut PIN) -> nb::Result<WORD, Self::Error> {
         let chan = PIN::channel();
 
-        if chan == 4 {
+        if chan == TEMPERATURE_SENSOR_CHANNEL {
             self.device.cs.modify(|_, w| w.ts_en().set_bit())
         }
 
