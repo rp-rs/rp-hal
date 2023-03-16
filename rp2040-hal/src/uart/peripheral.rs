@@ -14,6 +14,9 @@ use rp2040_pac::{UART0, UART1};
 
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::serial as eh1;
+#[cfg(feature = "eh1_0_alpha")]
+use eh_nb_1_0_alpha::serial as eh1nb;
+
 use pac::Peripherals;
 
 /// An UART Peripheral based on an underlying UART device.
@@ -357,9 +360,8 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::ErrorType for UartPeripheral<Ena
     type Error = ReadErrorType;
 }
 
-/* disabled for now - nb was migrated to separate crate
 #[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Read<u8> for UartPeripheral<Enabled, D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Read<u8> for UartPeripheral<Enabled, D, P> {
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
         let byte: &mut [u8] = &mut [0; 1];
 
@@ -372,7 +374,6 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Read<u8> for UartPeripheral<
         }
     }
 }
-*/
 
 impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for UartPeripheral<Enabled, D, P> {
     type Error = Infallible;
@@ -390,9 +391,8 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for UartPeripheral<Enabled,
     }
 }
 
-/* disabled for now - nb was migrated to separate crate
 #[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Write<u8> for UartPeripheral<Enabled, D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Write<u8> for UartPeripheral<Enabled, D, P> {
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
         if self.write_raw(&[word]).is_err() {
             Err(WouldBlock)
@@ -408,7 +408,6 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Write<u8> for UartPeripheral
         })
     }
 }
-*/
 
 impl<D: UartDevice, P: ValidUartPinout<D>> fmt::Write for UartPeripheral<Enabled, D, P> {
     fn write_str(&mut self, s: &str) -> fmt::Result {

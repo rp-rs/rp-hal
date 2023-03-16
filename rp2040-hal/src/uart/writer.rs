@@ -8,6 +8,8 @@ use core::fmt;
 use core::{convert::Infallible, marker::PhantomData};
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::serial as eh1;
+#[cfg(feature = "eh1_0_alpha")]
+use eh_nb_1_0_alpha::serial as eh1nb;
 use embedded_hal::serial::Write;
 use nb::Error::*;
 use rp2040_pac::uart0::RegisterBlock;
@@ -205,9 +207,8 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::ErrorType for Writer<D, P> {
     type Error = core::convert::Infallible;
 }
 
-/* disabled for now - nb was migrated to separate crate
 #[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Write<u8> for Writer<D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Write<u8> for Writer<D, P> {
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
         if self.write_raw(&[word]).is_err() {
             Err(WouldBlock)
@@ -223,7 +224,6 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Write<u8> for Writer<D, P> {
         })
     }
 }
-*/
 
 impl<D: UartDevice, P: ValidUartPinout<D>> fmt::Write for Writer<D, P> {
     fn write_str(&mut self, s: &str) -> fmt::Result {

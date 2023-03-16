@@ -10,6 +10,8 @@ use rp2040_pac::uart0::RegisterBlock;
 
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::serial as eh1;
+#[cfg(feature = "eh1_0_alpha")]
+use eh_nb_1_0_alpha::serial as eh1nb;
 
 /// When there's a read error.
 pub struct ReadError<'err> {
@@ -257,9 +259,8 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::ErrorType for Reader<D, P> {
     type Error = ReadErrorType;
 }
 
-/* disabled for now - nb was migrated to separate crate
 #[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Read<u8> for Reader<D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Read<u8> for Reader<D, P> {
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
         let byte: &mut [u8] = &mut [0; 1];
 
@@ -272,4 +273,3 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1::nb::Read<u8> for Reader<D, P> {
         }
     }
 }
-*/
