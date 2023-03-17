@@ -110,14 +110,13 @@ unsafe impl Sync for Timer {}
 ///
 /// ## Usage
 /// ```no_run
-/// use embedded_hal::clocks::ClocksManager;
 /// use embedded_hal::timer::{CountDown, Cancel};
 /// use fugit::ExtU32;
 /// use rp2040_hal;
 /// let mut pac = rp2040_hal::pac::Peripherals::take().unwrap();
 /// // Make sure to initialize clocks, otherwise the timer wouldn't work
 /// // properly. Omitted here for terseness.
-/// let _clocks:ClocksManager = todo!();
+/// let _clocks: rp2040_hal::clocks::ClocksManager = todo!();
 /// // Configure the Timer peripheral in count-down mode
 /// let timer = rp2040_hal::Timer::new(pac.TIMER, &mut pac.RESETS);
 /// let mut count_down = timer.count_down();
