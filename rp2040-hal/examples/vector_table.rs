@@ -22,7 +22,7 @@ use hal::pac;
 use core::cell::RefCell;
 use critical_section::Mutex;
 use embedded_hal::digital::v2::ToggleableOutputPin;
-use fugit::MicrosDurationU32;
+use hal::fugit::MicrosDurationU32;
 use pac::interrupt;
 use rp2040_hal::clocks::Clock;
 use rp2040_hal::timer::Alarm;

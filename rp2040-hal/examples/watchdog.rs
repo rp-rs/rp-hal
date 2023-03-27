@@ -23,7 +23,7 @@ use hal::pac;
 // Some traits we need
 use embedded_hal::digital::v2::OutputPin;
 use embedded_hal::watchdog::{Watchdog, WatchdogEnable};
-use fugit::ExtU32;
+use hal::fugit::ExtU32;
 use rp2040_hal::clocks::Clock;
 
 /// The linker will place this boot block at the start of our program image. We

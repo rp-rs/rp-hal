@@ -24,7 +24,7 @@ use hal::pac;
 
 // Some traits we need
 use core::fmt::Write;
-use fugit::RateExtU32;
+use hal::fugit::RateExtU32;
 use rp2040_hal::clocks::Clock;
 
 // UART related types

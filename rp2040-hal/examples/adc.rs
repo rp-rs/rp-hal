@@ -20,7 +20,7 @@ use rp2040_hal as hal;
 // Some traits we need
 use core::fmt::Write;
 use embedded_hal::adc::OneShot;
-use fugit::RateExtU32;
+use hal::fugit::RateExtU32;
 use rp2040_hal::Clock;
 
 // UART related types

@@ -22,7 +22,7 @@ use hal::pac;
 
 // Some traits we need
 use core::fmt::Write;
-use fugit::RateExtU32;
+use hal::fugit::RateExtU32;
 use hal::Clock;
 
 // UART related types

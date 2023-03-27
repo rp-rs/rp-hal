@@ -21,8 +21,8 @@ use rp2040_hal as hal;
 
 // Some traits we need
 use cortex_m::prelude::*;
-use fugit::RateExtU32;
-use rp2040_hal::clocks::Clock;
+use hal::clocks::Clock;
+use hal::fugit::RateExtU32;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access

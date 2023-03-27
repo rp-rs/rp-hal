@@ -13,12 +13,12 @@
 // be linked)
 use panic_halt as _;
 
-// Some traits we need
-use embedded_hal::blocking::i2c::Write;
-use fugit::RateExtU32;
-
 // Alias for our HAL crate
 use rp2040_hal as hal;
+
+// Some traits we need
+use embedded_hal::blocking::i2c::Write;
+use hal::fugit::RateExtU32;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access and a gpio related types.
