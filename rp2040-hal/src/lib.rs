@@ -38,6 +38,7 @@
 #![warn(missing_docs)]
 #![no_std]
 
+#[doc(hidden)]
 pub use paste;
 
 /// Re-export of the PAC
