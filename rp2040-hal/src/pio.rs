@@ -1848,7 +1848,7 @@ pub struct PIOBuilder<P> {
 
     /// Continuously assert the most recent OUT/SET to the pins.
     out_sticky: bool,
-    /// Use a bit of OUT data as an auxilary write enable.
+    /// Use a bit of OUT data as an auxiliary write enable.
     ///
     /// When [`out_sticky`](Self::out_sticky) is enabled, setting the bit to 0 deasserts for that instr.
     inline_out: Option<u8>,
@@ -2010,7 +2010,7 @@ impl<P: PIOExt> PIOBuilder<P> {
         self
     }
 
-    /// The clock is based on the `sys_clk` and will execute an intruction every `int + (frac/256)` ticks.
+    /// The clock is based on the `sys_clk` and will execute an instruction every `int + (frac/256)` ticks.
     ///
     /// A clock divisor of `n` will cause the state machine to run 1 cycle every `n` clock cycles. If the integer part
     /// is 0 then the fractional part must be 0. This is interpreted by the device as the integer 65536.

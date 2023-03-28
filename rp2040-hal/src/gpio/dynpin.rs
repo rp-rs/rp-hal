@@ -240,7 +240,7 @@ pub struct DynPinId {
 /// Provide a safe register interface for [`DynPin`]s
 ///
 /// This `struct` takes ownership of a [`DynPinId`] and provides an API to
-/// access the corresponding regsiters.
+/// access the corresponding registers.
 struct DynRegisters {
     id: DynPinId,
 }

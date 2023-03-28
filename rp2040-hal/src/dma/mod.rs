@@ -1,4 +1,4 @@
-//! Direct memory acces (DMA).
+//! Direct memory access (DMA).
 //!
 //! The DMA unit of the RP2040 seems very simplistic at first when compared to other MCUs. For
 //! example, the individual DMA channels do not support chaining multiple buffers. However, within
