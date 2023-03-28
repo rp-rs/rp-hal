@@ -408,7 +408,7 @@ impl<I: PinId> SomePinId for I {}
 /// Provide a safe register interface for [`Pin`]s
 ///
 /// This `struct` takes ownership of a [`PinId`] and provides an API to
-/// access the corresponding regsiters.
+/// access the corresponding registers.
 struct Registers<I: PinId> {
     id: PhantomData<I>,
 }
