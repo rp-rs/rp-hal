@@ -199,7 +199,7 @@ programming pins on your RP2040 board. Check the probe has been found by
 running:
 
 ```console
-$ probe-run --chip RP2040 --list-probes
+$ probe-run --list-probes
 The following devices were found:
 [0]: J-Link (J-Link) (VID: 1366, PID: 0101, Serial: 000099999999, JLink)
 ```
