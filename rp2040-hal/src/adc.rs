@@ -35,7 +35,7 @@
 //! ```
 //!
 //! See [examples/adc.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/adc.rs) and
-//! [pimoroni_pico_explorer_showcase.rs](https://github.com/rp-rs/rp-hal/tree/main/boards/pimoroni_pico_explorer/examples/pimoroni_pico_explorer_showcase.rs) for more complete examples
+//! [pimoroni_pico_explorer_showcase.rs](https://github.com/rp-rs/rp-hal-boards/tree/main/boards/pimoroni-pico-explorer/examples/pimoroni_pico_explorer_showcase.rs) for more complete examples
 
 use hal::adc::{Channel, OneShot};
 use pac::{ADC, RESETS};
