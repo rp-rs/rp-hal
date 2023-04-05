@@ -103,7 +103,7 @@ where
     /// Check if an interrupt is pending for either channel and clear the corresponding pending bit
     pub fn check_irq0(&mut self) -> bool {
         let a = self.ch.0.check_irq0();
-        let b = self.ch.1.check_irq1();
+        let b = self.ch.1.check_irq0();
         a | b
     }
 
