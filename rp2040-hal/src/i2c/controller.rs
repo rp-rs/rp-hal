@@ -284,45 +284,6 @@ impl<T: Deref<Target = Block>, PINS> eh1::I2c for I2C<T, PINS, Controller> {
         Write::write(self, addr, bytes)
     }
 
-    fn write_iter<B>(&mut self, address: u8, bytes: B) -> Result<(), Self::Error>
-    where
-        B: IntoIterator<Item = u8>,
-    {
-        let mut peekable = bytes.into_iter().peekable();
-        let addr: u16 = address.into();
-        Self::validate(addr, Some(peekable.peek().is_none()), None)?;
-        self.setup(addr);
-
-        while let Some(tx) = peekable.next() {
-            self.write_internal(&[tx], peekable.peek().is_none())?
-        }
-        Ok(())
-    }
-
-    fn write_read(&mut self, addr: u8, bytes: &[u8], buffer: &mut [u8]) -> Result<(), Error> {
-        WriteRead::write_read(self, addr, bytes, buffer)
-    }
-
-    fn write_iter_read<B>(
-        &mut self,
-        address: u8,
-        bytes: B,
-        buffer: &mut [u8],
-    ) -> Result<(), Self::Error>
-    where
-        B: IntoIterator<Item = u8>,
-    {
-        let mut peekable = bytes.into_iter().peekable();
-        let addr: u16 = address.into();
-        Self::validate(addr, Some(peekable.peek().is_none()), None)?;
-        self.setup(addr);
-
-        for tx in peekable {
-            self.write_internal(&[tx], false)?
-        }
-        self.read_internal(buffer, true, true)
-    }
-
     fn read(&mut self, addr: u8, buffer: &mut [u8]) -> Result<(), Error> {
         Read::read(self, addr, buffer)
     }
@@ -337,23 +298,6 @@ impl<T: Deref<Target = Block>, PINS> eh1::I2c for I2C<T, PINS, Controller> {
         for i in 0..operations.len() {
             let last = i == operations.len() - 1;
             match &mut operations[i] {
-                eh1::Operation::Read(buf) => self.read_internal(buf, false, last)?,
-                eh1::Operation::Write(buf) => self.write_internal(buf, last)?,
-            }
-        }
-        Ok(())
-    }
-
-    fn transaction_iter<'a, O>(&mut self, address: u8, operations: O) -> Result<(), Self::Error>
-    where
-        O: IntoIterator<Item = eh1::Operation<'a>>,
-    {
-        let addr: u16 = address.into();
-        self.setup(addr);
-        let mut peekable = operations.into_iter().peekable();
-        while let Some(operation) = peekable.next() {
-            let last = peekable.peek().is_none();
-            match operation {
                 eh1::Operation::Read(buf) => self.read_internal(buf, false, last)?,
                 eh1::Operation::Write(buf) => self.write_internal(buf, last)?,
             }
