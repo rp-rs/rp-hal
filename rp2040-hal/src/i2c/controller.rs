@@ -288,10 +288,10 @@ impl<T: Deref<Target = Block>, PINS> eh1::I2c for I2C<T, PINS, Controller> {
         Read::read(self, addr, buffer)
     }
 
-    fn transaction<'a>(
+    fn transaction(
         &mut self,
         address: u8,
-        operations: &mut [eh1::Operation<'a>],
+        operations: &mut [eh1::Operation<'_>],
     ) -> Result<(), Self::Error> {
         let addr: u16 = address.into();
         self.setup(addr);
