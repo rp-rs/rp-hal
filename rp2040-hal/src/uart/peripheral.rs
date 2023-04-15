@@ -298,7 +298,7 @@ fn configure_baudrate(
     device.uartlcr_h.modify(|_, w| w);
 
     Ok(HertzU32::from_raw(
-        (4 * frequency.to_Hz()) / (64 * baud_div_int + baud_div_frac) as u32,
+        (4 * frequency.to_Hz()) / (64 * baud_div_int as u32 + baud_div_frac as u32),
     ))
 }
 
