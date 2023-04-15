@@ -54,6 +54,10 @@ pub struct Timer {
 
 impl Timer {
     /// Create a new [`Timer`]
+    ///
+    /// Make sure that clocks and watchdog are configured, so
+    /// that timer ticks happen at a frequency of 1MHz.
+    /// Otherwise, `Timer` won't work as expected.
     pub fn new(timer: TIMER, resets: &mut RESETS) -> Self {
         timer.reset_bring_down(resets);
         timer.reset_bring_up(resets);
@@ -110,6 +114,9 @@ unsafe impl Sync for Timer {}
 /// use fugit::ExtU32;
 /// use rp2040_hal;
 /// let mut pac = rp2040_hal::pac::Peripherals::take().unwrap();
+/// // Make sure to initialize clocks, otherwise the timer wouldn't work
+/// // properly. Omitted here for terseness.
+/// let _clocks: rp2040_hal::clocks::ClocksManager = todo!();
 /// // Configure the Timer peripheral in count-down mode
 /// let timer = rp2040_hal::Timer::new(pac.TIMER, &mut pac.RESETS);
 /// let mut count_down = timer.count_down();
