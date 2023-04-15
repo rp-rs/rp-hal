@@ -255,7 +255,7 @@ impl<P: ValidUartPinout<UART1>> UartPeripheral<Enabled, UART1, P> {
 fn calculate_baudrate_dividers(
     wanted_baudrate: HertzU32,
     frequency: HertzU32,
-) -> Result<(u16, u16), Error> {
+) -> Result<(u32, u32), Error> {
     // See Chapter 4, Section 2 §7.1 from the datasheet for an explanation of how baudrate is
     // calculated
     let baudrate_div = frequency
@@ -269,7 +269,7 @@ fn calculate_baudrate_dividers(
 
         (int_part, _) if int_part >= 65535 => (65535, 0),
 
-        (int_part, frac_part) => (int_part as u16, frac_part as u16),
+        (int_part, frac_part) => (int_part as u32, frac_part as u32),
     })
 }
 
