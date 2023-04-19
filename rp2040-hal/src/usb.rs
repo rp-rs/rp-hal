@@ -236,7 +236,8 @@ impl Inner {
         // Data Buffers are typically 64 bytes long as this is the max normal packet size for most FS packets.
         // For Isochronous endpoints a maximum buffer size of 1023 bytes is supported.
         // For other packet types the maximum size is 64 bytes per buffer.
-        if (ep_type != EndpointType::Isochronous && max_packet_size > 64) || max_packet_size > 1023
+        if (!matches!(ep_type, EndpointType::Isochronous { .. }) && max_packet_size > 64)
+            || max_packet_size > 1023
         {
             return Err(UsbError::Unsupported);
         }
@@ -288,7 +289,7 @@ impl Inner {
             use crate::pac::usbctrl_dpram::ep_control::ENDPOINT_TYPE_A;
             let ep_type = match ep.ep_type {
                 EndpointType::Bulk => ENDPOINT_TYPE_A::BULK,
-                EndpointType::Isochronous => ENDPOINT_TYPE_A::ISOCHRONOUS,
+                EndpointType::Isochronous { .. } => ENDPOINT_TYPE_A::ISOCHRONOUS,
                 EndpointType::Control => ENDPOINT_TYPE_A::CONTROL,
                 EndpointType::Interrupt => ENDPOINT_TYPE_A::INTERRUPT,
             };
