@@ -44,11 +44,13 @@ where
         }
     }
 
+    #[allow(clippy::wrong_self_convention)]
     /// Set the transfer pacing for the DMA transfer from the source
     pub fn from_pace(&mut self, pace: Pace) {
         self.from_pace = pace;
     }
 
+    #[allow(clippy::wrong_self_convention)]
     /// Set the transfer pacing for the DMA transfer to the target
     pub fn to_pace(&mut self, pace: Pace) {
         self.to_pace = pace;

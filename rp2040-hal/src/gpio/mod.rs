@@ -41,6 +41,7 @@ pub use dynpin::*;
 
 mod reg;
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 /// The amount of current that a pin can drive when used as an output
 pub enum OutputDriveStrength {
