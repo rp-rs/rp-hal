@@ -69,23 +69,17 @@ fn main() -> ! {
     let (_ch, tx_buf, rx_buf) = transfer.wait();
 
     // Compare buffers to see if the data was transferred correctly
-    for i in 0..tx_buf.len() {
-        if rx_buf[i] != tx_buf[i] {
-            // Fast blink on error
-            loop {
-                led_pin.set_high().unwrap();
-                delay.delay_ms(100);
-                led_pin.set_low().unwrap();
-                delay.delay_ms(100);
-            }
-        }
-    }
-
-    // Slow blink on success
+    // Slow blink on success, fast on failure
+    let delay = if tx_buf == rx_buf {
+        500
+    } else {
+        100
+    };
+    
     loop {
         led_pin.set_high().unwrap();
-        delay.delay_ms(500);
+        delay.delay_ms(delay);
         led_pin.set_low().unwrap();
-        delay.delay_ms(500);
+        delay.delay_ms(delay);
     }
 }
