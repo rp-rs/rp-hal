@@ -88,7 +88,14 @@ where
     }
 }
 
-/// Adc
+/// Analog to Digital Convertor (ADC).
+///
+/// Represents an ADC within the RP2040. Each ADC has multiple channels, and each
+/// channel is either associated with a specific GPIO pin or attached to the internal
+/// temperature sensor. You should put the relevant pin into ADC mode by creating an
+/// [`AdcPin`] object with it, or you can put the ADC into `Temperature Sensing Mode"
+/// by calling [`Adc::enable_temp_sensor()`]. Either way, the resulting objects can be
+/// passed to the [`OneShot::read()`] trait method to actually do the read.
 pub struct Adc {
     device: ADC,
 }
