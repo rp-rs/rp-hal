@@ -70,16 +70,12 @@ fn main() -> ! {
 
     // Compare buffers to see if the data was transferred correctly
     // Slow blink on success, fast on failure
-    let delay = if tx_buf == rx_buf {
-        500
-    } else {
-        100
-    };
-    
+    let delay_ms = if tx_buf == rx_buf { 1000 } else { 100 };
+
     loop {
         led_pin.set_high().unwrap();
-        delay.delay_ms(delay);
+        delay.delay_ms(delay_ms);
         led_pin.set_low().unwrap();
-        delay.delay_ms(delay);
+        delay.delay_ms(delay_ms);
     }
 }
