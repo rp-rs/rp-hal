@@ -3,6 +3,7 @@ use rp2040_pac::rtc::{rtc_0, rtc_1, setup_0, setup_1};
 /// Errors regarding the [`DateTime`] and [`DateTimeFilter`] structs.
 ///
 /// [`DateTimeFilter`]: struct.DateTimeFilter.html
+#[allow(clippy::enum_variant_names)]
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {

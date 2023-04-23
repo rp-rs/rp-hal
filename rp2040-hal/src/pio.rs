@@ -78,6 +78,7 @@ impl PIOExt for PIO1 {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 /// Programmable IO Block
 pub struct PIO<P: PIOExt> {
     used_instruction_space: u32, // bit for each PIO_INSTRUCTION_COUNT
