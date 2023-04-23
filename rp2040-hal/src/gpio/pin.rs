@@ -56,6 +56,7 @@ pub struct DynPinId {
     pub num: u8,
 }
 impl PinId for DynPinId {
+    #[inline]
     fn as_dyn(&self) -> DynPinId {
         *self
     }
@@ -75,6 +76,7 @@ macro_rules! pin_ids {
                 pub struct [<$prefix $name>] (pub(crate) ());
                 impl crate::typelevel::Sealed for [<$prefix $name>] {}
                 impl PinId for [<$prefix $name>] {
+                    #[inline]
                     fn as_dyn(&self) -> DynPinId {
                         DynPinId {
                             bank: DynBankId::$bank,

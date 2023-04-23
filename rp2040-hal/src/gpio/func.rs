@@ -47,10 +47,12 @@ pub enum DynSioConfig {
 
 impl Function for DynFunction {}
 impl func_sealed::Function for DynFunction {
+    #[inline]
     fn from(f: DynFunction) -> Self {
         f
     }
 
+    #[inline]
     fn as_dyn(&self) -> DynFunction {
         *self
     }
@@ -64,9 +66,11 @@ macro_rules! pin_func {
             impl Function for [<Function $fn>] {}
             impl func_sealed::TypeLevelFunction for [<Function $fn>] {}
             impl func_sealed::Function for [<Function $fn>] {
+                #[inline]
                 fn from(_f: DynFunction) -> Self {
                     Self(())
                 }
+                #[inline]
                 fn as_dyn(&self) -> DynFunction {
                     DynFunction::[<$fn>]
                 }
