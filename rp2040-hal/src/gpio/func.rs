@@ -127,7 +127,7 @@ pub struct InvalidFunction;
 
 /// Marker of valid pin -> function combination.
 ///
-/// Read as `F is a valid function implemented for the pin F`
+/// Where `impl ValidFunction<F> for I` reads as `F is a valid function implemented for the pin I`.
 pub trait ValidFunction<F: Function>: super::pin::PinId {}
 
 impl DynFunction {

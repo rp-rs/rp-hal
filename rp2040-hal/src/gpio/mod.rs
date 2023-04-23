@@ -153,7 +153,8 @@ pub enum OutputOverride {
     AlwaysHigh = 3,
 }
 
-/// Pin with validation of [`Function`] and [`PullType`].
+/// Represents a pin, with a given ID (e.g. Xx), a given function (e.g. Uart) and a given pull type
+/// (e.g. pull-down).
 pub struct Pin<I: PinId, F: func::Function, P: PullType> {
     id: I,
     function: F,
