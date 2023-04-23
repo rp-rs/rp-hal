@@ -52,6 +52,11 @@ use crate::{
 
 const TEMPERATURE_SENSOR_CHANNEL: u8 = 4;
 
+/// The pin was invalid for the requested operation
+#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct InvalidPinError;
+
 /// A pin locked in use with the ADC.
 pub struct AdcPin<P>
 where
@@ -85,6 +90,47 @@ where
         p.set_output_disable(self.output_disable);
         p.set_input_enable(self.input_enable);
         P::from(p)
+    }
+}
+
+macro_rules! channel {
+    ($pin:ident, $channel:expr) => {
+        impl<F: Function, M: PullType> Channel<Adc> for AdcPin<Pin<$pin, F, M>>
+        where
+            $pin: crate::gpio::ValidFunction<F>,
+        {
+            type ID = u8; // ADC channels are identified numerically
+
+            fn channel() -> u8 {
+                $channel
+            }
+        }
+    };
+}
+
+channel!(Gpio26, 0);
+channel!(Gpio27, 1);
+channel!(Gpio28, 2);
+channel!(Gpio29, 3);
+
+impl<F: Function, M: PullType> Channel<Adc> for AdcPin<Pin<DynPinId, F, M>>
+where
+    DynPinId: crate::gpio::ValidFunction<F>,
+{
+    type ID = (); // ADC channels are identified at run time
+    fn channel() {}
+}
+
+/// Internal temperature sensor type
+pub struct TempSense {
+    __private: (),
+}
+
+impl Channel<Adc> for TempSense {
+    type ID = u8; // ADC channels are identified numerically
+
+    fn channel() -> u8 {
+        TEMPERATURE_SENSOR_CHANNEL
     }
 }
 
@@ -154,46 +200,6 @@ impl Adc {
     }
 }
 
-macro_rules! channel {
-    ($pin:ident, $channel:expr) => {
-        impl<F: Function, M: PullType> Channel<Adc> for AdcPin<Pin<$pin, F, M>>
-        where
-            $pin: crate::gpio::ValidFunction<F>,
-        {
-            type ID = u8; // ADC channels are identified numerically
-
-            fn channel() -> u8 {
-                $channel
-            }
-        }
-    };
-}
-
-channel!(Gpio26, 0);
-channel!(Gpio27, 1);
-channel!(Gpio28, 2);
-channel!(Gpio29, 3);
-impl<F: Function, M: PullType> Channel<Adc> for AdcPin<Pin<DynPinId, F, M>>
-where
-    DynPinId: crate::gpio::ValidFunction<F>,
-{
-    type ID = (); // ADC channels are identified at run time
-    fn channel() {}
-}
-
-/// Internal temperature sensor type
-pub struct TempSense {
-    __private: (),
-}
-
-impl Channel<Adc> for TempSense {
-    type ID = u8; // ADC channels are identified numerically
-
-    fn channel() -> u8 {
-        TEMPERATURE_SENSOR_CHANNEL
-    }
-}
-
 // Implementation for TempSense and type-checked pins
 impl<WORD, SRC> OneShot<Adc, WORD, SRC> for Adc
 where
@@ -204,18 +210,10 @@ where
 
     fn read(&mut self, _pin: &mut SRC) -> nb::Result<WORD, Self::Error> {
         let chan = SRC::channel();
-        if chan == TEMPERATURE_SENSOR_CHANNEL {
-            self.device.cs.modify(|_, w| w.ts_en().set_bit())
-        }
 
         Ok(self.read(chan).into())
     }
 }
-
-/// The pin was invalid for the requested operation
-#[derive(Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub struct InvalidPinError;
 
 // Implementation for dyn-pins
 impl<WORD, F, M> OneShot<Adc, WORD, AdcPin<Pin<DynPinId, F, M>>> for Adc
