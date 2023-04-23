@@ -84,8 +84,9 @@ macro_rules! pin_func {
 }
 pin_func!(Xip, Spi, Uart, I2c as I2C, Pwm, Pio0, Pio1, Clock, Usb, Null);
 
-// =============================
+//==============================================================================
 // SIO sub-types
+//==============================================================================
 
 /// Type-level `variant` for pin [`Function`].
 pub struct FunctionSio<C>(PhantomData<C>);
@@ -123,8 +124,9 @@ impl SioConfig for SioOutput {
     const DYN: DynSioConfig = DynSioConfig::Output;
 }
 
-// =============================
+//==============================================================================
 // Pin to function mapping
+//==============================================================================
 
 /// Error type for invalid function conversion.
 pub struct InvalidFunction;

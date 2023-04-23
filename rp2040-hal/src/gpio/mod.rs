@@ -164,7 +164,7 @@ pub struct Pin<I: PinId, F: func::Function, P: PullType> {
 /// Create a new pin instance.
 ///
 /// # Safety
-/// The unicity of the pin is not verified. User must make sure no other instance of that specific
+/// The uniqueness of the pin is not verified. User must make sure no other instance of that specific
 /// pin exists at the same time.
 pub unsafe fn new_pin(id: DynPinId) -> Pin<DynPinId, DynFunction, DynPullType> {
     use pin::pin_sealed::PinIdOps;
@@ -252,6 +252,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     {
         self.into_function()
     }
+
     /// Convert the pin function.
     pub fn into_function<F2>(self) -> Pin<I, F2, P>
     where
@@ -273,6 +274,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
             pull_type: self.pull_type,
         }
     }
+
     /// Convert the pin pull type.
     pub fn into_pull_type<M2: PullType>(self) -> Pin<I, F, M2> {
         let prev_pull_type = self.pull_type.as_dyn();
@@ -289,6 +291,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
             function: self.function,
         }
     }
+
     /// Erase the Pin ID type check.
     pub fn into_dyn_pin(self) -> Pin<DynPinId, F, P> {
         Pin {
@@ -303,8 +306,9 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
         self.pull_type.as_dyn()
     }
 
-    // ==========================================
+    //==============================================================================
     // Typical pin conversions.
+    //==============================================================================
 
     /// Disable the pin and set it to float
     #[inline]
@@ -341,6 +345,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     {
         self.into_function().into_pull_type()
     }
+
     /// Configure the pin to operate as a pulled down input
     #[inline]
     pub fn into_pull_down_input(self) -> Pin<I, FunctionSio<SioInput>, PullDown>
@@ -349,6 +354,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     {
         self.into_function().into_pull_type()
     }
+
     /// Configure the pin to operate as a pulled up input
     #[inline]
     pub fn into_pull_up_input(self) -> Pin<I, FunctionSio<SioInput>, PullUp>
@@ -357,6 +363,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     {
         self.into_function().into_pull_type()
     }
+
     /// Configure the pin to operate as a bus keep input
     #[inline]
     pub fn into_bus_keep_input(self) -> Pin<I, FunctionSio<SioInput>, PullBoth>
@@ -376,6 +383,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     {
         self.into_function()
     }
+
     /// Configure the pin to operate as a push-pull output, specifying an initial
     /// state which is applied immediately.
     #[inline]
@@ -404,6 +412,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     {
         self.into_function()
     }
+
     /// Configure the pin to operate as a readable push pull output, specifying an initial
     /// state which is applied immediately.
     #[inline]
@@ -415,10 +424,11 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
         self.into_push_pull_output_in_state(state)
     }
 
-    // ==========================================
+    //==============================================================================
     // methods available for all pins.
+    //==============================================================================
 
-    // ===================================
+    // =======================
     // Pad related methods
 
     /// Get the current drive strength of the pin.
@@ -500,7 +510,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
         self.id.pad_ctrl().modify(|_, w| w.ie().bit(enable));
     }
 
-    // ===================================
+    // =======================
     // IO related methods
 
     /// Set the input override.
@@ -559,7 +569,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
             .modify(|_, w| w.irqover().variant(variant));
     }
 
-    // ===================================
+    // =======================
     // SIO related methods
 
     #[inline]
@@ -610,7 +620,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
         !self._is_set_low()
     }
 
-    // ===================================
+    // =======================
     // Interrupt related methods
 
     /// Clear interrupt.
@@ -756,6 +766,7 @@ impl<I: PinId, P: PullType> Pin<I, DynFunction, P> {
         }
         Ok(())
     }
+
     /// Gets the pin's function.
     pub fn function(&self) -> DynFunction {
         use func::func_sealed::Function;
@@ -1267,6 +1278,7 @@ impl<T: AnyPin> embedded_hal::digital::v2::InputPin for InOutPin<T> {
     fn is_high(&self) -> Result<bool, Error> {
         self.inner.is_high()
     }
+
     fn is_low(&self) -> Result<bool, Error> {
         self.inner.is_low()
     }
@@ -1280,6 +1292,7 @@ impl<T: AnyPin> embedded_hal::digital::v2::OutputPin for InOutPin<T> {
             .set_output_enable_override(OutputEnableOverride::Enable);
         Ok(())
     }
+
     fn set_high(&mut self) -> Result<(), Error> {
         // To set the open-drain pin to high, just disable the output driver by configuring the
         // output override. That way, the DHT11 can still pull the data line down to send its response.
