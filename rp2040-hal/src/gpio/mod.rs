@@ -735,6 +735,30 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
         }
     }
 }
+impl<I: PinId, C: SioConfig, P: PullType> Pin<I, FunctionSio<C>, P> {
+    /// Is bypass enabled
+    #[inline]
+    pub fn is_sync_bypass(&self) -> bool {
+        let mask = self.id.mask();
+        self.id.proc_in_by_pass().read().bits() & mask == mask
+    }
+
+    /// Bypass the input sync stages.
+    ///
+    /// This saves two clock cycles in the input signal's path at the risks of intruducing metastability.
+    #[inline]
+    pub fn set_sync_bypass(&mut self, bypass: bool) {
+        let mask = self.id.mask();
+        let reg = self.id.proc_in_by_pass();
+        unsafe {
+            if bypass {
+                write_bitmask_set(reg.as_ptr(), mask);
+            } else {
+                write_bitmask_clear(reg.as_ptr(), mask);
+            }
+        }
+    }
+}
 impl<F: func::Function, P: PullType> Pin<DynPinId, F, P> {
     /// Try to return to a type-checked pin id.
     ///

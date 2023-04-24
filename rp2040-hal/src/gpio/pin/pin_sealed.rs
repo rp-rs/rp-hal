@@ -23,6 +23,7 @@ pub trait PinIdOps {
     fn sio_oe_set(&self) -> &pac::sio::GPIO_OE_SET;
     fn sio_oe_clr(&self) -> &pac::sio::GPIO_OE_CLR;
     fn sio_oe_xor(&self) -> &pac::sio::GPIO_OE_XOR;
+    fn proc_in_by_pass(&self) -> &pac::syscfg::PROC_IN_SYNC_BYPASS;
 
     fn intr(&self) -> (&pac::io_bank0::INTR, usize);
     fn proc_ints(&self, proc: CoreId) -> (&pac::io_bank0::PROC0_INTS, usize);
@@ -162,6 +163,17 @@ where
     accessor_fns!(sio oe_set);
     accessor_fns!(sio oe_clr);
     accessor_fns!(sio oe_xor);
+
+    fn proc_in_by_pass(&self) -> &rp2040_pac::syscfg::PROC_IN_SYNC_BYPASS {
+        let pin = self.as_dyn();
+        unsafe {
+            let syscfg = &*pac::SYSCFG::PTR;
+            match pin.bank {
+                DynBankId::Bank0 => &syscfg.proc_in_sync_bypass,
+                DynBankId::Qspi => core::mem::transmute(&syscfg.proc_in_sync_bypass_hi),
+            }
+        }
+    }
 
     fn intr(&self) -> (&pac::io_bank0::INTR, usize) {
         let pin = self.as_dyn();
