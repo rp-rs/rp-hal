@@ -19,7 +19,7 @@
 //!
 //! This API tries to provide three types of buffers: Single buffers, double-buffered transfers
 //! where the user can specify the next buffer while the previous is being transferred, and
-//! automatic continous ring buffers consisting of two aligned buffers being read or written
+//! automatic continuous ring buffers consisting of two aligned buffers being read or written
 //! alternatingly.
 
 use crate::{resets::SubsystemReset, typelevel::Sealed};
