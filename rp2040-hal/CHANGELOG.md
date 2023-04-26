@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use `let _ =` to ignore result rather than `.ok();` as this gives a false sense the result is
   checked. - @ithinuel
 - Reduce code repetition in i2c modules. - @ithinuel
+- Rename `DontInvert` to `Normal`. - @ithinuel
 
 ### Added
 

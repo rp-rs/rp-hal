@@ -105,7 +105,7 @@ impl Interrupt {
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum InterruptOverride {
     /// Don't invert the interrupt.
-    DontInvert = 0,
+    Normal = 0,
     /// Invert the interrupt.
     Invert = 1,
     /// Drive interrupt low.
@@ -118,7 +118,7 @@ pub enum InterruptOverride {
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum InputOverride {
     /// Don't invert the peripheral input.
-    DontInvert = 0,
+    Normal = 0,
     /// Invert the peripheral input.
     Invert = 1,
     /// Drive peripheral input low.
@@ -131,7 +131,7 @@ pub enum InputOverride {
 /// Output enable override state.
 pub enum OutputEnableOverride {
     /// Use the original output enable signal from selected peripheral.
-    DontInvert = 0,
+    Normal = 0,
     /// Invert the output enable signal from selected peripheral.
     Invert = 1,
     /// Disable output.
@@ -518,7 +518,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     pub fn set_input_override(&mut self, override_value: InputOverride) {
         use pac::io_bank0::gpio::gpio_ctrl::INOVER_A;
         let variant = match override_value {
-            InputOverride::DontInvert => INOVER_A::NORMAL,
+            InputOverride::Normal => INOVER_A::NORMAL,
             InputOverride::Invert => INOVER_A::INVERT,
             InputOverride::AlwaysLow => INOVER_A::LOW,
             InputOverride::AlwaysHigh => INOVER_A::HIGH,
@@ -531,7 +531,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     pub fn set_output_enable_override(&mut self, override_value: OutputEnableOverride) {
         use pac::io_bank0::gpio::gpio_ctrl::OEOVER_A;
         let variant = match override_value {
-            OutputEnableOverride::DontInvert => OEOVER_A::NORMAL,
+            OutputEnableOverride::Normal => OEOVER_A::NORMAL,
             OutputEnableOverride::Invert => OEOVER_A::INVERT,
             OutputEnableOverride::Disable => OEOVER_A::DISABLE,
             OutputEnableOverride::Enable => OEOVER_A::ENABLE,
@@ -559,7 +559,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     pub fn set_interrupt_override(&mut self, override_value: InterruptOverride) {
         use pac::io_bank0::gpio::gpio_ctrl::IRQOVER_A;
         let variant = match override_value {
-            InterruptOverride::DontInvert => IRQOVER_A::NORMAL,
+            InterruptOverride::Normal => IRQOVER_A::NORMAL,
             InterruptOverride::Invert => IRQOVER_A::INVERT,
             InterruptOverride::AlwaysLow => IRQOVER_A::LOW,
             InterruptOverride::AlwaysHigh => IRQOVER_A::HIGH,
@@ -1292,7 +1292,7 @@ impl<T: AnyPin> InOutPin<T> {
     /// Releases the pin reverting to its previous function.
     pub fn release(self) -> T {
         let mut inner = self.inner.into();
-        inner.set_output_enable_override(OutputEnableOverride::DontInvert);
+        inner.set_output_enable_override(OutputEnableOverride::Normal);
         T::from(inner)
     }
 }
