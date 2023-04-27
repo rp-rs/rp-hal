@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - pwm::Slice::has_overflown() returns the raw interrupt flag, without masking/forcing. - @jannic
+- Update embedded-hal alpha support to version 1.0.0-alpha.10 - @jannic
+- Update embedded-hal-nb alpha support to version 1.0.0-alpha.2 - @jannic
 
 ## [0.8.0] - 2023-02-16
 

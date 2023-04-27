@@ -284,6 +284,13 @@ pub enum Error {
     InvalidPinMode,
 }
 
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1::Error for Error {
+    fn kind(&self) -> eh1::ErrorKind {
+        eh1::ErrorKind::Other
+    }
+}
+
 //==============================================================================
 //  DynPin
 //==============================================================================

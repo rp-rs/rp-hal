@@ -235,7 +235,85 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
         }
         Ok(())
     }
+
+    /// Writes bytes to slave with address `address`
+    ///
+    /// # I2C Events (contract)
+    ///
+    /// Same as the `write` method
+    pub fn write_iter<B>(&mut self, address: u8, bytes: B) -> Result<(), Error>
+    where
+        B: IntoIterator<Item = u8>,
+    {
+        let mut peekable = bytes.into_iter().peekable();
+        let addr: u16 = address.into();
+        Self::validate(addr, Some(peekable.peek().is_none()), None)?;
+        self.setup(addr);
+
+        while let Some(tx) = peekable.next() {
+            self.write_internal(&[tx], peekable.peek().is_none())?
+        }
+        Ok(())
+    }
+
+    /// Writes bytes to slave with address `address` and then reads enough bytes to fill `buffer` *in a
+    /// single transaction*
+    ///
+    /// # I2C Events (contract)
+    ///
+    /// Same as the `write_read` method
+    pub fn write_iter_read<B>(
+        &mut self,
+        address: u8,
+        bytes: B,
+        buffer: &mut [u8],
+    ) -> Result<(), Error>
+    where
+        B: IntoIterator<Item = u8>,
+    {
+        let mut peekable = bytes.into_iter().peekable();
+        let addr: u16 = address.into();
+        Self::validate(addr, Some(peekable.peek().is_none()), None)?;
+        self.setup(addr);
+
+        for tx in peekable {
+            self.write_internal(&[tx], false)?
+        }
+        self.read_internal(buffer, true, true)
+    }
+
+    /// Execute the provided operations on the I2C bus (iterator version).
+    ///
+    /// Transaction contract:
+    /// - Before executing the first operation an ST is sent automatically. This is followed by SAD+R/W as appropriate.
+    /// - Data from adjacent operations of the same type are sent after each other without an SP or SR.
+    /// - Between adjacent operations of a different type an SR and SAD+R/W is sent.
+    /// - After executing the last operation an SP is sent automatically.
+    /// - If the last operation is a `Read` the master does not send an acknowledge for the last byte.
+    ///
+    /// - `ST` = start condition
+    /// - `SAD+R/W` = slave address followed by bit 1 to indicate reading or 0 to indicate writing
+    /// - `SR` = repeated start condition
+    /// - `SP` = stop condition
+    #[cfg(feature = "eh1_0_alpha")]
+    pub fn transaction_iter<'a, O>(&mut self, address: u8, operations: O) -> Result<(), Error>
+    where
+        O: IntoIterator<Item = eh1::Operation<'a>>,
+    {
+        let addr: u16 = address.into();
+        self.setup(addr);
+        let mut peekable = operations.into_iter().peekable();
+        while let Some(operation) = peekable.next() {
+            let last = peekable.peek().is_none();
+            match operation {
+                eh1::Operation::Read(buf) => self.read_internal(buf, false, last)?,
+                eh1::Operation::Write(buf) => self.write_internal(buf, last)?,
+            }
+        }
+        Ok(())
+    }
 }
+
 impl<T: Deref<Target = Block>, PINS> Read for I2C<T, PINS, Controller> {
     type Error = Error;
 
@@ -284,76 +362,20 @@ impl<T: Deref<Target = Block>, PINS> eh1::I2c for I2C<T, PINS, Controller> {
         Write::write(self, addr, bytes)
     }
 
-    fn write_iter<B>(&mut self, address: u8, bytes: B) -> Result<(), Self::Error>
-    where
-        B: IntoIterator<Item = u8>,
-    {
-        let mut peekable = bytes.into_iter().peekable();
-        let addr: u16 = address.into();
-        Self::validate(addr, Some(peekable.peek().is_none()), None)?;
-        self.setup(addr);
-
-        while let Some(tx) = peekable.next() {
-            self.write_internal(&[tx], peekable.peek().is_none())?
-        }
-        Ok(())
-    }
-
-    fn write_read(&mut self, addr: u8, bytes: &[u8], buffer: &mut [u8]) -> Result<(), Error> {
-        WriteRead::write_read(self, addr, bytes, buffer)
-    }
-
-    fn write_iter_read<B>(
-        &mut self,
-        address: u8,
-        bytes: B,
-        buffer: &mut [u8],
-    ) -> Result<(), Self::Error>
-    where
-        B: IntoIterator<Item = u8>,
-    {
-        let mut peekable = bytes.into_iter().peekable();
-        let addr: u16 = address.into();
-        Self::validate(addr, Some(peekable.peek().is_none()), None)?;
-        self.setup(addr);
-
-        for tx in peekable {
-            self.write_internal(&[tx], false)?
-        }
-        self.read_internal(buffer, true, true)
-    }
-
     fn read(&mut self, addr: u8, buffer: &mut [u8]) -> Result<(), Error> {
         Read::read(self, addr, buffer)
     }
 
-    fn transaction<'a>(
+    fn transaction(
         &mut self,
         address: u8,
-        operations: &mut [eh1::Operation<'a>],
+        operations: &mut [eh1::Operation<'_>],
     ) -> Result<(), Self::Error> {
         let addr: u16 = address.into();
         self.setup(addr);
         for i in 0..operations.len() {
             let last = i == operations.len() - 1;
             match &mut operations[i] {
-                eh1::Operation::Read(buf) => self.read_internal(buf, false, last)?,
-                eh1::Operation::Write(buf) => self.write_internal(buf, last)?,
-            }
-        }
-        Ok(())
-    }
-
-    fn transaction_iter<'a, O>(&mut self, address: u8, operations: O) -> Result<(), Self::Error>
-    where
-        O: IntoIterator<Item = eh1::Operation<'a>>,
-    {
-        let addr: u16 = address.into();
-        self.setup(addr);
-        let mut peekable = operations.into_iter().peekable();
-        while let Some(operation) = peekable.next() {
-            let last = peekable.peek().is_none();
-            match operation {
                 eh1::Operation::Read(buf) => self.read_internal(buf, false, last)?,
                 eh1::Operation::Write(buf) => self.write_internal(buf, last)?,
             }
