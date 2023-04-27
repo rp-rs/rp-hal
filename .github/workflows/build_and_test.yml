@@ -2,52 +2,98 @@ on: [push, pull_request]
 name: Build and Test check
 jobs:
   rp2040-hal-builds:
-    name: Build rp2040-hal examples without bsp
+    name: Build rp2040-hal's features
     runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        mode: ["", "--release"]
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
         with:
           target: thumbv6m-none-eabi
+      - name: Install cargo-hack
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: cargo-hack
       - name: Build rp2040-hal's examples
-        run: cargo build -p rp2040-hal ${{ matrix.mode }} --examples --features rt,critical-section-impl
-  builds:
-    name: Build checks
+        run: cargo hack build --optional-deps --each-feature
+  examples-builds:
+    name: Build rp2040-hal's examples
     runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        features: ["", "--features eh1_0_alpha", "--features chrono", "--features rp2040-e5"]
-        mode: ["", "--release"]
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
         with:
           target: thumbv6m-none-eabi
+      - name: Install cargo-hack
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: cargo-hack
       - name: Build workspace
-        run: cargo build ${{ matrix.mode }} --workspace ${{ matrix.features }}
-      - name: Build workspace and examples
-        run: cargo build ${{ matrix.mode }} --workspace --examples ${{ matrix.features }}
-      - name: List built examples and clean
-        run: rm -vrf target/thumbv6m-none-eabi/*/examples/* | sed -e "s/removed '\(.*\)'/\1/" | xargs -l basename | grep -Ev '(-|\.d)'
+        run: cargo hack build --examples --optional-deps --each-feature
+  tests:
+    name: Execute host-runable tests
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          target: thumbv6m-none-eabi
+      - name: Install cargo-hack
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: cargo-hack
       - name: Test
-        run: cargo test --tests --target x86_64-unknown-linux-gnu ${{ matrix.features }}
+        run: cargo hack test --tests --target x86_64-unknown-linux-gnu  --optional-deps --each-feature
       - name: Test docs
-        run: cargo test --doc --target x86_64-unknown-linux-gnu ${{ matrix.features }}
+        run: cargo hack test --doc --target x86_64-unknown-linux-gnu  --optional-deps --each-feature
       - name: Clean
         run: cargo clean
-      - uses: dtolnay/rust-toolchain@nightly
+  udeps:
+    name: Check rp2040-hal for unused dependencies
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: nightly
           target: thumbv6m-none-eabi
+      - name: Install cargo-hack
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: cargo-hack
       - name: Install cargo-udeps
-        run: curl --location "https://github.com/est31/cargo-udeps/releases/download/v0.1.35/cargo-udeps-v0.1.35-x86_64-unknown-linux-gnu.tar.gz" --output - | tar --strip-components=2 -C ~/.cargo/bin -xzvvf - ./cargo-udeps-v0.1.35-x86_64-unknown-linux-gnu/cargo-udeps
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: cargo-udeps
       - name: Check unused deps
-        run: cargo udeps ${{ matrix.mode }} --workspace ${{ matrix.features }}
-      - uses: dtolnay/rust-toolchain@master
+        run: cargo hack udeps --optional-deps --each-feature
+  msrv:
+    name: Verifiy build on MSRV
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.62
           target: thumbv6m-none-eabi
+      - name: Install cargo-hack
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: cargo-hack
       - name: Verifiy MSRV
-        run: cargo build --workspace --examples ${{ matrix.features }}
+        run: cargo hack build --examples --optional-deps --each-feature
+  on-target-build:
+    name: Build on-target-tests
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          target: thumbv6m-none-eabi
+      - name: Install cargo-hack
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: cargo-hack
+      - name: Build on-target-tests
+        run: |
+          cd on-target-tests
+          cargo hack build --each-feature --exclude-all-features
