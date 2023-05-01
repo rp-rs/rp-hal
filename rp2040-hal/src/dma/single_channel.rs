@@ -124,6 +124,7 @@ pub(crate) trait ChannelConfig {
         from: &FROM,
         to: &mut TO,
         pace: Pace,
+        bswap: bool,
         chain_to: Option<u8>,
         start: bool,
     ) where
@@ -141,6 +142,7 @@ impl<CH: SingleChannel> ChannelConfig for CH {
         from: &FROM,
         to: &mut TO,
         pace: Pace,
+        bswap: bool,
         chain_to: Option<u8>,
         start: bool,
     ) where
@@ -167,6 +169,7 @@ impl<CH: SingleChannel> ChannelConfig for CH {
             w.incr_read().bit(src_incr);
             w.incr_write().bit(dest_incr);
             w.treq_sel().bits(treq);
+            w.bswap().bit(bswap);
             w.chain_to().bits(chain_to.unwrap_or_else(|| self.id()));
             w.en().bit(true);
             w

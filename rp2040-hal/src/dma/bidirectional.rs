@@ -22,6 +22,7 @@ where
     to: TO,
     from_pace: Pace,
     to_pace: Pace,
+    bswap: bool,
 }
 
 impl<CH1, CH2, FROM, BIDI, TO, WORD> Config<CH1, CH2, FROM, BIDI, TO>
@@ -39,6 +40,7 @@ where
             from,
             bidi,
             to,
+            bswap: false,
             from_pace: Pace::PreferSink,
             to_pace: Pace::PreferSink,
         }
@@ -56,18 +58,37 @@ where
         self.to_pace = pace;
     }
 
+    /// Enable/disable byteswapping for the DMA transfers, default value is false.
+    ///
+    /// For byte data, this has no effect. For halfword data, the two bytes of
+    /// each halfword are swapped. For word data, the four bytes of each word
+    /// are swapped to reverse order.
+    pub fn bswap(&mut self, bswap: bool) {
+        self.bswap = bswap;
+    }
+
     /// Start the DMA transfer
     pub fn start(mut self) -> Transfer<CH1, CH2, FROM, BIDI, TO> {
         cortex_m::asm::dsb();
         compiler_fence(Ordering::SeqCst);
 
         // Configure the DMA channel and start it.
-        self.ch
-            .0
-            .config(&self.from, &mut self.bidi, self.from_pace, None, false);
-        self.ch
-            .1
-            .config(&self.bidi, &mut self.to, self.to_pace, None, false);
+        self.ch.0.config(
+            &self.from,
+            &mut self.bidi,
+            self.from_pace,
+            self.bswap,
+            None,
+            false,
+        );
+        self.ch.1.config(
+            &self.bidi,
+            &mut self.to,
+            self.to_pace,
+            self.bswap,
+            None,
+            false,
+        );
         self.ch.0.start_both(&mut self.ch.1);
 
         Transfer {

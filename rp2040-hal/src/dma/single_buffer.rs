@@ -12,6 +12,7 @@ pub struct Config<CH: SingleChannel, FROM: ReadTarget, TO: WriteTarget> {
     from: FROM,
     to: TO,
     pace: Pace,
+    bswap: bool,
 }
 
 impl<CH, FROM, TO, WORD> Config<CH, FROM, TO>
@@ -27,6 +28,7 @@ where
             from,
             to,
             pace: Pace::PreferSource,
+            bswap: false,
         }
     }
 
@@ -37,6 +39,15 @@ where
     /// or the sink shall be queried for the pace signal.
     pub fn pace(&mut self, pace: Pace) {
         self.pace = pace;
+    }
+
+    /// Enable/disable byteswapping for the DMA transfers, default value is false.
+    ///
+    /// For byte data, this has no effect. For halfword data, the two bytes of
+    /// each halfword are swapped. For word data, the four bytes of each word
+    /// are swapped to reverse order.
+    pub fn bswap(&mut self, bswap: bool) {
+        self.bswap = bswap;
     }
 
     /// Start the DMA transfer
@@ -50,7 +61,7 @@ where
 
         // Configure the DMA channel and start it.
         self.ch
-            .config(&self.from, &mut self.to, self.pace, None, true);
+            .config(&self.from, &mut self.to, self.pace, self.bswap, None, true);
 
         Transfer {
             ch: self.ch,
