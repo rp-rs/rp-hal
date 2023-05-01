@@ -46,6 +46,8 @@ where
     /// For byte data, this has no effect. For halfword data, the two bytes of
     /// each halfword are swapped. For word data, the four bytes of each word
     /// are swapped to reverse order.
+    ///
+    /// This is a convenient way to change the (half-)words' byte endianness on the fly.
     pub fn bswap(&mut self, bswap: bool) {
         self.bswap = bswap;
     }
