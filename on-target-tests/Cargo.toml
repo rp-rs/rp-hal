@@ -46,7 +46,7 @@ defmt-rtt = "0.4"
 defmt-test = "0.3"
 panic-probe = { version = "0.3", features = ["print-defmt"] }
 
-rp2040-hal = { path = "../rp2040-hal", version = "0.6", features = [
+rp2040-hal = { path = "../rp2040-hal", version = "0.8", features = [
     "defmt",
     "critical-section-impl",
 ] }
@@ -55,7 +55,6 @@ fugit = "0.3.6"
 
 rp2040-boot2 = "0.2"
 critical-section = "1.0.0"
-
 
 [features]
 default = ['defmt-trace']
