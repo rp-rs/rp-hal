@@ -146,13 +146,13 @@ impl<'p> Core<'p> {
     /// Spawn a function on this core.
     pub fn spawn<F>(&mut self, stack: &'static mut [usize], entry: F) -> Result<(), Error>
     where
-        F: FnOnce() -> bad::Never + Send + 'static,
+        F: FnOnce() + Send + 'static,
     {
         if let Some((psm, ppb, fifo)) = self.inner.as_mut() {
             // The first two ignored `u64` parameters are there to take up all of the registers,
             // which means that the rest of the arguments are taken from the stack,
             // where we're able to put them from core 0.
-            extern "C" fn core1_startup<F: FnOnce() -> bad::Never>(
+            extern "C" fn core1_startup<F: FnOnce()>(
                 _: u64,
                 _: u64,
                 entry: &mut ManuallyDrop<F>,
@@ -170,7 +170,12 @@ impl<'p> Core<'p> {
                 let mut sio = Sio::new(peripherals.SIO);
                 sio.fifo.write_blocking(1);
 
-                entry()
+                entry();
+                // TODO: should this bring the core back to its startup state waiting for a
+                // function? and/or reset its NVIC and other core specific blocks.
+                loop {
+                    cortex_m::asm::wfe()
+                }
             }
 
             // Reset the core
@@ -254,19 +259,4 @@ impl<'p> Core<'p> {
             Err(Error::InvalidCore)
         }
     }
-}
-
-// https://github.com/nvzqz/bad-rs/blob/master/src/never.rs
-mod bad {
-    pub(crate) type Never = <F as HasOutput>::Output;
-
-    pub trait HasOutput {
-        type Output;
-    }
-
-    impl<O> HasOutput for fn() -> O {
-        type Output = O;
-    }
-
-    type F = fn() -> !;
 }
