@@ -12,7 +12,7 @@
 //!
 //! static mut CORE1_STACK: Stack<4096> = Stack::new();
 //!
-//! fn core1_task() -> ! {
+//! fn core1_task() {
 //!     loop {}
 //! }
 //!
@@ -144,6 +144,12 @@ impl<'p> Core<'p> {
     }
 
     /// Spawn a function on this core.
+    ///
+    /// Upon exit of the entry function, the core will enter an infinite `wfe` (wait for event)
+    /// loop. In order to reduce power consumption, it is recommended that all interrupts and events
+    /// are disabled before returning.
+    ///
+    /// Core 1 will need to be reset from core 0 in order to spawn another task.
     pub fn spawn<F>(&mut self, stack: &'static mut [usize], entry: F) -> Result<(), Error>
     where
         F: FnOnce() + Send + 'static,
@@ -179,6 +185,10 @@ impl<'p> Core<'p> {
             }
 
             // Reset the core
+            // TODO: resetting without prior check that the core is actually stowed is unsafe.
+            // But there does not seem to be any obvious way to check that. A marker flag could be
+            // set from this method and cleared for the wrapper after `entry` returned. But doing
+            // so wouldn't be zero cost.
             psm.frce_off.modify(|_, w| w.proc1().set_bit());
             while !psm.frce_off.read().proc1().bit_is_set() {
                 cortex_m::asm::nop();
