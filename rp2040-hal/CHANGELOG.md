@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   checked. - @ithinuel
 - Reduce code repetition in i2c modules. - @ithinuel
 - Rename `DontInvert` to `Normal`. - @ithinuel
+- Prevent the creation of multiple instances of `adc::TempSensor` - @ithinuel
 
 ### Added
 

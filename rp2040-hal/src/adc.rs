@@ -29,7 +29,7 @@
 //! // Enable adc
 //! let mut adc = Adc::new(peripherals.ADC, &mut peripherals.RESETS);
 //! // Enable the temperature sensor
-//! let mut temperature_sensor = adc.enable_temp_sensor();
+//! let mut temperature_sensor = adc.take_temp_sensor().unwrap();
 //! // Read the ADC counts from the ADC channel
 //! let temperature_adc_counts: u16 = adc.read(&mut temperature_sensor).unwrap();
 //! ```
@@ -140,7 +140,7 @@ impl Channel<Adc> for TempSense {
 /// channel is either associated with a specific GPIO pin or attached to the internal
 /// temperature sensor. You should put the relevant pin into ADC mode by creating an
 /// [`AdcPin`] object with it, or you can put the ADC into `Temperature Sensing Mode"
-/// by calling [`Adc::enable_temp_sensor()`]. Either way, the resulting objects can be
+/// by calling [`Adc::take_temp_sensor()`]. Either way, the resulting objects can be
 /// passed to the [`OneShot::read()`] trait method to actually do the read.
 pub struct Adc {
     device: ADC,
@@ -171,11 +171,26 @@ impl Adc {
         self.device.result.read().result().bits()
     }
 
-    /// Enable temperature sensor, returns a channel to use
+    /// Enable temperature sensor, returns a channel to use.
+    ///
+    /// This can only be done once before calling [`disable_temp_sensor`]. If the sensor has already
+    /// been enabled, this method will panic.
     pub fn enable_temp_sensor(&mut self) -> TempSense {
-        self.device.cs.modify(|_, w| w.ts_en().set_bit());
+        self.take_temp_sensor()
+            .expect("Temp sensor is already enabled.")
+    }
 
-        TempSense { __private: () }
+    /// Enable temperature sensor, returns a channel to use
+    ///
+    /// If the sensor has already been enabled, this method returns `None`.
+    pub fn take_temp_sensor(&mut self) -> Option<TempSense> {
+        let mut disabled = false;
+        self.device.cs.modify(|r, w| {
+            disabled = r.ts_en().bit_is_clear();
+            // if bit was already set, this is a nop
+            w.ts_en().set_bit()
+        });
+        disabled.then_some(TempSense { __private: () })
     }
 
     /// Disable temperature sensor, consumes channel
