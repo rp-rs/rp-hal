@@ -9,13 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Re-enabled implementations of traits from embedded-hal-nb 1.0.0-alpha.1 - @jannic
+- Re-enabled implementations of traits from embedded-hal-nb 1.0.0-alpha.1 - #569 @jannic
+- PIO: Added `set_mov_status_config` to `PIOBuilder` - #566 @Gip-gip
+- memory.x: Added SRAM4 and SRAM5 blocks - #578 @jannic
+- DMA: Added memory-to-memory example - #579 @jlpettersson
 
 ### Changed
 
-- pwm::Slice::has_overflown() returns the raw interrupt flag, without masking/forcing. - @jannic
-- Update embedded-hal alpha support to version 1.0.0-alpha.10 - @jannic
-- Update embedded-hal-nb alpha support to version 1.0.0-alpha.2 - @jannic
+- pwm::Slice::has_overflown() returns the raw interrupt flag, without masking/forcing. - #562 @jannic
+- Update embedded-hal alpha support to version 1.0.0-alpha.10 - #582 @jannic
+- Update embedded-hal-nb alpha support to version 1.0.0-alpha.2 - #582 @jannic
+- DMA: Fixed an issue where `check_irq0` would check `irq1` on channel 1 - #580 @jlpettersson
+- Serial: Fixed possible overflow of the baudrate calculation - #583 @ArchUsr64
+- Doc: Several improvements have been made to documentation: #567 #570 #574 #575 #577 #586
+- CI: A few improvements have been made to CI pipelines: #555 #587 #588
 
 ## [0.8.0] - 2023-02-16
 
