@@ -2,7 +2,7 @@
 // See [Chapter 2 Section 16](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 
 use core::convert::TryInto;
-use core::{convert::Infallible, ops::RangeInclusive};
+use core::ops::RangeInclusive;
 
 use fugit::HertzU32;
 use nb::Error::WouldBlock;
@@ -137,7 +137,7 @@ pub struct StableOscillatorToken {
 
 impl CrystalOscillator<Initialized> {
     /// One has to wait for the startup delay before using the oscillator, ie awaiting stablilzation of the XOSC
-    pub fn await_stabilization(&self) -> nb::Result<StableOscillatorToken, Infallible> {
+    pub fn await_stabilization(&self) -> nb::Result<StableOscillatorToken, bad::Never> {
         if self.device.status.read().stable().bit_is_clear() {
             return Err(WouldBlock);
         }

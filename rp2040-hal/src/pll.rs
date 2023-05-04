@@ -2,7 +2,7 @@
 // See [Chapter 2 Section 18](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 
 use core::{
-    convert::{Infallible, TryInto},
+    convert::TryInto,
     marker::PhantomData,
     ops::{Deref, Range, RangeInclusive},
 };
@@ -243,7 +243,7 @@ pub struct LockedPLLToken<D> {
 
 impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Locking, D> {
     /// Awaits locking of the PLL.
-    pub fn await_lock(&self) -> nb::Result<LockedPLLToken<D>, Infallible> {
+    pub fn await_lock(&self) -> nb::Result<LockedPLLToken<D>, bad::Never> {
         if self.device.cs.read().lock().bit_is_clear() {
             return Err(WouldBlock);
         }

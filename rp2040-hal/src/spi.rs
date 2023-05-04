@@ -22,7 +22,7 @@
 use crate::dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget};
 use crate::resets::SubsystemReset;
 use crate::typelevel::Sealed;
-use core::{convert::Infallible, marker::PhantomData, ops::Deref};
+use core::{marker::PhantomData, ops::Deref};
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::spi as eh1;
 #[cfg(feature = "eh1_0_alpha")]
@@ -256,16 +256,16 @@ macro_rules! impl_write {
 
         $(
         impl<D: SpiDevice> FullDuplex<$type> for Spi<Enabled, D, $nr> {
-            type Error = Infallible;
+            type Error = $crate::typelevel::Never;
 
-            fn read(&mut self) -> Result<$type, nb::Error<Infallible>> {
+            fn read(&mut self) -> Result<$type, nb::Error<Self::Error>> {
                 if !self.is_readable() {
                     return Err(nb::Error::WouldBlock);
                 }
 
                 Ok(self.device.sspdr.read().data().bits() as $type)
             }
-            fn send(&mut self, word: $type) -> Result<(), nb::Error<Infallible>> {
+            fn send(&mut self, word: $type) -> Result<(), nb::Error<Self::Error>> {
                 // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
                 // is full, PL022 inhibits RX pushes, and sets a sticky flag on
                 // push-on-full, but continues shifting. Safe if SSPIMSC_RORIM is not set.
@@ -286,7 +286,7 @@ macro_rules! impl_write {
 
         #[cfg(feature = "eh1_0_alpha")]
         impl<D: SpiDevice> eh1::ErrorType for Spi<Enabled, D, $nr> {
-            type Error = Infallible;
+            type Error = $crate::typelevel::Never;
         }
 
         #[cfg(feature = "eh1_0_alpha")]
@@ -375,14 +375,14 @@ macro_rules! impl_write {
 
         #[cfg(feature = "eh1_0_alpha")]
         impl<D: SpiDevice> eh1nb::FullDuplex<$type> for Spi<Enabled, D, $nr> {
-            fn read(&mut self) -> Result<$type, nb::Error<Infallible>> {
+            fn read(&mut self) -> Result<$type, nb::Error<Self::Error>> {
                 if !self.is_readable() {
                     return Err(nb::Error::WouldBlock);
                 }
 
                 Ok(self.device.sspdr.read().data().bits() as $type)
             }
-            fn write(&mut self, word: $type) -> Result<(), nb::Error<Infallible>> {
+            fn write(&mut self, word: $type) -> Result<(), nb::Error<Self::Error>> {
                 // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
                 // is full, PL022 inhibits RX pushes, and sets a sticky flag on
                 // push-on-full, but continues shifting. Safe if SSPIMSC_RORIM is not set.

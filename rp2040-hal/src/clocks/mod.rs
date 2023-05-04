@@ -71,7 +71,7 @@ use crate::{
     watchdog::Watchdog,
     xosc::{setup_xosc_blocking, CrystalOscillator, Error as XoscError, Stable},
 };
-use core::{convert::Infallible, marker::PhantomData};
+use core::marker::PhantomData;
 use fugit::HertzU32;
 use fugit::RateExtU32;
 use pac::{CLOCKS, PLL_SYS, PLL_USB, RESETS, XOSC};
@@ -145,7 +145,7 @@ trait GlitchlessClock {
     fn await_select(
         &self,
         clock_token: &ChangingClockToken<Self::Clock>,
-    ) -> nb::Result<(), Infallible>;
+    ) -> nb::Result<(), bad::Never>;
 }
 
 /// Token which can be used to await the glitchless switch

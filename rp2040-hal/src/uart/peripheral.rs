@@ -5,7 +5,7 @@
 
 use super::*;
 use crate::pac::uart0::uartlcr_h::W as UART_LCR_H_Writer;
-use core::convert::Infallible;
+
 use core::fmt;
 use embedded_hal::serial::{Read, Write};
 use fugit::HertzU32;
@@ -173,7 +173,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
     /// - 0 bytes were written, a WouldBlock Error is returned
     /// - some bytes were written, it is deemed to be a success
     /// Upon success, the remaining slice is returned.
-    pub fn write_raw<'d>(&self, data: &'d [u8]) -> nb::Result<&'d [u8], Infallible> {
+    pub fn write_raw<'d>(&self, data: &'d [u8]) -> nb::Result<&'d [u8], bad::Never> {
         super::writer::write_raw(&self.device, data)
     }
 
@@ -376,7 +376,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Read<u8> for UartPeripheral<En
 }
 
 impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for UartPeripheral<Enabled, D, P> {
-    type Error = Infallible;
+    type Error = bad::Never;
 
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
         if self.write_raw(&[word]).is_err() {

@@ -255,18 +255,3 @@ impl<'p> Core<'p> {
         }
     }
 }
-
-// https://github.com/nvzqz/bad-rs/blob/master/src/never.rs
-mod bad {
-    pub(crate) type Never = <F as HasOutput>::Output;
-
-    pub trait HasOutput {
-        type Output;
-    }
-
-    impl<O> HasOutput for fn() -> O {
-        type Output = O;
-    }
-
-    type F = fn() -> !;
-}

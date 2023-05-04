@@ -21,7 +21,6 @@
 use crate::typelevel::Sealed;
 
 use super::*;
-use core::convert::Infallible;
 
 /// Marker struct for ownership of SIO gpio bank0
 pub struct SioGpioBank0 {
@@ -458,7 +457,7 @@ where
     }
 
     /// Try to claim the spinlock. Will return `WouldBlock` until the spinlock is available.
-    pub fn claim_async() -> nb::Result<Self, Infallible> {
+    pub fn claim_async() -> nb::Result<Self, bad::Never> {
         Self::try_claim().ok_or(nb::Error::WouldBlock)
     }
 

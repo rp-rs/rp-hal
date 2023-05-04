@@ -695,3 +695,31 @@ where
 {
     type Type = T;
 }
+
+// ==============================================
+// Implement some embedded-hal trait for a wrapped !
+/// Wraps [`bad::Never`] to implement a few embedded-hal trait.
+pub struct Never(bad::Never);
+impl core::fmt::Debug for Never {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("Never").finish()
+    }
+}
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1_0_alpha::digital::Error for Never {
+    fn kind(&self) -> eh1_0_alpha::digital::ErrorKind {
+        unreachable!("This type cannot exists")
+    }
+}
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1_0_alpha::spi::Error for Never {
+    fn kind(&self) -> eh1_0_alpha::spi::ErrorKind {
+        unreachable!("This type cannot exists")
+    }
+}
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1_0_alpha::serial::Error for Never {
+    fn kind(&self) -> eh1_0_alpha::serial::ErrorKind {
+        unreachable!("This type cannot exists")
+    }
+}

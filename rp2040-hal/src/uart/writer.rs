@@ -5,7 +5,7 @@
 use super::{FifoWatermark, UartDevice, ValidUartPinout};
 use crate::dma::{EndlessWriteTarget, WriteTarget};
 use core::fmt;
-use core::{convert::Infallible, marker::PhantomData};
+use core::marker::PhantomData;
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::serial as eh1;
 #[cfg(feature = "eh1_0_alpha")]
@@ -30,7 +30,7 @@ pub fn set_tx_watermark(rb: &RegisterBlock, watermark: FifoWatermark) {
 
 /// Returns `Err(WouldBlock)` if the UART TX FIFO still has data in it or
 /// `Ok(())` if the FIFO is empty.
-pub(crate) fn transmit_flushed(rb: &RegisterBlock) -> nb::Result<(), Infallible> {
+pub(crate) fn transmit_flushed(rb: &RegisterBlock) -> nb::Result<(), bad::Never> {
     if rb.uartfr.read().txfe().bit_is_set() {
         Ok(())
     } else {
@@ -54,7 +54,7 @@ pub(crate) fn uart_is_writable(rb: &RegisterBlock) -> bool {
 pub(crate) fn write_raw<'d>(
     rb: &RegisterBlock,
     data: &'d [u8],
-) -> nb::Result<&'d [u8], Infallible> {
+) -> nb::Result<&'d [u8], bad::Never> {
     let mut bytes_written = 0;
 
     for c in data {
@@ -144,7 +144,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Writer<D, P> {
     /// - some bytes were written, it is deemed to be a success
     ///
     /// Upon success, the remaining (unwritten) slice is returned.
-    pub fn write_raw<'d>(&self, data: &'d [u8]) -> nb::Result<&'d [u8], Infallible> {
+    pub fn write_raw<'d>(&self, data: &'d [u8]) -> nb::Result<&'d [u8], bad::Never> {
         write_raw(&self.device, data)
     }
 
@@ -169,7 +169,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Writer<D, P> {
 }
 
 impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for Writer<D, P> {
-    type Error = Infallible;
+    type Error = bad::Never;
 
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
         if self.write_raw(&[word]).is_err() {
@@ -204,7 +204,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> EndlessWriteTarget for Writer<D, P> {
 
 #[cfg(feature = "eh1_0_alpha")]
 impl<D: UartDevice, P: ValidUartPinout<D>> eh1::ErrorType for Writer<D, P> {
-    type Error = core::convert::Infallible;
+    type Error = crate::typelevel::Never;
 }
 
 #[cfg(feature = "eh1_0_alpha")]

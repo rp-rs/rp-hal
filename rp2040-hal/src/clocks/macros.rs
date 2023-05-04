@@ -88,7 +88,7 @@ macro_rules! clock {
             impl GlitchlessClock for $name {
                 type Clock = Self;
 
-                fn await_select(&self, clock_token: &ChangingClockToken<Self>) -> nb::Result<(), Infallible> {
+                fn await_select(&self, clock_token: &ChangingClockToken<Self>) -> nb::Result<(), bad::Never> {
                     let shared_dev = unsafe { self.shared_dev.get() };
 
                     let selected = shared_dev.[<$reg _selected>].read().bits();
@@ -133,7 +133,7 @@ macro_rules! clock {
 
             impl $name {
                 /// Reset clock back to its reset source
-                pub fn reset_source_await(&mut self) -> nb::Result<(), Infallible> {
+                pub fn reset_source_await(&mut self) -> nb::Result<(), bad::Never> {
                     let shared_dev = unsafe { self.shared_dev.get() };
 
                     shared_dev.[<$reg _ctrl>].modify(|_, w| {

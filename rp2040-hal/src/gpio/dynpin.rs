@@ -70,7 +70,7 @@
 //!
 //! This module implements all of the embedded HAL GPIO traits for [`DynPin`].
 //! However, whereas the type-level API uses
-//! `Error = core::convert::Infallible`, the value-level API can return a real
+//! `Error = bad::Never`, the value-level API can return a real
 //! error. If the [`DynPin`] is not in the correct [`DynPinMode`] for the
 //! operation, the trait functions will return
 //! [`InvalidPinType`](Error::InvalidPinType).

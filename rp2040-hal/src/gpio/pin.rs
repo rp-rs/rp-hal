@@ -99,7 +99,7 @@ use super::{
 };
 use crate::gpio::reg::RegisterInterface;
 use crate::typelevel::{Is, NoneT, Sealed};
-use core::convert::Infallible;
+
 use core::marker::PhantomData;
 
 use crate::gpio::dynpin::DynFunction;
@@ -815,7 +815,7 @@ where
     I: PinId,
     C: OutputConfig,
 {
-    type Error = Infallible;
+    type Error = bad::Never;
     #[inline]
     fn set_high(&mut self) -> Result<(), Self::Error> {
         self._set_high();
@@ -832,7 +832,7 @@ impl<I> InputPin for Pin<I, ReadableOutput>
 where
     I: PinId,
 {
-    type Error = Infallible;
+    type Error = bad::Never;
     #[inline]
     fn is_high(&self) -> Result<bool, Self::Error> {
         Ok(self._is_high())
@@ -848,7 +848,7 @@ where
     I: PinId,
     C: InputConfig,
 {
-    type Error = Infallible;
+    type Error = bad::Never;
     #[inline]
     fn is_high(&self) -> Result<bool, Self::Error> {
         Ok(self._is_high())
@@ -864,7 +864,7 @@ where
     I: PinId,
     C: OutputConfig,
 {
-    type Error = Infallible;
+    type Error = bad::Never;
     #[inline]
     fn toggle(&mut self) -> Result<(), Self::Error> {
         self._toggle();
@@ -893,7 +893,7 @@ where
     I: PinId,
     C: OutputConfig,
 {
-    type Error = Infallible;
+    type Error = crate::typelevel::Never;
 }
 
 #[cfg(feature = "eh1_0_alpha")]
@@ -935,7 +935,7 @@ where
     I: PinId,
     C: InputConfig,
 {
-    type Error = Infallible;
+    type Error = crate::typelevel::Never;
 }
 
 #[cfg(feature = "eh1_0_alpha")]
