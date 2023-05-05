@@ -45,7 +45,7 @@ rp2040-hal = { path = "../rp2040-hal", version = "0.8", features = [
 # Needed to set spi frequencies
 fugit = "0.3.6"
 
-rp2040-boot2 = "0.2"
+rp2040-boot2 = "0.3.0"
 critical-section = "1.0.0"
 
 [features]

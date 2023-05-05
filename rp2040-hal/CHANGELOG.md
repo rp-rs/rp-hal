@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - multicore: remove the requirement on the closure to never return - #594 @ithinuel
+- Updated dependency on rp2040-boot2 to version 0.3.0. - @jannic
+  - This doubles the flash access speed to the value used by the C SDK by
+    default. So it should usually be safe. However, if you are overclocking
+    the RP2040, you might need to lower the flash speed accordingly.
 
 ## [0.8.1] - 2023-05-05
 
@@ -262,6 +266,7 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.54.
 
 - Initial release
 
+[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.8.1...HEAD
 [0.8.1]: https://github.com/rp-rs/rp-hal/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/rp-rs/rp-hal/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/rp-rs/rp-hal/compare/v0.6.0...v0.7.0
