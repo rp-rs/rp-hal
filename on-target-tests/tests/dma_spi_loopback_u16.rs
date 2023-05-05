@@ -7,6 +7,7 @@
 use crate::hal::dma::Channels;
 use defmt_rtt as _; // defmt transport
 use defmt_test as _;
+use hal::gpio::{self, Pin};
 use panic_probe as _;
 use rp2040_hal as hal; // memory layout // panic handler
 use rp2040_hal::pac::SPI0;
@@ -24,9 +25,12 @@ pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
 /// if your board has a different frequency
 const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
+type MISO = Pin<gpio::bank0::Gpio4, gpio::FunctionSpi, gpio::PullNone>;
+type MOSI = Pin<gpio::bank0::Gpio7, gpio::FunctionSpi, gpio::PullNone>;
+type SCLK = Pin<gpio::bank0::Gpio6, gpio::FunctionSpi, gpio::PullNone>;
 struct State {
     channels: Option<Channels>,
-    spi: Option<spi::Spi<spi::Enabled, SPI0, 16>>,
+    spi: Option<spi::Spi<spi::Enabled, SPI0, (MOSI, MISO, SCLK), 16>>,
 }
 
 mod testdata {
@@ -91,10 +95,10 @@ mod tests {
         );
 
         // These are implicitly used by the spi driver if they are in the correct mode
-        let _spi_sclk = pins.gpio6.into_mode::<hal::gpio::FunctionSpi>();
-        let _spi_mosi = pins.gpio7.into_mode::<hal::gpio::FunctionSpi>();
-        let _spi_miso = pins.gpio4.into_mode::<hal::gpio::FunctionSpi>();
-        let spi = hal::spi::Spi::<_, _, 16>::new(pac.SPI0);
+        let spi_sclk = pins.gpio6.into();
+        let spi_mosi = pins.gpio7.into();
+        let spi_miso = pins.gpio4.into();
+        let spi = hal::spi::Spi::new(pac.SPI0, (spi_mosi, spi_miso, spi_sclk));
 
         // Exchange the uninitialised SPI driver for an initialised one
         let spi = spi.init(
