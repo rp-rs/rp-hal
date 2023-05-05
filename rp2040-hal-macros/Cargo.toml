@@ -5,6 +5,7 @@ name = "rp2040-hal-macros"
 readme = "README.md"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/rp-rs/rp-hal"
 
 [lib]
 proc-macro = true
