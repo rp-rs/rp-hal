@@ -135,6 +135,21 @@ pub(crate) trait ChannelConfig {
     fn start_both<CH: SingleChannel>(&mut self, other: &mut CH);
 }
 
+// RP2040's DMA engine only works with certain word sizes. Make sure that other
+// word sizes will fail to compile.
+struct IsValidWordSize<WORD> {
+    w: core::marker::PhantomData<WORD>,
+}
+
+impl<WORD> IsValidWordSize<WORD> {
+    const OK: usize = {
+        match mem::size_of::<WORD>() {
+            1 | 2 | 4 => 0, // ok
+            _ => panic!("Unsupported DMA word size"),
+        }
+    };
+}
+
 impl<CH: SingleChannel> ChannelConfig for CH {
     fn config<WORD, FROM, TO>(
         &mut self,
@@ -148,10 +163,8 @@ impl<CH: SingleChannel> ChannelConfig for CH {
         TO: WriteTarget<TransmittedWord = WORD>,
     {
         // Configure the DMA channel.
-        assert!(
-            mem::size_of::<WORD>() != 8,
-            "DMA does not support transferring 64bit data"
-        );
+        let _ = IsValidWordSize::<WORD>::OK;
+
         let (src, src_count) = from.rx_address_count();
         let src_incr = from.rx_increment();
         let (dest, dest_count) = to.tx_address_count();
