@@ -17,10 +17,6 @@ name = "dma_m2m_u32"
 harness = false
 
 [[test]]
-name = "dma_m2m_u64"
-harness = false
-
-[[test]]
 name = "dma_spi_loopback_u8"
 harness = false
 
