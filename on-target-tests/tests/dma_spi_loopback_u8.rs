@@ -1,3 +1,5 @@
+//! This test needs a connection between GPIO 4 and GPIO 7 (pins 6 and 10 an a Pico)
+
 #![no_std]
 #![no_main]
 #![cfg(test)]
