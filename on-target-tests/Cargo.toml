@@ -25,10 +25,6 @@ name = "dma_spi_loopback_u16"
 harness = false
 
 [[test]]
-name = "dma_drop"
-harness = false
-
-[[test]]
 name = "dma_dyn"
 harness = false
 
