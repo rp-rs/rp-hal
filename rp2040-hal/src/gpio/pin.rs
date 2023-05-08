@@ -144,7 +144,7 @@ pub(crate) fn set_pull_type<P: PinId>(pin: &P, pull_type: DynPullType) {
         DynPullType::None => (false, false),
         DynPullType::Up => (true, false),
         DynPullType::Down => (false, true),
-        DynPullType::Both => (true, true),
+        DynPullType::BusKeep => (true, true),
     };
 
     pin.pad_ctrl()

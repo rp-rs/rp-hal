@@ -21,9 +21,15 @@ pub enum DynPullType {
     Up,
     #[allow(missing_docs)]
     Down,
-    /// This enables both pull resistor. This setup is described as bus-keep in the RP2040
-    /// datasheet.
-    Both,
+    /// This enables bus-keep mode.
+    ///
+    /// This is not documented in the datasheet but discribed in the
+    /// [c-sdk](https://github.com/raspberrypi/pico-sdk/blob/e7267f99febc70486923e17a8210088af058c915/src/rp2_common/hardware_gpio/gpio.c#L53)
+    /// as:
+    ///
+    /// > […]  on RP2040, setting both pulls enables a "bus keep" function,
+    /// > i.e. weak pull to whatever is current high/low state of GPIO.
+    BusKeep,
 }
 
 impl PullType for DynPullType {}
@@ -54,4 +60,4 @@ macro_rules! pin_pull_type {
         })*
     };
 }
-pin_pull_type!(None, Up, Down, Both);
+pin_pull_type!(None, Up, Down, BusKeep);

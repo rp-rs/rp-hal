@@ -199,7 +199,7 @@ pub unsafe fn new_pin(id: DynPinId) -> Pin<DynPinId, DynFunction, DynPullType> {
     };
     let pad = id.pad_ctrl().read();
     let pull_type = match (pad.pue().bit_is_set(), pad.pde().bit_is_set()) {
-        (true, true) => DynPullType::Both,
+        (true, true) => DynPullType::BusKeep,
         (true, false) => DynPullType::Up,
         (false, true) => DynPullType::Down,
         (false, false) => DynPullType::None,
@@ -366,7 +366,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
 
     /// Configure the pin to operate as a bus keep input
     #[inline]
-    pub fn into_bus_keep_input(self) -> Pin<I, FunctionSio<SioInput>, PullBoth>
+    pub fn into_bus_keep_input(self) -> Pin<I, FunctionSio<SioInput>, PullBusKeep>
     where
         I: ValidFunction<FunctionSio<SioInput>>,
     {
