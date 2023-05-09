@@ -12,6 +12,7 @@ pub struct Config<CH1: SingleChannel, CH2: SingleChannel, FROM: ReadTarget, TO: 
     ch: (CH1, CH2),
     from: FROM,
     to: TO,
+    bswap: bool,
     pace: Pace,
 }
 
@@ -28,6 +29,7 @@ where
             ch,
             from,
             to,
+            bswap: false,
             pace: Pace::PreferSource,
         }
     }
@@ -39,6 +41,17 @@ where
     /// or the sink shall be queried for the pace signal.
     pub fn pace(&mut self, pace: Pace) {
         self.pace = pace;
+    }
+
+    /// Enable/disable byteswapping for the DMA transfers, default value is false.
+    ///
+    /// For byte data, this has no effect. For halfword data, the two bytes of
+    /// each halfword are swapped. For word data, the four bytes of each word
+    /// are swapped to reverse order.
+    ///
+    /// This is a convenient way to change the (half-)words' byte endianness on the fly.
+    pub fn bswap(&mut self, bswap: bool) {
+        self.bswap = bswap;
     }
 
     /// Start the DMA transfer
@@ -53,13 +66,14 @@ where
         // Configure the DMA channel and start it.
         self.ch
             .0
-            .config(&self.from, &mut self.to, self.pace, None, true);
+            .config(&self.from, &mut self.to, self.pace, self.bswap, None, true);
 
         Transfer {
             ch: self.ch,
             from: self.from,
             to: self.to,
             pace: self.pace,
+            bswap: self.bswap,
             state: (),
             second_ch: false,
         }
@@ -83,6 +97,7 @@ where
     from: FROM,
     to: TO,
     pace: Pace,
+    bswap: bool,
     state: STATE,
     second_ch: bool,
 }
@@ -161,9 +176,13 @@ where
 
         // Configure the _other_ DMA channel, but do not start it yet.
         if self.second_ch {
-            self.ch.0.config(&buf, &mut self.to, self.pace, None, false);
+            self.ch
+                .0
+                .config(&buf, &mut self.to, self.pace, self.bswap, None, false);
         } else {
-            self.ch.1.config(&buf, &mut self.to, self.pace, None, false);
+            self.ch
+                .1
+                .config(&buf, &mut self.to, self.pace, self.bswap, None, false);
         }
 
         // Chain the first channel to the second.
@@ -178,6 +197,7 @@ where
             from: self.from,
             to: self.to,
             pace: self.pace,
+            bswap: self.bswap,
             state: ReadNext(buf),
             second_ch: self.second_ch,
         }
@@ -205,11 +225,11 @@ where
         if self.second_ch {
             self.ch
                 .0
-                .config(&self.from, &mut buf, self.pace, None, false);
+                .config(&self.from, &mut buf, self.pace, self.bswap, None, false);
         } else {
             self.ch
                 .1
-                .config(&self.from, &mut buf, self.pace, None, false);
+                .config(&self.from, &mut buf, self.pace, self.bswap, None, false);
         }
 
         // Chain the first channel to the second.
@@ -224,6 +244,7 @@ where
             from: self.from,
             to: self.to,
             pace: self.pace,
+            bswap: self.bswap,
             state: WriteNext(buf),
             second_ch: self.second_ch,
         }
@@ -254,6 +275,7 @@ where
                 from: self.state.0,
                 to: self.to,
                 pace: self.pace,
+                bswap: self.bswap,
                 state: (),
                 second_ch: !self.second_ch,
             },
@@ -285,6 +307,7 @@ where
                 from: self.from,
                 to: self.state.0,
                 pace: self.pace,
+                bswap: self.bswap,
                 state: (),
                 second_ch: !self.second_ch,
             },
