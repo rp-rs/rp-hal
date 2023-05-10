@@ -175,6 +175,10 @@ impl Adc {
     ///
     /// This can only be done once before calling [`disable_temp_sensor`]. If the sensor has already
     /// been enabled, this method will panic.
+    #[deprecated(
+        note = "This method may panic, use `take_temp_sensor()` instead.",
+        since = "0.9.0"
+    )]
     pub fn enable_temp_sensor(&mut self) -> TempSense {
         self.take_temp_sensor()
             .expect("Temp sensor is already enabled.")

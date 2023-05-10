@@ -405,7 +405,10 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     ///
     /// If you want to specify the initial pin state, use [`Pin::into_readable_output_in_state`].
     #[inline]
-    #[deprecated(note = "All gpio are readable, use `.into_push_pull_output()` instead.")]
+    #[deprecated(
+        note = "All gpio are readable, use `.into_push_pull_output()` instead.",
+        since = "0.9.0"
+    )]
     pub fn into_readable_output(self) -> Pin<I, FunctionSio<SioOutput>, P>
     where
         I: ValidFunction<FunctionSio<SioOutput>>,
@@ -416,7 +419,10 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     /// Configure the pin to operate as a readable push pull output, specifying an initial
     /// state which is applied immediately.
     #[inline]
-    #[deprecated(note = "All gpio are readable, use `.into_push_pull_output_in_state()` instead.")]
+    #[deprecated(
+        note = "All gpio are readable, use `.into_push_pull_output_in_state()` instead.",
+        since = "0.9.0"
+    )]
     pub fn into_readable_output_in_state(self, state: PinState) -> Pin<I, FunctionSio<SioOutput>, P>
     where
         I: ValidFunction<FunctionSio<SioOutput>>,
