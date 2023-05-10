@@ -1047,7 +1047,6 @@ pub trait AnyPin: Sealed
 where
     Self: typelevel::Sealed,
     Self: typelevel::Is<Type = SpecificPin<Self>>,
-    <Self as AnyPin>::Id: ValidFunction<<Self as AnyPin>::Function>,
 {
     /// [`PinId`] of the corresponding [`Pin`]
     type Id: PinId;
@@ -1059,7 +1058,7 @@ where
 
 impl<I, F, P> Sealed for Pin<I, F, P>
 where
-    I: PinId + func::ValidFunction<F>,
+    I: PinId,
     F: func::Function,
     P: PullType,
 {
@@ -1067,7 +1066,7 @@ where
 
 impl<I, F, P> AnyPin for Pin<I, F, P>
 where
-    I: func::ValidFunction<F>,
+    I: PinId,
     F: func::Function,
     P: PullType,
 {
@@ -1288,7 +1287,13 @@ impl<T: AnyPin> InOutPin<T> {
             inner: inner.into(),
         }
     }
+}
 
+impl<T> InOutPin<T>
+where
+    T: AnyPin,
+    T::Id: ValidFunction<T::Function>,
+{
     /// Releases the pin reverting to its previous function.
     pub fn release(self) -> T {
         let mut inner = self.inner.into();

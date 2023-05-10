@@ -98,13 +98,18 @@ impl Sealed for Enabled {}
 
 /// Pac SPI device
 pub trait SpiDevice: Deref<Target = pac::spi0::RegisterBlock> + SubsystemReset + Sealed {
+    /// Index of the peripheral.
+    const ID: usize;
+
     /// The DREQ number for which TX DMA requests are triggered.
     fn tx_dreq() -> u8;
     /// The DREQ number for which RX DMA requests are triggered.
     fn rx_dreq() -> u8;
 }
 
+impl Sealed for pac::SPI0 {}
 impl SpiDevice for pac::SPI0 {
+    const ID: usize = 0;
     fn tx_dreq() -> u8 {
         TREQ_SEL_A::SPI0_TX.into()
     }
@@ -112,8 +117,9 @@ impl SpiDevice for pac::SPI0 {
         TREQ_SEL_A::SPI0_RX.into()
     }
 }
-impl Sealed for pac::SPI0 {}
+impl Sealed for pac::SPI1 {}
 impl SpiDevice for pac::SPI1 {
+    const ID: usize = 1;
     fn tx_dreq() -> u8 {
         TREQ_SEL_A::SPI1_TX.into()
     }
@@ -121,7 +127,6 @@ impl SpiDevice for pac::SPI1 {
         TREQ_SEL_A::SPI1_RX.into()
     }
 }
-impl Sealed for pac::SPI1 {}
 
 /// Data size used in spi
 pub trait DataSize: Sealed {}

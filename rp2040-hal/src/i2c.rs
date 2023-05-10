@@ -46,7 +46,7 @@
 use core::{marker::PhantomData, ops::Deref};
 
 use crate::{
-    gpio::{bank0::*, AnyPin, FunctionI2C},
+    gpio::{bank0::*, pin::pin_sealed::TypeLevelPinId, AnyPin, FunctionI2c},
     resets::SubsystemReset,
     typelevel::Sealed,
 };
@@ -57,6 +57,20 @@ use pac::{i2c0::RegisterBlock as I2CBlock, I2C0, I2C1, RESETS};
 pub mod controller;
 /// Peripheral implementation
 pub mod peripheral;
+
+/// Pac I2C device
+pub trait I2cDevice: Deref<Target = pac::i2c0::RegisterBlock> + SubsystemReset + Sealed {
+    /// Index of the peripheral.
+    const ID: usize;
+}
+impl Sealed for pac::I2C0 {}
+impl I2cDevice for pac::I2C0 {
+    const ID: usize = 0;
+}
+impl Sealed for pac::I2C1 {}
+impl I2cDevice for pac::I2C1 {
+    const ID: usize = 1;
+}
 
 /// I2C error
 #[non_exhaustive]
@@ -135,11 +149,53 @@ impl eh1_0_alpha::i2c::Error for Error {
     }
 }
 
-/// SCL pin
-pub trait ValidSclPin<I2C>: Sealed {}
+macro_rules! pin_validation {
+    ($p:ident) => {
+        paste::paste!{
+            #[doc = "Marker for PinId that can serve as " $p]
+            pub trait [<ValidPinId $p>]<I2C>: Sealed {}
 
-/// SDA pin
-pub trait ValidSdaPin<I2C>: Sealed {}
+            #[doc = "Valid " $p]
+            pub trait [<ValidPin $p>]<I2C>: Sealed {}
+
+            impl<T, U: I2cDevice> [<ValidPin $p>]<U> for T
+            where
+                T: AnyPin<Function = FunctionI2c>,
+                T::Id: [<ValidPinId $p>]<U>,
+            {
+            }
+
+            #[doc = "A runtime validated " $p " pin for I2C."]
+            pub struct [<ValidatedPin $p>]<P, I2C>(P, PhantomData<I2C>);
+            impl<P, I2C: I2cDevice> Sealed for [<ValidatedPin $p>]<P, I2C> {}
+            impl<P, I2C: I2cDevice> [<ValidPin $p>]<I2C> for [<ValidatedPin $p>]<P, I2C> {}
+            impl<P, S> [<ValidatedPin $p>]<P, S>
+            where
+                P: AnyPin<Function = FunctionI2c>,
+                S: I2cDevice,
+            {
+                /// Validate a pin's function on a i2c peripheral.
+                ///
+                #[doc = "Will err if the pin cannot be used as a " $p " pin for that I2C."]
+                pub fn validate(p: P, _u: &S) -> Result<Self, P> {
+                    if [<$p:upper>].contains(&(p.borrow().id().num, S::ID)) &&
+                        p.borrow().id().bank == crate::gpio::DynBankId::Bank0 {
+                        Ok(Self(p, PhantomData))
+                    } else {
+                        Err(p)
+                    }
+                }
+            }
+        }
+    };
+    ($($p:ident),*) => {
+        $(
+            pin_validation!($p);
+        )*
+    };
+}
+
+pin_validation!(Scl, Sda);
 
 macro_rules! valid_pins {
     ($($i2c:ident: {
@@ -147,9 +203,12 @@ macro_rules! valid_pins {
         scl: [$($scl:ident),*]
     }),*) => {
         $(
-            $(impl ValidSdaPin<$i2c> for $sda {})*
-            $(impl ValidSclPin<$i2c> for $scl {})*
+            $(impl ValidPinIdSda<$i2c> for $sda {})*
+            $(impl ValidPinIdScl<$i2c> for $scl {})*
          )*
+
+        const SDA: &[(u8, usize)] = &[$($(($sda::ID.num, $i2c::ID)),*),*];
+        const SCL: &[(u8, usize)] = &[$($(($scl::ID.num, $i2c::ID)),*),*];
     };
 }
 valid_pins! {
@@ -249,11 +308,7 @@ impl<Block: Deref<Target = I2CBlock>, PINS, Mode> I2C<Block, PINS, Mode> {
 macro_rules! hal {
     ($($I2CX:ident: ($i2cX:ident),)+) => {
         $(
-            impl<Sda, Scl> I2C<$I2CX, (Sda, Scl)>
-            where
-                Sda: AnyPin<Function = FunctionI2C>,
-                Scl: AnyPin<Function = FunctionI2C>,
-            {
+            impl<Sda, Scl> I2C<$I2CX, (Sda, Scl)> {
                 /// Configures the I2C peripheral to work in master mode
                 pub fn $i2cX<F, SystemF>(
                     i2c: $I2CX,
@@ -264,8 +319,8 @@ macro_rules! hal {
                     system_clock: SystemF) -> Self
                 where
                     F: Into<HertzU32>,
-                    Sda::Id: ValidSdaPin<$I2CX>,
-                    Scl::Id: ValidSclPin<$I2CX>,
+                    Sda: ValidPinSda<$I2CX>,
+                    Scl: ValidPinScl<$I2CX>,
                     SystemF: Into<HertzU32>,
                 {
                     Self::new_controller(i2c, sda_pin, scl_pin, freq.into(), resets, system_clock.into())

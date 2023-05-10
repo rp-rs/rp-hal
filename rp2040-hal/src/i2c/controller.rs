@@ -1,9 +1,6 @@
 use core::{marker::PhantomData, ops::Deref};
 
-use crate::{
-    gpio::{AnyPin, FunctionI2C},
-    resets::SubsystemReset,
-};
+use crate::resets::SubsystemReset;
 use fugit::HertzU32;
 use hal::blocking::i2c::{Read, Write, WriteRead};
 use pac::{i2c0::RegisterBlock as Block, RESETS};
@@ -11,15 +8,13 @@ use pac::{i2c0::RegisterBlock as Block, RESETS};
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::i2c as eh1;
 
-use super::{i2c_reserved_addr, Controller, Error, ValidSclPin, ValidSdaPin, I2C};
+use super::{i2c_reserved_addr, Controller, Error, ValidPinScl, ValidPinSda, I2C};
 
 impl<T, Sda, Scl> I2C<T, (Sda, Scl), Controller>
 where
     T: SubsystemReset + Deref<Target = Block>,
-    Sda: AnyPin<Function = FunctionI2C>,
-    Scl: AnyPin<Function = FunctionI2C>,
-    Sda::Id: ValidSdaPin<T>,
-    Scl::Id: ValidSclPin<T>,
+    Sda: ValidPinSda<T>,
+    Scl: ValidPinScl<T>,
 {
     /// Configures the I2C peripheral to work in controller mode
     pub fn new_controller(

@@ -275,8 +275,8 @@ fn calculate_baudrate_dividers(
 }
 
 /// Baudrate configuration. Code loosely inspired from the C SDK.
-fn configure_baudrate(
-    device: &mut dyn UartDevice,
+fn configure_baudrate<U: UartDevice>(
+    device: &mut U,
     wanted_baudrate: HertzU32,
     frequency: HertzU32,
 ) -> Result<HertzU32, Error> {

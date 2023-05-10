@@ -1,17 +1,69 @@
-use crate::gpio::{bank0::*, AnyPin, FunctionUart};
+use core::marker::PhantomData;
+
+use crate::gpio::{bank0::*, pin::pin_sealed::TypeLevelPinId, AnyPin, FunctionUart};
 use crate::pac::{UART0, UART1};
 use crate::typelevel::{OptionT, OptionTNone, OptionTSome, Sealed};
 
 use super::UartDevice;
 
-/// Indicates a valid TX pin for UART0 or UART1
-pub trait ValidPinTx<UART: UartDevice>: Sealed {}
-/// Indicates a valid RX pin for UART0 or UART1
-pub trait ValidPinRx<UART: UartDevice>: Sealed {}
-/// Indicates a valid CTS pin for UART0 or UART1
-pub trait ValidPinCts<UART: UartDevice>: Sealed {}
-/// Indicates a valid RTS pin for UART0 or UART1
-pub trait ValidPinRts<UART: UartDevice>: Sealed {}
+// All type level checked pins are inherently valid.
+macro_rules! pin_validation {
+    ($p:ident) => {
+        paste::paste!{
+            #[doc = "Indicates a valid " $p " pin for UART0 or UART1"]
+            pub trait [<ValidPinId $p>]<UART: UartDevice>: Sealed {}
+
+            #[doc = "Indicates a valid " $p " pin for UART0 or UART1"]
+            pub trait [<ValidPin $p>]<UART: UartDevice>: Sealed {}
+
+            impl<T, U: UartDevice> [<ValidPin $p>]<U> for T
+            where
+                T: AnyPin<Function = FunctionUart>,
+                T::Id: [<ValidPinId $p>]<U>,
+            {
+            }
+
+            #[doc = "A runtime validated " $p " pin for uart."]
+            pub struct [<ValidatedPin $p>]<P, Uart>(P, PhantomData<Uart>);
+            impl<P, UART: UartDevice> Sealed for [<ValidatedPin $p>]<P, UART> {}
+            impl<P, UART: UartDevice> [<ValidPin $p>]<UART> for [<ValidatedPin $p>]<P, UART> {}
+            impl<P, U> [<ValidatedPin $p>]<P, U>
+            where
+                P: AnyPin<Function = FunctionUart>,
+                U: UartDevice,
+            {
+                /// Validate a pin's function on a uart peripheral.
+                ///
+                #[doc = "Will err if the pin cannot be used as a " $p " pin for that Uart."]
+                pub fn validate(p: P, _u: &U) -> Result<Self, P> {
+                    if [<$p:upper>].contains(&(p.borrow().id().num, U::ID)) &&
+                        p.borrow().id().bank == crate::gpio::DynBankId::Bank0 {
+                        Ok(Self(p, PhantomData))
+                    } else {
+                        Err(p)
+                    }
+                }
+            }
+
+            #[doc = "Indicates a valid optional " $p " pin for UART0 or UART1"]
+            pub trait [<ValidOption $p>]<U>: OptionT {}
+
+            impl<U: UartDevice> [<ValidOption $p>]<U> for OptionTNone {}
+            impl<U, T> [<ValidOption $p>]<U> for OptionTSome<T>
+            where
+                U: UartDevice,
+                T: [<ValidPin $p>]<U>,
+            {
+            }
+        }
+    };
+    ($($p:ident),*) => {
+        $(
+            pin_validation!($p);
+         )*
+    };
+}
+pin_validation!(Tx, Rx, Cts, Rts);
 
 macro_rules! impl_valid_uart {
     ($($uart:ident: {
@@ -21,11 +73,15 @@ macro_rules! impl_valid_uart {
         rts: [$($rts:ident),*],
     }),*) => {
         $(
-            $(impl ValidPinTx<$uart> for $tx {})*
-            $(impl ValidPinRx<$uart> for $rx {})*
-            $(impl ValidPinCts<$uart> for $cts {})*
-            $(impl ValidPinRts<$uart> for $rts {})*
+            $(impl ValidPinIdTx<$uart> for $tx {})*
+            $(impl ValidPinIdRx<$uart> for $rx {})*
+            $(impl ValidPinIdCts<$uart> for $cts {})*
+            $(impl ValidPinIdRts<$uart> for $rts {})*
         )*
+        const RX: &[(u8, usize)] = &[$($(($rx::ID.num, $uart::ID)),*),*];
+        const TX: &[(u8, usize)] = &[$($(($tx::ID.num, $uart::ID)),*),*];
+        const CTS: &[(u8, usize)] = &[$($(($cts::ID.num, $uart::ID)),*),*];
+        const RTS: &[(u8, usize)] = &[$($(($rts::ID.num, $uart::ID)),*),*];
     };
 }
 
@@ -44,48 +100,6 @@ impl_valid_uart!(
     }
 );
 
-/// Indicates a valid optional Tx pin for UART0 or UART1
-pub trait ValidOptionTx<U>: OptionT {}
-/// Indicates a valid optional Rx pin for UART0 or UART1
-pub trait ValidOptionRx<U>: OptionT {}
-/// Indicates a valid optional Cts pin for UART0 or UART1
-pub trait ValidOptionCts<U>: OptionT {}
-/// Indicates a valid optional Rts pin for UART0 or UART1
-pub trait ValidOptionRts<U>: OptionT {}
-impl<U: UartDevice> ValidOptionTx<U> for OptionTNone {}
-impl<U: UartDevice> ValidOptionRx<U> for OptionTNone {}
-impl<U: UartDevice> ValidOptionCts<U> for OptionTNone {}
-impl<U: UartDevice> ValidOptionRts<U> for OptionTNone {}
-
-impl<U, T> ValidOptionTx<U> for OptionTSome<T>
-where
-    U: UartDevice,
-    T: AnyPin<Function = FunctionUart>,
-    T::Id: ValidPinTx<U>,
-{
-}
-impl<U, T> ValidOptionRx<U> for OptionTSome<T>
-where
-    U: UartDevice,
-    T: AnyPin<Function = FunctionUart>,
-    T::Id: ValidPinRx<U>,
-{
-}
-impl<U, T> ValidOptionCts<U> for OptionTSome<T>
-where
-    U: UartDevice,
-    T: AnyPin<Function = FunctionUart>,
-    T::Id: ValidPinCts<U>,
-{
-}
-impl<U, T> ValidOptionRts<U> for OptionTSome<T>
-where
-    U: UartDevice,
-    T: AnyPin<Function = FunctionUart>,
-    T::Id: ValidPinRts<U>,
-{
-}
-
 /// Declares a valid UART pinout.
 pub trait ValidUartPinout<U: UartDevice>: Sealed {
     #[allow(missing_docs)]
@@ -101,10 +115,8 @@ pub trait ValidUartPinout<U: UartDevice>: Sealed {
 impl<Uart, Tx, Rx> ValidUartPinout<Uart> for (Tx, Rx)
 where
     Uart: UartDevice,
-    Tx: AnyPin<Function = FunctionUart>,
-    Rx: AnyPin<Function = FunctionUart>,
-    Tx::Id: ValidPinTx<Uart>,
-    Rx::Id: ValidPinRx<Uart>,
+    Tx: ValidPinTx<Uart>,
+    Rx: ValidPinRx<Uart>,
 {
     type Tx = OptionTSome<Tx>;
     type Rx = OptionTSome<Rx>;
@@ -115,14 +127,10 @@ where
 impl<Uart, Tx, Rx, Cts, Rts> ValidUartPinout<Uart> for (Tx, Rx, Cts, Rts)
 where
     Uart: UartDevice,
-    Tx: AnyPin<Function = FunctionUart>,
-    Rx: AnyPin<Function = FunctionUart>,
-    Cts: AnyPin<Function = FunctionUart>,
-    Rts: AnyPin<Function = FunctionUart>,
-    Tx::Id: ValidPinTx<Uart>,
-    Rx::Id: ValidPinRx<Uart>,
-    Cts::Id: ValidPinCts<Uart>,
-    Rts::Id: ValidPinRts<Uart>,
+    Tx: ValidPinTx<Uart>,
+    Rx: ValidPinRx<Uart>,
+    Cts: ValidPinCts<Uart>,
+    Rts: ValidPinRts<Uart>,
 {
     type Rx = OptionTSome<Rx>;
     type Tx = OptionTSome<Tx>;

@@ -1,17 +1,71 @@
-use super::SpiDevice;
-use crate::gpio::{AnyPin, FunctionSpi};
-use crate::typelevel::{OptionTSome, Sealed};
-use crate::{gpio::bank0::*, typelevel::OptionTNone};
+use core::marker::PhantomData;
+
+use crate::gpio::{pin::pin_sealed::TypeLevelPinId, AnyPin, FunctionSpi};
+use crate::{
+    gpio::bank0::*,
+    typelevel::{OptionT, OptionTNone, OptionTSome, Sealed},
+};
 use pac::{SPI0, SPI1};
 
-/// Indicates a valid Rx pin for SPI0 or SPI1
-pub trait ValidPinRx<SPI: SpiDevice>: Sealed {}
-/// Indicates a valid Tx pin for SPI0 or SPI1
-pub trait ValidPinTx<SPI: SpiDevice>: Sealed {}
-/// Indicates a valid SCLK pin for SPI0 or SPI1
-pub trait ValidPinSck<SPI: SpiDevice>: Sealed {}
-/// Indicates a valid CS pin for SPI0 or SPI1
-pub trait ValidPinCs<SPI: SpiDevice>: Sealed {}
+use super::SpiDevice;
+
+macro_rules! pin_validation {
+    ($p:ident) => {
+        paste::paste!{
+            #[doc = "Indicates a valid " $p " pin for SPI0 or SPI1"]
+            pub trait [<ValidPinId $p>]<SPI: SpiDevice>: Sealed {}
+
+            #[doc = "Indicates a valid " $p " pin for SPI0 or SPI1"]
+            pub trait [<ValidPin $p>]<SPI: SpiDevice>: Sealed {}
+
+            impl<T, U: SpiDevice> [<ValidPin $p>]<U> for T
+            where
+                T: AnyPin<Function = FunctionSpi>,
+                T::Id: [<ValidPinId $p>]<U>,
+            {
+            }
+
+            #[doc = "A runtime validated " $p " pin for spi."]
+            pub struct [<ValidatedPin $p>]<P, Spi>(P, PhantomData<Spi>);
+            impl<P, SPI: SpiDevice> Sealed for [<ValidatedPin $p>]<P, SPI> {}
+            impl<P, SPI: SpiDevice> [<ValidPin $p>]<SPI> for [<ValidatedPin $p>]<P, SPI> {}
+            impl<P, S> [<ValidatedPin $p>]<P, S>
+            where
+                P: AnyPin<Function = FunctionSpi>,
+                S: SpiDevice,
+            {
+                /// Validate a pin's function on a spi peripheral.
+                ///
+                #[doc = "Will err if the pin cannot be used as a " $p " pin for that Spi."]
+                pub fn validate(p: P, _u: &S) -> Result<Self, P> {
+                    if [<$p:upper>].contains(&(p.borrow().id().num, S::ID)) &&
+                        p.borrow().id().bank == crate::gpio::DynBankId::Bank0 {
+                        Ok(Self(p, PhantomData))
+                    } else {
+                        Err(p)
+                    }
+                }
+            }
+
+            #[doc = "Indicates a valid optional " $p " pin for SPI0 or SPI1"]
+            pub trait [<ValidOption $p>]<U>: OptionT {}
+
+            impl<U: SpiDevice> [<ValidOption $p>]<U> for OptionTNone {}
+            impl<U, T> [<ValidOption $p>]<U> for OptionTSome<T>
+            where
+                U: SpiDevice,
+                T: [<ValidPin $p>]<U>,
+            {
+            }
+        }
+    };
+    ($($p:ident),*) => {
+        $(
+            pin_validation!($p);
+         )*
+    };
+}
+pin_validation!(Tx, Rx, Sck, Cs);
 
 macro_rules! impl_valid_spi {
     ($($spi:ident: {
@@ -21,11 +75,16 @@ macro_rules! impl_valid_spi {
         tx: [$($tx:ident),*],
     }),*) => {
         $(
-            $(impl ValidPinRx<$spi> for $rx {})*
-            $(impl ValidPinTx<$spi> for $tx {})*
-            $(impl ValidPinSck<$spi> for $sck {})*
-            $(impl ValidPinCs<$spi> for $cs {})*
+            $(impl ValidPinIdRx<$spi> for $rx {})*
+            $(impl ValidPinIdTx<$spi> for $tx {})*
+            $(impl ValidPinIdSck<$spi> for $sck {})*
+            $(impl ValidPinIdCs<$spi> for $cs {})*
         )*
+
+        const RX: &[(u8, usize)] = &[$($(($rx::ID.num, $spi::ID)),*),*];
+        const TX: &[(u8, usize)] = &[$($(($tx::ID.num, $spi::ID)),*),*];
+        const SCK: &[(u8, usize)] = &[$($(($sck::ID.num, $spi::ID)),*),*];
+        const CS: &[(u8, usize)] = &[$($(($cs::ID.num, $spi::ID)),*),*];
     };
 }
 
@@ -44,48 +103,6 @@ impl_valid_spi!(
     }
 );
 
-/// Indicates a valid optional Rx pin for SPI0 or SPI1
-pub trait ValidOptionRx<SPI: SpiDevice>: Sealed {}
-/// Indicates a valid optional Tx pin for SPI0 or SPI1
-pub trait ValidOptionTx<SPI: SpiDevice>: Sealed {}
-/// Indicates a valid optional SCLK pin for SPI0 or SPI1
-pub trait ValidOptionSck<SPI: SpiDevice>: Sealed {}
-/// Indicates a valid optional CS pin for SPI0 or SPI1
-pub trait ValidOptionCs<SPI: SpiDevice>: Sealed {}
-impl<T: SpiDevice> ValidOptionRx<T> for OptionTNone {}
-impl<T: SpiDevice> ValidOptionCs<T> for OptionTNone {}
-impl<T: SpiDevice> ValidOptionSck<T> for OptionTNone {}
-impl<T: SpiDevice> ValidOptionTx<T> for OptionTNone {}
-
-impl<U, T> ValidOptionRx<U> for OptionTSome<T>
-where
-    U: SpiDevice,
-    T: AnyPin<Function = FunctionSpi>,
-    T::Id: ValidPinRx<U>,
-{
-}
-impl<U, T> ValidOptionCs<U> for OptionTSome<T>
-where
-    U: SpiDevice,
-    T: AnyPin<Function = FunctionSpi>,
-    T::Id: ValidPinCs<U>,
-{
-}
-impl<U, T> ValidOptionSck<U> for OptionTSome<T>
-where
-    U: SpiDevice,
-    T: AnyPin<Function = FunctionSpi>,
-    T::Id: ValidPinSck<U>,
-{
-}
-impl<U, T> ValidOptionTx<U> for OptionTSome<T>
-where
-    U: SpiDevice,
-    T: AnyPin<Function = FunctionSpi>,
-    T::Id: ValidPinTx<U>,
-{
-}
-
 /// Declares a valid SPI pinout.
 pub trait ValidSpiPinout<U: SpiDevice>: Sealed {
     #[allow(missing_docs)]
@@ -101,10 +118,8 @@ pub trait ValidSpiPinout<U: SpiDevice>: Sealed {
 impl<Spi, Tx, Sck> ValidSpiPinout<Spi> for (Tx, Sck)
 where
     Spi: SpiDevice,
-    Tx: AnyPin<Function = FunctionSpi>,
-    Sck: AnyPin<Function = FunctionSpi>,
-    Tx::Id: ValidPinTx<Spi>,
-    Sck::Id: ValidPinSck<Spi>,
+    Tx: ValidPinTx<Spi>,
+    Sck: ValidPinSck<Spi>,
 {
     type Rx = OptionTNone;
     type Cs = OptionTNone;
@@ -115,12 +130,9 @@ where
 impl<Spi, Tx, Rx, Sck> ValidSpiPinout<Spi> for (Tx, Rx, Sck)
 where
     Spi: SpiDevice,
-    Tx: AnyPin<Function = FunctionSpi>,
-    Sck: AnyPin<Function = FunctionSpi>,
-    Rx: AnyPin<Function = FunctionSpi>,
-    Tx::Id: ValidPinTx<Spi>,
-    Sck::Id: ValidPinSck<Spi>,
-    Rx::Id: ValidPinRx<Spi>,
+    Tx: ValidPinTx<Spi>,
+    Sck: ValidPinSck<Spi>,
+    Rx: ValidPinRx<Spi>,
 {
     type Rx = OptionTSome<Rx>;
     type Cs = OptionTNone;
