@@ -780,6 +780,31 @@ impl<F: func::Function, P: PullType> Pin<DynPinId, F, P> {
             Err(self)
         }
     }
+
+    /// Try to change the pin's function.
+    pub fn try_into_function<F2>(self) -> Result<Pin<DynPinId, F2, P>, Pin<DynPinId, F, P>>
+    where
+        F2: func::Function,
+    {
+        // Thanks to type-level validation, we know F2 is valid for I
+        let prev_function = self.function.as_dyn();
+        let function = F2::from(prev_function);
+        let function_as_dyn = function.as_dyn();
+
+        use func_sealed::Function;
+        if function_as_dyn.is_valid(&self.id) {
+            if function_as_dyn != prev_function.as_dyn() {
+                pin::set_function(&self.id, function_as_dyn);
+            }
+            Ok(Pin {
+                function,
+                id: self.id,
+                pull_type: self.pull_type,
+            })
+        } else {
+            Err(self)
+        }
+    }
 }
 impl<I: PinId, P: PullType> Pin<I, DynFunction, P> {
     /// Try to set the pin's function.
@@ -787,7 +812,7 @@ impl<I: PinId, P: PullType> Pin<I, DynFunction, P> {
     /// This method may fail if the requested function is not supported by the pin, eg `FunctionXiP`
     /// on a gpio from `Bank0`.
     pub fn try_set_function(&mut self, function: DynFunction) -> Result<(), func::InvalidFunction> {
-        use func::func_sealed::Function;
+        use func_sealed::Function;
         if !function.is_valid(&self.id) {
             return Err(func::InvalidFunction);
         } else if function != self.function.as_dyn() {
@@ -799,7 +824,7 @@ impl<I: PinId, P: PullType> Pin<I, DynFunction, P> {
 
     /// Gets the pin's function.
     pub fn function(&self) -> DynFunction {
-        use func::func_sealed::Function;
+        use func_sealed::Function;
         self.function.as_dyn()
     }
 }
