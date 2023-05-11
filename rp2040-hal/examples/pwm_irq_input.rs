@@ -134,7 +134,7 @@ fn main() -> ! {
     pwm.enable();
 
     // Connect to GPI O1 as the input to channel B on PWM0
-    let input_pin = pins.gpio1.into();
+    let input_pin = pins.gpio1.into_typestate();
     let channel = &mut pwm.channel_b;
     channel.enable();
 
@@ -144,7 +144,7 @@ fn main() -> ! {
     // Configure GPIO 25 as an output to drive our LED.
     // we can use into_mode() instead of into_pull_up_input()
     // since the variable we're pushing it into has that type
-    let led = pins.gpio25.into();
+    let led = pins.gpio25.into_typestate();
 
     // Give away our pins by moving them into the `GLOBAL_PINS` variable.
     // We won't need to access them in the main thread again

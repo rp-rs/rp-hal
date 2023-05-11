@@ -233,7 +233,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     }
 
     /// Convert the pin from one state to the other.
-    pub fn into<F2, P2>(self) -> Pin<I, F2, P2>
+    pub fn into_typestate<F2, P2>(self) -> Pin<I, F2, P2>
     where
         F2: func::Function,
         P2: PullType,
@@ -318,7 +318,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     where
         I: ValidFunction<FunctionNull>,
     {
-        self.into()
+        self.into_typestate()
     }
 
     /// Disable the pin and set it to pull down
@@ -327,7 +327,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     where
         I: ValidFunction<FunctionNull>,
     {
-        self.into()
+        self.into_typestate()
     }
 
     /// Disable the pin and set it to pull up
@@ -336,7 +336,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     where
         I: ValidFunction<FunctionNull>,
     {
-        self.into()
+        self.into_typestate()
     }
 
     /// Configure the pin to operate as a floating input
@@ -1316,9 +1316,7 @@ impl<T: AnyPin> InOutPin<T> {
         // into Pin<_, FunctionSioOutput, _>
         let inner = inner.into_push_pull_output_in_state(PinState::Low);
 
-        Self {
-            inner: inner.into(),
-        }
+        Self { inner }
     }
 }
 
@@ -1329,8 +1327,11 @@ where
 {
     /// Releases the pin reverting to its previous function.
     pub fn release(self) -> T {
-        let mut inner = self.inner.into();
+        // restore the previous typestate first
+        let mut inner = self.inner.into_typestate();
+        // disable override
         inner.set_output_enable_override(OutputEnableOverride::Normal);
+        // typelevel-return
         T::from(inner)
     }
 }
