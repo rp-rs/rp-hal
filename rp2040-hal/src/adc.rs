@@ -139,9 +139,11 @@ impl Channel<Adc> for TempSense {
 /// Represents an ADC within the RP2040. Each ADC has multiple channels, and each
 /// channel is either associated with a specific GPIO pin or attached to the internal
 /// temperature sensor. You should put the relevant pin into ADC mode by creating an
-/// [`AdcPin`] object with it, or you can put the ADC into `Temperature Sensing Mode"
+/// [`AdcPin`] object with it, or you can put the ADC into `Temperature Sensing Mode`
 /// by calling [`Adc::take_temp_sensor()`]. Either way, the resulting objects can be
-/// passed to the [`OneShot::read()`] trait method to actually do the read.
+/// passed to the [`OneShot::read()`][a] trait method to actually do the read.
+///
+/// [a]: embedded_hal::adc::OneShot::read
 pub struct Adc {
     device: ADC,
 }
@@ -173,7 +175,7 @@ impl Adc {
 
     /// Enable temperature sensor, returns a channel to use.
     ///
-    /// This can only be done once before calling [`disable_temp_sensor`]. If the sensor has already
+    /// This can only be done once before calling [`Adc::disable_temp_sensor()`]. If the sensor has already
     /// been enabled, this method will panic.
     #[deprecated(
         note = "This method may panic, use `take_temp_sensor()` instead.",
