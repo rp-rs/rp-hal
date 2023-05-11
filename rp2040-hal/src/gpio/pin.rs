@@ -30,12 +30,6 @@ use super::{DynFunction, DynPullType};
 
 pub(crate) mod pin_sealed;
 
-/// Type-level `enum` for the pin Id (pin number + bank).
-pub trait PinId: pin_sealed::PinIdOps {
-    /// This pin as a `DynPinId`.
-    fn as_dyn(&self) -> DynPinId;
-}
-
 /// Value-level `enum` for the pin's bank.
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -44,6 +38,25 @@ pub enum DynBankId {
     Bank0,
     /// QSPI Pins bank
     Qspi,
+}
+
+/// Type-level `enum` for the pin's bank ID.
+pub trait BankId: crate::typelevel::Sealed {}
+
+/// Type-level `variant` of `BankId`
+pub struct BankBank0;
+impl crate::typelevel::Sealed for BankBank0 {}
+impl BankId for BankBank0 {}
+
+/// Type-level `variant` of `BankId`
+pub struct BankQspi;
+impl crate::typelevel::Sealed for BankQspi {}
+impl BankId for BankQspi {}
+
+/// Type-level `enum` for the pin Id (pin number + bank).
+pub trait PinId: pin_sealed::PinIdOps {
+    /// This pin as a `DynPinId`.
+    fn as_dyn(&self) -> DynPinId;
 }
 
 /// Value-level representation for the pin (bank + id).
@@ -85,6 +98,8 @@ macro_rules! pin_ids {
                     }
                 }
                 impl pin_sealed::TypeLevelPinId for [<$prefix $name>] {
+                    type Bank = [<Bank $bank>];
+
                     const ID: DynPinId = DynPinId {
                         bank: DynBankId::$bank,
                         num: $id
@@ -100,12 +115,12 @@ macro_rules! pin_ids {
 }
 /// Bank of all the GPIOs.
 pub mod bank0 {
-    use super::{pin_sealed, DynBankId, DynPinId, PinId};
+    use super::{pin_sealed, BankBank0, DynBankId, DynPinId, PinId};
     pin_ids!(Bank0 as Gpio: 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29);
 }
 /// Bank of the QSPI related pins.
 pub mod qspi {
-    use super::{pin_sealed, DynBankId, DynPinId, PinId};
+    use super::{pin_sealed, BankQspi, DynBankId, DynPinId, PinId};
     pin_ids!(Qspi: 0;Sclk, 1;Ss, 2;Sd0, 3;Sd1, 4;Sd2, 5;Sd3);
 }
 

@@ -49,10 +49,12 @@ use crate::{
 
 mod func;
 pub(crate) mod pin;
+mod pin_group;
 mod pull;
 
 pub use func::*;
 pub use pin::{DynBankId, DynPinId, PinId};
+pub use pin_group::PinGroup;
 pub use pull::*;
 
 /// The amount of current that a pin can drive when used as an output.

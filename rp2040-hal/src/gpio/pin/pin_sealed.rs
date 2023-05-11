@@ -3,6 +3,8 @@ use crate::sio::CoreId;
 use super::{DynBankId, DynPinId};
 
 pub trait TypeLevelPinId: super::PinId {
+    type Bank: super::BankId;
+
     const ID: DynPinId;
 
     fn new() -> Self;

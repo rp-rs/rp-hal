@@ -647,6 +647,9 @@ impl<A: Sealed, B: Sealed> Sealed for (A, B) {}
 impl<A: Sealed, B: Sealed, C: Sealed> Sealed for (A, B, C) {}
 impl<A: Sealed, B: Sealed, C: Sealed, D: Sealed> Sealed for (A, B, C, D) {}
 
+impl Sealed for frunk::HNil {}
+impl<H: Sealed, T: Sealed> Sealed for frunk::HCons<H, T> {}
+
 /// Type-level version of the [None] variant
 #[derive(Default)]
 pub struct NoneT;
