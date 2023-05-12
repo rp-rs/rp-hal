@@ -435,6 +435,9 @@ impl UsbBus {
         force_vbus_detect_bit: bool,
         resets: &mut RESETS,
     ) -> Self {
+        #[cfg(feature = "rp2040-e5")]
+        Self::check_bank0_reset();
+
         ctrl_reg.reset_bring_down(resets);
         ctrl_reg.reset_bring_up(resets);
 
@@ -476,6 +479,20 @@ impl UsbBus {
             let inner = self.inner.borrow(cs).borrow_mut();
             inner.ctrl_reg.sie_ctrl.modify(|_, w| w.resume().set_bit());
         });
+    }
+
+    #[cfg(feature = "rp2040-e5")]
+    /// Make sure bank0 is out of reset, which is necessary for the rp2040-e5 workaround.
+    /// If it is not, panic.
+    fn check_bank0_reset() {
+        // SAFETY: Only used for reading the reset state.
+        let pac = unsafe { crate::pac::Peripherals::steal() };
+        let reset_state = pac.RESETS.reset.read();
+        assert!(
+            reset_state.io_bank0().bit_is_clear()
+                && reset_state.pads_bank0().bit_is_clear(),
+            "IO Bank 0 must be out of reset for this work around to function properly."
+        );
     }
 }
 
