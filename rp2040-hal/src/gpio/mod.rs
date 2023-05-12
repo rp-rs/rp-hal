@@ -484,7 +484,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
 
     /// Get wether the schmitt trigger (hysteresis) is enabled.
     #[inline]
-    pub fn get_schimtt_enabled(&self) -> bool {
+    pub fn get_schmitt_enabled(&self) -> bool {
         self.id.pad_ctrl().read().schmitt().bit_is_set()
     }
 
