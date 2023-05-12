@@ -29,7 +29,9 @@ impl Errata5State {
         let pac = crate::pac::Peripherals::steal();
         match self {
             Self::WaitEndOfReset => {
-                if pac.USBCTRL_REGS.sie_status.read().line_state().is_se0() {
+                if pac.SYSINFO.chip_id.read().revision().bits() >= 2 {
+                    None
+                } else if pac.USBCTRL_REGS.sie_status.read().line_state().is_se0() {
                     Some(self)
                 } else {
                     let reset_state = pac.RESETS.reset.read();
