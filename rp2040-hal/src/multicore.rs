@@ -145,11 +145,10 @@ impl<'p> Core<'p> {
 
     /// Spawn a function on this core.
     ///
-    /// Upon exit of the entry function, the core will enter an infinite `wfe` (wait for event)
-    /// loop. In order to reduce power consumption, it is recommended that all interrupts and events
-    /// are disabled before returning.
+    /// The closure should not return. It is currently defined as `-> ()` because `-> !` is not yet
+    /// stable.
     ///
-    /// Core 1 will need to be reset from core 0 in order to spawn another task.
+    /// Core 1 will be reset from core 0 in order to spawn another task.
     pub fn spawn<F>(&mut self, stack: &'static mut [usize], entry: F) -> Result<(), Error>
     where
         F: FnOnce() + Send + 'static,
@@ -177,15 +176,13 @@ impl<'p> Core<'p> {
                 sio.fifo.write_blocking(1);
 
                 entry();
-                // TODO: should this bring the core back to its startup state waiting for a
-                // function? and/or reset its NVIC and other core specific blocks.
                 loop {
                     cortex_m::asm::wfe()
                 }
             }
 
             // Reset the core
-            // TODO: resetting without prior check that the core is actually stowed is unsafe.
+            // TODO: resetting without prior check that the core is actually stowed is not great.
             // But there does not seem to be any obvious way to check that. A marker flag could be
             // set from this method and cleared for the wrapper after `entry` returned. But doing
             // so wouldn't be zero cost.
