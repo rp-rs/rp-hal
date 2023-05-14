@@ -435,6 +435,9 @@ impl UsbBus {
         force_vbus_detect_bit: bool,
         resets: &mut RESETS,
     ) -> Self {
+        #[cfg(feature = "rp2040-e5")]
+        errata5::Errata5State::check_bank0_reset();
+
         ctrl_reg.reset_bring_down(resets);
         ctrl_reg.reset_bring_up(resets);
 
