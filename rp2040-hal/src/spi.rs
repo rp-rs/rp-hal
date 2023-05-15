@@ -23,12 +23,18 @@ use crate::dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget}
 use crate::resets::SubsystemReset;
 use crate::typelevel::Sealed;
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
+use embedded_hal::blocking::spi;
+use embedded_hal::spi::FullDuplex;
+
+#[cfg(feature = "eh1_0_alpha")]
+use eh1::{Mode, Phase, Polarity};
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::spi as eh1;
 #[cfg(feature = "eh1_0_alpha")]
 use eh_nb_1_0_alpha::spi as eh1nb;
-use embedded_hal::blocking::spi;
-use embedded_hal::spi::{FullDuplex, Mode, Phase, Polarity};
+#[cfg(not(feature = "eh1_0_alpha"))]
+use embedded_hal::spi::{Mode, Phase, Polarity};
+
 use fugit::HertzU32;
 use fugit::RateExtU32;
 use pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
