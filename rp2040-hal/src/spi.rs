@@ -16,7 +16,7 @@
 //! let _ = pins.gpio2.into_mode::<FunctionSpi>();
 //! let _ = pins.gpio3.into_mode::<FunctionSpi>();
 //!
-//! let spi = Spi::<_, _, 8>::new(peripherals.SPI0).init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), &MODE_0);
+//! let spi = Spi::<_, _, 8>::new(peripherals.SPI0).init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), MODE_0);
 //! ```
 
 use crate::dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget};
@@ -28,11 +28,45 @@ use eh1_0_alpha::spi as eh1;
 #[cfg(feature = "eh1_0_alpha")]
 use eh_nb_1_0_alpha::spi as eh1nb;
 use embedded_hal::blocking::spi;
-use embedded_hal::spi::{FullDuplex, Mode, Phase, Polarity};
+use embedded_hal::spi::{FullDuplex, Phase, Polarity};
 use fugit::HertzU32;
 use fugit::RateExtU32;
 use pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
 use pac::RESETS;
+
+/// Spi mode
+pub struct Mode(embedded_hal::spi::Mode);
+
+impl From<embedded_hal::spi::Mode> for Mode {
+    fn from(f: embedded_hal::spi::Mode) -> Self {
+        Mode(f)
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl From<eh1_0_alpha::spi::Mode> for Mode {
+    fn from(f: eh1_0_alpha::spi::Mode) -> Self {
+        let eh1_0_alpha::spi::Mode { polarity, phase } = f;
+        match (polarity, phase) {
+            (
+                eh1_0_alpha::spi::Polarity::IdleLow,
+                eh1_0_alpha::spi::Phase::CaptureOnFirstTransition,
+            ) => Mode(embedded_hal::spi::MODE_0),
+            (
+                eh1_0_alpha::spi::Polarity::IdleLow,
+                eh1_0_alpha::spi::Phase::CaptureOnSecondTransition,
+            ) => Mode(embedded_hal::spi::MODE_1),
+            (
+                eh1_0_alpha::spi::Polarity::IdleHigh,
+                eh1_0_alpha::spi::Phase::CaptureOnFirstTransition,
+            ) => Mode(embedded_hal::spi::MODE_2),
+            (
+                eh1_0_alpha::spi::Polarity::IdleHigh,
+                eh1_0_alpha::spi::Phase::CaptureOnSecondTransition,
+            ) => Mode(embedded_hal::spi::MODE_3),
+        }
+    }
+}
 
 /// State of the SPI
 pub trait State: Sealed {}
@@ -165,14 +199,14 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
     }
 
     /// Set format and datasize
-    fn set_format(&mut self, data_bits: u8, mode: &Mode) {
+    fn set_format(&mut self, data_bits: u8, mode: Mode) {
         self.device.sspcr0.modify(|_, w| unsafe {
             w.dss()
                 .bits(data_bits - 1)
                 .spo()
-                .bit(mode.polarity == Polarity::IdleHigh)
+                .bit(mode.0.polarity == Polarity::IdleHigh)
                 .sph()
-                .bit(mode.phase == Phase::CaptureOnSecondTransition)
+                .bit(mode.0.phase == Phase::CaptureOnSecondTransition)
         });
     }
 
@@ -190,7 +224,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
         resets: &mut RESETS,
         peri_frequency: F,
         baudrate: B,
-        mode: &Mode,
+        mode: Mode,
         slave: bool,
     ) -> Spi<Enabled, D, DS> {
         self.device.reset_bring_down(resets);
@@ -211,22 +245,22 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
     }
 
     /// Initialize the SPI in master mode
-    pub fn init<F: Into<HertzU32>, B: Into<HertzU32>>(
+    pub fn init<F: Into<HertzU32>, B: Into<HertzU32>, M: Into<Mode>>(
         self,
         resets: &mut RESETS,
         peri_frequency: F,
         baudrate: B,
-        mode: &Mode,
+        mode: M,
     ) -> Spi<Enabled, D, DS> {
-        self.init_spi(resets, peri_frequency, baudrate, mode, false)
+        self.init_spi(resets, peri_frequency, baudrate, mode.into(), false)
     }
 
     /// Initialize the SPI in slave mode
-    pub fn init_slave(self, resets: &mut RESETS, mode: &Mode) -> Spi<Enabled, D, DS> {
+    pub fn init_slave<M: Into<Mode>>(self, resets: &mut RESETS, mode: M) -> Spi<Enabled, D, DS> {
         // Use dummy values for frequency and baudrate.
         // With both values 0, set_baudrate will set prescale == u8::MAX, which will break if debug assertions are enabled.
         // u8::MAX is outside the allowed range 2..=254 for CPSDVSR, which might interfere with proper operation in slave mode.
-        self.init_spi(resets, 1000u32.Hz(), 1000u32.Hz(), mode, true)
+        self.init_spi(resets, 1000u32.Hz(), 1000u32.Hz(), mode.into(), true)
     }
 }
 
