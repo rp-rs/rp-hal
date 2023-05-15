@@ -16,7 +16,7 @@
 //! let _ = pins.gpio2.into_mode::<FunctionSpi>();
 //! let _ = pins.gpio3.into_mode::<FunctionSpi>();
 //!
-//! let spi = Spi::<_, _, 8>::new(peripherals.SPI0).init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), &MODE_0);
+//! let spi = Spi::<_, _, 8>::new(peripherals.SPI0).init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), MODE_0);
 //! ```
 
 use crate::dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget};
@@ -35,7 +35,6 @@ use pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
 use pac::RESETS;
 
 /// Spi mode
-#[derive(Clone)]
 pub struct Mode(embedded_hal::spi::Mode);
 
 impl From<embedded_hal::spi::Mode> for Mode {
@@ -200,8 +199,8 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
     }
 
     /// Set format and datasize
-    fn set_format<M: Into<Mode> + Clone>(&mut self, data_bits: u8, mode: &M) {
-        let mode: Mode = (*mode).clone().into();
+    fn set_format<M: Into<Mode>>(&mut self, data_bits: u8, mode: M) {
+        let mode: Mode = mode.into();
         self.device.sspcr0.modify(|_, w| unsafe {
             w.dss()
                 .bits(data_bits - 1)
@@ -221,12 +220,12 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
         }
     }
 
-    fn init_spi<F: Into<HertzU32>, B: Into<HertzU32>, M: Into<Mode> + Copy>(
+    fn init_spi<F: Into<HertzU32>, B: Into<HertzU32>, M: Into<Mode>>(
         mut self,
         resets: &mut RESETS,
         peri_frequency: F,
         baudrate: B,
-        mode: &M,
+        mode: M,
         slave: bool,
     ) -> Spi<Enabled, D, DS> {
         self.device.reset_bring_down(resets);
@@ -247,22 +246,18 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
     }
 
     /// Initialize the SPI in master mode
-    pub fn init<F: Into<HertzU32>, B: Into<HertzU32>, M: Into<Mode> + Copy>(
+    pub fn init<F: Into<HertzU32>, B: Into<HertzU32>, M: Into<Mode>>(
         self,
         resets: &mut RESETS,
         peri_frequency: F,
         baudrate: B,
-        mode: &M,
+        mode: M,
     ) -> Spi<Enabled, D, DS> {
         self.init_spi(resets, peri_frequency, baudrate, mode, false)
     }
 
     /// Initialize the SPI in slave mode
-    pub fn init_slave<M: Into<Mode> + Copy>(
-        self,
-        resets: &mut RESETS,
-        mode: &M,
-    ) -> Spi<Enabled, D, DS> {
+    pub fn init_slave<M: Into<Mode>>(self, resets: &mut RESETS, mode: M) -> Spi<Enabled, D, DS> {
         // Use dummy values for frequency and baudrate.
         // With both values 0, set_baudrate will set prescale == u8::MAX, which will break if debug assertions are enabled.
         // u8::MAX is outside the allowed range 2..=254 for CPSDVSR, which might interfere with proper operation in slave mode.
