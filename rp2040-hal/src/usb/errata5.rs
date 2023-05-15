@@ -23,7 +23,7 @@ impl Errata5State {
         Self::WaitEndOfReset
     }
     /// SAFETY: This method steals the peripherals.
-    /// It makes read only use of TIMER and read/write access to USBCTRL_REGS.
+    /// It makes read only use of TIMER and SYSINFO and read/write access to USBCTRL_REGS.
     /// Both peripherals must be initialized & running.
     pub unsafe fn update(self) -> Option<Self> {
         let pac = crate::pac::Peripherals::steal();
