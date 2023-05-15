@@ -36,7 +36,7 @@ use pac::RESETS;
 
 /// Spi mode
 #[derive(Clone)]
-pub struct Mode(pub embedded_hal::spi::Mode);
+pub struct Mode(embedded_hal::spi::Mode);
 
 impl From<embedded_hal::spi::Mode> for Mode {
     fn from(f: embedded_hal::spi::Mode) -> Self {
