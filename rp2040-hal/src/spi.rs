@@ -199,8 +199,8 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
     }
 
     /// Set format and datasize
-    fn set_format<M: Into<Mode>>(&mut self, data_bits: u8, mode: M) {
-        let mode: Mode = mode.into();
+    fn set_format(&mut self, data_bits: u8, mode: Mode) {
+        let mode: Mode = mode;
         self.device.sspcr0.modify(|_, w| unsafe {
             w.dss()
                 .bits(data_bits - 1)
@@ -220,12 +220,12 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
         }
     }
 
-    fn init_spi<F: Into<HertzU32>, B: Into<HertzU32>, M: Into<Mode>>(
+    fn init_spi<F: Into<HertzU32>, B: Into<HertzU32>>(
         mut self,
         resets: &mut RESETS,
         peri_frequency: F,
         baudrate: B,
-        mode: M,
+        mode: Mode,
         slave: bool,
     ) -> Spi<Enabled, D, DS> {
         self.device.reset_bring_down(resets);
@@ -253,7 +253,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
         baudrate: B,
         mode: M,
     ) -> Spi<Enabled, D, DS> {
-        self.init_spi(resets, peri_frequency, baudrate, mode, false)
+        self.init_spi(resets, peri_frequency, baudrate, mode.into(), false)
     }
 
     /// Initialize the SPI in slave mode
@@ -261,7 +261,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
         // Use dummy values for frequency and baudrate.
         // With both values 0, set_baudrate will set prescale == u8::MAX, which will break if debug assertions are enabled.
         // u8::MAX is outside the allowed range 2..=254 for CPSDVSR, which might interfere with proper operation in slave mode.
-        self.init_spi(resets, 1000u32.Hz(), 1000u32.Hz(), mode, true)
+        self.init_spi(resets, 1000u32.Hz(), 1000u32.Hz(), mode.into(), true)
     }
 }
 
