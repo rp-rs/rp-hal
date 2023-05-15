@@ -82,6 +82,12 @@ impl Timer {
             next_end: None,
         }
     }
+
+    /// Create a Timer based delay (as opposed to the cortex_m systick based Delay).
+    pub fn delay(&self) -> Delay {
+        Delay(())
+    }
+
     /// Retrieve a reference to alarm 0. Will only return a value the first time this is called
     pub fn alarm_0(&mut self) -> Option<Alarm0> {
         take_alarm(1 << 0).then_some(Alarm0(PhantomData))
@@ -105,6 +111,71 @@ impl Timer {
 
 // safety: all write operations are synchronised and all reads are atomic
 unsafe impl Sync for Timer {}
+
+/// [`Timer`] based Delay
+pub struct Delay(());
+impl embedded_hal::blocking::delay::DelayUs<u32> for Delay {
+    fn delay_us(&mut self, us: u32) {
+        // safety: only reads are made
+        let timer = unsafe { &*pac::TIMER::PTR };
+        let eta = timer.timelr.read().bits().wrapping_add(us);
+        while eta >= timer.timelr.read().bits() {
+            // use nop instead of wfe because there is no event configured to wake us up.
+            cortex_m::asm::nop();
+        }
+    }
+}
+impl embedded_hal::blocking::delay::DelayUs<u64> for Delay {
+    fn delay_us(&mut self, us: u64) {
+        // safety: only reads are made
+        let timer = unsafe { &*pac::TIMER::PTR };
+        // wrapping_add isn't strictly necessary here, there's no way we'll reach the wrap point of
+        // that u64, right?
+        let eta = get_counter(timer).ticks().wrapping_add(us);
+        while eta >= get_counter(timer).ticks() {
+            // use nop instead of wfe because there is no event configured to wake us up.
+            cortex_m::asm::nop();
+        }
+    }
+}
+impl embedded_hal::blocking::delay::DelayMs<u32> for Delay {
+    fn delay_ms(&mut self, ms: u32) {
+        // safety: only reads are made
+        let timer = unsafe { &*pac::TIMER::PTR };
+        let eta = timer.timelr.read().bits().wrapping_add(ms * 1000);
+        while eta >= timer.timelr.read().bits() {
+            // use nop instead of wfe because there is no event configured to wake us up.
+            cortex_m::asm::nop();
+        }
+    }
+}
+impl embedded_hal::blocking::delay::DelayMs<u64> for Delay {
+    fn delay_ms(&mut self, ms: u64) {
+        // safety: only reads are made
+        let timer = unsafe { &*pac::TIMER::PTR };
+        // wrapping_add isn't strictly necessary here, there's no way we'll reach the wrap point of
+        // that u64, right? Also, there's not overflow gard with the conversion of ms to us but
+        // again, if this ever occurs, there's something else wrongger than this.
+        let eta = get_counter(timer).ticks().wrapping_add(ms * 1000);
+        while eta >= get_counter(timer).ticks() {
+            // use nop instead of wfe because there is no event configured to wake us up.
+            cortex_m::asm::nop();
+        }
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1_0_alpha::delay::DelayUs for Delay {
+    fn delay_us(&mut self, us: u32) {
+        // safety: only reads are made
+        let timer = unsafe { &*pac::TIMER::PTR };
+        let eta = timer.timelr.read().bits().wrapping_add(us);
+        while eta >= timer.timelr.read().bits() {
+            // use nop instead of wfe because there is no event configured to wake us up.
+            cortex_m::asm::nop();
+        }
+    }
+}
 
 /// Implementation of the embedded_hal::Timer traits using rp2040_hal::timer counter
 ///
