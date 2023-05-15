@@ -149,16 +149,16 @@ impl embedded_hal::blocking::delay::DelayUs<u64> for Delay {
 }
 impl embedded_hal::blocking::delay::DelayMs<u32> for Delay {
     fn delay_ms(&mut self, ms: u32) {
-        // There's no guard for overflow here, but DelayMs are typically meant for short pause.
-        // Longer pause should rely on alarms.
-        self.delay_from_u32(ms * 1000)
+        for _ in 0..ms {
+            self.delay_from_u32(1000);
+        }
     }
 }
 impl embedded_hal::blocking::delay::DelayMs<u64> for Delay {
     fn delay_ms(&mut self, ms: u64) {
-        // There's no overflow gard with the conversion of ms to us but if this ever occurs,
-        // there's something else wrongger than this.
-        self.delay_from_u64(ms * 1000)
+        for _ in 0..ms {
+            self.delay_from_u32(1000);
+        }
     }
 }
 
