@@ -36,4 +36,4 @@ The enforcement policies listed above apply to all official embedded rp-rs venue
 
 *Text kindly borrowed from the Rust Embedded Working Group*
 
-[team]: https://github.com/orgs/rp-rs/teams/rp-rs
+[team]: https://github.com/orgs/rp-rs/people
