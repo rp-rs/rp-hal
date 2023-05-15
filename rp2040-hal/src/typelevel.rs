@@ -1,7 +1,7 @@
 //! Module supporting type-level programming
 //!
 //! This is heavily inspired by the work in [`atsamd-rs`](https://github.com/atsamd-rs/atsamd). Please refer to the
-//! [documentation](https://github.com/atsamd-rs/atsamd/blob/d2ba3da08daa807ee5adc0e17546551bbfe7c1f2/hal/src/typelevel.rs)
+//! [documentation](https://docs.rs/atsamd-hal/0.15.1/atsamd_hal/typelevel/index.html)
 //! over there for more details.
 
 mod private {
@@ -20,11 +20,6 @@ impl<A: Sealed, B: Sealed, C: Sealed, D: Sealed> Sealed for (A, B, C, D) {}
 
 impl Sealed for frunk::HNil {}
 impl<H: Sealed, T: Sealed> Sealed for frunk::HCons<H, T> {}
-
-/// Type-level version of the [None] variant
-#[derive(Default)]
-pub struct NoneT;
-impl Sealed for NoneT {}
 
 /// Marker trait for type identity
 ///
@@ -55,7 +50,7 @@ impl Sealed for NoneT {}
 /// }
 /// ```
 ///
-/// [`AnyKind`]: #anykind-trait-pattern
+/// [`AnyKind`]: https://docs.rs/atsamd-hal/0.15.1/atsamd_hal/typelevel/index.html#anykind-trait-pattern
 pub trait Is
 where
     Self: Sealed,
