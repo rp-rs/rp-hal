@@ -200,7 +200,6 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
 
     /// Set format and datasize
     fn set_format(&mut self, data_bits: u8, mode: Mode) {
-        let mode: Mode = mode;
         self.device.sspcr0.modify(|_, w| unsafe {
             w.dss()
                 .bits(data_bits - 1)
