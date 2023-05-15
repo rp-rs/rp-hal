@@ -28,7 +28,7 @@
 //!   This enables a fix for USB errata 5: USB device fails to exit RESET state on busy USB bus.
 //!   Only required for RP2040 B0 and RP2040 B1, but it also works for RP2040 B2 and above.
 //!   **Note that the workaround takes control of pin 15 (bank0) during usb reset so the bank needs
-//!   to be taken out of reset before starting to poll the usb device**.
+//!   to be taken out of reset before calling `UsbBus::new`**.
 //!   Using `let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);`
 //!   is enough to take the Bank 0 out of reset.
 //! * **rtic-monotonic** -
