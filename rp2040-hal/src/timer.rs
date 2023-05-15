@@ -114,8 +114,8 @@ unsafe impl Sync for Timer {}
 
 /// [`Timer`] based Delay
 pub struct Delay(());
-impl embedded_hal::blocking::delay::DelayUs<u32> for Delay {
-    fn delay_us(&mut self, us: u32) {
+impl Delay {
+    fn delay_from_u32(&self, us: u32) {
         // safety: only reads are made
         let timer = unsafe { &*pac::TIMER::PTR };
         let eta = timer.timelr.read().bits().wrapping_add(us);
@@ -124,9 +124,8 @@ impl embedded_hal::blocking::delay::DelayUs<u32> for Delay {
             cortex_m::asm::nop();
         }
     }
-}
-impl embedded_hal::blocking::delay::DelayUs<u64> for Delay {
-    fn delay_us(&mut self, us: u64) {
+
+    fn delay_from_u64(&self, us: u64) {
         // safety: only reads are made
         let timer = unsafe { &*pac::TIMER::PTR };
         // wrapping_add isn't strictly necessary here, there's no way we'll reach the wrap point of
@@ -138,42 +137,35 @@ impl embedded_hal::blocking::delay::DelayUs<u64> for Delay {
         }
     }
 }
+impl embedded_hal::blocking::delay::DelayUs<u32> for Delay {
+    fn delay_us(&mut self, us: u32) {
+        self.delay_from_u32(us)
+    }
+}
+impl embedded_hal::blocking::delay::DelayUs<u64> for Delay {
+    fn delay_us(&mut self, us: u64) {
+        self.delay_from_u64(us)
+    }
+}
 impl embedded_hal::blocking::delay::DelayMs<u32> for Delay {
     fn delay_ms(&mut self, ms: u32) {
-        // safety: only reads are made
-        let timer = unsafe { &*pac::TIMER::PTR };
-        let eta = timer.timelr.read().bits().wrapping_add(ms * 1000);
-        while eta >= timer.timelr.read().bits() {
-            // use nop instead of wfe because there is no event configured to wake us up.
-            cortex_m::asm::nop();
-        }
+        // There's no guard for overflow here, but DelayMs are typically meant for short pause.
+        // Longer pause should rely on alarms.
+        self.delay_from_u32(ms * 1000)
     }
 }
 impl embedded_hal::blocking::delay::DelayMs<u64> for Delay {
     fn delay_ms(&mut self, ms: u64) {
-        // safety: only reads are made
-        let timer = unsafe { &*pac::TIMER::PTR };
-        // wrapping_add isn't strictly necessary here, there's no way we'll reach the wrap point of
-        // that u64, right? Also, there's not overflow gard with the conversion of ms to us but
-        // again, if this ever occurs, there's something else wrongger than this.
-        let eta = get_counter(timer).ticks().wrapping_add(ms * 1000);
-        while eta >= get_counter(timer).ticks() {
-            // use nop instead of wfe because there is no event configured to wake us up.
-            cortex_m::asm::nop();
-        }
+        // There's no overflow gard with the conversion of ms to us but if this ever occurs,
+        // there's something else wrongger than this.
+        self.delay_from_u64(ms * 1000)
     }
 }
 
 #[cfg(feature = "eh1_0_alpha")]
 impl eh1_0_alpha::delay::DelayUs for Delay {
     fn delay_us(&mut self, us: u32) {
-        // safety: only reads are made
-        let timer = unsafe { &*pac::TIMER::PTR };
-        let eta = timer.timelr.read().bits().wrapping_add(us);
-        while eta >= timer.timelr.read().bits() {
-            // use nop instead of wfe because there is no event configured to wake us up.
-            cortex_m::asm::nop();
-        }
+        self.delay_from_u32(us)
     }
 }
 
