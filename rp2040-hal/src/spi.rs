@@ -13,10 +13,10 @@
 //! let sio = Sio::new(peripherals.SIO);
 //! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
 //!
-//! let sclk = pins.gpio2.into_mode::<FunctionSpi>();
-//! let mosi = pins.gpio3.into_mode::<FunctionSpi>();
+//! let sclk = pins.gpio2.into_function::<FunctionSpi>();
+//! let mosi = pins.gpio3.into_function::<FunctionSpi>();
 //!
-//! let spi = Spi::<_, _, 8>::new(peripherals.SPI0).init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), MODE_0);
+//! let spi = Spi::<_, _, _, 8>::new(peripherals.SPI0, (mosi, sclk)).init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), MODE_0);
 //! ```
 
 use crate::dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget};

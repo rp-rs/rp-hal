@@ -119,7 +119,7 @@ fn main() -> ! {
     );
 
     // Configure GPIO 25 as an output to drive our LED.
-    // we can use into_mode() instead of into_pull_up_input()
+    // we can use into_typestate() instead of into_pull_up_input()
     // since the variable we're pushing it into has that type
     let led = pins.gpio25.into_typestate();
 
