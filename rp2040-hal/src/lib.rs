@@ -92,3 +92,48 @@ pub use sio::Sio;
 pub use spi::Spi;
 pub use timer::Timer;
 pub use watchdog::Watchdog;
+
+/// Trigger full reset of the RP2040.
+///
+/// When called from core0, it will shut down core1 and
+/// then call `SCB::sys_reset()`, which keeps the debug
+/// connection active.
+///
+/// This is not possible when called from core1. It will
+/// trigger a watchdog reset of the whole system instead,
+/// which breaks a running debug connection.
+pub fn reset() -> ! {
+    unsafe {
+        if crate::Sio::core() == 0 {
+            (*pac::PSM::PTR).frce_off.write(|w| w.proc1().set_bit());
+            pac::SCB::sys_reset();
+        } else {
+            (*pac::PSM::PTR).wdsel.write(|w| w.bits(0x0000ffff));
+            (*pac::WATCHDOG::PTR).ctrl.write(|w| w.trigger().set_bit());
+        }
+        #[allow(clippy::empty_loop)]
+        loop {}
+    }
+}
+
+/// Halt the RP2040.
+///
+/// Completely disables the other core, and parks the current core in an
+/// infinite loop with interrupts disabled.
+///
+/// Doesn't stop other subsystems.
+pub fn halt() -> ! {
+    unsafe {
+        cortex_m::interrupt::disable();
+        // Stop other core
+        if crate::Sio::core() == 0 {
+            (*pac::PSM::PTR).frce_off.write(|w| w.proc1().set_bit());
+        } else {
+            (*pac::PSM::PTR).frce_off.write(|w| w.proc0().set_bit());
+        }
+        // Keep current core running, so debugging stays possible
+        loop {
+            cortex_m::asm::wfe()
+        }
+    }
+}
