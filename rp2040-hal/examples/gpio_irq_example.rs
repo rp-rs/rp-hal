@@ -63,11 +63,11 @@ const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 // We'll create some type aliases using `type` to help with that
 
 /// This pin will be our output - it will drive an LED if you run this on a Pico
-type LedPin = gpio::Pin<gpio::bank0::Gpio25, gpio::PushPullOutput>;
+type LedPin = gpio::Pin<gpio::bank0::Gpio25, gpio::FunctionSioOutput, gpio::PullNone>;
 
 /// This pin will be our interrupt source.
 /// It will trigger an interrupt if pulled to ground (via a switch or jumper wire)
-type ButtonPin = gpio::Pin<gpio::bank0::Gpio26, gpio::PullUpInput>;
+type ButtonPin = gpio::Pin<gpio::bank0::Gpio26, gpio::FunctionSioInput, gpio::PullUp>;
 
 /// Since we're always accessing these pins together we'll store them in a tuple.
 /// Giving this tuple a type alias means we won't need to use () when putting them
@@ -121,10 +121,10 @@ fn main() -> ! {
     // Configure GPIO 25 as an output to drive our LED.
     // we can use into_mode() instead of into_pull_up_input()
     // since the variable we're pushing it into has that type
-    let led = pins.gpio25.into_mode();
+    let led = pins.gpio25.into();
 
     // Set up the GPIO pin that will be our input
-    let in_pin = pins.gpio26.into_mode();
+    let in_pin = pins.gpio26.into();
 
     // Trigger on the 'falling edge' of the input pin.
     // This will happen as the button is being pressed

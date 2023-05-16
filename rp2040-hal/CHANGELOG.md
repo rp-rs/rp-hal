@@ -25,11 +25,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Doc: Several improvements have been made to documentation: #607 #597
 - DMA: Check for valid word sizes at compile time - #600 @jannic
 - Use an enum for core identification. - @ithinuel
+- Merge DynPin and Pin into Pin. The type class used in Pin now have a runtime variant allowing for
+  the creation of uniform array of pins (eg: `[Pin<DynPinId, PinFnSio, PullDown>]`). - @ithinuel
+- Fix miss defined ValidPinMode bound allowing any Bank0 pin to be Xip and any Qspi pin to be any
+  other function (except for clock). - @ithinuel
+- Use `let _ =` to ignore result rather than `.ok();` as this gives a false sense the result is
+  checked. - @ithinuel
+- Reduce code repetition in i2c modules. - @ithinuel
 
 ### Added
 
 - timer::Timer implements the embedded-hal delay traits and Copy/Clone - #614 @ithinuel @jannic
 - DMA: Allow access to the DMA engine's byteswapping feature - #603 @Gip-Gip
+- Added `AdcPin` wrapper to disable digital function for ADC operations - @ithinuel
+- Added `Sealed` supertrait to `PIOExt` - @ithinuel
+- Added pins to `Spi` to fix inconsistencies in gpio bounds in peripheral (i2c, uart, spi) - @ithinuel
+- Added `sio::Sio::read_bank0() -> u32` to provide single instruction multiple io read.
 
 ## [0.8.1] - 2023-05-05
 

@@ -79,7 +79,7 @@
 use core::marker::PhantomData;
 
 use crate::{
-    gpio::{bank0::*, AnyPin, FunctionPwm, Pin, ValidPinMode},
+    gpio::{bank0::*, AnyPin, FunctionPwm, Pin, ValidFunction},
     resets::SubsystemReset,
     typelevel::{Is, Sealed},
 };
@@ -539,9 +539,9 @@ pwm! {
 }
 
 /// Marker trait for valid input pins (Channel B only)
-pub trait ValidPwmInputPin<S: SliceId>: Sealed {}
+pub trait ValidPwmInputPin<S: SliceId>: ValidFunction<FunctionPwm> + Sealed {}
 /// Marker trait for valid output pins
-pub trait ValidPwmOutputPin<S: SliceId, C: ChannelId>: Sealed {}
+pub trait ValidPwmOutputPin<S: SliceId, C: ChannelId>: ValidFunction<FunctionPwm> + Sealed {}
 
 impl Slices {
     /// Free the pwm registers from the pwm hal struct while consuming it.
@@ -690,12 +690,11 @@ impl<S: AnySlice> PwmPin for Channel<S, B> {
 
 impl<S: AnySlice> Channel<S, A> {
     /// Capture a gpio pin and use it as pwm output for channel A
-    pub fn output_to<P: AnyPin>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm>
+    pub fn output_to<P: AnyPin>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm, P::Pull>
     where
         P::Id: ValidPwmOutputPin<S::Id, A>,
-        P::Mode: ValidPinMode<P::Id>,
     {
-        pin.into().into_mode()
+        pin.into().into_function()
     }
 
     /// Invert channel output
@@ -713,12 +712,11 @@ impl<S: AnySlice> Channel<S, A> {
 
 impl<S: AnySlice> Channel<S, B> {
     /// Capture a gpio pin and use it as pwm output for channel B
-    pub fn output_to<P: AnyPin>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm>
+    pub fn output_to<P: AnyPin>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm, P::Pull>
     where
         P::Id: ValidPwmOutputPin<S::Id, B>,
-        P::Mode: ValidPinMode<P::Id>,
     {
-        pin.into().into_mode()
+        pin.into().into_function()
     }
 
     /// Invert channel output
@@ -739,30 +737,30 @@ where
     S::Mode: ValidSliceInputMode<S::Id>,
 {
     /// Capture a gpio pin and use it as pwm input for channel B
-    pub fn input_from<P: AnyPin>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm>
+    pub fn input_from<P: AnyPin>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm, P::Pull>
     where
         P::Id: ValidPwmInputPin<S::Id>,
     {
-        pin.into().into_mode()
+        pin.into().into_function()
     }
 }
 
 impl<S: SliceId, M: ValidSliceMode<S>> Slice<S, M> {
     /// Capture a gpio pin and use it as pwm output
-    pub fn output_to<P: AnyPin, C: ChannelId>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm>
+    pub fn output_to<P: AnyPin, C: ChannelId>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm, P::Pull>
     where
         P::Id: ValidPwmOutputPin<S, C>,
     {
-        pin.into().into_mode()
+        pin.into().into_function()
     }
 }
 
 impl<S: SliceId, M: ValidSliceInputMode<S>> Slice<S, M> {
     /// Capture a gpio pin and use it as pwm input for channel B
-    pub fn input_from<P: AnyPin>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm>
+    pub fn input_from<P: AnyPin>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm, P::Pull>
     where
         P::Id: ValidPwmInputPin<S>,
     {
-        pin.into().into_mode()
+        pin.into().into_function()
     }
 }

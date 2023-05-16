@@ -13,26 +13,30 @@
 //! let sio = Sio::new(peripherals.SIO);
 //! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
 //!
-//! let _ = pins.gpio2.into_mode::<FunctionSpi>();
-//! let _ = pins.gpio3.into_mode::<FunctionSpi>();
+//! let sclk = pins.gpio2.into_mode::<FunctionSpi>();
+//! let mosi = pins.gpio3.into_mode::<FunctionSpi>();
 //!
 //! let spi = Spi::<_, _, 8>::new(peripherals.SPI0).init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), MODE_0);
 //! ```
 
 use crate::dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget};
-use crate::resets::SubsystemReset;
-use crate::typelevel::Sealed;
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
+
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::spi as eh1;
 #[cfg(feature = "eh1_0_alpha")]
 use eh_nb_1_0_alpha::spi as eh1nb;
-use embedded_hal::blocking::spi;
-use embedded_hal::spi::{FullDuplex, Phase, Polarity};
-use fugit::HertzU32;
-use fugit::RateExtU32;
-use pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
-use pac::RESETS;
+use embedded_hal::{
+    blocking::spi,
+    spi::{FullDuplex, Phase, Polarity},
+};
+use fugit::{HertzU32, RateExtU32};
+use pac::{dma::ch::ch_ctrl_trig::TREQ_SEL_A, RESETS};
+
+use crate::{resets::SubsystemReset, typelevel::Sealed};
+
+mod pins;
+pub use pins::*;
 
 /// Spi mode
 pub struct Mode(embedded_hal::spi::Mode);
@@ -128,15 +132,17 @@ impl Sealed for u8 {}
 impl Sealed for u16 {}
 
 /// Spi
-pub struct Spi<S: State, D: SpiDevice, const DS: u8> {
+pub struct Spi<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> {
     device: D,
+    pins: P,
     state: PhantomData<S>,
 }
 
-impl<S: State, D: SpiDevice, const DS: u8> Spi<S, D, DS> {
-    fn transition<To: State>(self, _: To) -> Spi<To, D, DS> {
+impl<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<S, D, P, DS> {
+    fn transition<To: State>(self, _: To) -> Spi<To, D, P, DS> {
         Spi {
             device: self.device,
+            pins: self.pins,
             state: PhantomData,
         }
     }
@@ -195,11 +201,12 @@ impl<S: State, D: SpiDevice, const DS: u8> Spi<S, D, DS> {
     }
 }
 
-impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
+impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
     /// Create new spi device
-    pub fn new(device: D) -> Spi<Disabled, D, DS> {
+    pub fn new(device: D, pins: P) -> Spi<Disabled, D, P, DS> {
         Spi {
             device,
+            pins,
             state: PhantomData,
         }
     }
@@ -232,7 +239,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
         baudrate: B,
         mode: Mode,
         slave: bool,
-    ) -> Spi<Enabled, D, DS> {
+    ) -> Spi<Enabled, D, P, DS> {
         self.device.reset_bring_down(resets);
         self.device.reset_bring_up(resets);
 
@@ -257,12 +264,12 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
         peri_frequency: F,
         baudrate: B,
         mode: M,
-    ) -> Spi<Enabled, D, DS> {
+    ) -> Spi<Enabled, D, P, DS> {
         self.init_spi(resets, peri_frequency, baudrate, mode.into(), false)
     }
 
     /// Initialize the SPI in slave mode
-    pub fn init_slave<M: Into<Mode>>(self, resets: &mut RESETS, mode: M) -> Spi<Enabled, D, DS> {
+    pub fn init_slave<M: Into<Mode>>(self, resets: &mut RESETS, mode: M) -> Spi<Enabled, D, P, DS> {
         // Use dummy values for frequency and baudrate.
         // With both values 0, set_baudrate will set prescale == u8::MAX, which will break if debug assertions are enabled.
         // u8::MAX is outside the allowed range 2..=254 for CPSDVSR, which might interfere with proper operation in slave mode.
@@ -270,7 +277,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
     }
 }
 
-impl<D: SpiDevice, const DS: u8> Spi<Enabled, D, DS> {
+impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Enabled, D, P, DS> {
     fn is_writable(&self) -> bool {
         self.device.sspsr.read().tnf().bit_is_set()
     }
@@ -284,7 +291,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Enabled, D, DS> {
     }
 
     /// Disable the spi to reset its configuration
-    pub fn disable(self) -> Spi<Disabled, D, DS> {
+    pub fn disable(self) -> Spi<Disabled, D, P, DS> {
         self.device.sspcr1.modify(|_, w| w.sse().clear_bit());
 
         self.transition(Disabled { __private: () })
@@ -295,7 +302,7 @@ macro_rules! impl_write {
     ($type:ident, [$($nr:expr),+]) => {
 
         $(
-        impl<D: SpiDevice> FullDuplex<$type> for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> FullDuplex<$type> for Spi<Enabled, D, P, $nr> {
             type Error = Infallible;
 
             fn read(&mut self) -> Result<$type, nb::Error<Infallible>> {
@@ -320,17 +327,17 @@ macro_rules! impl_write {
             }
         }
 
-        impl<D: SpiDevice> spi::write::Default<$type> for Spi<Enabled, D, $nr> {}
-        impl<D: SpiDevice> spi::transfer::Default<$type> for Spi<Enabled, D, $nr> {}
-        impl<D: SpiDevice> spi::write_iter::Default<$type> for Spi<Enabled, D, $nr> {}
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi::write::Default<$type> for Spi<Enabled, D, P, $nr> {}
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi::transfer::Default<$type> for Spi<Enabled, D, P, $nr> {}
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi::write_iter::Default<$type> for Spi<Enabled, D, P, $nr> {}
 
         #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice> eh1::ErrorType for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1::ErrorType for Spi<Enabled, D, P, $nr> {
             type Error = Infallible;
         }
 
         #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice> eh1::SpiBusFlush for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1::SpiBusFlush for Spi<Enabled, D, P, $nr> {
             fn flush(&mut self) -> Result<(), Self::Error> {
                 while self.is_busy() {}
                 Ok(())
@@ -338,7 +345,7 @@ macro_rules! impl_write {
         }
 
         #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice> eh1::SpiBusRead<$type> for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1::SpiBusRead<$type> for Spi<Enabled, D, P, $nr> {
             fn read(&mut self, words: &mut [$type]) -> Result<(), Self::Error> {
                 for word in words.iter_mut() {
                     // write empty word
@@ -356,7 +363,7 @@ macro_rules! impl_write {
         }
 
         #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice> eh1::SpiBusWrite<$type> for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1::SpiBusWrite<$type> for Spi<Enabled, D, P, $nr> {
             fn write(&mut self, words: &[$type]) -> Result<(), Self::Error> {
                 for word in words.iter() {
                     // write one word
@@ -374,7 +381,7 @@ macro_rules! impl_write {
         }
 
         #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice> eh1::SpiBus<$type> for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1::SpiBus<$type> for Spi<Enabled, D, P, $nr> {
             fn transfer(&mut self, read: &mut [$type], write: &[$type]) -> Result<(), Self::Error>{
                 let len = read.len().max(write.len());
                 for i in 0..len {
@@ -414,7 +421,7 @@ macro_rules! impl_write {
         }
 
         #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice> eh1nb::FullDuplex<$type> for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1nb::FullDuplex<$type> for Spi<Enabled, D, P, $nr> {
             fn read(&mut self) -> Result<$type, nb::Error<Infallible>> {
                 if !self.is_readable() {
                     return Err(nb::Error::WouldBlock);
@@ -437,7 +444,7 @@ macro_rules! impl_write {
             }
         }
 
-        impl<D: SpiDevice> ReadTarget for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> ReadTarget for Spi<Enabled, D, P, $nr> {
             type ReceivedWord = $type;
 
             fn rx_treq() -> Option<u8> {
@@ -456,9 +463,9 @@ macro_rules! impl_write {
             }
         }
 
-        impl<D: SpiDevice> EndlessReadTarget for Spi<Enabled, D, $nr> {}
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> EndlessReadTarget for Spi<Enabled, D, P, $nr> {}
 
-        impl<D: SpiDevice> WriteTarget for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> WriteTarget for Spi<Enabled, D, P, $nr> {
             type TransmittedWord = $type;
 
             fn tx_treq() -> Option<u8> {
@@ -477,7 +484,7 @@ macro_rules! impl_write {
             }
         }
 
-        impl<D: SpiDevice> EndlessWriteTarget for Spi<Enabled, D, $nr> {}
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> EndlessWriteTarget for Spi<Enabled, D, P, $nr> {}
     )+
 
     };

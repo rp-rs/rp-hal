@@ -1,12 +1,12 @@
 use core::{marker::PhantomData, ops::Deref};
 
 use crate::{
-    gpio::{pin::FunctionI2C, AnyPin},
+    gpio::{AnyPin, FunctionI2C},
     resets::SubsystemReset,
 };
 use pac::{i2c0::RegisterBlock as I2CBlock, RESETS};
 
-use super::{Peripheral, SclPin, SdaPin, I2C};
+use super::{Peripheral, ValidSclPin, ValidSdaPin, I2C};
 
 /// I2C bus events
 #[derive(Debug, PartialEq, Eq)]
@@ -40,10 +40,10 @@ pub struct I2CPeripheralEventIterator<Block, Pins> {
 impl<T, Sda, Scl> I2C<T, (Sda, Scl), Peripheral>
 where
     T: SubsystemReset + Deref<Target = I2CBlock>,
-    Sda: AnyPin<Mode = FunctionI2C>,
-    Scl: AnyPin<Mode = FunctionI2C>,
-    Sda::Id: SdaPin<T>,
-    Scl::Id: SclPin<T>,
+    Sda: AnyPin<Function = FunctionI2C>,
+    Scl: AnyPin<Function = FunctionI2C>,
+    Sda::Id: ValidSdaPin<T>,
+    Scl::Id: ValidSclPin<T>,
 {
     /// Configures the I2C peripheral to work in peripheral mode
     ///

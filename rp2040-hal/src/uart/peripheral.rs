@@ -4,8 +4,8 @@
 //! UartPeripheral object that can both read and write.
 
 use super::*;
-use crate::gpio::SomePin;
 use crate::pac::uart0::uartlcr_h::W as UART_LCR_H_Writer;
+use crate::typelevel::OptionT;
 use core::convert::Infallible;
 use core::fmt;
 use embedded_hal::serial::{Read, Write};

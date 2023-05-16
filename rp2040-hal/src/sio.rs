@@ -99,6 +99,11 @@ impl Sio {
         }
     }
 
+    /// Reads the whole bank0 at once.
+    pub fn read_bank0() -> u32 {
+        unsafe { (*pac::SIO::PTR).gpio_in.read().bits() }
+    }
+
     /// Returns whether we are running on Core 0 (`0`) or Core 1 (`1`).
     pub fn core() -> CoreId {
         // Safety: it is always safe to read this read-only register

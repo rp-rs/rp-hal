@@ -604,7 +604,7 @@
 //!     pub fn elided(mut self) -> Self {
 //!         let pin = self.pin.into();
 //!         let mut pin = pin.into_push_pull_output();
-//!         pin.set_high().ok();
+//!         let _ = pin.set_high();
 //!         let pin = pin.into_floating_input();
 //!         let _bit = pin.is_low().unwrap();
 //!         let pin = pin.into_mode();
@@ -614,7 +614,7 @@
 //!     pub fn expanded(mut self) -> Self {
 //!         let pin: SpecificPin<P> = self.pin.into();
 //!         let mut pin: Pin<P::Id, PushPullOutput> = pin.into_push_pull_output();
-//!         pin.set_high().ok();
+//!         let _ = pin.set_high();
 //!         let pin: Pin<P::Id, FloatingInput> = pin.into_floating_input();
 //!         let _bit = pin.is_low().unwrap();
 //!         let pin: SpecificPin<P> = pin.into_mode::<P::Mode>();
@@ -642,6 +642,10 @@ mod private {
 use core::borrow::{Borrow, BorrowMut};
 
 pub(crate) use private::Sealed;
+
+impl<A: Sealed, B: Sealed> Sealed for (A, B) {}
+impl<A: Sealed, B: Sealed, C: Sealed> Sealed for (A, B, C) {}
+impl<A: Sealed, B: Sealed, C: Sealed, D: Sealed> Sealed for (A, B, C, D) {}
 
 /// Type-level version of the [None] variant
 #[derive(Default)]
@@ -696,4 +700,28 @@ where
     T: Sealed + Borrow<T> + BorrowMut<T>,
 {
     type Type = T;
+}
+
+// =====================
+// Type level option
+// =====================
+
+/// Type-level `enum` for Option.
+pub trait OptionT: Sealed {
+    /// Is this Some or None ?
+    const IS_SOME: bool;
+}
+
+/// Type-level variant for `OptionT`
+pub struct OptionTNone;
+impl Sealed for OptionTNone {}
+impl OptionT for OptionTNone {
+    const IS_SOME: bool = false;
+}
+
+/// Type-level variant for `OptionT`
+pub struct OptionTSome<T>(pub T);
+impl<T> Sealed for OptionTSome<T> {}
+impl<T> OptionT for OptionTSome<T> {
+    const IS_SOME: bool = true;
 }

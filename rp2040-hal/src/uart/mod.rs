@@ -19,8 +19,8 @@
 //!
 //! // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
 //! let pins = (
-//!     pins.gpio0.into_mode(),
-//!     pins.gpio1.into_mode(),
+//!     pins.gpio0.into_function(),
+//!     pins.gpio1.into_function(),
 //! );
 //! // Need to perform clock init before using UART or it will freeze.
 //! let uart = UartPeripheral::new(peripherals.UART0, pins, &mut peripherals.RESETS)
@@ -38,11 +38,11 @@ mod reader;
 mod utils;
 mod writer;
 
-pub use self::peripheral::UartPeripheral;
-pub use self::pins::*;
-pub use self::reader::{ReadError, ReadErrorType, Reader};
-pub use self::utils::*;
-pub use self::writer::Writer;
+pub use peripheral::UartPeripheral;
+pub use pins::*;
+pub use reader::{ReadError, ReadErrorType, Reader};
+pub use utils::*;
+pub use writer::Writer;
 
 /// Common configurations for UART.
 #[deprecated(note = "Use UartConfig::new(...) instead.")]
