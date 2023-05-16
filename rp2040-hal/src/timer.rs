@@ -118,8 +118,8 @@ impl Delay {
     fn delay_from_u32(&self, us: u32) {
         // safety: only reads are made
         let timer = unsafe { &*pac::TIMER::PTR };
-        let eta = timer.timelr.read().bits().wrapping_add(us);
-        while eta >= timer.timelr.read().bits() {
+        let start = timer.timelr.read().bits();
+        while timer.timelr.read().bits().wrapping_sub(start) <= us {
             // use nop instead of wfe because there is no event configured to wake us up.
             cortex_m::asm::nop();
         }
@@ -128,10 +128,8 @@ impl Delay {
     fn delay_from_u64(&self, us: u64) {
         // safety: only reads are made
         let timer = unsafe { &*pac::TIMER::PTR };
-        // wrapping_add isn't strictly necessary here, there's no way we'll reach the wrap point of
-        // that u64, right?
-        let eta = get_counter(timer).ticks().wrapping_add(us);
-        while eta >= get_counter(timer).ticks() {
+        let start = get_counter(timer).ticks();
+        while get_counter(timer).ticks().wrapping_sub(start) <= us {
             // use nop instead of wfe because there is no event configured to wake us up.
             cortex_m::asm::nop();
         }
