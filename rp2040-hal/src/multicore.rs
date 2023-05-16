@@ -52,7 +52,7 @@ pub enum Error {
 }
 
 #[inline(always)]
-fn install_stack_guard(stack_bottom: *mut usize) {
+fn install_stack_guard(stack_limit: *mut usize) {
     let core = unsafe { pac::CorePeripherals::steal() };
 
     // Trap if MPU is already configured
@@ -62,7 +62,7 @@ fn install_stack_guard(stack_bottom: *mut usize) {
 
     // The minimum we can protect is 32 bytes on a 32 byte boundary, so round up which will
     // just shorten the valid stack range a tad.
-    let addr = (stack_bottom as u32 + 31) & !31;
+    let addr = (stack_limit as u32 + 31) & !31;
     // Mask is 1 bit per 32 bytes of the 256 byte range... clear the bit for the segment we want
     let subregion_select = 0xff ^ (1 << ((addr >> 5) & 7));
     unsafe {
@@ -78,8 +78,8 @@ fn install_stack_guard(stack_bottom: *mut usize) {
 }
 
 #[inline(always)]
-fn core1_setup(stack_bottom: *mut usize) {
-    install_stack_guard(stack_bottom);
+fn core1_setup(stack_limit: *mut usize) {
+    install_stack_guard(stack_limit);
     // TODO: irq priorities
 }
 
@@ -156,9 +156,9 @@ impl<'p> Core<'p> {
                 _: u64,
                 _: u64,
                 entry: *mut ManuallyDrop<F>,
-                stack_bottom: *mut usize,
+                stack_limit: *mut usize,
             ) -> ! {
-                core1_setup(stack_bottom);
+                core1_setup(stack_limit);
 
                 let entry = unsafe { ManuallyDrop::take(&mut *entry) };
 
@@ -185,21 +185,21 @@ impl<'p> Core<'p> {
 
             // Set up the stack
             // AAPCS requires in 6.2.1.2 that the stack is 8bytes aligned., we may need to trim the
-            // array size to guaranty that the bottom of the stack (the end of the array) meets that requirement.
+            // array size to guaranty that the base of the stack (the end of the array) meets that requirement.
             // The start of the array does not need to be aligned.
 
             let mut stack_ptr = stack.as_mut_ptr_range().end;
             // on rp2040, usize are 4 bytes, so align_offset(8) on a *mut usize returns either 0 or 1.
-            let miss_alignement_offset = stack_ptr.align_offset(8);
+            let misalignement_offset = stack_ptr.align_offset(8);
 
             // We don't want to drop this, since it's getting moved to the other core.
             let mut entry = ManuallyDrop::new(entry);
 
             // Push the arguments to `core1_startup` onto the stack.
             unsafe {
-                stack_ptr = stack_ptr.sub(miss_alignement_offset);
+                stack_ptr = stack_ptr.sub(misalignement_offset);
 
-                // Push `stack_bottom`.
+                // Push `stack_limit`.
                 stack_ptr = stack_ptr.sub(1);
                 stack_ptr.cast::<*mut usize>().write(stack.as_mut_ptr());
 
