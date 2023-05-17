@@ -52,7 +52,7 @@ pub enum Error {
 }
 
 #[inline(always)]
-fn install_stack_guard(stack_bottom: *mut usize) {
+fn install_stack_guard(stack_limit: *mut usize) {
     let core = unsafe { pac::CorePeripherals::steal() };
 
     // Trap if MPU is already configured
@@ -62,7 +62,7 @@ fn install_stack_guard(stack_bottom: *mut usize) {
 
     // The minimum we can protect is 32 bytes on a 32 byte boundary, so round up which will
     // just shorten the valid stack range a tad.
-    let addr = (stack_bottom as u32 + 31) & !31;
+    let addr = (stack_limit as u32 + 31) & !31;
     // Mask is 1 bit per 32 bytes of the 256 byte range... clear the bit for the segment we want
     let subregion_select = 0xff ^ (1 << ((addr >> 5) & 7));
     unsafe {
@@ -78,8 +78,8 @@ fn install_stack_guard(stack_bottom: *mut usize) {
 }
 
 #[inline(always)]
-fn core1_setup(stack_bottom: *mut usize) {
-    install_stack_guard(stack_bottom);
+fn core1_setup(stack_limit: *mut usize) {
+    install_stack_guard(stack_limit);
     // TODO: irq priorities
 }
 
@@ -155,12 +155,15 @@ impl<'p> Core<'p> {
             extern "C" fn core1_startup<F: FnOnce() -> bad::Never>(
                 _: u64,
                 _: u64,
-                entry: &mut ManuallyDrop<F>,
-                stack_bottom: *mut usize,
+                entry: *mut ManuallyDrop<F>,
+                stack_limit: *mut usize,
             ) -> ! {
-                core1_setup(stack_bottom);
+                core1_setup(stack_limit);
 
-                let entry = unsafe { ManuallyDrop::take(entry) };
+                let entry = unsafe { ManuallyDrop::take(&mut *entry) };
+
+                // make sure the preceding read doesn't get reordered past the following fifo write
+                compiler_fence(Ordering::SeqCst);
 
                 // Signal that it's safe for core 0 to get rid of the original value now.
                 //
@@ -181,20 +184,28 @@ impl<'p> Core<'p> {
             psm.frce_off.modify(|_, w| w.proc1().clear_bit());
 
             // Set up the stack
-            let mut stack_ptr = unsafe { stack.as_mut_ptr().add(stack.len()) };
+            // AAPCS requires in 6.2.1.2 that the stack is 8bytes aligned., we may need to trim the
+            // array size to guaranty that the base of the stack (the end of the array) meets that requirement.
+            // The start of the array does not need to be aligned.
+
+            let mut stack_ptr = stack.as_mut_ptr_range().end;
+            // on rp2040, usize are 4 bytes, so align_offset(8) on a *mut usize returns either 0 or 1.
+            let misalignement_offset = stack_ptr.align_offset(8);
 
             // We don't want to drop this, since it's getting moved to the other core.
             let mut entry = ManuallyDrop::new(entry);
 
             // Push the arguments to `core1_startup` onto the stack.
             unsafe {
-                // Push `stack_bottom`.
+                stack_ptr = stack_ptr.sub(misalignement_offset);
+
+                // Push `stack_limit`.
                 stack_ptr = stack_ptr.sub(1);
                 stack_ptr.cast::<*mut usize>().write(stack.as_mut_ptr());
 
                 // Push `entry`.
                 stack_ptr = stack_ptr.sub(1);
-                stack_ptr.cast::<&mut ManuallyDrop<F>>().write(&mut entry);
+                stack_ptr.cast::<*mut ManuallyDrop<F>>().write(&mut entry);
             }
 
             // Make sure the compiler does not reorder the stack writes after to after the
