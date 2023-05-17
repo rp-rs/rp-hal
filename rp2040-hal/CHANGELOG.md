@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2] - 2023-05-17
+
+### Fixed
+
+- With rust nightly and beta 1.70.0, the multi-core spawn code could get miscompiled
+  due to undefined behavior in our code. This was first found in embassy (which
+  uses similar code) and reported to us by @Dirbaio. - #612 @ithinuel
+
 ## [0.8.1] - 2023-05-05
 
 ### Added
@@ -256,6 +264,7 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.54.
 
 - Initial release
 
+[0.8.2]: https://github.com/rp-rs/rp-hal/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/rp-rs/rp-hal/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/rp-rs/rp-hal/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/rp-rs/rp-hal/compare/v0.6.0...v0.7.0
