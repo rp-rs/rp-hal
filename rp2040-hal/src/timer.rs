@@ -62,14 +62,10 @@ impl Timer {
         Self { _private: () }
     }
 
-    // Safety: Must only be used for read-only operations
-    fn timer(&self) -> &crate::pac::timer::RegisterBlock {
-        unsafe { &*pac::TIMER::PTR }
-    }
-
     /// Get the current counter value.
     pub fn get_counter(&self) -> Instant {
-        let timer = self.timer();
+        // Safety: Only used for reading current timer value
+        let timer = unsafe { &*pac::TIMER::PTR };
         let mut hi0 = timer.timerawh.read().bits();
         let timestamp = loop {
             let low = timer.timerawl.read().bits();
@@ -84,7 +80,8 @@ impl Timer {
 
     /// Get the value of the least significant word of the counter.
     pub fn get_counter_low(&self) -> u32 {
-        self.timer().timerawl.read().bits()
+        // Safety: Only used for reading current timer value
+        unsafe { &*pac::TIMER::PTR }.timerawl.read().bits()
     }
 
     /// Initialized a Count Down instance without starting it.
@@ -270,7 +267,8 @@ macro_rules! impl_alarm {
         impl $name {
             fn schedule_internal(&mut self, timestamp: Instant) -> Result<(), ScheduleAlarmError> {
                 let timestamp_low = (timestamp.ticks() & 0xFFFF_FFFF) as u32;
-                let timer = self.0.timer();
+                // Safety: Only used to access bits belonging exclusively to this alarm
+                let timer = unsafe { &*pac::TIMER::PTR };
 
                 // This lock is for time-criticality
                 cortex_m::interrupt::free(|_| {
