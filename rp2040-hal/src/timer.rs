@@ -124,39 +124,53 @@ impl Delay {
             cortex_m::asm::nop();
         }
     }
+}
+macro_rules! impl_delay {
+    (u32: $($t:ty),*) => {
+        $(impl embedded_hal::blocking::delay::DelayUs<$t> for Delay {
+            fn delay_us(&mut self, us: $t) {
+                self.delay_from_u32(u32::from(us))
+            }
+        })*
+        $(impl embedded_hal::blocking::delay::DelayMs<$t> for Delay {
+            fn delay_ms(&mut self, ms: $t) {
+                for _ in 0..ms {
+                    self.delay_from_u32(1_000)
+                }
+            }
+        })*
+    };
+}
 
-    fn delay_from_u64(&self, us: u64) {
-        // safety: only reads are made
-        let timer = unsafe { &*pac::TIMER::PTR };
-        let start = get_counter(timer).ticks();
-        while get_counter(timer).ticks().wrapping_sub(start) <= us {
-            // use nop instead of wfe because there is no event configured to wake us up.
-            cortex_m::asm::nop();
-        }
-    }
-}
-impl embedded_hal::blocking::delay::DelayUs<u32> for Delay {
-    fn delay_us(&mut self, us: u32) {
-        self.delay_from_u32(us)
-    }
-}
+impl_delay!(u32: u8, u16, u32);
 impl embedded_hal::blocking::delay::DelayUs<u64> for Delay {
     fn delay_us(&mut self, us: u64) {
-        self.delay_from_u64(us)
-    }
-}
-impl embedded_hal::blocking::delay::DelayMs<u32> for Delay {
-    fn delay_ms(&mut self, ms: u32) {
-        for _ in 0..ms {
-            self.delay_from_u32(1000);
-        }
+        use embedded_hal::blocking::delay::DelayMs;
+
+        let (ms, us) = (us / 1_000, us % 1000);
+        // us is garanteed to be < 1000 so it fits a u32 without truncation
+        self.delay_from_u32(us as u32);
+        self.delay_ms(ms);
     }
 }
 impl embedded_hal::blocking::delay::DelayMs<u64> for Delay {
     fn delay_ms(&mut self, ms: u64) {
         for _ in 0..ms {
-            self.delay_from_u32(1000);
+            self.delay_from_u32(1_000);
         }
+    }
+}
+// Workaround for ambiguous typeless integer literals
+impl embedded_hal::blocking::delay::DelayUs<i32> for Delay {
+    fn delay_us(&mut self, us: i32) {
+        assert!(us >= 0);
+        self.delay_us(us as u32)
+    }
+}
+impl embedded_hal::blocking::delay::DelayMs<i32> for Delay {
+    fn delay_ms(&mut self, ms: i32) {
+        assert!(ms >= 0);
+        self.delay_ms(ms as u32)
     }
 }
 
