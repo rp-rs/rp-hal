@@ -63,9 +63,9 @@ pub trait PinId: pin_sealed::PinIdOps {
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct DynPinId {
-    #[allow(missing_docs)]
+    /// Pin bank.
     pub bank: DynBankId,
-    #[allow(missing_docs)]
+    /// Pin number.
     pub num: u8,
 }
 impl PinId for DynPinId {

@@ -165,11 +165,14 @@ where
 ///
 /// assert_is_valid_uart0(pins);
 /// ```
-#[allow(missing_docs)]
 pub struct Pins<Tx, Rx, Cts, Rts> {
+    #[allow(missing_docs)]
     pub tx: Tx,
+    #[allow(missing_docs)]
     pub rx: Rx,
+    #[allow(missing_docs)]
     pub cts: Cts,
+    #[allow(missing_docs)]
     pub rts: Rts,
 }
 

@@ -15,11 +15,11 @@ pub trait PullType: pull_sealed::PullType {}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// Value-level `enum` for pull resistor types.
 pub enum DynPullType {
-    #[allow(missing_docs)]
+    /// No pull enabled.
     None,
-    #[allow(missing_docs)]
+    /// Enable pull up.
     Up,
-    #[allow(missing_docs)]
+    /// Enable pull down.
     Down,
     /// This enables bus-keep mode.
     ///

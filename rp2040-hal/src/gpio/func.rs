@@ -17,21 +17,40 @@ pub(crate) mod func_sealed {
 /// Type-level `enum` for pin function.
 pub trait Function: func_sealed::Function {}
 
-/// Value-level `enum` for pin function.
-#[allow(missing_docs)]
+/// Describes the function currently assigned to a pin with a dynamic type.
+///
+/// A 'pin' on the RP2040 can be connected to different parts of the chip
+/// internally - for example, it could be configured as a GPIO pin and connected
+/// to the SIO block, or it could be configured as a UART pin and connected to
+/// the UART block.
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DynFunction {
+    /// The 'XIP' (or Execute-in-place) function, which means talking to the QSPI Flash.
     Xip,
+    /// The 'SPI' (or serial-peripheral-interface) function.
     Spi,
+    /// The 'UART' (or serial-port) function.
     Uart,
+    /// The 'I2C' (or inter-integrated circuit) function. This is sometimes also called TWI (for
+    /// two-wire-interface).
     I2c,
+    /// The 'PWM' (or pulse-width-modulation) function.
     Pwm,
+    /// The 'SIO' (or single-cycle input-output) function. This is the function to use for
+    /// 'manually' controlling the GPIO.
     Sio(DynSioConfig),
+    /// The 'PIO' (or programmable-input-output) function for the PIO0 peripheral block.
     Pio0,
+    /// The 'PIO' (or programmable-input-output) function for the PIO1 peripheral block.
     Pio1,
+    /// The 'Clock' function. This can be used to input or output clock references to or from the
+    /// rp2040.
     Clock,
+    /// The 'USB' function. Only VBUS detect, VBUS enable and overcurrent detect are configurable.
+    /// Other USB io have dedicated pins.
     Usb,
+    /// The 'Null' function for unused pins.
     Null,
 }
 
