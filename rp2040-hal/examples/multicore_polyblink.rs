@@ -8,9 +8,6 @@
 #![no_std]
 #![no_main]
 
-use cortex_m::delay::Delay;
-
-use hal::clocks::Clock;
 use hal::gpio::Pins;
 use hal::multicore::{Multicore, Stack};
 use hal::sio::Sio;
@@ -26,6 +23,7 @@ use rp2040_hal as hal;
 use hal::pac;
 
 // Some traits we need
+use embedded_hal::blocking::delay::DelayUs;
 use embedded_hal::digital::v2::ToggleableOutputPin;
 
 /// The linker will place this boot block at the start of our program image. We
@@ -69,13 +67,12 @@ static mut CORE1_STACK: Stack<4096> = Stack::new();
 fn main() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
-    let core = pac::CorePeripherals::take().unwrap();
 
     // Set up the watchdog driver - needed by the clock setup code
     let mut watchdog = hal::watchdog::Watchdog::new(pac.WATCHDOG);
 
     // Configure the clocks
-    let clocks = hal::clocks::init_clocks_and_plls(
+    let _clocks = hal::clocks::init_clocks_and_plls(
         XTAL_FREQ_HZ,
         pac.XOSC,
         pac.CLOCKS,
@@ -99,8 +96,8 @@ fn main() -> ! {
     let mut led2 = pins.gpio3.into_push_pull_output();
 
     // Set up the delay for the first core.
-    let sys_freq = clocks.system_clock.freq().to_Hz();
-    let mut delay = Delay::new(core.SYST, sys_freq);
+    let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS);
+    let mut delay = timer.delay();
 
     // Start up the second core to blink the second LED
     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
@@ -108,12 +105,8 @@ fn main() -> ! {
     let core1 = &mut cores[1];
     core1
         .spawn(unsafe { &mut CORE1_STACK.mem }, move || {
-            // Get the second core's copy of the `CorePeripherals`, which are per-core.
-            // Unfortunately, `cortex-m` doesn't support this properly right now,
-            // so we have to use `steal`.
-            let core = unsafe { pac::CorePeripherals::steal() };
             // Set up the delay for the second core.
-            let mut delay = Delay::new(core.SYST, sys_freq);
+            let mut delay = timer.delay();
             // Blink the second LED.
             loop {
                 led2.toggle().unwrap();

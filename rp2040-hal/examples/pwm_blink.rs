@@ -18,8 +18,10 @@ use panic_halt as _;
 use rp2040_hal as hal;
 
 // Some traits we need
-use embedded_hal::PwmPin;
-use rp2040_hal::clocks::Clock;
+use embedded_hal::{
+    blocking::delay::{DelayMs, DelayUs},
+    PwmPin,
+};
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
@@ -54,7 +56,6 @@ const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 fn main() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
-    let core = pac::CorePeripherals::take().unwrap();
 
     // Set up the watchdog driver - needed by the clock setup code
     let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
@@ -62,7 +63,7 @@ fn main() -> ! {
     // Configure the clocks
     //
     // The default is to generate a 125 MHz system clock
-    let clocks = hal::clocks::init_clocks_and_plls(
+    let _clocks = hal::clocks::init_clocks_and_plls(
         XTAL_FREQ_HZ,
         pac.XOSC,
         pac.CLOCKS,
@@ -87,7 +88,7 @@ fn main() -> ! {
 
     // The delay object lets us wait for specified amounts of time (in
     // milliseconds)
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+    let mut delay = hal::Timer::new(pac.TIMER, &mut pac.RESETS).delay();
 
     // Init PWMs
     let mut pwm_slices = hal::pwm::Slices::new(pac.PWM, &mut pac.RESETS);
