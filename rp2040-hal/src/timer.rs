@@ -124,19 +124,31 @@ impl Timer {
     }
 }
 
-impl embedded_hal::blocking::delay::DelayUs<u32> for Timer {
-    fn delay_us(&mut self, us: u32) {
-        (*self).delay_us(us.into())
+macro_rules! impl_delay_traits {
+    ($($t:ty),+) => {
+        $(
+        impl embedded_hal::blocking::delay::DelayUs<$t> for Timer {
+            fn delay_us(&mut self, us: $t) {
+                #![allow(unused_comparisons)]
+                assert!(us >= 0); // Only meaningful for i32
+                (*self).delay_us(us as u64)
+            }
+        }
+        impl embedded_hal::blocking::delay::DelayMs<$t> for Timer {
+            fn delay_ms(&mut self, ms: $t) {
+                #![allow(unused_comparisons)]
+                assert!(ms >= 0); // Only meaningful for i32
+                for _ in 0..ms {
+                    self.delay_us(1000);
+                }
+            }
+        }
+        )*
     }
 }
 
-impl embedded_hal::blocking::delay::DelayMs<u32> for Timer {
-    fn delay_ms(&mut self, ms: u32) {
-        for _ in 0..ms {
-            self.delay_us(1000);
-        }
-    }
-}
+// The implementation for i32 is a workaround to allow `delay_ms(42)` construction without specifying a type.
+impl_delay_traits!(u8, u16, u32, u64, i32);
 
 #[cfg(feature = "eh1_0_alpha")]
 impl eh1_0_alpha::delay::DelayUs for Timer {
