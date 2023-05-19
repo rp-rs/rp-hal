@@ -170,7 +170,7 @@ impl_delay_traits!(u8, u16, u32, u64, i32);
 #[cfg(feature = "eh1_0_alpha")]
 impl eh1_0_alpha::delay::DelayUs for Timer {
     fn delay_us(&mut self, us: u32) {
-        (*self).delay_us(us.into())
+        (*self).delay_us(us)
     }
 }
 
