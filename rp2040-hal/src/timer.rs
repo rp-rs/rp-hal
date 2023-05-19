@@ -35,16 +35,16 @@ fn release_alarm(mask: u8) {
 }
 
 /// Timer peripheral
-///
-/// This struct logically wraps a `pac::TIMER`, but doesn't actually store it:
-/// As after initialization all accesses are read-only anyways, the `pac::TIMER` can
-/// be summoned unsafely instead. This allows timer to be cloned.
-///
-/// (Alarms do use write operations, but they are local to the respective alarm, and
-/// those are still owned singletons.)
-///
-/// As the timer peripheral needs to be started first, this struct can only be
-/// constructed by calling `Timer::new(...)`.
+//
+// This struct logically wraps a `pac::TIMER`, but doesn't actually store it:
+// As after initialization all accesses are read-only anyways, the `pac::TIMER` can
+// be summoned unsafely instead. This allows timer to be cloned.
+//
+// (Alarms do use write operations, but they are local to the respective alarm, and
+// those are still owned singletons.)
+//
+// As the timer peripheral needs to be started first, this struct can only be
+// constructed by calling `Timer::new(...)`.
 #[derive(Clone, Copy)]
 pub struct Timer {
     _private: (),
