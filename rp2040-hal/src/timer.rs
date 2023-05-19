@@ -113,13 +113,26 @@ impl Timer {
     }
 
     /// Pauses execution for at minimum `us` microseconds.
-    fn delay_us(&self, us: u64) {
-        let end = self.get_counter().ticks().saturating_add(us);
+    fn delay_us(&self, mut us: u32) {
+        let mut start = self.get_counter_low();
+        // If we knew that the loop ran at least once per timer tick,
+        // this could be simplified to:
+        // ```
+        // while timer.timelr.read().bits().wrapping_sub(start) <= us {
+        //     cortex_m::asm::nop();
+        // }
+        // ```
+        // However, due to interrupts, for `us == u32::MAX`, we could
+        // miss the moment where the loop should terminate if the loop skips
+        // a timer tick.
         loop {
-            let ts = self.get_counter().ticks();
-            if ts >= end {
-                return;
+            let now = self.get_counter_low();
+            let waited = now.wrapping_sub(start);
+            if waited >= us {
+                break;
             }
+            start = now;
+            us -= waited;
         }
     }
 }
@@ -128,10 +141,14 @@ macro_rules! impl_delay_traits {
     ($($t:ty),+) => {
         $(
         impl embedded_hal::blocking::delay::DelayUs<$t> for Timer {
-            fn delay_us(&mut self, us: $t) {
+            fn delay_us(&mut self, mut us: $t) {
                 #![allow(unused_comparisons)]
                 assert!(us >= 0); // Only meaningful for i32
-                (*self).delay_us(us as u64)
+                while us > u32::MAX as $t {
+                    (*self).delay_us(u32::MAX);
+                    us -= u32::MAX as $t;
+                }
+                (*self).delay_us(us as u32)
             }
         }
         impl embedded_hal::blocking::delay::DelayMs<$t> for Timer {
