@@ -144,7 +144,7 @@ macro_rules! impl_delay_traits {
             fn delay_us(&mut self, mut us: $t) {
                 #![allow(unused_comparisons)]
                 assert!(us >= 0); // Only meaningful for i32
-                while us > u32::MAX as $t {
+                while <$t>::MAX as u64 > u32::MAX as u64 && us > u32::MAX as $t {
                     (*self).delay_us(u32::MAX);
                     us -= u32::MAX as $t;
                 }
