@@ -141,13 +141,9 @@ macro_rules! impl_delay_traits {
     ($($t:ty),+) => {
         $(
         impl embedded_hal::blocking::delay::DelayUs<$t> for Timer {
-            fn delay_us(&mut self, mut us: $t) {
+            fn delay_us(&mut self, us: $t) {
                 #![allow(unused_comparisons)]
                 assert!(us >= 0); // Only meaningful for i32
-                while <$t>::MAX as u64 > u32::MAX as u64 && us > u32::MAX as $t {
-                    self.delay_us_internal(u32::MAX);
-                    us -= u32::MAX as $t;
-                }
                 self.delay_us_internal(us as u32)
             }
         }
@@ -165,7 +161,7 @@ macro_rules! impl_delay_traits {
 }
 
 // The implementation for i32 is a workaround to allow `delay_ms(42)` construction without specifying a type.
-impl_delay_traits!(u8, u16, u32, u64, i32);
+impl_delay_traits!(u8, u16, u32, i32);
 
 #[cfg(feature = "eh1_0_alpha")]
 impl eh1_0_alpha::delay::DelayUs for Timer {
