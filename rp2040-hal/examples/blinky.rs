@@ -21,8 +21,8 @@ use rp2040_hal as hal;
 use hal::pac;
 
 // Some traits we need
+use embedded_hal::blocking::delay::DelayMs;
 use embedded_hal::digital::v2::OutputPin;
-use rp2040_hal::clocks::Clock;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -47,13 +47,12 @@ const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 fn main() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
-    let core = pac::CorePeripherals::take().unwrap();
 
     // Set up the watchdog driver - needed by the clock setup code
     let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
 
     // Configure the clocks
-    let clocks = hal::clocks::init_clocks_and_plls(
+    let _clocks = hal::clocks::init_clocks_and_plls(
         XTAL_FREQ_HZ,
         pac.XOSC,
         pac.CLOCKS,
@@ -65,7 +64,7 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+    let mut timer = rp2040_hal::Timer::new(pac.TIMER, &mut pac.RESETS);
 
     // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);
@@ -82,10 +81,9 @@ fn main() -> ! {
     let mut led_pin = pins.gpio25.into_push_pull_output();
     loop {
         led_pin.set_high().unwrap();
-        // TODO: Replace with proper 1s delays once we have clocks working
-        delay.delay_ms(500);
+        timer.delay_ms(500);
         led_pin.set_low().unwrap();
-        delay.delay_ms(500);
+        timer.delay_ms(500);
     }
 }
 
