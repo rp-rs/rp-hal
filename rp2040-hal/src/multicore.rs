@@ -149,6 +149,11 @@ impl<'p> Core<'p> {
     /// stable.
     ///
     /// Core 1 will be reset from core 0 in order to spawn another task.
+    ///
+    /// Resetting a single core of a running program can have undesired consequences. Deadlocks are
+    /// likely if the core being reset happens to be inside a critical section.
+    /// It may even break safety assumptions of some unsafe code. So, be careful when calling this method
+    /// more than once.
     pub fn spawn<F>(&mut self, stack: &'static mut [usize], entry: F) -> Result<(), Error>
     where
         F: FnOnce() + Send + 'static,
