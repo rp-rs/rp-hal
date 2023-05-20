@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- With rust nightly and beta 1.70.0, the multi-core spawn code could get miscompiled
+  due to undefined behavior in our code. This was first found in embassy (which
+  uses similar code) and reported to us by @Dirbaio. - #612 @ithinuel
+- Fixed embedded-hal 1.0-alpha implementation of SPI - #611 @tomgilligan
+- Fixed the on-target tests - #601 @jannic
+
 ### Changed
 
 - multicore: remove the requirement on the closure to never return - #594 @ithinuel
@@ -15,6 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     default. So it should usually be safe. However, if you are overclocking
     the RP2040, you might need to lower the flash speed accordingly.
 - timer: Make sure clocks are initialized before creating a timer - #618 @jannic
+- Doc: Several improvements have been made to documentation: #607 #597
+- DMA: Check for valid word sizes at compile time - #600 @jannic
+
+### Added
+
+- timer::Timer implements the embedded-hal delay traits and Copy/Clone - #614 @ithinuel @jannic
+- DMA: Allow access to the DMA engine's byteswapping feature - #603 @Gip-Gip
 
 ## [0.8.1] - 2023-05-05
 
