@@ -43,6 +43,12 @@ impl From<embedded_hal::spi::Mode> for Mode {
     }
 }
 
+impl From<&embedded_hal::spi::Mode> for Mode {
+    fn from(f: &embedded_hal::spi::Mode) -> Self {
+        Mode(*f)
+    }
+}
+
 #[cfg(feature = "eh1_0_alpha")]
 impl From<eh1_0_alpha::spi::Mode> for Mode {
     fn from(f: eh1_0_alpha::spi::Mode) -> Self {
