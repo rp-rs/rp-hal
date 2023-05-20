@@ -12,7 +12,7 @@
 //!
 //! static mut CORE1_STACK: Stack<4096> = Stack::new();
 //!
-//! fn core1_task() -> ! {
+//! fn core1_task() {
 //!     loop {}
 //! }
 //!
@@ -144,15 +144,25 @@ impl<'p> Core<'p> {
     }
 
     /// Spawn a function on this core.
+    ///
+    /// The closure should not return. It is currently defined as `-> ()` because `-> !` is not yet
+    /// stable.
+    ///
+    /// Core 1 will be reset from core 0 in order to spawn another task.
+    ///
+    /// Resetting a single core of a running program can have undesired consequences. Deadlocks are
+    /// likely if the core being reset happens to be inside a critical section.
+    /// It may even break safety assumptions of some unsafe code. So, be careful when calling this method
+    /// more than once.
     pub fn spawn<F>(&mut self, stack: &'static mut [usize], entry: F) -> Result<(), Error>
     where
-        F: FnOnce() -> bad::Never + Send + 'static,
+        F: FnOnce() + Send + 'static,
     {
         if let Some((psm, ppb, fifo)) = self.inner.as_mut() {
             // The first two ignored `u64` parameters are there to take up all of the registers,
             // which means that the rest of the arguments are taken from the stack,
             // where we're able to put them from core 0.
-            extern "C" fn core1_startup<F: FnOnce() -> bad::Never>(
+            extern "C" fn core1_startup<F: FnOnce()>(
                 _: u64,
                 _: u64,
                 entry: *mut ManuallyDrop<F>,
@@ -173,10 +183,17 @@ impl<'p> Core<'p> {
                 let mut sio = Sio::new(peripherals.SIO);
                 sio.fifo.write_blocking(1);
 
-                entry()
+                entry();
+                loop {
+                    cortex_m::asm::wfe()
+                }
             }
 
             // Reset the core
+            // TODO: resetting without prior check that the core is actually stowed is not great.
+            // But there does not seem to be any obvious way to check that. A marker flag could be
+            // set from this method and cleared for the wrapper after `entry` returned. But doing
+            // so wouldn't be zero cost.
             psm.frce_off.modify(|_, w| w.proc1().set_bit());
             while !psm.frce_off.read().proc1().bit_is_set() {
                 cortex_m::asm::nop();
@@ -265,19 +282,4 @@ impl<'p> Core<'p> {
             Err(Error::InvalidCore)
         }
     }
-}
-
-// https://github.com/nvzqz/bad-rs/blob/master/src/never.rs
-mod bad {
-    pub(crate) type Never = <F as HasOutput>::Output;
-
-    pub trait HasOutput {
-        type Output;
-    }
-
-    impl<O> HasOutput for fn() -> O {
-        type Output = O;
-    }
-
-    type F = fn() -> !;
 }
