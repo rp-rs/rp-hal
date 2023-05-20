@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - This doubles the flash access speed to the value used by the C SDK by
     default. So it should usually be safe. However, if you are overclocking
     the RP2040, you might need to lower the flash speed accordingly.
+- timer: Make sure clocks are initialized before creating a timer - #618 @jannic
 
 ## [0.8.1] - 2023-05-05
 

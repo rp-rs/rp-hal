@@ -11,6 +11,7 @@
 use fugit::{MicrosDurationU32, MicrosDurationU64, TimerInstantU64};
 
 use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
+use crate::clocks::ClocksManager;
 use crate::pac::{RESETS, TIMER};
 use crate::resets::SubsystemReset;
 use crate::typelevel::Sealed;
@@ -56,7 +57,7 @@ impl Timer {
     /// Make sure that clocks and watchdog are configured, so
     /// that timer ticks happen at a frequency of 1MHz.
     /// Otherwise, `Timer` won't work as expected.
-    pub fn new(timer: TIMER, resets: &mut RESETS) -> Self {
+    pub fn new(timer: TIMER, resets: &mut RESETS, _clocks: &ClocksManager) -> Self {
         timer.reset_bring_down(resets);
         timer.reset_bring_up(resets);
         Self { _private: () }
