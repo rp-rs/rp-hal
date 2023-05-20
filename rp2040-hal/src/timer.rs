@@ -113,7 +113,7 @@ impl Timer {
     }
 
     /// Pauses execution for at minimum `us` microseconds.
-    fn delay_us(&self, mut us: u32) {
+    fn delay_us_internal(&self, mut us: u32) {
         let mut start = self.get_counter_low();
         // If we knew that the loop ran at least once per timer tick,
         // this could be simplified to:
@@ -145,10 +145,10 @@ macro_rules! impl_delay_traits {
                 #![allow(unused_comparisons)]
                 assert!(us >= 0); // Only meaningful for i32
                 while <$t>::MAX as u64 > u32::MAX as u64 && us > u32::MAX as $t {
-                    (*self).delay_us(u32::MAX);
+                    self.delay_us_internal(u32::MAX);
                     us -= u32::MAX as $t;
                 }
-                (*self).delay_us(us as u32)
+                self.delay_us_internal(us as u32)
             }
         }
         impl embedded_hal::blocking::delay::DelayMs<$t> for Timer {
@@ -156,7 +156,7 @@ macro_rules! impl_delay_traits {
                 #![allow(unused_comparisons)]
                 assert!(ms >= 0); // Only meaningful for i32
                 for _ in 0..ms {
-                    self.delay_us(1000);
+                    self.delay_us_internal(1000);
                 }
             }
         }
@@ -170,7 +170,7 @@ impl_delay_traits!(u8, u16, u32, u64, i32);
 #[cfg(feature = "eh1_0_alpha")]
 impl eh1_0_alpha::delay::DelayUs for Timer {
     fn delay_us(&mut self, us: u32) {
-        (*self).delay_us(us)
+        self.delay_us_internal(us)
     }
 }
 
