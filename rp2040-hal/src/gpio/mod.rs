@@ -155,7 +155,7 @@ pub enum OutputOverride {
     AlwaysHigh = 3,
 }
 
-/// Represents a pin, with a given ID (e.g. Xx), a given function (e.g. Uart) and a given pull type
+/// Represents a pin, with a given ID (e.g. Gpio3), a given function (e.g. FunctionUart) and a given pull type
 /// (e.g. pull-down).
 pub struct Pin<I: PinId, F: func::Function, P: PullType> {
     id: I,
