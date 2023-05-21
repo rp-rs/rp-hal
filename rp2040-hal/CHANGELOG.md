@@ -19,12 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - multicore: remove the requirement on the closure to never return - #594 @ithinuel
 - Updated dependency on rp2040-boot2 to version 0.3.0. - @jannic
-  - This doubles the flash access speed to the value used by the C SDK by
-    default. So it should usually be safe. However, if you are overclocking
-    the RP2040, you might need to lower the flash speed accordingly.
-- timer: Make sure clocks are initialized before creating a timer - #618 @jannic
+  This doubles the flash access speed to the value used by the C SDK by
+  default. So it should usually be safe. However, if you are overclocking
+  the RP2040, you might need to lower the flash speed accordingly.
 - Doc: Several improvements have been made to documentation: #607 #597
 - DMA: Check for valid word sizes at compile time - #600 @jannic
+- Use an enum for core identification. - @ithinuel
 
 ### Added
 
