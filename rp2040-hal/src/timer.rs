@@ -181,9 +181,9 @@ impl eh1_0_alpha::delay::DelayUs for Timer {
 /// let mut pac = rp2040_hal::pac::Peripherals::take().unwrap();
 /// // Make sure to initialize clocks, otherwise the timer wouldn't work
 /// // properly. Omitted here for terseness.
-/// let _clocks: rp2040_hal::clocks::ClocksManager = todo!();
+/// let clocks: rp2040_hal::clocks::ClocksManager = todo!();
 /// // Configure the Timer peripheral in count-down mode
-/// let timer = rp2040_hal::Timer::new(pac.TIMER, &mut pac.RESETS);
+/// let timer = rp2040_hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
 /// let mut count_down = timer.count_down();
 /// // Create a count_down timer for 500 milliseconds
 /// count_down.start(500.millis());
