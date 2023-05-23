@@ -236,7 +236,9 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Read<u8> for Reader<D, P> {
     }
 }
 
-impl<D: UartDevice, P: ValidUartPinout<D>> ReadTarget for Reader<D, P> {
+// Safety: This only reads from the RX fifo, so it doesn't
+// interact with rust-managed memory.
+unsafe impl<D: UartDevice, P: ValidUartPinout<D>> ReadTarget for Reader<D, P> {
     type ReceivedWord = u8;
 
     fn rx_treq() -> Option<u8> {

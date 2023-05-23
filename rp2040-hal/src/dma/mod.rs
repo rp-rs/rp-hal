@@ -149,7 +149,8 @@ impl<CH: ChannelIndex> ChannelRegs for Channel<CH> {
 }
 
 /// Trait which is implemented by anything that can be read via DMA.
-pub trait ReadTarget {
+
+pub unsafe trait ReadTarget {
     /// Type which is transferred in a single DMA transfer.
     type ReceivedWord;
 
@@ -179,7 +180,8 @@ pub trait ReadTarget {
 /// two DMA channels. In the case of peripherals, the function can always return the same values.
 pub trait EndlessReadTarget: ReadTarget {}
 
-impl<B: ReadBuffer> ReadTarget for B {
+/// Safety: ReadBuffer and ReadTarget have the same safety requirements.
+unsafe impl<B: ReadBuffer> ReadTarget for B {
     type ReceivedWord = <B as ReadBuffer>::Word;
 
     fn rx_treq() -> Option<u8> {
@@ -197,7 +199,7 @@ impl<B: ReadBuffer> ReadTarget for B {
 }
 
 /// Trait which is implemented by anything that can be written via DMA.
-pub trait WriteTarget {
+pub unsafe trait WriteTarget {
     /// Type which is transferred in a single DMA transfer.
     type TransmittedWord;
 
@@ -221,7 +223,8 @@ pub trait WriteTarget {
 /// two DMA channels. In the case of peripherals, the function can always return the same values.
 pub trait EndlessWriteTarget: WriteTarget {}
 
-impl<B: WriteBuffer> WriteTarget for B {
+/// Safety: WriteBuffer and WriteTarget have the same safety requirements.
+unsafe impl<B: WriteBuffer> WriteTarget for B {
     type TransmittedWord = <B as WriteBuffer>::Word;
 
     fn tx_treq() -> Option<u8> {

@@ -1394,7 +1394,9 @@ impl<SM: ValidStateMachine> Rx<SM> {
     }
 }
 
-impl<SM: ValidStateMachine> ReadTarget for Rx<SM> {
+// Safety: This only reads from the state machine fifo, so it doesn't
+// interact with rust-managed memory.
+unsafe impl<SM: ValidStateMachine> ReadTarget for Rx<SM> {
     type ReceivedWord = u32;
 
     fn rx_treq() -> Option<u8> {
@@ -1586,7 +1588,9 @@ impl<SM: ValidStateMachine> Tx<SM> {
     }
 }
 
-impl<SM: ValidStateMachine> WriteTarget for Tx<SM> {
+// Safety: This only writes to the state machine fifo, so it doesn't
+// interact with rust-managed memory.
+unsafe impl<SM: ValidStateMachine> WriteTarget for Tx<SM> {
     type TransmittedWord = u32;
 
     fn tx_treq() -> Option<u8> {

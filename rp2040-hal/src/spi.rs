@@ -449,7 +449,9 @@ macro_rules! impl_write {
             }
         }
 
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> ReadTarget for Spi<Enabled, D, P, $nr> {
+        // Safety: This only reads from the RX fifo, so it doesn't
+        // interact with rust-managed memory.
+        unsafe impl<D: SpiDevice, P: ValidSpiPinout<D>> ReadTarget for Spi<Enabled, D, P, $nr> {
             type ReceivedWord = $type;
 
             fn rx_treq() -> Option<u8> {
@@ -470,7 +472,9 @@ macro_rules! impl_write {
 
         impl<D: SpiDevice, P: ValidSpiPinout<D>> EndlessReadTarget for Spi<Enabled, D, P, $nr> {}
 
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> WriteTarget for Spi<Enabled, D, P, $nr> {
+        // Safety: This only writes to the TX fifo, so it doesn't
+        // interact with rust-managed memory.
+        unsafe impl<D: SpiDevice, P: ValidSpiPinout<D>> WriteTarget for Spi<Enabled, D, P, $nr> {
             type TransmittedWord = $type;
 
             fn tx_treq() -> Option<u8> {
