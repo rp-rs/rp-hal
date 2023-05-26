@@ -14,6 +14,94 @@ use eh1_0_alpha::i2c as eh1;
 
 use super::{i2c_reserved_addr, Controller, Error, SclPin, SdaPin, I2C};
 
+impl<T: SubsystemReset + Deref<Target = Block>> I2C<T, (), Controller> {
+    /// Configures the I2C peripheral to work in controller mode
+    pub fn new_controller_without_pins(
+        i2c: T,
+        freq: HertzU32,
+        resets: &mut RESETS,
+        system_clock: HertzU32,
+    ) -> Self {
+        let freq = freq.to_Hz();
+        assert!(freq <= 1_000_000);
+        assert!(freq > 0);
+
+        i2c.reset_bring_down(resets);
+        i2c.reset_bring_up(resets);
+
+        i2c.ic_enable.write(|w| w.enable().disabled());
+
+        // select controller mode & speed
+        i2c.ic_con.modify(|_, w| {
+            w.speed().fast();
+            w.master_mode().enabled();
+            w.ic_slave_disable().slave_disabled();
+            w.ic_restart_en().enabled();
+            w.tx_empty_ctrl().enabled()
+        });
+
+        // Clear FIFO threshold
+        i2c.ic_tx_tl.write(|w| unsafe { w.tx_tl().bits(0) });
+        i2c.ic_rx_tl.write(|w| unsafe { w.rx_tl().bits(0) });
+
+        let freq_in = system_clock.to_Hz();
+
+        // There are some subtleties to I2C timing which we are completely ignoring here
+        // See: https://github.com/raspberrypi/pico-sdk/blob/bfcbefafc5d2a210551a4d9d80b4303d4ae0adf7/src/rp2_common/hardware_i2c/i2c.c#L69
+        let period = (freq_in + freq / 2) / freq;
+        let lcnt = period * 3 / 5; // spend 3/5 (60%) of the period low
+        let hcnt = period - lcnt; // and 2/5 (40%) of the period high
+
+        // Check for out-of-range divisors:
+        assert!(hcnt <= 0xffff);
+        assert!(lcnt <= 0xffff);
+        assert!(hcnt >= 8);
+        assert!(lcnt >= 8);
+
+        // Per I2C-bus specification a device in standard or fast mode must
+        // internally provide a hold time of at least 300ns for the SDA signal to
+        // bridge the undefined region of the falling edge of SCL. A smaller hold
+        // time of 120ns is used for fast mode plus.
+        let sda_tx_hold_count = if freq < 1000000 {
+            // sda_tx_hold_count = freq_in [cycles/s] * 300ns * (1s / 1e9ns)
+            // Reduce 300/1e9 to 3/1e7 to avoid numbers that don't fit in uint.
+            // Add 1 to avoid division truncation.
+            ((freq_in * 3) / 10000000) + 1
+        } else {
+            // fast mode plus requires a clk_in > 32MHz
+            assert!(freq_in >= 32_000_000);
+
+            // sda_tx_hold_count = freq_in [cycles/s] * 120ns * (1s / 1e9ns)
+            // Reduce 120/1e9 to 3/25e6 to avoid numbers that don't fit in uint.
+            // Add 1 to avoid division truncation.
+            ((freq_in * 3) / 25000000) + 1
+        };
+        assert!(sda_tx_hold_count <= lcnt - 2);
+
+        unsafe {
+            i2c.ic_fs_scl_hcnt
+                .write(|w| w.ic_fs_scl_hcnt().bits(hcnt as u16));
+            i2c.ic_fs_scl_lcnt
+                .write(|w| w.ic_fs_scl_lcnt().bits(lcnt as u16));
+            i2c.ic_fs_spklen.write(|w| {
+                w.ic_fs_spklen()
+                    .bits(if lcnt < 16 { 1 } else { (lcnt / 16) as u8 })
+            });
+            i2c.ic_sda_hold
+                .modify(|_r, w| w.ic_sda_tx_hold().bits(sda_tx_hold_count as u16));
+        }
+
+        // Enable I2C block
+        i2c.ic_enable.write(|w| w.enable().enabled());
+
+        Self {
+            i2c,
+            pins: (),
+            mode: PhantomData,
+        }
+    }
+}
+
 impl<T: SubsystemReset + Deref<Target = Block>, Sda: PinId + BankPinId, Scl: PinId + BankPinId>
     I2C<T, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>), Controller>
 {
