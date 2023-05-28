@@ -134,7 +134,7 @@ fn main() -> ! {
     pwm.enable();
 
     // Connect to GPI O1 as the input to channel B on PWM0
-    let input_pin = pins.gpio1.into_typestate();
+    let input_pin = pins.gpio1.reconfigure();
     let channel = &mut pwm.channel_b;
     channel.enable();
 
@@ -142,9 +142,9 @@ fn main() -> ! {
     input_pin.set_interrupt_enabled(gpio::Interrupt::EdgeLow, true);
 
     // Configure GPIO 25 as an output to drive our LED.
-    // we can use into_typestate() instead of into_pull_up_input()
+    // we can use reconfigure() instead of into_pull_up_input()
     // since the variable we're pushing it into has that type
-    let led = pins.gpio25.into_typestate();
+    let led = pins.gpio25.reconfigure();
 
     // Give away our pins by moving them into the `GLOBAL_PINS` variable.
     // We won't need to access them in the main thread again

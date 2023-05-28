@@ -119,12 +119,12 @@ fn main() -> ! {
     );
 
     // Configure GPIO 25 as an output to drive our LED.
-    // we can use into_typestate() instead of into_pull_up_input()
+    // we can use reconfigure() instead of into_pull_up_input()
     // since the variable we're pushing it into has that type
-    let led = pins.gpio25.into_typestate();
+    let led = pins.gpio25.reconfigure();
 
     // Set up the GPIO pin that will be our input
-    let in_pin = pins.gpio26.into_typestate();
+    let in_pin = pins.gpio26.reconfigure();
 
     // Trigger on the 'falling edge' of the input pin.
     // This will happen as the button is being pressed
