@@ -95,9 +95,9 @@ mod tests {
         );
 
         // These are implicitly used by the spi driver if they are in the correct mode
-        let spi_sclk = pins.gpio6.into();
-        let spi_mosi = pins.gpio7.into();
-        let spi_miso = pins.gpio4.into();
+        let spi_sclk = pins.gpio6.reconfigure();
+        let spi_mosi = pins.gpio7.reconfigure();
+        let spi_miso = pins.gpio4.reconfigure();
         let spi = hal::spi::Spi::new(pac.SPI0, (spi_mosi, spi_miso, spi_sclk));
 
         // Exchange the uninitialised SPI driver for an initialised one
