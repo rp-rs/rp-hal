@@ -38,7 +38,7 @@ defmt-rtt = "0.4"
 defmt-test = "0.3"
 panic-probe = { version = "0.3", features = ["print-defmt"] }
 
-rp2040-hal = { path = "../rp2040-hal", version = "0.9", features = [
+rp2040-hal = { path = "../rp2040-hal", features = [
     "defmt",
     "critical-section-impl",
 ] }
