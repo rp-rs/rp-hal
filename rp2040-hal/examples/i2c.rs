@@ -75,9 +75,9 @@ fn main() -> ! {
     );
 
     // Configure two pins as being I²C, not GPIO
-    let sda_pin = pins.gpio18.into_mode::<hal::gpio::FunctionI2C>();
-    let scl_pin = pins.gpio19.into_mode::<hal::gpio::FunctionI2C>();
-    // let not_an_scl_pin = pins.gpio20.into_mode::<hal::gpio::FunctionI2C>();
+    let sda_pin = pins.gpio18.into_function::<hal::gpio::FunctionI2C>();
+    let scl_pin = pins.gpio19.into_function::<hal::gpio::FunctionI2C>();
+    // let not_an_scl_pin = pins.gpio20.into_function::<hal::gpio::FunctionI2C>();
 
     // Create the I²C drive, using the two pre-configured pins. This will fail
     // at compile time if the pins are in the wrong mode, or if this I²C

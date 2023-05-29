@@ -1,10 +1,6 @@
 use core::{marker::PhantomData, ops::Deref};
 
-use crate::{
-    gpio::pin::bank0::BankPinId,
-    gpio::pin::{FunctionI2C, Pin, PinId},
-    resets::SubsystemReset,
-};
+use crate::resets::SubsystemReset;
 use fugit::HertzU32;
 use hal::blocking::i2c::{Read, Write, WriteRead};
 use pac::{i2c0::RegisterBlock as Block, RESETS};
@@ -12,24 +8,23 @@ use pac::{i2c0::RegisterBlock as Block, RESETS};
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::i2c as eh1;
 
-use super::{i2c_reserved_addr, Controller, Error, SclPin, SdaPin, I2C};
+use super::{i2c_reserved_addr, Controller, Error, ValidPinScl, ValidPinSda, I2C};
 
-impl<T: SubsystemReset + Deref<Target = Block>, Sda: PinId + BankPinId, Scl: PinId + BankPinId>
-    I2C<T, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>), Controller>
+impl<T, Sda, Scl> I2C<T, (Sda, Scl), Controller>
+where
+    T: SubsystemReset + Deref<Target = Block>,
+    Sda: ValidPinSda<T>,
+    Scl: ValidPinScl<T>,
 {
     /// Configures the I2C peripheral to work in controller mode
     pub fn new_controller(
         i2c: T,
-        sda_pin: Pin<Sda, FunctionI2C>,
-        scl_pin: Pin<Scl, FunctionI2C>,
+        sda_pin: Sda,
+        scl_pin: Scl,
         freq: HertzU32,
         resets: &mut RESETS,
         system_clock: HertzU32,
-    ) -> Self
-    where
-        Sda: SdaPin<T>,
-        Scl: SclPin<T>,
-    {
+    ) -> Self {
         let freq = freq.to_Hz();
         assert!(freq <= 1_000_000);
         assert!(freq > 0);

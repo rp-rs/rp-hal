@@ -1,180 +1,69 @@
-use crate::gpio::{bank0, FunctionUart, Pin};
+use core::marker::PhantomData;
+
+use crate::gpio::{bank0::*, pin::pin_sealed::TypeLevelPinId, AnyPin, FunctionUart};
 use crate::pac::{UART0, UART1};
-use crate::typelevel::Sealed;
+use crate::typelevel::{OptionT, OptionTNone, OptionTSome, Sealed};
 
 use super::UartDevice;
 
-/// Declares a valid UART pinout.
-pub trait ValidUartPinout<UART: UartDevice> {
-    /// Indicates TX should be enabled for this pinout
-    const TX_ENABLED: bool;
-    /// Indicates RX should be enabled for this pinout
-    const RX_ENABLED: bool;
-    /// Indicates CTS should be enabled for this pinout
-    const CTS_ENABLED: bool;
-    /// Indicates RTS should be enabled for this pinout
-    const RTS_ENABLED: bool;
-}
+// All type level checked pins are inherently valid.
+macro_rules! pin_validation {
+    ($p:ident) => {
+        paste::paste!{
+            #[doc = "Indicates a valid " $p " pin for UART0 or UART1"]
+            pub trait [<ValidPinId $p>]<UART: UartDevice>: Sealed {}
 
-impl<UART, TX, RX, CTS, RTS> ValidUartPinout<UART> for Pins<TX, RX, CTS, RTS>
-where
-    UART: UartDevice,
-    TX: Tx<UART>,
-    RX: Rx<UART>,
-    CTS: Cts<UART>,
-    RTS: Rts<UART>,
-{
-    const TX_ENABLED: bool = TX::ENABLED;
-    const RX_ENABLED: bool = RX::ENABLED;
-    const CTS_ENABLED: bool = CTS::ENABLED;
-    const RTS_ENABLED: bool = RTS::ENABLED;
-}
+            #[doc = "Indicates a valid " $p " pin for UART0 or UART1"]
+            pub trait [<ValidPin $p>]<UART: UartDevice>: Sealed {}
 
-impl<UART, TX, RX> ValidUartPinout<UART> for (TX, RX)
-where
-    UART: UartDevice,
-    TX: Tx<UART>,
-    RX: Rx<UART>,
-{
-    const TX_ENABLED: bool = TX::ENABLED;
-    const RX_ENABLED: bool = RX::ENABLED;
-    const CTS_ENABLED: bool = false;
-    const RTS_ENABLED: bool = false;
-}
+            impl<T, U: UartDevice> [<ValidPin $p>]<U> for T
+            where
+                T: AnyPin<Function = FunctionUart>,
+                T::Id: [<ValidPinId $p>]<U>,
+            {
+            }
 
-impl<UART, TX, RX, CTS, RTS> ValidUartPinout<UART> for (TX, RX, CTS, RTS)
-where
-    UART: UartDevice,
-    TX: Tx<UART>,
-    RX: Rx<UART>,
-    CTS: Cts<UART>,
-    RTS: Rts<UART>,
-{
-    const TX_ENABLED: bool = TX::ENABLED;
-    const RX_ENABLED: bool = RX::ENABLED;
-    const CTS_ENABLED: bool = CTS::ENABLED;
-    const RTS_ENABLED: bool = RTS::ENABLED;
-}
+            #[doc = "A runtime validated " $p " pin for uart."]
+            pub struct [<ValidatedPin $p>]<P, Uart>(P, PhantomData<Uart>);
+            impl<P, UART: UartDevice> Sealed for [<ValidatedPin $p>]<P, UART> {}
+            impl<P, UART: UartDevice> [<ValidPin $p>]<UART> for [<ValidatedPin $p>]<P, UART> {}
+            impl<P, U> [<ValidatedPin $p>]<P, U>
+            where
+                P: AnyPin<Function = FunctionUart>,
+                U: UartDevice,
+            {
+                /// Validate a pin's function on a uart peripheral.
+                ///
+                #[doc = "Will err if the pin cannot be used as a " $p " pin for that Uart."]
+                pub fn validate(p: P, _u: &U) -> Result<Self, P> {
+                    if [<$p:upper>].contains(&(p.borrow().id().num, U::ID)) &&
+                        p.borrow().id().bank == crate::gpio::DynBankId::Bank0 {
+                        Ok(Self(p, PhantomData))
+                    } else {
+                        Err(p)
+                    }
+                }
+            }
 
-/// Customizable Uart pinout, allowing you to set the pins individually.
-///
-/// The following pins are valid UART pins:
-///
-/// |UART |     TX      |     RX      |    CTS      |    RTS      |
-/// |-----|-------------|-------------|-------------|-------------|
-/// |UART0|0, 12, 16, 28|1, 13, 17, 29|2, 14, 18    |3, 15, 19    |
-/// |UART1|4, 8, 20, 24 |5, 9, 21, 25 |6, 10, 22, 26|7, 11, 23, 27|
-///
-/// Every field can be set to `()` to not configure them.
-///
-/// Note that you can also use tuples `(RX, TX)` or `(RX, TX, CTS, RTS)` instead of this type.
-///
-/// This struct can either be filled manually or with a builder pattern:
-///
-/// ```no_run
-/// # use rp2040_hal::uart::{Pins, ValidUartPinout};
-/// # use rp2040_hal::pac::UART0;
-/// # let gpio_pins: rp2040_hal::gpio::Pins = unsafe { core::mem::zeroed() };
-/// let pins = Pins::default()
-///     .tx(gpio_pins.gpio0.into_mode())
-///     .rx(gpio_pins.gpio1.into_mode());
-///
-/// fn assert_is_valid_uart0<T: ValidUartPinout<UART0>>(_: T) {}
-///
-/// assert_is_valid_uart0(pins);
-/// ```
-#[allow(missing_docs)]
-pub struct Pins<TX, RX, CTS, RTS> {
-    pub tx: TX,
-    pub rx: RX,
-    pub rts: RTS,
-    pub cts: CTS,
-}
+            #[doc = "Indicates a valid optional " $p " pin for UART0 or UART1"]
+            pub trait [<ValidOption $p>]<U>: OptionT {}
 
-impl Default for Pins<(), (), (), ()> {
-    fn default() -> Self {
-        Self {
-            tx: (),
-            rx: (),
-            rts: (),
-            cts: (),
+            impl<U: UartDevice> [<ValidOption $p>]<U> for OptionTNone {}
+            impl<U, T> [<ValidOption $p>]<U> for OptionTSome<T>
+            where
+                U: UartDevice,
+                T: [<ValidPin $p>]<U>,
+            {
+            }
         }
-    }
+    };
+    ($($p:ident),*) => {
+        $(
+            pin_validation!($p);
+         )*
+    };
 }
-
-impl<TX, RX, CTS, RTS> Pins<TX, RX, CTS, RTS> {
-    /// Set the TX pin
-    pub fn tx<NTX>(self, tx: NTX) -> Pins<NTX, RX, CTS, RTS> {
-        Pins {
-            tx,
-            rx: self.rx,
-            rts: self.rts,
-            cts: self.cts,
-        }
-    }
-    /// Set the RX pin
-    pub fn rx<NRX>(self, rx: NRX) -> Pins<TX, NRX, CTS, RTS> {
-        Pins {
-            tx: self.tx,
-            rx,
-            rts: self.rts,
-            cts: self.cts,
-        }
-    }
-    /// Set the CTS pin
-    pub fn cts<NCTS>(self, cts: NCTS) -> Pins<TX, RX, NCTS, RTS> {
-        Pins {
-            tx: self.tx,
-            rx: self.rx,
-            rts: self.rts,
-            cts,
-        }
-    }
-    /// Set the RTS pin
-    pub fn rts<NRTS>(self, rts: NRTS) -> Pins<TX, RX, CTS, NRTS> {
-        Pins {
-            tx: self.tx,
-            rx: self.rx,
-            rts,
-            cts: self.cts,
-        }
-    }
-}
-
-/// Indicates a valid TX pin for UART0 or UART1
-pub trait Tx<UART: UartDevice>: Sealed {
-    #[allow(missing_docs)]
-    const ENABLED: bool;
-}
-/// Indicates a valid RX pin for UART0 or UART1
-pub trait Rx<UART: UartDevice>: Sealed {
-    #[allow(missing_docs)]
-    const ENABLED: bool;
-}
-/// Indicates a valid CTS pin for UART0 or UART1
-pub trait Cts<UART: UartDevice>: Sealed {
-    #[allow(missing_docs)]
-    const ENABLED: bool;
-}
-/// Indicates a valid RTS pin for UART0 or UART1
-pub trait Rts<UART: UartDevice>: Sealed {
-    #[allow(missing_docs)]
-    const ENABLED: bool;
-}
-
-impl<UART: UartDevice> Tx<UART> for () {
-    const ENABLED: bool = false;
-}
-impl<UART: UartDevice> Rx<UART> for () {
-    const ENABLED: bool = false;
-}
-impl<UART: UartDevice> Cts<UART> for () {
-    const ENABLED: bool = false;
-}
-impl<UART: UartDevice> Rts<UART> for () {
-    const ENABLED: bool = false;
-}
-impl Sealed for () {}
+pin_validation!(Tx, Rx, Cts, Rts);
 
 macro_rules! impl_valid_uart {
     ($($uart:ident: {
@@ -184,27 +73,15 @@ macro_rules! impl_valid_uart {
         rts: [$($rts:ident),*],
     }),*) => {
         $(
-            $(
-                impl Tx<$uart> for Pin<bank0::$tx, FunctionUart> {
-                    const ENABLED: bool = true;
-                }
-            )*
-            $(
-                impl Rx<$uart> for Pin<bank0::$rx, FunctionUart> {
-                    const ENABLED: bool = true;
-                }
-            )*
-            $(
-                impl Cts<$uart> for Pin<bank0::$cts, FunctionUart> {
-                    const ENABLED: bool = true;
-                }
-            )*
-            $(
-                impl Rts<$uart> for Pin<bank0::$rts, FunctionUart> {
-                    const ENABLED: bool = true;
-                }
-            )*
+            $(impl ValidPinIdTx<$uart> for $tx {})*
+            $(impl ValidPinIdRx<$uart> for $rx {})*
+            $(impl ValidPinIdCts<$uart> for $cts {})*
+            $(impl ValidPinIdRts<$uart> for $rts {})*
         )*
+        const RX: &[(u8, usize)] = &[$($(($rx::ID.num, $uart::ID)),*),*];
+        const TX: &[(u8, usize)] = &[$($(($tx::ID.num, $uart::ID)),*),*];
+        const CTS: &[(u8, usize)] = &[$($(($cts::ID.num, $uart::ID)),*),*];
+        const RTS: &[(u8, usize)] = &[$($(($rts::ID.num, $uart::ID)),*),*];
     };
 }
 
@@ -222,3 +99,144 @@ impl_valid_uart!(
         rts: [Gpio7, Gpio11, Gpio23, Gpio27],
     }
 );
+
+/// Declares a valid UART pinout.
+pub trait ValidUartPinout<U: UartDevice>: Sealed {
+    #[allow(missing_docs)]
+    type Rx: ValidOptionRx<U>;
+    #[allow(missing_docs)]
+    type Tx: ValidOptionTx<U>;
+    #[allow(missing_docs)]
+    type Cts: ValidOptionCts<U>;
+    #[allow(missing_docs)]
+    type Rts: ValidOptionRts<U>;
+}
+
+impl<Uart, Tx, Rx> ValidUartPinout<Uart> for (Tx, Rx)
+where
+    Uart: UartDevice,
+    Tx: ValidPinTx<Uart>,
+    Rx: ValidPinRx<Uart>,
+{
+    type Tx = OptionTSome<Tx>;
+    type Rx = OptionTSome<Rx>;
+    type Cts = OptionTNone;
+    type Rts = OptionTNone;
+}
+
+impl<Uart, Tx, Rx, Cts, Rts> ValidUartPinout<Uart> for (Tx, Rx, Cts, Rts)
+where
+    Uart: UartDevice,
+    Tx: ValidPinTx<Uart>,
+    Rx: ValidPinRx<Uart>,
+    Cts: ValidPinCts<Uart>,
+    Rts: ValidPinRts<Uart>,
+{
+    type Rx = OptionTSome<Rx>;
+    type Tx = OptionTSome<Tx>;
+    type Cts = OptionTSome<Cts>;
+    type Rts = OptionTSome<Rts>;
+}
+
+/// Customizable Uart pinout, allowing you to set the pins individually.
+///
+/// The following pins are valid UART pins:
+///
+/// |UART |     TX      |     RX      |    CTS      |    RTS      |
+/// |-----|-------------|-------------|-------------|-------------|
+/// |UART0|0, 12, 16, 28|1, 13, 17, 29|2, 14, 18    |3, 15, 19    |
+/// |UART1|4, 8, 20, 24 |5, 9, 21, 25 |6, 10, 22, 26|7, 11, 23, 27|
+///
+/// Every field can be set to [`OptionTNone`] to not configure them.
+///
+/// Note that you can also use tuples `(RX, TX)` or `(RX, TX, CTS, RTS)` instead of this type.
+///
+/// This struct can either be filled manually or with a builder pattern:
+///
+/// ```no_run
+/// # use rp2040_hal::uart::{Pins, ValidUartPinout};
+/// # use rp2040_hal::pac::UART0;
+/// # let gpio_pins: rp2040_hal::gpio::Pins = unsafe { core::mem::zeroed() };
+/// let pins = Pins::default()
+///     .tx(gpio_pins.gpio0.into_function())
+///     .rx(gpio_pins.gpio1.into_function());
+///
+/// fn assert_is_valid_uart0<T: ValidUartPinout<UART0>>(_: T) {}
+///
+/// assert_is_valid_uart0(pins);
+/// ```
+pub struct Pins<Tx, Rx, Cts, Rts> {
+    #[allow(missing_docs)]
+    pub tx: Tx,
+    #[allow(missing_docs)]
+    pub rx: Rx,
+    #[allow(missing_docs)]
+    pub cts: Cts,
+    #[allow(missing_docs)]
+    pub rts: Rts,
+}
+
+impl Default for Pins<OptionTNone, OptionTNone, OptionTNone, OptionTNone> {
+    fn default() -> Self {
+        Self {
+            tx: OptionTNone,
+            rx: OptionTNone,
+            rts: OptionTNone,
+            cts: OptionTNone,
+        }
+    }
+}
+
+impl<Tx, Rx, Cts, Rts> Pins<Tx, Rx, Cts, Rts> {
+    /// Set the TX pin
+    pub fn tx<NewTx>(self, tx: NewTx) -> Pins<OptionTSome<NewTx>, Rx, Cts, Rts> {
+        Pins {
+            tx: OptionTSome(tx),
+            rx: self.rx,
+            rts: self.rts,
+            cts: self.cts,
+        }
+    }
+    /// Set the RX pin
+    pub fn rx<NewRx>(self, rx: NewRx) -> Pins<Tx, OptionTSome<NewRx>, Cts, Rts> {
+        Pins {
+            tx: self.tx,
+            rx: OptionTSome(rx),
+            rts: self.rts,
+            cts: self.cts,
+        }
+    }
+    /// Set the CTS pin
+    pub fn cts<NewCts>(self, cts: NewCts) -> Pins<Tx, Rx, OptionTSome<NewCts>, Rts> {
+        Pins {
+            tx: self.tx,
+            rx: self.rx,
+            rts: self.rts,
+            cts: OptionTSome(cts),
+        }
+    }
+    /// Set the RTS pin
+    pub fn rts<NewRts>(self, rts: NewRts) -> Pins<Tx, Rx, Cts, OptionTSome<NewRts>> {
+        Pins {
+            tx: self.tx,
+            rx: self.rx,
+            rts: OptionTSome(rts),
+            cts: self.cts,
+        }
+    }
+}
+
+impl<Tx, Rx, Cts, Rts> Sealed for Pins<Tx, Rx, Cts, Rts> {}
+impl<Uart, Tx, Rx, Cts, Rts> ValidUartPinout<Uart> for Pins<Tx, Rx, Cts, Rts>
+where
+    Uart: UartDevice,
+    Tx: ValidOptionTx<Uart>,
+    Rx: ValidOptionRx<Uart>,
+    Cts: ValidOptionCts<Uart>,
+    Rts: ValidOptionRts<Uart>,
+{
+    type Rx = Rx;
+    type Tx = Tx;
+    type Cts = Cts;
+    type Rts = Rts;
+}

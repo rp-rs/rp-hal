@@ -63,10 +63,10 @@ const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 /// We'll create some type aliases using `type` to help with that
 
 /// This pin will be our output - it will drive an LED if you run this on a Pico
-type LedPin = gpio::Pin<gpio::bank0::Gpio25, gpio::PushPullOutput>;
+type LedPin = gpio::Pin<gpio::bank0::Gpio25, gpio::FunctionSio<gpio::SioOutput>, gpio::PullNone>;
 
 /// This pin will be our input for a 50 Hz servo PWM signal
-type InputPwmPin = gpio::Pin<gpio::bank0::Gpio1, gpio::FunctionPwm>;
+type InputPwmPin = gpio::Pin<gpio::bank0::Gpio1, gpio::FunctionPwm, gpio::PullNone>;
 
 /// This will be our PWM Slice - it will interpret the PWM signal from the pin
 type PwmSlice = pwm::Slice<pwm::Pwm0, pwm::InputHighRunning>;
@@ -134,17 +134,17 @@ fn main() -> ! {
     pwm.enable();
 
     // Connect to GPI O1 as the input to channel B on PWM0
+    let input_pin = pins.gpio1.reconfigure();
     let channel = &mut pwm.channel_b;
-    let input_pin = channel.input_from(pins.gpio1);
     channel.enable();
 
     // Enable an interrupt whenever GPI O1 goes from high to low (the end of a pulse)
     input_pin.set_interrupt_enabled(gpio::Interrupt::EdgeLow, true);
 
     // Configure GPIO 25 as an output to drive our LED.
-    // we can use into_mode() instead of into_pull_up_input()
+    // we can use reconfigure() instead of into_pull_up_input()
     // since the variable we're pushing it into has that type
-    let led = pins.gpio25.into_mode();
+    let led = pins.gpio25.reconfigure();
 
     // Give away our pins by moving them into the `GLOBAL_PINS` variable.
     // We won't need to access them in the main thread again
@@ -193,14 +193,14 @@ fn IO_IRQ_BANK0() {
             // if the PWM signal indicates low, turn off the LED
             if pulse_width_us < LOW_US {
                 // set_low can't fail, but the embedded-hal traits always allow for it
-                // we can discard the Result by transforming it to an Option
-                led.set_low().ok();
+                // we can discard the Result
+                let _ = led.set_low();
             }
             // if the PWM signal indicates low, turn on the LED
             else if pulse_width_us > HIGH_US {
                 // set_high can't fail, but the embedded-hal traits always allow for it
-                // we can discard the Result by transforming it to an Option
-                led.set_high().ok();
+                // we can discard the Result
+                let _ = led.set_high();
             }
 
             // If the PWM signal was in the dead-zone between LOW and HIGH, don't change the LED's

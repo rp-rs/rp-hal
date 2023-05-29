@@ -1,21 +1,27 @@
 //! Programmable IO (PIO)
 //! See [Chapter 3 of the datasheet](https://rptl.io/rp2040-datasheet#section_pio) for more details.
+use core::ops::Deref;
+
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
     dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget},
+    gpio::{Function, FunctionPio0, FunctionPio1},
     resets::SubsystemReset,
     typelevel::Sealed,
 };
 use pio::{Instruction, InstructionOperands, Program, SideSet, Wrap};
-use rp2040_pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
-use rp2040_pac::{PIO0, PIO1};
+use rp2040_pac::{dma::ch::ch_ctrl_trig::TREQ_SEL_A, pio0::RegisterBlock, PIO0, PIO1};
 
 const PIO_INSTRUCTION_COUNT: usize = 32;
 
+impl crate::typelevel::Sealed for PIO0 {}
+impl crate::typelevel::Sealed for PIO1 {}
+
 /// PIO Instance
-pub trait PIOExt:
-    core::ops::Deref<Target = rp2040_pac::pio0::RegisterBlock> + SubsystemReset + Sized + Send + Sealed
-{
+pub trait PIOExt: Deref<Target = RegisterBlock> + SubsystemReset + Sized + Send + Sealed {
+    /// Associated Pin Function.
+    type PinFunction: Function;
+
     /// Create a new PIO wrapper and split the state machines into individual objects.
     #[allow(clippy::type_complexity)] // Required for symmetry with PIO::free().
     fn split(
@@ -68,11 +74,13 @@ pub trait PIOExt:
 }
 
 impl PIOExt for PIO0 {
+    type PinFunction = FunctionPio0;
     fn id() -> usize {
         0
     }
 }
 impl PIOExt for PIO1 {
+    type PinFunction = FunctionPio1;
     fn id() -> usize {
         1
     }
@@ -447,8 +455,6 @@ impl<P: PIOExt, SM: StateMachineIndex> ValidStateMachine for (P, SM) {
     }
 }
 
-impl<P: PIOExt, SM: StateMachineIndex> Sealed for (P, SM) {}
-
 /// Pin State in the PIO
 ///
 /// Note the GPIO is able to override/invert that.
@@ -474,7 +480,7 @@ pub enum PinDir {
 /// PIO State Machine (uninitialized, without a program).
 #[derive(Debug)]
 pub struct UninitStateMachine<SM: ValidStateMachine> {
-    block: *const rp2040_pac::pio0::RegisterBlock,
+    block: *const RegisterBlock,
     sm: *const rp2040_pac::pio0::SM,
     _phantom: core::marker::PhantomData<SM>,
 }
@@ -536,7 +542,7 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
         &*self.sm
     }
 
-    unsafe fn pio(&self) -> &rp2040_pac::pio0::RegisterBlock {
+    unsafe fn pio(&self) -> &RegisterBlock {
         &*self.block
     }
 }
@@ -1273,7 +1279,7 @@ impl<SM: ValidStateMachine> StateMachine<SM, Running> {
 
 /// PIO RX FIFO handle.
 pub struct Rx<SM: ValidStateMachine> {
-    block: *const rp2040_pac::pio0::RegisterBlock,
+    block: *const RegisterBlock,
     _phantom: core::marker::PhantomData<SM>,
 }
 
@@ -1411,7 +1417,7 @@ impl<SM: ValidStateMachine> EndlessReadTarget for Rx<SM> {}
 
 /// PIO TX FIFO handle.
 pub struct Tx<SM: ValidStateMachine> {
-    block: *const rp2040_pac::pio0::RegisterBlock,
+    block: *const RegisterBlock,
     _phantom: core::marker::PhantomData<SM>,
 }
 
@@ -1604,7 +1610,7 @@ impl<SM: ValidStateMachine> EndlessWriteTarget for Tx<SM> {}
 /// PIO Interrupt controller.
 #[derive(Debug)]
 pub struct Interrupt<'a, P: PIOExt, const IRQ: usize> {
-    block: *const rp2040_pac::pio0::RegisterBlock,
+    block: *const RegisterBlock,
     _phantom: core::marker::PhantomData<&'a P>,
 }
 
@@ -1770,7 +1776,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         )
     }
 
-    unsafe fn block(&self) -> &rp2040_pac::pio0::RegisterBlock {
+    unsafe fn block(&self) -> &RegisterBlock {
         &*self.block
     }
 

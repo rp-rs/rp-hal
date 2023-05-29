@@ -33,7 +33,7 @@ static mut RAM_VTABLE: VectorTable = VectorTable::new();
 
 // Give our LED and Alarm a type alias to make it easier to refer to them
 type LedAndAlarm = (
-    hal::gpio::Pin<hal::gpio::bank0::Gpio25, hal::gpio::PushPullOutput>,
+    hal::gpio::Pin<hal::gpio::bank0::Gpio25, hal::gpio::FunctionSioOutput, hal::gpio::PullDown>,
     hal::timer::Alarm0,
 );
 

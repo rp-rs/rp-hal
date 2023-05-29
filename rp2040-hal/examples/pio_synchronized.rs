@@ -38,12 +38,12 @@ fn main() -> ! {
     );
 
     // configure pins for Pio0.
-    let _: Pin<_, FunctionPio0> = pins.gpio0.into_mode();
-    let _: Pin<_, FunctionPio0> = pins.gpio1.into_mode();
+    let gp0: Pin<_, FunctionPio0, _> = pins.gpio0.into_function();
+    let gp1: Pin<_, FunctionPio0, _> = pins.gpio1.into_function();
 
     // PIN id for use inside of PIO
-    let pin0 = 0;
-    let pin1 = 1;
+    let pin0 = gp0.id().num;
+    let pin1 = gp1.id().num;
 
     // Define some simple PIO program.
     let program = pio_proc::pio_asm!(

@@ -116,8 +116,6 @@ impl<CH1: ChannelIndex, CH2: ChannelIndex> SingleChannel for (Channel<CH1>, Chan
     }
 }
 
-impl<CH1: ChannelIndex, CH2: ChannelIndex> Sealed for (Channel<CH1>, Channel<CH2>) {}
-
 pub(crate) trait ChannelConfig {
     fn config<WORD, FROM, TO>(
         &mut self,

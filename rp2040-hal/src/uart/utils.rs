@@ -17,6 +17,9 @@ pub trait State: Sealed {}
 
 /// Trait to handle both underlying devices (UART0 & UART1)
 pub trait UartDevice: Deref<Target = RegisterBlock> + SubsystemReset + Sealed + 'static {
+    /// Index of the Uart.
+    const ID: usize;
+
     /// The DREQ number for which TX DMA requests are triggered.
     fn tx_dreq() -> u8
     where
@@ -28,6 +31,8 @@ pub trait UartDevice: Deref<Target = RegisterBlock> + SubsystemReset + Sealed + 
 }
 
 impl UartDevice for UART0 {
+    const ID: usize = 0;
+
     /// The DREQ number for which TX DMA requests are triggered.
     fn tx_dreq() -> u8 {
         TREQ_SEL_A::UART0_TX.into()
@@ -39,6 +44,8 @@ impl UartDevice for UART0 {
 }
 impl Sealed for UART0 {}
 impl UartDevice for UART1 {
+    const ID: usize = 1;
+
     /// The DREQ number for which TX DMA requests are triggered.
     fn tx_dreq() -> u8 {
         TREQ_SEL_A::UART1_TX.into()

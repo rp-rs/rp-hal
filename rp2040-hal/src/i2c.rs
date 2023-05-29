@@ -12,8 +12,8 @@
 //!
 //! let mut i2c = I2C::i2c1(
 //!     peripherals.I2C1,
-//!     pins.gpio18.into_mode(), // sda
-//!     pins.gpio19.into_mode(), // scl
+//!     pins.gpio18.into_function(), // sda
+//!     pins.gpio19.into_function(), // scl
 //!     400.kHz(),
 //!     &mut peripherals.RESETS,
 //!     125_000_000.Hz(),
@@ -46,12 +46,7 @@
 use core::{marker::PhantomData, ops::Deref};
 
 use crate::{
-    gpio::pin::bank0::{
-        BankPinId, Gpio0, Gpio1, Gpio10, Gpio11, Gpio12, Gpio13, Gpio14, Gpio15, Gpio16, Gpio17,
-        Gpio18, Gpio19, Gpio2, Gpio20, Gpio21, Gpio22, Gpio23, Gpio24, Gpio25, Gpio26, Gpio27,
-        Gpio28, Gpio29, Gpio3, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8, Gpio9,
-    },
-    gpio::pin::{FunctionI2C, Pin, PinId},
+    gpio::{bank0::*, pin::pin_sealed::TypeLevelPinId, AnyPin, FunctionI2c},
     resets::SubsystemReset,
     typelevel::Sealed,
 };
@@ -62,6 +57,20 @@ use pac::{i2c0::RegisterBlock as I2CBlock, I2C0, I2C1, RESETS};
 pub mod controller;
 /// Peripheral implementation
 pub mod peripheral;
+
+/// Pac I2C device
+pub trait I2cDevice: Deref<Target = pac::i2c0::RegisterBlock> + SubsystemReset + Sealed {
+    /// Index of the peripheral.
+    const ID: usize;
+}
+impl Sealed for pac::I2C0 {}
+impl I2cDevice for pac::I2C0 {
+    const ID: usize = 0;
+}
+impl Sealed for pac::I2C1 {}
+impl I2cDevice for pac::I2C1 {
+    const ID: usize = 1;
+}
 
 /// I2C error
 #[non_exhaustive]
@@ -140,56 +149,78 @@ impl eh1_0_alpha::i2c::Error for Error {
     }
 }
 
-/// SCL pin
-pub trait SclPin<I2C>: Sealed {}
+macro_rules! pin_validation {
+    ($p:ident) => {
+        paste::paste!{
+            #[doc = "Marker for PinId that can serve as " $p]
+            pub trait [<ValidPinId $p>]<I2C>: Sealed {}
 
-/// SDA pin
-pub trait SdaPin<I2C>: Sealed {}
+            #[doc = "Valid " $p]
+            pub trait [<ValidPin $p>]<I2C>: Sealed {}
 
-impl SdaPin<I2C0> for Gpio0 {}
-impl SclPin<I2C0> for Gpio1 {}
+            impl<T, U: I2cDevice> [<ValidPin $p>]<U> for T
+            where
+                T: AnyPin<Function = FunctionI2c>,
+                T::Id: [<ValidPinId $p>]<U>,
+            {
+            }
 
-impl SdaPin<I2C1> for Gpio2 {}
-impl SclPin<I2C1> for Gpio3 {}
+            #[doc = "A runtime validated " $p " pin for I2C."]
+            pub struct [<ValidatedPin $p>]<P, I2C>(P, PhantomData<I2C>);
+            impl<P, I2C: I2cDevice> Sealed for [<ValidatedPin $p>]<P, I2C> {}
+            impl<P, I2C: I2cDevice> [<ValidPin $p>]<I2C> for [<ValidatedPin $p>]<P, I2C> {}
+            impl<P, S> [<ValidatedPin $p>]<P, S>
+            where
+                P: AnyPin<Function = FunctionI2c>,
+                S: I2cDevice,
+            {
+                /// Validate a pin's function on a i2c peripheral.
+                ///
+                #[doc = "Will err if the pin cannot be used as a " $p " pin for that I2C."]
+                pub fn validate(p: P, _u: &S) -> Result<Self, P> {
+                    if [<$p:upper>].contains(&(p.borrow().id().num, S::ID)) &&
+                        p.borrow().id().bank == crate::gpio::DynBankId::Bank0 {
+                        Ok(Self(p, PhantomData))
+                    } else {
+                        Err(p)
+                    }
+                }
+            }
+        }
+    };
+    ($($p:ident),*) => {
+        $(
+            pin_validation!($p);
+        )*
+    };
+}
 
-impl SdaPin<I2C0> for Gpio4 {}
-impl SclPin<I2C0> for Gpio5 {}
+pin_validation!(Scl, Sda);
 
-impl SdaPin<I2C1> for Gpio6 {}
-impl SclPin<I2C1> for Gpio7 {}
+macro_rules! valid_pins {
+    ($($i2c:ident: {
+        sda: [$($sda:ident),*],
+        scl: [$($scl:ident),*]
+    }),*) => {
+        $(
+            $(impl ValidPinIdSda<$i2c> for $sda {})*
+            $(impl ValidPinIdScl<$i2c> for $scl {})*
+         )*
 
-impl SdaPin<I2C0> for Gpio8 {}
-impl SclPin<I2C0> for Gpio9 {}
-
-impl SdaPin<I2C1> for Gpio10 {}
-impl SclPin<I2C1> for Gpio11 {}
-
-impl SdaPin<I2C0> for Gpio12 {}
-impl SclPin<I2C0> for Gpio13 {}
-
-impl SdaPin<I2C1> for Gpio14 {}
-impl SclPin<I2C1> for Gpio15 {}
-
-impl SdaPin<I2C0> for Gpio16 {}
-impl SclPin<I2C0> for Gpio17 {}
-
-impl SdaPin<I2C1> for Gpio18 {}
-impl SclPin<I2C1> for Gpio19 {}
-
-impl SdaPin<I2C0> for Gpio20 {}
-impl SclPin<I2C0> for Gpio21 {}
-
-impl SdaPin<I2C1> for Gpio22 {}
-impl SclPin<I2C1> for Gpio23 {}
-
-impl SdaPin<I2C0> for Gpio24 {}
-impl SclPin<I2C0> for Gpio25 {}
-
-impl SdaPin<I2C1> for Gpio26 {}
-impl SclPin<I2C1> for Gpio27 {}
-
-impl SdaPin<I2C0> for Gpio28 {}
-impl SclPin<I2C0> for Gpio29 {}
+        const SDA: &[(u8, usize)] = &[$($(($sda::ID.num, $i2c::ID)),*),*];
+        const SCL: &[(u8, usize)] = &[$($(($scl::ID.num, $i2c::ID)),*),*];
+    };
+}
+valid_pins! {
+    I2C0: {
+        sda: [Gpio0, Gpio4, Gpio8, Gpio12, Gpio16, Gpio20, Gpio24, Gpio28],
+        scl: [Gpio1, Gpio5, Gpio9, Gpio13, Gpio17, Gpio21, Gpio25, Gpio29]
+    },
+    I2C1: {
+        sda: [Gpio2, Gpio6, Gpio10, Gpio14, Gpio18, Gpio22, Gpio26],
+        scl: [Gpio3, Gpio7, Gpio11, Gpio15, Gpio19, Gpio23, Gpio27]
+    }
+}
 
 /// Operational mode of the I2C peripheral.
 pub trait I2CMode: Sealed {
@@ -223,19 +254,13 @@ fn i2c_reserved_addr(addr: u16) -> bool {
     (addr & 0x78) == 0 || (addr & 0x78) == 0x78
 }
 
-impl<Block, Sda, Scl, Mode> I2C<Block, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>), Mode>
+impl<Block, Sda, Scl, Mode> I2C<Block, (Sda, Scl), Mode>
 where
     Block: SubsystemReset + Deref<Target = I2CBlock>,
-    Sda: PinId + BankPinId,
-    Scl: PinId + BankPinId,
-    Mode: I2CMode,
 {
     /// Releases the I2C peripheral and associated pins
     #[allow(clippy::type_complexity)]
-    pub fn free(
-        self,
-        resets: &mut RESETS,
-    ) -> (Block, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)) {
+    pub fn free(self, resets: &mut RESETS) -> (Block, (Sda, Scl)) {
         self.i2c.reset_bring_down(resets);
 
         (self.i2c, self.pins)
@@ -283,20 +308,19 @@ impl<Block: Deref<Target = I2CBlock>, PINS, Mode> I2C<Block, PINS, Mode> {
 macro_rules! hal {
     ($($I2CX:ident: ($i2cX:ident),)+) => {
         $(
-            impl<Sda: PinId + BankPinId, Scl: PinId + BankPinId>
-                I2C<$I2CX, (Pin<Sda, FunctionI2C>, Pin<Scl, FunctionI2C>)> {
+            impl<Sda, Scl> I2C<$I2CX, (Sda, Scl)> {
                 /// Configures the I2C peripheral to work in master mode
                 pub fn $i2cX<F, SystemF>(
                     i2c: $I2CX,
-                    sda_pin: Pin<Sda, FunctionI2C>,
-                    scl_pin: Pin<Scl, FunctionI2C>,
+                    sda_pin: Sda,
+                    scl_pin: Scl,
                     freq: F,
                     resets: &mut RESETS,
                     system_clock: SystemF) -> Self
                 where
                     F: Into<HertzU32>,
-                    Sda: SdaPin<$I2CX>,
-                    Scl: SclPin<$I2CX>,
+                    Sda: ValidPinSda<$I2CX>,
+                    Scl: ValidPinScl<$I2CX>,
                     SystemF: Into<HertzU32>,
                 {
                     Self::new_controller(i2c, sda_pin, scl_pin, freq.into(), resets, system_clock.into())
