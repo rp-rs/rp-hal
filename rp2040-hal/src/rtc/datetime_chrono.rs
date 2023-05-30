@@ -10,6 +10,7 @@ pub type DayOfWeek = chrono::Weekday;
 ///
 /// [`DateTimeFilter`]: struct.DateTimeFilter.html
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[allow(clippy::enum_variant_names)]
 pub enum Error {
     /// The [DateTime] has an invalid year. The year must be between 0 and 4095.
     InvalidYear,
