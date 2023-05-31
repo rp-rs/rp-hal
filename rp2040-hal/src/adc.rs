@@ -41,6 +41,7 @@ use core::convert::Infallible;
 
 use hal::adc::{Channel, OneShot};
 use pac::{ADC, RESETS};
+use num_traits::float::FloatCore;
 
 use crate::{
     gpio::{
@@ -259,3 +260,210 @@ where
         Ok(self.read(chan).into())
     }
 }
+
+impl Adc {
+    pub fn free_running<'a>(&'a mut self) -> FreeRunning<'a> {
+        FreeRunning { adc: self }
+    }
+}
+
+pub struct FreeRunning<'a> {
+    adc: &'a mut Adc,
+}
+
+impl<'a> FreeRunning<'a> {
+    /// Manually set clock divider integral and fractional parts
+    pub fn clock_divider(self, int: u16, frac: u8) -> Self {
+        self.adc.device.div.modify(|_, w| unsafe { w.int().bits(int).frac().bits(frac) });
+        self
+    }
+
+    /// Select initial ADC input to sample from
+    ///
+    /// If round-robin mode is used, this will only affect the first sample.
+    pub fn initial_input<PIN: Channel<Adc, ID = u8>>(self, _pin: &mut PIN) -> Self {
+        self.adc.device.cs.modify(|_, w| unsafe { w.ainsel().bits(PIN::channel()) });
+        self
+    }
+
+    /// Set channels to use for round-robin mode
+    ///
+    /// Takes a tuple of channels, like `(&mut adc_pin, &mut temp_sense)`.
+    ///
+    /// The order in which the channels are specified has no effect.
+    /// Channels are always sampled in increasing order (Channel 0, Channel 1, ...).
+    pub fn round_robin<T: Into<RoundRobin>>(self, selected_channels: T) -> Self {
+        let RoundRobin(bits) = selected_channels.into();
+        self.adc.device.cs.modify(|_, w| unsafe { w.rrobin().bits(bits) });
+        self
+    }
+
+    /// Enable ADC fifo and start free-running conversion
+    ///
+    /// Use the returned `Fifo` instance to access the captured data.
+    ///
+    /// To stop capturing, call `fifo.stop()`.
+    pub fn start_fifo(self) -> Fifo<'a, false> {
+        self.adc.device.fcs.modify(|_, w| w.en().set_bit());
+        self.adc.device.cs.modify(|_, w| w.start_many().set_bit());
+        Fifo { adc: self.adc }
+    }
+
+    /// Enable ADC fifo with DMA and start free-running conversion
+    ///
+    /// In addition to being usable the same way as a `Fifo` returned from `start_fifo`,
+    /// the Fifo returned by this function can also be used as a source for DMA transfers.
+    pub fn start_fifo_with_dma(self, thresh: u8) -> Fifo<'a, true> {
+        self.adc.device.fcs.modify(|_, w| unsafe {
+            w.en().set_bit()
+                .dreq_en().set_bit()
+                .thresh().bits(thresh)
+        });
+        self.adc.device.cs.modify(|_, w| w.start_many().set_bit());
+        Fifo { adc: self.adc }
+    }
+}
+
+/// Represents the ADC fifo, when used in free running mode
+///
+/// The fifo can be used in one of two ways:
+/// 1. Directly, by polling `len()` and calling `read()`:
+/// ```
+/// let fifo = adc.free_running().sample_rate(1).initial_input(&mut adc_pin).start_fifo();
+/// loop {
+///   // wait for fifo to fill the first value:
+///   if fifo.len() > 0 {
+///     // read it & print it!
+///     println!("Sample: {}", fifo.read());
+///   }
+/// }
+/// ```
+///
+pub struct Fifo<'a, const DmaEnabled: bool> {
+    adc: &'a mut Adc,
+}
+
+impl<'a, const DmaEnabled: bool> Fifo<'a, DmaEnabled> {
+    pub fn clock_divider(&mut self) -> (u16, u8) {
+        let r = self.adc.device.div.read();
+        (r.int().bits(), r.frac().bits())
+    }
+
+    /// Returns the number of elements currently in the fifo
+    pub fn len(&mut self) -> u8 {
+        self.adc.device.fcs.read().level().bits()
+    }
+
+    /// Check if there was a fifo overrun
+    ///
+    /// An overrun happens when the fifo is filled up faster than `read` is called to consume it.
+    ///
+    /// This function also clears the `over` bit if it was set.
+    pub fn is_over(&mut self) -> bool {
+        let over = self.adc.device.fcs.read().over().bit();
+        if over {
+            self.adc.device.fcs.modify(|_, w| w.over().set_bit());
+        }
+        over
+    }
+
+    /// Check if there was a fifo underrun
+    ///
+    /// An underrun happens when `read` is called on an empty fifo (`len() == 0`).
+    ///
+    /// This function also clears the `under` bit if it was set.
+    pub fn is_under(&mut self) -> bool {
+        let under = self.adc.device.fcs.read().under().bit();
+        if under {
+            self.adc.device.fcs.modify(|_, w| w.under().set_bit());
+        }
+        under
+    }
+
+    /// Read a single value from the fifo
+    pub fn read(&mut self) -> u16 {
+        self.adc.device.fifo.read().val().bits()
+    }
+
+    /// Stop capturing in free running mode.
+    ///
+    /// Disables the ADC fifo and stops ADC capture.
+    /// Returns the underlying `Adc` instance.
+    pub fn stop(self) -> &'a mut Adc {
+        self.adc.device.cs.modify(|_, w| w.start_many().clear_bit());
+        self.adc.device.fcs.modify(|_, w| w.en().clear_bit());
+        self.adc
+    }
+}
+
+pub struct RoundRobin(u8);
+
+impl<PIN: Channel<Adc, ID = u8>> From<PIN> for RoundRobin {
+    fn from(_: PIN) -> Self {
+        Self(1 << PIN::channel())
+    }
+}
+
+impl<A, B> From<(&mut A, &mut B)> for RoundRobin
+where
+    A: Channel<Adc, ID = u8>,
+    B: Channel<Adc, ID = u8>,
+{
+    fn from(_: (&mut A, &mut B)) -> Self {
+        Self(1 << A::channel() | 1 << B::channel())
+    }
+}
+
+impl<A, B, C> From<(&mut A, &mut B, &mut C)> for RoundRobin
+where
+    A: Channel<Adc, ID = u8>,
+    B: Channel<Adc, ID = u8>,
+    C: Channel<Adc, ID = u8>,
+{
+    fn from(_: (&mut A, &mut B, &mut C)) -> Self {
+        Self(1 << A::channel() | 1 << B::channel() | 1 << C::channel())
+    }
+}
+
+impl<A, B, C, D> From<(&mut A, &mut B, &mut C, &mut D)> for RoundRobin
+where
+    A: Channel<Adc, ID = u8>,
+    B: Channel<Adc, ID = u8>,
+    C: Channel<Adc, ID = u8>,
+    D: Channel<Adc, ID = u8>,
+{
+    fn from(_: (&mut A, &mut B, &mut C, &mut D)) -> Self {
+        Self(1 << A::channel() | 1 << B::channel() | 1 << C::channel() | 1 << D::channel())
+    }
+}
+
+impl<A, B, C, D, E> From<(&mut A, &mut B, &mut C, &mut D, &mut E)> for RoundRobin
+where
+    A: Channel<Adc, ID = u8>,
+    B: Channel<Adc, ID = u8>,
+    C: Channel<Adc, ID = u8>,
+    D: Channel<Adc, ID = u8>,
+    E: Channel<Adc, ID = u8>,
+{
+    fn from(_: (&mut A, &mut B, &mut C, &mut D, &mut E)) -> Self {
+        Self(1 << A::channel() | 1 << B::channel() | 1 << C::channel() | 1 << D::channel() | 1 << E::channel())
+    }
+}
+
+impl crate::dma::ReadTarget for Fifo<'_, true> {
+    type ReceivedWord = u8;
+
+    fn rx_treq() -> Option<u8> {
+        Some(rp2040_pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A::ADC.into())
+    }
+
+    fn rx_address_count(&self) -> (u32, u32) {
+        (&self.adc.device.fifo as *const _ as u32, u32::MAX)
+    }
+
+    fn rx_increment(&self) -> bool {
+        false
+    }
+}
+
+impl crate::dma::EndlessReadTarget for Fifo<'_, true> {}
