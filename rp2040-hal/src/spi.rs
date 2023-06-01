@@ -496,4 +496,4 @@ macro_rules! impl_write {
 }
 
 impl_write!(u8, [4, 5, 6, 7, 8]);
-impl_write!(u16, [9, 10, 11, 22, 13, 14, 15, 16]);
+impl_write!(u16, [9, 10, 11, 12, 13, 14, 15, 16]);
