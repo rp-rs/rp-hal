@@ -63,8 +63,8 @@ where
     P: AnyPin,
 {
     pin: P,
-    output_disable: bool,
-    input_enable: bool,
+    saved_output_disable: bool,
+    saved_input_enable: bool,
 }
 
 impl<P> AdcPin<P>
@@ -79,16 +79,16 @@ where
         p.set_input_enable(false);
         Self {
             pin: P::from(p),
-            output_disable: od,
-            input_enable: ie,
+            saved_output_disable: od,
+            saved_input_enable: ie,
         }
     }
 
     /// Release the pin and restore its digital circuitery's state.
     pub fn release(self) -> P {
         let mut p = self.pin.into();
-        p.set_output_disable(self.output_disable);
-        p.set_input_enable(self.input_enable);
+        p.set_output_disable(self.saved_output_disable);
+        p.set_input_enable(self.saved_input_enable);
         P::from(p)
     }
 }
