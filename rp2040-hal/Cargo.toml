@@ -44,6 +44,7 @@ frunk = { version = "0.4.1", default-features = false }
 
 [dev-dependencies]
 cortex-m-rt = "0.7"
+cortex-m-rtic = "1.1.4"
 panic-halt = "0.2.0"
 rp2040-boot2 = "0.3.0"
 hd44780-driver = "0.4.0"
@@ -90,4 +91,9 @@ required-features = ["rt", "critical-section-impl"]
 [[example]]
 # vector_table example uses cortex-m-rt::interrupt, need rt feature for that
 name = "vector_table"
+required-features = ["rt", "critical-section-impl"]
+
+[[example]]
+# adc_fifo_irq example uses cortex-m-rt::interrupt, need rt feature for that
+name = "adc_fifo_irq"
 required-features = ["rt", "critical-section-impl"]
