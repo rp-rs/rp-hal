@@ -243,7 +243,7 @@ impl Adc {
     ///
     /// Capturing is started by calling [`AdcFifoBuilder::start`], which
     /// returns an [`AdcFifo`] to read from.
-    pub fn build_fifo<'a>(&'a mut self) -> AdcFifoBuilder<'a> {
+    pub fn build_fifo<'a>(&'a mut self) -> AdcFifoBuilder<'a, false> {
         AdcFifoBuilder { adc: self }
     }
 
@@ -306,11 +306,11 @@ where
 /// Used to configure & build an [`AdcFifo`]
 ///
 /// See [`Adc::build_fifo`] for details, as well as the `adc_fifo_*` [examples](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples).
-pub struct AdcFifoBuilder<'a> {
+pub struct AdcFifoBuilder<'a, const SHIFTED: bool> {
     adc: &'a mut Adc,
 }
 
-impl<'a> AdcFifoBuilder<'a> {
+impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
     /// Manually set clock divider integral and fractional parts
     ///
     /// Default: 0, 0
@@ -352,12 +352,23 @@ impl<'a> AdcFifoBuilder<'a> {
         self
     }
 
+    /// Shift values to produce 8 bit samples (discarding the lower 4 bits).
+    ///
+    /// Normally the ADC uses 12 bits of precision, packed into a u16.
+    /// Shifting the values loses some precision, but produces smaller samples.
+    ///
+    /// When this method has been called, the resulting fifo's `read` method returns u8.
+    pub fn shift_8bit(self) -> AdcFifoBuilder<'a, true> {
+        self.adc.device.fcs.modify(|_, w| w.shift().set_bit());
+        AdcFifoBuilder { adc: self.adc }
+    }
+
     /// Enable ADC FIFO and start free-running conversion
     ///
     /// Use the returned [`AdcFifo`] instance to access the captured data.
     ///
     /// To stop capturing, call [`AdcFifo::stop`].
-    pub fn start(self) -> AdcFifo<'a> {
+    pub fn start(self) -> AdcFifo<'a, SHIFTED> {
         self.adc.device.fcs.modify(|_, w| w.en().set_bit());
         self.adc.device.cs.modify(|_, w| w.start_many().set_bit());
         AdcFifo { adc: self.adc }
@@ -368,11 +379,11 @@ impl<'a> AdcFifoBuilder<'a> {
 ///
 /// Constructed by [`AdcFifoBuilder::start`], which is accessible through [`Adc::build_fifo`].
 ///
-pub struct AdcFifo<'a> {
+pub struct AdcFifo<'a, const SHIFTED: bool> {
     adc: &'a mut Adc,
 }
 
-impl<'a> AdcFifo<'a> {
+impl<'a, const SHIFTED: bool> AdcFifo<'a, SHIFTED> {
     /// Returns the number of elements currently in the fifo
     pub fn len(&mut self) -> u8 {
         self.adc.device.fcs.read().level().bits()
@@ -404,11 +415,6 @@ impl<'a> AdcFifo<'a> {
         under
     }
 
-    /// Read a single value from the fifo
-    pub fn read(&mut self) -> u16 {
-        self.adc.device.fifo.read().val().bits()
-    }
-
     /// Stop capturing in free running mode.
     ///
     /// Resets all capture options that can be set via [`AdcFifoBuilder`] to
@@ -431,7 +437,7 @@ impl<'a> AdcFifo<'a> {
         // The only way to clear `INTS.FIFO` is for `FCS.LEVEL` to go
         // below `FCS.THRESH`, which requires `FCS.THRESH` not to be 0.
         while self.len() > 0 {
-            self.read();
+            self.read_from_fifo();
         }
         // disable fifo and reset threshold to 0
         self.adc.device.fcs.modify(|_, w| unsafe {
@@ -448,6 +454,26 @@ impl<'a> AdcFifo<'a> {
     /// Interrupts must be enabled ([`AdcFifoBuilder::enable_interrupt`]), or else this methods blocks forever.
     pub fn wait_for_interrupt(&mut self) {
         while self.adc.device.intr.read().fifo().bit_is_clear() {}
+    }
+
+    fn read_from_fifo(&mut self) -> u16 {
+        self.adc.device.fifo.read().val().bits()
+    }
+}
+
+impl<'a> AdcFifo<'a, false> {
+    /// Read a single value from the fifo (u16 version, not shifted)
+    pub fn read(&mut self) -> u16 {
+        self.read_from_fifo()
+    }
+}
+
+impl<'a> AdcFifo<'a, true> {
+    /// Read a single value from the fifo (u8 version, shifted)
+    ///
+    /// Also see [`AdcFifoBuilder::shift_8bit`].
+    pub fn read(&mut self) -> u8 {
+        self.read_from_fifo() as u8
     }
 }
 

@@ -119,6 +119,8 @@ fn main() -> ! {
         .set_channel(&mut temperature_sensor)
         // then alternate between GPIO26 and the temperature sensor
         .round_robin((&mut adc_pin_0, &mut temperature_sensor))
+        // Uncomment this line to produce 8-bit samples, instead of 12 bit (lower bits are discarded)
+        //.shift_8bit()
         // start sampling
         .start();
 
