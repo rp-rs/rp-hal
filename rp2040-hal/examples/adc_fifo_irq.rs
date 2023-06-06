@@ -29,7 +29,6 @@ mod app {
     use fugit::RateExtU32;
     use hal::Clock;
     use core::fmt::Write;
-    use embedded_hal::digital::v2::OutputPin;
 
     /// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz. Adjust
     /// if your board has a different frequency
@@ -49,15 +48,14 @@ mod app {
                 hal::uart::Enabled,
             hal::pac::UART0,
             (
-                hal::gpio::Pin<hal::gpio::bank0::Gpio0, hal::gpio::Function<hal::gpio::Uart>>,
-                hal::gpio::Pin<hal::gpio::bank0::Gpio1, hal::gpio::Function<hal::gpio::Uart>>,
+                hal::gpio::Pin<hal::gpio::bank0::Gpio0, hal::gpio::FunctionUart, hal::gpio::PullDown>,
+                hal::gpio::Pin<hal::gpio::bank0::Gpio1, hal::gpio::FunctionUart, hal::gpio::PullDown>,
             )>,
     }
 
     #[local]
     struct Local {
-        adc_fifo: Option<hal::adc::AdcFifo<'static>>,
-        led_pin: hal::gpio::Pin<hal::gpio::bank0::Gpio25, hal::gpio::PushPullOutput>,
+        adc_fifo: Option<hal::adc::AdcFifo<'static, false>>,
     }
 
     #[init(local = [adc: Option<hal::Adc> = None])]
@@ -92,8 +90,8 @@ mod app {
 
         // UART TX (characters sent from pico) on pin 1 (GPIO0) and RX (on pin 2 (GPIO1)
         let uart_pins = (
-            pins.gpio0.into_mode::<hal::gpio::FunctionUart>(),
-            pins.gpio1.into_mode::<hal::gpio::FunctionUart>(),
+            pins.gpio0.into_function::<hal::gpio::FunctionUart>(),
+            pins.gpio1.into_function::<hal::gpio::FunctionUart>(),
         );
 
         // Create a UART driver
@@ -108,7 +106,7 @@ mod app {
         *c.local.adc = Some(hal::Adc::new(c.device.ADC, &mut resets));
         let adc = c.local.adc.as_mut().unwrap();
 
-        let mut adc_pin_0 = pins.gpio26.into_floating_input();
+        let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26.into_floating_input());
 
         uart.write_full_blocking(b"ADC FIFO interrupt example\r\n");
 
@@ -118,10 +116,6 @@ mod app {
             .enable_interrupt(1)
             .start();
 
-        let mut led_pin = pins.gpio25.into_push_pull_output();
-
-        led_pin.set_low();
-        
         (Shared {
             done: false,
             buf: [0; SAMPLE_COUNT],
@@ -129,7 +123,6 @@ mod app {
         },
          Local {
              adc_fifo: Some(adc_fifo),
-             led_pin,
          },
          init::Monotonics())
     }
@@ -142,7 +135,7 @@ mod app {
                     for i in 0..SAMPLE_COUNT {
                         writeln!(uart, "Sample: {}\r", buf[i]).unwrap();
                     }
-                    writeln!(uart, "All done, going to sleep 😴\r");
+                    writeln!(uart, "All done, going to sleep 😴\r").unwrap();
                     true
                 } else {
                     false
@@ -160,26 +153,18 @@ mod app {
     #[task(
         binds = ADC_IRQ_FIFO,
         priority = 1,
-        shared = [done, buf, uart],
-        local = [adc_fifo, counter: usize = 0, led_pin]
+        shared = [done, buf],
+        local = [adc_fifo, counter: usize = 0]
     )]
     fn adc_irq_fifo(mut c: adc_irq_fifo::Context) {
-        if let Some(adc_fifo) = c.local.adc_fifo.as_mut() {
-            let sample = adc_fifo.read();
-            let i = *c.local.counter;
-            c.shared.buf.lock(|buf| buf[i] = sample);
-            *c.local.counter += 1;
-            
-            if *c.local.counter == SAMPLE_COUNT {
-                c.local.adc_fifo.take().unwrap().stop();
-                c.shared.done.lock(|done| *done = true);
-            }
-        } else {
-            // this should never be reached
-            c.local.led_pin.set_high();
-            c.shared.uart.lock(|uart| {
-                uart.write_full_blocking(b"???");
-            });
+        let sample = c.local.adc_fifo.as_mut().unwrap().read();
+        let i = *c.local.counter;
+        c.shared.buf.lock(|buf| buf[i] = sample);
+        *c.local.counter += 1;
+
+        if *c.local.counter == SAMPLE_COUNT {
+            c.local.adc_fifo.take().unwrap().stop();
+            c.shared.done.lock(|done| *done = true);
         }
     }
 }
