@@ -415,20 +415,29 @@ impl<'a> AdcFifo<'a> {
     /// their defaults.
     ///
     /// Returns the underlying [`Adc`], to be reused.
-    pub fn stop(self) -> &'a mut Adc {
+    pub fn stop(mut self) -> &'a mut Adc {
         // stop capture and clear channel selection
         self.adc.device.cs.modify(|_, w| unsafe {
             w.start_many().clear_bit()
                 .rrobin().bits(0)
                 .ainsel().bits(0)
         });
+        // disable fifo interrupt
+        self.adc.device.inte.modify(|_, w| w.fifo().clear_bit());
+        // drain remaining values from fifo.
+        // This MUST happen *after* the interrupt is disabled, but
+        // *before* `thresh` is modified. Otherwise if `INTS.FIFO = 1`,
+        // the interrupt fill be fired one more time.
+        // The only way to clear `INTS.FIFO` is for `FCS.LEVEL` to go
+        // below `FCS.THRESH`, which requires `FCS.THRESH` not to be 0.
+        while self.len() > 0 {
+            self.read();
+        }
         // disable fifo and reset threshold to 0
         self.adc.device.fcs.modify(|_, w| unsafe {
             w.en().clear_bit()
                 .thresh().bits(0)
         });
-        // disable fifo interrupt
-        self.adc.device.inte.modify(|_, w| w.fifo().clear_bit());
         // reset clock divider
         self.adc.device.div.modify(|_, w| unsafe { w.int().bits(0).frac().bits(0) });
         self.adc
