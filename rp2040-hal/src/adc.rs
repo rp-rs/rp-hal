@@ -324,7 +324,7 @@ impl<'a> AdcFifoBuilder<'a> {
     /// If round-robin mode is used, this will only affect the first sample.
     ///
     /// The given `pin` can either be one of the ADC inputs (GPIO26-28) or the
-    /// internal temperature sensor (retrieved via [`Adc.enable_temp_sensor`]).
+    /// internal temperature sensor (retrieved via [`Adc::enable_temp_sensor`]).
     pub fn set_channel<PIN: Channel<Adc, ID = u8>>(self, _pin: &mut PIN) -> Self {
         self.adc.device.cs.modify(|_, w| unsafe { w.ainsel().bits(PIN::channel()) });
         self
@@ -414,7 +414,7 @@ impl<'a> AdcFifo<'a> {
     /// Resets all capture options that can be set via [`AdcFifoBuilder`] to
     /// their defaults.
     ///
-    /// Returns the underlying `Adc` instance.
+    /// Returns the underlying [`Adc`], to be reused.
     pub fn stop(self) -> &'a mut Adc {
         // stop capture and clear channel selection
         self.adc.device.cs.modify(|_, w| unsafe {
