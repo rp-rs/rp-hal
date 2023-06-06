@@ -36,6 +36,37 @@
 //!
 //! See [examples/adc.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/adc.rs) and
 //! [pimoroni_pico_explorer_showcase.rs](https://github.com/rp-rs/rp-hal-boards/tree/main/boards/pimoroni-pico-explorer/examples/pimoroni_pico_explorer_showcase.rs) for more complete examples
+//!
+//! ### Free running mode
+//!
+//! In free-running mode the ADC automatically captures samples in regular intervals.
+//! The samples are written to a FIFO, from which they can be retrieved.
+//!
+//! ```no_run
+//! use rp2040_hal::{adc::Adc, gpio::Pins, pac, Sio};
+//! let mut peripherals = pac::Peripherals::take().unwrap();
+//! let sio = Sio::new(peripherals.SIO);
+//! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
+//! // Enable adc
+//! let mut adc = Adc::new(peripherals.ADC, &mut peripherals.RESETS);
+//! // Enable the temperature sensor
+//! let mut temperature_sensor = adc.enable_temp_sensor();
+//!
+//! // Configure & start capturing to the fifo:
+//! let fifo = adc.build_fifo()
+//!   .clock_divider(0, 0) // sample as fast as possible (500ksps. This is the default)
+//!   .set_channel(&mut temperature_sensor)
+//!   .start();
+//!
+//! loop {
+//!   if fifo.len() > 0 {
+//!     // Read one captured ADC sample from the FIFO:
+//!     let temperature_adc_counts: u16 = fifo.read();
+//!   }
+//! }
+//! ```
+//! See [examples/adc_fifo_poll.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/adc.rs) for a more complete example.
+//!
 
 use core::convert::Infallible;
 
@@ -205,6 +236,18 @@ impl Adc {
         self.device.cs.modify(|_, w| w.ts_en().clear_bit());
     }
 
+    /// Start configuring free-running mode, and set up the FIFO
+    ///
+    /// The [`AdcFifoBuilder`] returned by this method can be used
+    /// to configure capture options, like sample rate, channels to
+    /// capture from etc.
+    ///
+    /// Capturing is started by calling [`AdcFifoBuilder::start`], which
+    /// returns an [`AdcFifo`] to read from.
+    pub fn build_fifo<'a>(&'a mut self) -> AdcFifoBuilder<'a> {
+        AdcFifoBuilder { adc: self }
+    }
+
     fn read(&mut self, chan: u8) -> u16 {
         while !self.device.cs.read().ready().bit_is_set() {
             cortex_m::asm::nop();
@@ -261,27 +304,29 @@ where
     }
 }
 
-impl Adc {
-    pub fn free_running<'a>(&'a mut self) -> FreeRunning<'a> {
-        FreeRunning { adc: self }
-    }
-}
-
-pub struct FreeRunning<'a> {
+/// Used to configure & build an [`AdcFifo`]
+///
+/// See [`Adc::build_fifo`] for details, as well as the `adc_fifo_*` [examples](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples).
+pub struct AdcFifoBuilder<'a> {
     adc: &'a mut Adc,
 }
 
-impl<'a> FreeRunning<'a> {
+impl<'a> AdcFifoBuilder<'a> {
     /// Manually set clock divider integral and fractional parts
+    ///
+    /// Default: 0, 0
     pub fn clock_divider(self, int: u16, frac: u8) -> Self {
         self.adc.device.div.modify(|_, w| unsafe { w.int().bits(int).frac().bits(frac) });
         self
     }
 
-    /// Select initial ADC input to sample from
+    /// Select ADC input channel to sample from
     ///
     /// If round-robin mode is used, this will only affect the first sample.
-    pub fn initial_input<PIN: Channel<Adc, ID = u8>>(self, _pin: &mut PIN) -> Self {
+    ///
+    /// The given `pin` can either be one of the ADC inputs (GPIO26-28) or the
+    /// internal temperature sensor (retrieved via [`Adc.enable_temp_sensor`]).
+    pub fn set_channel<PIN: Channel<Adc, ID = u8>>(self, _pin: &mut PIN) -> Self {
         self.adc.device.cs.modify(|_, w| unsafe { w.ainsel().bits(PIN::channel()) });
         self
     }
@@ -290,65 +335,45 @@ impl<'a> FreeRunning<'a> {
     ///
     /// Takes a tuple of channels, like `(&mut adc_pin, &mut temp_sense)`.
     ///
-    /// The order in which the channels are specified has no effect.
-    /// Channels are always sampled in increasing order (Channel 0, Channel 1, ...).
+    /// **NOTE:** *The order in which the channels are specified has no effect!
+    /// Channels are always sampled in increasing order, by their channel number (Channel 0, Channel 1, ...).*
     pub fn round_robin<T: Into<RoundRobin>>(self, selected_channels: T) -> Self {
         let RoundRobin(bits) = selected_channels.into();
         self.adc.device.cs.modify(|_, w| unsafe { w.rrobin().bits(bits) });
         self
     }
 
-    /// Enable ADC fifo and start free-running conversion
+    /// Enable the FIFO interrupt ([`ADC_IRQ_FIFO`](pac::Interrupt::ADC_IRQ_FIFO))
     ///
-    /// Use the returned `Fifo` instance to access the captured data.
+    /// It will be triggered whenever there are at least `threshold` samples waiting in the FIFO.
     ///
-    /// To stop capturing, call `fifo.stop()`.
-    pub fn start_fifo(self) -> Fifo<'a, false> {
-        self.adc.device.fcs.modify(|_, w| w.en().set_bit());
-        self.adc.device.cs.modify(|_, w| w.start_many().set_bit());
-        Fifo { adc: self.adc }
+    pub fn enable_interrupt(self, threshold: u8) -> Self {
+        self.adc.device.inte.modify(|_, w| w.fifo().set_bit());
+        self.adc.device.fcs.modify(|_, w| unsafe { w.thresh().bits(threshold) });
+        self
     }
 
-    /// Enable ADC fifo with DMA and start free-running conversion
+    /// Enable ADC FIFO and start free-running conversion
     ///
-    /// In addition to being usable the same way as a `Fifo` returned from `start_fifo`,
-    /// the Fifo returned by this function can also be used as a source for DMA transfers.
-    pub fn start_fifo_with_dma(self, thresh: u8) -> Fifo<'a, true> {
-        self.adc.device.fcs.modify(|_, w| unsafe {
-            w.en().set_bit()
-                .dreq_en().set_bit()
-                .thresh().bits(thresh)
-        });
+    /// Use the returned [`AdcFifo`] instance to access the captured data.
+    ///
+    /// To stop capturing, call [`AdcFifo::stop`].
+    pub fn start(self) -> AdcFifo<'a> {
+        self.adc.device.fcs.modify(|_, w| w.en().set_bit());
         self.adc.device.cs.modify(|_, w| w.start_many().set_bit());
-        Fifo { adc: self.adc }
+        AdcFifo { adc: self.adc }
     }
 }
 
 /// Represents the ADC fifo, when used in free running mode
 ///
-/// The fifo can be used in one of two ways:
-/// 1. Directly, by polling `len()` and calling `read()`:
-/// ```
-/// let fifo = adc.free_running().sample_rate(1).initial_input(&mut adc_pin).start_fifo();
-/// loop {
-///   // wait for fifo to fill the first value:
-///   if fifo.len() > 0 {
-///     // read it & print it!
-///     println!("Sample: {}", fifo.read());
-///   }
-/// }
-/// ```
+/// Constructed by [`AdcFifoBuilder::start`], which is accessible through [`Adc::build_fifo`].
 ///
-pub struct Fifo<'a, const DmaEnabled: bool> {
+pub struct AdcFifo<'a> {
     adc: &'a mut Adc,
 }
 
-impl<'a, const DmaEnabled: bool> Fifo<'a, DmaEnabled> {
-    pub fn clock_divider(&mut self) -> (u16, u8) {
-        let r = self.adc.device.div.read();
-        (r.int().bits(), r.frac().bits())
-    }
-
+impl<'a> AdcFifo<'a> {
     /// Returns the number of elements currently in the fifo
     pub fn len(&mut self) -> u8 {
         self.adc.device.fcs.read().level().bits()
@@ -387,15 +412,40 @@ impl<'a, const DmaEnabled: bool> Fifo<'a, DmaEnabled> {
 
     /// Stop capturing in free running mode.
     ///
-    /// Disables the ADC fifo and stops ADC capture.
+    /// Resets all capture options that can be set via [`AdcFifoBuilder`] to
+    /// their defaults.
+    ///
     /// Returns the underlying `Adc` instance.
     pub fn stop(self) -> &'a mut Adc {
-        self.adc.device.cs.modify(|_, w| w.start_many().clear_bit());
-        self.adc.device.fcs.modify(|_, w| w.en().clear_bit());
+        // stop capture and clear channel selection
+        self.adc.device.cs.modify(|_, w| unsafe {
+            w.start_many().clear_bit()
+                .rrobin().bits(0)
+                .ainsel().bits(0)
+        });
+        // disable fifo and reset threshold to 0
+        self.adc.device.fcs.modify(|_, w| unsafe {
+            w.en().clear_bit()
+                .thresh().bits(0)
+        });
+        // disable fifo interrupt
+        self.adc.device.inte.modify(|_, w| w.fifo().clear_bit());
+        // reset clock divider
+        self.adc.device.div.modify(|_, w| unsafe { w.int().bits(0).frac().bits(0) });
         self.adc
+    }
+
+    /// Block until a ADC_IRQ_FIFO interrupt occurs
+    ///
+    /// Interrupts must be enabled ([`AdcFifoBuilder::enable_interrupt`]), or else this methods blocks forever.
+    pub fn wait_for_interrupt(&mut self) {
+        while self.adc.device.intr.read().fifo().bit_is_clear() {}
     }
 }
 
+/// Internal struct representing values for the `CS.RROBIN` register.
+///
+/// See [`AdcFreeRunning.round_robin`], for usage example.
 pub struct RoundRobin(u8);
 
 impl<PIN: Channel<Adc, ID = u8>> From<PIN> for RoundRobin {
@@ -449,21 +499,3 @@ where
         Self(1 << A::channel() | 1 << B::channel() | 1 << C::channel() | 1 << D::channel() | 1 << E::channel())
     }
 }
-
-impl crate::dma::ReadTarget for Fifo<'_, true> {
-    type ReceivedWord = u8;
-
-    fn rx_treq() -> Option<u8> {
-        Some(rp2040_pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A::ADC.into())
-    }
-
-    fn rx_address_count(&self) -> (u32, u32) {
-        (&self.adc.device.fifo as *const _ as u32, u32::MAX)
-    }
-
-    fn rx_increment(&self) -> bool {
-        false
-    }
-}
-
-impl crate::dma::EndlessReadTarget for Fifo<'_, true> {}
