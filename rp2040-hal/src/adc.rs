@@ -72,7 +72,6 @@ use core::convert::Infallible;
 
 use hal::adc::{Channel, OneShot};
 use pac::{ADC, RESETS};
-use num_traits::float::FloatCore;
 
 use crate::{
     gpio::{
