@@ -1,6 +1,6 @@
 //! Functions and data from the RPI Bootrom.
 //!
-//! From the [RP2040 datasheet](https://datasheets.raspberrypi.org/rp2040/rp2040-datasheet.pdf), Section 2.8.2.1:
+//! From the [RP2040 datasheet](https://datasheets.raspberrypi.org/rp2040/rp2040-datasheet.pdf), Section 2.8.3.1:
 //!
 //! > The Bootrom contains a number of public functions that provide useful
 //! > RP2040 functionality that might be needed in the absence of any other code
