@@ -196,7 +196,7 @@ fn IO_IRQ_BANK0() {
                 // we can discard the Result
                 let _ = led.set_low();
             }
-            // if the PWM signal indicates low, turn on the LED
+            // if the PWM signal indicates high, turn on the LED
             else if pulse_width_us > HIGH_US {
                 // set_high can't fail, but the embedded-hal traits always allow for it
                 // we can discard the Result
