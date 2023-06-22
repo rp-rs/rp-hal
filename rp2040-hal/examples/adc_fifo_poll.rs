@@ -113,7 +113,9 @@ fn main() -> ! {
 
     // Configure free-running mode:
     let mut adc_fifo = adc.build_fifo()
-        // set clock divider to configure sample rate of 1ksps
+        // Set clock divider to target a sample rate of 1000 samples per second (1ksps).
+        // The value was calculated by `(48MHz / 1ksps) - 1 = 47999.0`.
+        // Please check the `clock_divider` method documentation for details.
         .clock_divider(47999, 0)
         // sample the temperature sensor first
         .set_channel(&mut temperature_sensor)

@@ -311,9 +311,43 @@ pub struct AdcFifoBuilder<'a, const SHIFTED: bool> {
 }
 
 impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
-    /// Manually set clock divider integral and fractional parts
+    /// Manually set clock divider to control sample rate
     ///
-    /// Default: 0, 0
+    /// The ADC is tied to the USB clock, normally running at 48MHz.
+    /// ADC conversion happens at 96 cycles per sample, so with the dividers
+    /// both set to 0 (the default) the sample rate will be `48MHz / 96 = 500ksps`.
+    ///
+    /// Setting the `int` and / or `frac` dividers will hold off between
+    /// samples, leading to an effective rate of:
+    ///
+    /// ```
+    ///  rate = 48MHz / (1 + int + (frac / 256))
+    /// ```
+    ///
+    /// To determine the required `int` and `frac` values for a given target rate,
+    /// use these equations:
+    ///
+    /// ```
+    ///  int = floor((48MHz / rate) - 1)
+    ///  frac = round(256 * ((48MHz / rate) - 1 - int))
+    /// ```
+    ///
+    /// Some examples:
+    ///
+    /// | Target rate | `int`   | `frac` |
+    /// |-------------|---------|--------|
+    /// | 1000sps     | `47999` |    `0` |
+    /// | 1024sps     | `46874` |    `0` |
+    /// | 1337sps     | `35900` |   `70` |
+    /// | 4096sps     | `11717` |  `192` |
+    /// | 96ksps      |   `499` |    `0` |
+    ///
+    /// Since each conversion takes 96 cycles, setting `int` to anything below 96 does
+    /// not make a difference, and leads to the same result as setting it to 0.
+    ///
+    /// The lowest possible rate is 732.41Hz, attainable by setting `int = 0xFFFF, frac = 0xFF`.
+    ///
+    /// For more details, please refer to section 4.9.2.2 in the RP2040 datasheet.
     pub fn clock_divider(self, int: u16, frac: u8) -> Self {
         self.adc.device.div.modify(|_, w| unsafe { w.int().bits(int).frac().bits(frac) });
         self
