@@ -430,12 +430,13 @@ impl<'a, const SHIFTED: bool> AdcFifo<'a, SHIFTED> {
         });
         // disable fifo interrupt
         self.adc.device.inte.modify(|_, w| w.fifo().clear_bit());
-        // drain remaining values from fifo.
+        // Wait for one more conversion, then drain remaining values from fifo.
         // This MUST happen *after* the interrupt is disabled, but
         // *before* `thresh` is modified. Otherwise if `INTS.FIFO = 1`,
-        // the interrupt fill be fired one more time.
+        // the interrupt will be fired one more time.
         // The only way to clear `INTS.FIFO` is for `FCS.LEVEL` to go
         // below `FCS.THRESH`, which requires `FCS.THRESH` not to be 0.
+        while self.adc.device.cs.read().ready().bit_is_clear() {}
         while self.len() > 0 {
             self.read_from_fifo();
         }
