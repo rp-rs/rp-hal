@@ -449,6 +449,39 @@ impl<'a, const SHIFTED: bool> AdcFifo<'a, SHIFTED> {
         under
     }
 
+    /// Read the most recently sampled ADC value
+    ///
+    /// Returns the most recently sampled value, bypassing the FIFO.
+    ///
+    /// This can be used if you want to read samples occasionally, but don't
+    /// want to incur the 96 cycle delay of a one-off read.
+    ///
+    /// Example:
+    /// ```
+    /// // start continously sampling values:
+    /// let fifo = adc.build_fifo().set_channel(&mut adc_pin).start();
+    ///
+    /// loop {
+    ///   do_something_timing_critical();
+    ///
+    ///   // read the most recent value:
+    ///   if fifo.read_single() > THRESHOLD {
+    ///     led.set_high().unwrap();
+    ///   } else {
+    ///     led.set_low().unwrap();
+    ///   }
+    /// }
+    ///
+    /// // stop sampling, when it's no longer needed
+    /// fifo.stop();
+    /// ```
+    ///
+    /// Note that when round-robin sampling is used, there is no way
+    /// to tell from which channel this sample came.
+    pub fn read_single(&mut self) -> u16 {
+        self.adc.read_single()
+    }
+
     /// Stop capturing in free running mode.
     ///
     /// Resets all capture options that can be set via [`AdcFifoBuilder`] to
