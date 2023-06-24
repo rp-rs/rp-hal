@@ -25,10 +25,10 @@ pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
 
 #[rtic::app(device = rp2040_hal::pac)]
 mod app {
-    use rp2040_hal as hal;
+    use core::fmt::Write;
     use fugit::RateExtU32;
     use hal::Clock;
-    use core::fmt::Write;
+    use rp2040_hal as hal;
 
     /// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz. Adjust
     /// if your board has a different frequency
@@ -45,12 +45,21 @@ mod app {
         done: bool,
         buf: [u16; SAMPLE_COUNT],
         uart: hal::uart::UartPeripheral<
-                hal::uart::Enabled,
+            hal::uart::Enabled,
             hal::pac::UART0,
             (
-                hal::gpio::Pin<hal::gpio::bank0::Gpio0, hal::gpio::FunctionUart, hal::gpio::PullDown>,
-                hal::gpio::Pin<hal::gpio::bank0::Gpio1, hal::gpio::FunctionUart, hal::gpio::PullDown>,
-            )>,
+                hal::gpio::Pin<
+                    hal::gpio::bank0::Gpio0,
+                    hal::gpio::FunctionUart,
+                    hal::gpio::PullDown,
+                >,
+                hal::gpio::Pin<
+                    hal::gpio::bank0::Gpio1,
+                    hal::gpio::FunctionUart,
+                    hal::gpio::PullDown,
+                >,
+            ),
+        >,
     }
 
     #[local]
@@ -87,7 +96,6 @@ mod app {
             &mut resets,
         );
 
-
         // UART TX (characters sent from pico) on pin 1 (GPIO0) and RX (on pin 2 (GPIO1)
         let uart_pins = (
             pins.gpio0.into_function::<hal::gpio::FunctionUart>(),
@@ -97,11 +105,16 @@ mod app {
         // Create a UART driver
         let uart = hal::uart::UartPeripheral::new(c.device.UART0, uart_pins, &mut resets)
             .enable(
-                hal::uart::UartConfig::new(115200.Hz(), hal::uart::DataBits::Eight, None, hal::uart::StopBits::One),
+                hal::uart::UartConfig::new(
+                    115200.Hz(),
+                    hal::uart::DataBits::Eight,
+                    None,
+                    hal::uart::StopBits::One,
+                ),
                 clocks.peripheral_clock.freq(),
             )
             .unwrap();
-        
+
         // the ADC is put into a local, to gain static lifetime
         *c.local.adc = Some(hal::Adc::new(c.device.ADC, &mut resets));
         let adc = c.local.adc.as_mut().unwrap();
@@ -110,7 +123,8 @@ mod app {
 
         uart.write_full_blocking(b"ADC FIFO interrupt example\r\n");
 
-        let adc_fifo = adc.build_fifo()
+        let adc_fifo = adc
+            .build_fifo()
             // Set clock divider to target a sample rate of 1000 samples per second (1ksps).
             // The value was calculated by `(48MHz / 1ksps) - 1 = 47999.0`.
             // Please check the `clock_divider` method documentation for details.
@@ -119,34 +133,38 @@ mod app {
             .enable_interrupt(1)
             .start();
 
-        (Shared {
-            done: false,
-            buf: [0; SAMPLE_COUNT],
-            uart,
-        },
-         Local {
-             adc_fifo: Some(adc_fifo),
-         },
-         init::Monotonics())
+        (
+            Shared {
+                done: false,
+                buf: [0; SAMPLE_COUNT],
+                uart,
+            },
+            Local {
+                adc_fifo: Some(adc_fifo),
+            },
+            init::Monotonics(),
+        )
     }
 
     #[idle(shared = [done, buf, uart])]
     fn idle(mut c: idle::Context) -> ! {
         loop {
-            let finished = (&mut c.shared.done, &mut c.shared.buf, &mut c.shared.uart).lock(|done, buf, uart| {
-                if *done {
-                    for i in 0..SAMPLE_COUNT {
-                        writeln!(uart, "Sample: {}\r", buf[i]).unwrap();
+            let finished = (&mut c.shared.done, &mut c.shared.buf, &mut c.shared.uart).lock(
+                |done, buf, uart| {
+                    if *done {
+                        for i in 0..SAMPLE_COUNT {
+                            writeln!(uart, "Sample: {}\r", buf[i]).unwrap();
+                        }
+                        writeln!(uart, "All done, going to sleep 😴\r").unwrap();
+                        true
+                    } else {
+                        false
                     }
-                    writeln!(uart, "All done, going to sleep 😴\r").unwrap();
-                    true
-                } else {
-                    false
-                }
-            });
+                },
+            );
 
             if finished {
-                break
+                break;
             }
         }
 

@@ -112,7 +112,8 @@ fn main() -> ! {
     let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26.into_floating_input());
 
     // Configure free-running mode:
-    let mut adc_fifo = adc.build_fifo()
+    let mut adc_fifo = adc
+        .build_fifo()
         // Set clock divider to target a sample rate of 1000 samples per second (1ksps).
         // The value was calculated by `(48MHz / 1ksps) - 1 = 47999.0`.
         // Please check the `clock_divider` method documentation for details.
@@ -179,9 +180,9 @@ fn main() -> ! {
         writeln!(
             uart,
             "Temp:\t{}\tPin\t{}\r",
-            temp_samples[i],
-            pin_samples[i]
-        ).unwrap();
+            temp_samples[i], pin_samples[i]
+        )
+        .unwrap();
     }
 
     writeln!(uart, "Sampling took: {}\r", time_taken).unwrap();

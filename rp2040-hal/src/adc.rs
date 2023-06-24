@@ -243,7 +243,7 @@ impl Adc {
     ///
     /// Capturing is started by calling [`AdcFifoBuilder::start`], which
     /// returns an [`AdcFifo`] to read from.
-    pub fn build_fifo<'a>(&'a mut self) -> AdcFifoBuilder<'a, false> {
+    pub fn build_fifo(&mut self) -> AdcFifoBuilder<'_, false> {
         AdcFifoBuilder { adc: self }
     }
 
@@ -349,7 +349,10 @@ impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
     ///
     /// For more details, please refer to section 4.9.2.2 in the RP2040 datasheet.
     pub fn clock_divider(self, int: u16, frac: u8) -> Self {
-        self.adc.device.div.modify(|_, w| unsafe { w.int().bits(int).frac().bits(frac) });
+        self.adc
+            .device
+            .div
+            .modify(|_, w| unsafe { w.int().bits(int).frac().bits(frac) });
         self
     }
 
@@ -360,7 +363,10 @@ impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
     /// The given `pin` can either be one of the ADC inputs (GPIO26-28) or the
     /// internal temperature sensor (retrieved via [`Adc::enable_temp_sensor`]).
     pub fn set_channel<PIN: Channel<Adc, ID = u8>>(self, _pin: &mut PIN) -> Self {
-        self.adc.device.cs.modify(|_, w| unsafe { w.ainsel().bits(PIN::channel()) });
+        self.adc
+            .device
+            .cs
+            .modify(|_, w| unsafe { w.ainsel().bits(PIN::channel()) });
         self
     }
 
@@ -372,7 +378,10 @@ impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
     /// Channels are always sampled in increasing order, by their channel number (Channel 0, Channel 1, ...).*
     pub fn round_robin<T: Into<RoundRobin>>(self, selected_channels: T) -> Self {
         let RoundRobin(bits) = selected_channels.into();
-        self.adc.device.cs.modify(|_, w| unsafe { w.rrobin().bits(bits) });
+        self.adc
+            .device
+            .cs
+            .modify(|_, w| unsafe { w.rrobin().bits(bits) });
         self
     }
 
@@ -382,7 +391,10 @@ impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
     ///
     pub fn enable_interrupt(self, threshold: u8) -> Self {
         self.adc.device.inte.modify(|_, w| w.fifo().set_bit());
-        self.adc.device.fcs.modify(|_, w| unsafe { w.thresh().bits(threshold) });
+        self.adc
+            .device
+            .fcs
+            .modify(|_, w| unsafe { w.thresh().bits(threshold) });
         self
     }
 
@@ -418,6 +430,7 @@ pub struct AdcFifo<'a, const SHIFTED: bool> {
 }
 
 impl<'a, const SHIFTED: bool> AdcFifo<'a, SHIFTED> {
+    #[allow(clippy::len_without_is_empty)]
     /// Returns the number of elements currently in the fifo
     pub fn len(&mut self) -> u8 {
         self.adc.device.fcs.read().level().bits()
@@ -490,11 +503,10 @@ impl<'a, const SHIFTED: bool> AdcFifo<'a, SHIFTED> {
     /// Returns the underlying [`Adc`], to be reused.
     pub fn stop(mut self) -> &'a mut Adc {
         // stop capture and clear channel selection
-        self.adc.device.cs.modify(|_, w| unsafe {
-            w.start_many().clear_bit()
-                .rrobin().bits(0)
-                .ainsel().bits(0)
-        });
+        self.adc
+            .device
+            .cs
+            .modify(|_, w| unsafe { w.start_many().clear_bit().rrobin().bits(0).ainsel().bits(0) });
         // disable fifo interrupt
         self.adc.device.inte.modify(|_, w| w.fifo().clear_bit());
         // Wait for one more conversion, then drain remaining values from fifo.
@@ -508,12 +520,15 @@ impl<'a, const SHIFTED: bool> AdcFifo<'a, SHIFTED> {
             self.read_from_fifo();
         }
         // disable fifo and reset threshold to 0
-        self.adc.device.fcs.modify(|_, w| unsafe {
-            w.en().clear_bit()
-                .thresh().bits(0)
-        });
+        self.adc
+            .device
+            .fcs
+            .modify(|_, w| unsafe { w.en().clear_bit().thresh().bits(0) });
         // reset clock divider
-        self.adc.device.div.modify(|_, w| unsafe { w.int().bits(0).frac().bits(0) });
+        self.adc
+            .device
+            .div
+            .modify(|_, w| unsafe { w.int().bits(0).frac().bits(0) });
         self.adc
     }
 
@@ -598,6 +613,12 @@ where
     E: Channel<Adc, ID = u8>,
 {
     fn from(_: (&mut A, &mut B, &mut C, &mut D, &mut E)) -> Self {
-        Self(1 << A::channel() | 1 << B::channel() | 1 << C::channel() | 1 << D::channel() | 1 << E::channel())
+        Self(
+            1 << A::channel()
+                | 1 << B::channel()
+                | 1 << C::channel()
+                | 1 << D::channel()
+                | 1 << E::channel(),
+        )
     }
 }
