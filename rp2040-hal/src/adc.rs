@@ -36,6 +36,37 @@
 //!
 //! See [examples/adc.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/adc.rs) and
 //! [pimoroni_pico_explorer_showcase.rs](https://github.com/rp-rs/rp-hal-boards/tree/main/boards/pimoroni-pico-explorer/examples/pimoroni_pico_explorer_showcase.rs) for more complete examples
+//!
+//! ### Free running mode
+//!
+//! In free-running mode the ADC automatically captures samples in regular intervals.
+//! The samples are written to a FIFO, from which they can be retrieved.
+//!
+//! ```no_run
+//! use rp2040_hal::{adc::Adc, gpio::Pins, pac, Sio};
+//! let mut peripherals = pac::Peripherals::take().unwrap();
+//! let sio = Sio::new(peripherals.SIO);
+//! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
+//! // Enable adc
+//! let mut adc = Adc::new(peripherals.ADC, &mut peripherals.RESETS);
+//! // Enable the temperature sensor
+//! let mut temperature_sensor = adc.take_temp_sensor().unwrap();
+//!
+//! // Configure & start capturing to the fifo:
+//! let mut fifo = adc.build_fifo()
+//!   .clock_divider(0, 0) // sample as fast as possible (500ksps. This is the default)
+//!   .set_channel(&mut temperature_sensor)
+//!   .start();
+//!
+//! loop {
+//!   if fifo.len() > 0 {
+//!     // Read one captured ADC sample from the FIFO:
+//!     let temperature_adc_counts: u16 = fifo.read();
+//!   }
+//! }
+//! ```
+//! See [examples/adc_fifo_poll.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/adc_fifo_poll.rs) for a more complete example.
+//!
 
 use core::convert::Infallible;
 
@@ -204,6 +235,18 @@ impl Adc {
         self.device.cs.modify(|_, w| w.ts_en().clear_bit());
     }
 
+    /// Start configuring free-running mode, and set up the FIFO
+    ///
+    /// The [`AdcFifoBuilder`] returned by this method can be used
+    /// to configure capture options, like sample rate, channels to
+    /// capture from etc.
+    ///
+    /// Capturing is started by calling [`AdcFifoBuilder::start`], which
+    /// returns an [`AdcFifo`] to read from.
+    pub fn build_fifo(&mut self) -> AdcFifoBuilder<'_, false> {
+        AdcFifoBuilder { adc: self }
+    }
+
     fn read(&mut self, chan: u8) -> u16 {
         while !self.device.cs.read().ready().bit_is_set() {
             cortex_m::asm::nop();
@@ -257,5 +300,325 @@ where
         };
 
         Ok(self.read(chan).into())
+    }
+}
+
+/// Used to configure & build an [`AdcFifo`]
+///
+/// See [`Adc::build_fifo`] for details, as well as the `adc_fifo_*` [examples](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples).
+pub struct AdcFifoBuilder<'a, const SHIFTED: bool> {
+    adc: &'a mut Adc,
+}
+
+impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
+    /// Manually set clock divider to control sample rate
+    ///
+    /// The ADC is tied to the USB clock, normally running at 48MHz.
+    /// ADC conversion happens at 96 cycles per sample, so with the dividers
+    /// both set to 0 (the default) the sample rate will be `48MHz / 96 = 500ksps`.
+    ///
+    /// Setting the `int` and / or `frac` dividers will hold off between
+    /// samples, leading to an effective rate of:
+    ///
+    /// ```text
+    ///  rate = 48MHz / (1 + int + (frac / 256))
+    /// ```
+    ///
+    /// To determine the required `int` and `frac` values for a given target rate,
+    /// use these equations:
+    ///
+    /// ```text
+    ///  int = floor((48MHz / rate) - 1)
+    ///  frac = round(256 * ((48MHz / rate) - 1 - int))
+    /// ```
+    ///
+    /// Some examples:
+    ///
+    /// | Target rate | `int`   | `frac` |
+    /// |-------------|---------|--------|
+    /// | 1000sps     | `47999` |    `0` |
+    /// | 1024sps     | `46874` |    `0` |
+    /// | 1337sps     | `35900` |   `70` |
+    /// | 4096sps     | `11717` |  `192` |
+    /// | 96ksps      |   `499` |    `0` |
+    ///
+    /// Since each conversion takes 96 cycles, setting `int` to anything below 96 does
+    /// not make a difference, and leads to the same result as setting it to 0.
+    ///
+    /// The lowest possible rate is 732.41Hz, attainable by setting `int = 0xFFFF, frac = 0xFF`.
+    ///
+    /// For more details, please refer to section 4.9.2.2 in the RP2040 datasheet.
+    pub fn clock_divider(self, int: u16, frac: u8) -> Self {
+        self.adc
+            .device
+            .div
+            .modify(|_, w| unsafe { w.int().bits(int).frac().bits(frac) });
+        self
+    }
+
+    /// Select ADC input channel to sample from
+    ///
+    /// If round-robin mode is used, this will only affect the first sample.
+    ///
+    /// The given `pin` can either be one of the ADC inputs (GPIO26-28) or the
+    /// internal temperature sensor (retrieved via [`Adc::take_temp_sensor`]).
+    pub fn set_channel<PIN: Channel<Adc, ID = u8>>(self, _pin: &mut PIN) -> Self {
+        self.adc
+            .device
+            .cs
+            .modify(|_, w| unsafe { w.ainsel().bits(PIN::channel()) });
+        self
+    }
+
+    /// Set channels to use for round-robin mode
+    ///
+    /// Takes a tuple of channels, like `(&mut adc_pin, &mut temp_sense)`.
+    ///
+    /// **NOTE:** *The order in which the channels are specified has no effect!
+    /// Channels are always sampled in increasing order, by their channel number (Channel 0, Channel 1, ...).*
+    pub fn round_robin<T: Into<RoundRobin>>(self, selected_channels: T) -> Self {
+        let RoundRobin(bits) = selected_channels.into();
+        self.adc
+            .device
+            .cs
+            .modify(|_, w| unsafe { w.rrobin().bits(bits) });
+        self
+    }
+
+    /// Enable the FIFO interrupt ([`ADC_IRQ_FIFO`](pac::Interrupt::ADC_IRQ_FIFO))
+    ///
+    /// It will be triggered whenever there are at least `threshold` samples waiting in the FIFO.
+    ///
+    pub fn enable_interrupt(self, threshold: u8) -> Self {
+        self.adc.device.inte.modify(|_, w| w.fifo().set_bit());
+        self.adc
+            .device
+            .fcs
+            .modify(|_, w| unsafe { w.thresh().bits(threshold) });
+        self
+    }
+
+    /// Shift values to produce 8 bit samples (discarding the lower 4 bits).
+    ///
+    /// Normally the ADC uses 12 bits of precision, packed into a u16.
+    /// Shifting the values loses some precision, but produces smaller samples.
+    ///
+    /// When this method has been called, the resulting fifo's `read` method returns u8.
+    pub fn shift_8bit(self) -> AdcFifoBuilder<'a, true> {
+        self.adc.device.fcs.modify(|_, w| w.shift().set_bit());
+        AdcFifoBuilder { adc: self.adc }
+    }
+
+    /// Enable ADC FIFO and start free-running conversion
+    ///
+    /// Use the returned [`AdcFifo`] instance to access the captured data.
+    ///
+    /// To stop capturing, call [`AdcFifo::stop`].
+    pub fn start(self) -> AdcFifo<'a, SHIFTED> {
+        self.adc.device.fcs.modify(|_, w| w.en().set_bit());
+        self.adc.device.cs.modify(|_, w| w.start_many().set_bit());
+        AdcFifo { adc: self.adc }
+    }
+}
+
+/// Represents the ADC fifo, when used in free running mode
+///
+/// Constructed by [`AdcFifoBuilder::start`], which is accessible through [`Adc::build_fifo`].
+///
+pub struct AdcFifo<'a, const SHIFTED: bool> {
+    adc: &'a mut Adc,
+}
+
+impl<'a, const SHIFTED: bool> AdcFifo<'a, SHIFTED> {
+    #[allow(clippy::len_without_is_empty)]
+    /// Returns the number of elements currently in the fifo
+    pub fn len(&mut self) -> u8 {
+        self.adc.device.fcs.read().level().bits()
+    }
+
+    /// Check if there was a fifo overrun
+    ///
+    /// An overrun happens when the fifo is filled up faster than `read` is called to consume it.
+    ///
+    /// This function also clears the `over` bit if it was set.
+    pub fn is_over(&mut self) -> bool {
+        let over = self.adc.device.fcs.read().over().bit();
+        if over {
+            self.adc.device.fcs.modify(|_, w| w.over().set_bit());
+        }
+        over
+    }
+
+    /// Check if there was a fifo underrun
+    ///
+    /// An underrun happens when `read` is called on an empty fifo (`len() == 0`).
+    ///
+    /// This function also clears the `under` bit if it was set.
+    pub fn is_under(&mut self) -> bool {
+        let under = self.adc.device.fcs.read().under().bit();
+        if under {
+            self.adc.device.fcs.modify(|_, w| w.under().set_bit());
+        }
+        under
+    }
+
+    /// Read the most recently sampled ADC value
+    ///
+    /// Returns the most recently sampled value, bypassing the FIFO.
+    ///
+    /// This can be used if you want to read samples occasionally, but don't
+    /// want to incur the 96 cycle delay of a one-off read.
+    ///
+    /// Example:
+    /// ```ignore
+    /// // start continously sampling values:
+    /// let mut fifo = adc.build_fifo().set_channel(&mut adc_pin).start();
+    ///
+    /// loop {
+    ///   do_something_timing_critical();
+    ///
+    ///   // read the most recent value:
+    ///   if fifo.read_single() > THRESHOLD {
+    ///     led.set_high().unwrap();
+    ///   } else {
+    ///     led.set_low().unwrap();
+    ///   }
+    /// }
+    ///
+    /// // stop sampling, when it's no longer needed
+    /// fifo.stop();
+    /// ```
+    ///
+    /// Note that when round-robin sampling is used, there is no way
+    /// to tell from which channel this sample came.
+    pub fn read_single(&mut self) -> u16 {
+        self.adc.read_single()
+    }
+
+    /// Stop capturing in free running mode.
+    ///
+    /// Resets all capture options that can be set via [`AdcFifoBuilder`] to
+    /// their defaults.
+    ///
+    /// Returns the underlying [`Adc`], to be reused.
+    pub fn stop(mut self) -> &'a mut Adc {
+        // stop capture and clear channel selection
+        self.adc
+            .device
+            .cs
+            .modify(|_, w| unsafe { w.start_many().clear_bit().rrobin().bits(0).ainsel().bits(0) });
+        // disable fifo interrupt
+        self.adc.device.inte.modify(|_, w| w.fifo().clear_bit());
+        // Wait for one more conversion, then drain remaining values from fifo.
+        // This MUST happen *after* the interrupt is disabled, but
+        // *before* `thresh` is modified. Otherwise if `INTS.FIFO = 1`,
+        // the interrupt will be fired one more time.
+        // The only way to clear `INTS.FIFO` is for `FCS.LEVEL` to go
+        // below `FCS.THRESH`, which requires `FCS.THRESH` not to be 0.
+        while self.adc.device.cs.read().ready().bit_is_clear() {}
+        while self.len() > 0 {
+            self.read_from_fifo();
+        }
+        // disable fifo and reset threshold to 0
+        self.adc
+            .device
+            .fcs
+            .modify(|_, w| unsafe { w.en().clear_bit().thresh().bits(0) });
+        // reset clock divider
+        self.adc
+            .device
+            .div
+            .modify(|_, w| unsafe { w.int().bits(0).frac().bits(0) });
+        self.adc
+    }
+
+    /// Block until a ADC_IRQ_FIFO interrupt occurs
+    ///
+    /// Interrupts must be enabled ([`AdcFifoBuilder::enable_interrupt`]), or else this methods blocks forever.
+    pub fn wait_for_interrupt(&mut self) {
+        while self.adc.device.intr.read().fifo().bit_is_clear() {}
+    }
+
+    fn read_from_fifo(&mut self) -> u16 {
+        self.adc.device.fifo.read().val().bits()
+    }
+}
+
+impl<'a> AdcFifo<'a, false> {
+    /// Read a single value from the fifo (u16 version, not shifted)
+    pub fn read(&mut self) -> u16 {
+        self.read_from_fifo()
+    }
+}
+
+impl<'a> AdcFifo<'a, true> {
+    /// Read a single value from the fifo (u8 version, shifted)
+    ///
+    /// Also see [`AdcFifoBuilder::shift_8bit`].
+    pub fn read(&mut self) -> u8 {
+        self.read_from_fifo() as u8
+    }
+}
+
+/// Internal struct representing values for the `CS.RROBIN` register.
+///
+/// See [`AdcFifoBuilder::round_robin`], for usage example.
+pub struct RoundRobin(u8);
+
+impl<PIN: Channel<Adc, ID = u8>> From<PIN> for RoundRobin {
+    fn from(_: PIN) -> Self {
+        Self(1 << PIN::channel())
+    }
+}
+
+impl<A, B> From<(&mut A, &mut B)> for RoundRobin
+where
+    A: Channel<Adc, ID = u8>,
+    B: Channel<Adc, ID = u8>,
+{
+    fn from(_: (&mut A, &mut B)) -> Self {
+        Self(1 << A::channel() | 1 << B::channel())
+    }
+}
+
+impl<A, B, C> From<(&mut A, &mut B, &mut C)> for RoundRobin
+where
+    A: Channel<Adc, ID = u8>,
+    B: Channel<Adc, ID = u8>,
+    C: Channel<Adc, ID = u8>,
+{
+    fn from(_: (&mut A, &mut B, &mut C)) -> Self {
+        Self(1 << A::channel() | 1 << B::channel() | 1 << C::channel())
+    }
+}
+
+impl<A, B, C, D> From<(&mut A, &mut B, &mut C, &mut D)> for RoundRobin
+where
+    A: Channel<Adc, ID = u8>,
+    B: Channel<Adc, ID = u8>,
+    C: Channel<Adc, ID = u8>,
+    D: Channel<Adc, ID = u8>,
+{
+    fn from(_: (&mut A, &mut B, &mut C, &mut D)) -> Self {
+        Self(1 << A::channel() | 1 << B::channel() | 1 << C::channel() | 1 << D::channel())
+    }
+}
+
+impl<A, B, C, D, E> From<(&mut A, &mut B, &mut C, &mut D, &mut E)> for RoundRobin
+where
+    A: Channel<Adc, ID = u8>,
+    B: Channel<Adc, ID = u8>,
+    C: Channel<Adc, ID = u8>,
+    D: Channel<Adc, ID = u8>,
+    E: Channel<Adc, ID = u8>,
+{
+    fn from(_: (&mut A, &mut B, &mut C, &mut D, &mut E)) -> Self {
+        Self(
+            1 << A::channel()
+                | 1 << B::channel()
+                | 1 << C::channel()
+                | 1 << D::channel()
+                | 1 << E::channel(),
+        )
     }
 }
