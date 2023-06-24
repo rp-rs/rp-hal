@@ -40,26 +40,20 @@ mod app {
 
     const SAMPLE_COUNT: usize = 1000;
 
+    type Uart = hal::uart::UartPeripheral<
+        hal::uart::Enabled,
+        hal::pac::UART0,
+        (
+            hal::gpio::Pin<hal::gpio::bank0::Gpio0, hal::gpio::FunctionUart, hal::gpio::PullDown>,
+            hal::gpio::Pin<hal::gpio::bank0::Gpio1, hal::gpio::FunctionUart, hal::gpio::PullDown>,
+        ),
+    >;
+
     #[shared]
     struct Shared {
         done: bool,
         buf: [u16; SAMPLE_COUNT],
-        uart: hal::uart::UartPeripheral<
-            hal::uart::Enabled,
-            hal::pac::UART0,
-            (
-                hal::gpio::Pin<
-                    hal::gpio::bank0::Gpio0,
-                    hal::gpio::FunctionUart,
-                    hal::gpio::PullDown,
-                >,
-                hal::gpio::Pin<
-                    hal::gpio::bank0::Gpio1,
-                    hal::gpio::FunctionUart,
-                    hal::gpio::PullDown,
-                >,
-            ),
-        >,
+        uart: Uart,
     }
 
     #[local]
@@ -152,8 +146,8 @@ mod app {
             let finished = (&mut c.shared.done, &mut c.shared.buf, &mut c.shared.uart).lock(
                 |done, buf, uart| {
                     if *done {
-                        for i in 0..SAMPLE_COUNT {
-                            writeln!(uart, "Sample: {}\r", buf[i]).unwrap();
+                        for sample in buf {
+                            writeln!(uart, "Sample: {}\r", sample).unwrap();
                         }
                         writeln!(uart, "All done, going to sleep 😴\r").unwrap();
                         true
@@ -168,6 +162,7 @@ mod app {
             }
         }
 
+        #[allow(clippy::empty_loop)]
         loop {}
     }
 
