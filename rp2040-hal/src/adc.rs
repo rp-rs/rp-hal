@@ -50,10 +50,10 @@
 //! // Enable adc
 //! let mut adc = Adc::new(peripherals.ADC, &mut peripherals.RESETS);
 //! // Enable the temperature sensor
-//! let mut temperature_sensor = adc.enable_temp_sensor();
+//! let mut temperature_sensor = adc.take_temp_sensor().unwrap();
 //!
 //! // Configure & start capturing to the fifo:
-//! let fifo = adc.build_fifo()
+//! let mut fifo = adc.build_fifo()
 //!   .clock_divider(0, 0) // sample as fast as possible (500ksps. This is the default)
 //!   .set_channel(&mut temperature_sensor)
 //!   .start();
@@ -65,7 +65,7 @@
 //!   }
 //! }
 //! ```
-//! See [examples/adc_fifo_poll.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/adc.rs) for a more complete example.
+//! See [examples/adc_fifo_poll.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/adc_fifo_poll.rs) for a more complete example.
 //!
 
 use core::convert::Infallible;
@@ -320,14 +320,14 @@ impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
     /// Setting the `int` and / or `frac` dividers will hold off between
     /// samples, leading to an effective rate of:
     ///
-    /// ```
+    /// ```text
     ///  rate = 48MHz / (1 + int + (frac / 256))
     /// ```
     ///
     /// To determine the required `int` and `frac` values for a given target rate,
     /// use these equations:
     ///
-    /// ```
+    /// ```text
     ///  int = floor((48MHz / rate) - 1)
     ///  frac = round(256 * ((48MHz / rate) - 1 - int))
     /// ```
@@ -361,7 +361,7 @@ impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
     /// If round-robin mode is used, this will only affect the first sample.
     ///
     /// The given `pin` can either be one of the ADC inputs (GPIO26-28) or the
-    /// internal temperature sensor (retrieved via [`Adc::enable_temp_sensor`]).
+    /// internal temperature sensor (retrieved via [`Adc::take_temp_sensor`]).
     pub fn set_channel<PIN: Channel<Adc, ID = u8>>(self, _pin: &mut PIN) -> Self {
         self.adc
             .device
@@ -470,9 +470,9 @@ impl<'a, const SHIFTED: bool> AdcFifo<'a, SHIFTED> {
     /// want to incur the 96 cycle delay of a one-off read.
     ///
     /// Example:
-    /// ```
+    /// ```no_run
     /// // start continously sampling values:
-    /// let fifo = adc.build_fifo().set_channel(&mut adc_pin).start();
+    /// let mut fifo = adc.build_fifo().set_channel(&mut adc_pin).start();
     ///
     /// loop {
     ///   do_something_timing_critical();
@@ -562,7 +562,7 @@ impl<'a> AdcFifo<'a, true> {
 
 /// Internal struct representing values for the `CS.RROBIN` register.
 ///
-/// See [`AdcFreeRunning.round_robin`], for usage example.
+/// See [`AdcFifoBuilder::round_robin`], for usage example.
 pub struct RoundRobin(u8);
 
 impl<PIN: Channel<Adc, ID = u8>> From<PIN> for RoundRobin {
