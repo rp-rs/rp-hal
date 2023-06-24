@@ -470,7 +470,7 @@ impl<'a, const SHIFTED: bool> AdcFifo<'a, SHIFTED> {
     /// want to incur the 96 cycle delay of a one-off read.
     ///
     /// Example:
-    /// ```no_run
+    /// ```ignore
     /// // start continously sampling values:
     /// let mut fifo = adc.build_fifo().set_channel(&mut adc_pin).start();
     ///
