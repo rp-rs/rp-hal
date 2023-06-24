@@ -69,9 +69,12 @@
 //!
 
 use core::convert::Infallible;
+use core::marker::PhantomData;
 
 use hal::adc::{Channel, OneShot};
 use pac::{ADC, RESETS};
+use crate::dma;
+use pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
 
 use crate::{
     gpio::{
@@ -243,8 +246,8 @@ impl Adc {
     ///
     /// Capturing is started by calling [`AdcFifoBuilder::start`], which
     /// returns an [`AdcFifo`] to read from.
-    pub fn build_fifo(&mut self) -> AdcFifoBuilder<'_, false> {
-        AdcFifoBuilder { adc: self }
+    pub fn build_fifo(&mut self) -> AdcFifoBuilder<'_, u16> {
+        AdcFifoBuilder { adc: self, marker: PhantomData }
     }
 
     fn read(&mut self, chan: u8) -> u16 {
@@ -306,11 +309,12 @@ where
 /// Used to configure & build an [`AdcFifo`]
 ///
 /// See [`Adc::build_fifo`] for details, as well as the `adc_fifo_*` [examples](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples).
-pub struct AdcFifoBuilder<'a, const SHIFTED: bool> {
+pub struct AdcFifoBuilder<'a, Word> {
     adc: &'a mut Adc,
+    marker: PhantomData<Word>,
 }
 
-impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
+impl<'a, Word> AdcFifoBuilder<'a, Word> {
     /// Manually set clock divider to control sample rate
     ///
     /// The ADC is tied to the USB clock, normally running at 48MHz.
@@ -388,7 +392,6 @@ impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
     /// Enable the FIFO interrupt ([`ADC_IRQ_FIFO`](pac::Interrupt::ADC_IRQ_FIFO))
     ///
     /// It will be triggered whenever there are at least `threshold` samples waiting in the FIFO.
-    ///
     pub fn enable_interrupt(self, threshold: u8) -> Self {
         self.adc.device.inte.modify(|_, w| w.fifo().set_bit());
         self.adc
@@ -404,9 +407,9 @@ impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
     /// Shifting the values loses some precision, but produces smaller samples.
     ///
     /// When this method has been called, the resulting fifo's `read` method returns u8.
-    pub fn shift_8bit(self) -> AdcFifoBuilder<'a, true> {
+    pub fn shift_8bit(self) -> AdcFifoBuilder<'a, u8> {
         self.adc.device.fcs.modify(|_, w| w.shift().set_bit());
-        AdcFifoBuilder { adc: self.adc }
+        AdcFifoBuilder { adc: self.adc, marker: PhantomData }
     }
 
     /// Enable ADC FIFO and start free-running conversion
@@ -414,10 +417,55 @@ impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
     /// Use the returned [`AdcFifo`] instance to access the captured data.
     ///
     /// To stop capturing, call [`AdcFifo::stop`].
-    pub fn start(self) -> AdcFifo<'a, SHIFTED> {
+    pub fn start(self) -> AdcFifo<'a, Word> {
         self.adc.device.fcs.modify(|_, w| w.en().set_bit());
         self.adc.device.cs.modify(|_, w| w.start_many().set_bit());
-        AdcFifo { adc: self.adc }
+        AdcFifo { adc: self.adc, marker: PhantomData }
+    }
+
+    /// Set up and start a DMA transfer, then start FIFO capture
+    ///
+    /// Note that this will force the FIFO threshold to `1`, overwriting any other value passed to [`AdcFifoBuilder::enable_interrupt`].
+    ///
+    /// Example:
+    /// ```ignore
+    ///
+    /// let write_target = ...; // set up a destination (e.g. buffer) accepting u16 words
+    ///
+    /// let (transfer, fifo) = adc
+    ///     .build_fifo()
+    ///     .start_dma(|read_target| {
+    ///         dma::single_buffer::Config::new(dma.ch0, read_target, write_target).start()
+    ///     });
+    ///
+    /// // wait for transfer to complete
+    /// let (channel, read_target, write_target) = transfer.wait();
+    ///
+    /// // another transfer could be started now (the ADC conversion is still running)
+    ///
+    /// // stop capturing:
+    /// let adc = fifo.stop();
+    /// ```
+    pub fn start_dma<CH, TO, F>(self, start_transfer: F) -> (dma::single_buffer::Transfer<CH, AdcReadTarget<Word>, TO>, AdcFifo<'a, Word>)
+    where
+        CH: dma::SingleChannel,
+        TO: dma::WriteTarget<TransmittedWord = Word>,
+        F: FnOnce(AdcReadTarget<Word>) -> dma::single_buffer::Transfer<CH, AdcReadTarget<Word>, TO>
+    {
+        // Enable DREQ, set threshold to 1, enable FIFO
+        self.adc
+            .device
+            .fcs
+            .modify(|_, w| unsafe {
+                w.dreq_en().set_bit()
+                    .thresh().bits(1)
+                    .en().set_bit()
+            });
+        // Start DMA transfer
+        let transfer = start_transfer(AdcReadTarget(&self.adc.device.fifo as *const _ as u32, PhantomData));
+        // Start capturing
+        self.adc.device.cs.modify(|_, w| w.start_many().set_bit());
+        (transfer, AdcFifo { adc: self.adc, marker: PhantomData })
     }
 }
 
@@ -425,11 +473,12 @@ impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
 ///
 /// Constructed by [`AdcFifoBuilder::start`], which is accessible through [`Adc::build_fifo`].
 ///
-pub struct AdcFifo<'a, const SHIFTED: bool> {
+pub struct AdcFifo<'a, Word> {
     adc: &'a mut Adc,
+    marker: PhantomData<Word>,
 }
 
-impl<'a, const SHIFTED: bool> AdcFifo<'a, SHIFTED> {
+impl<'a, Word> AdcFifo<'a, Word> {
     #[allow(clippy::len_without_is_empty)]
     /// Returns the number of elements currently in the fifo
     pub fn len(&mut self) -> u8 {
@@ -544,19 +593,38 @@ impl<'a, const SHIFTED: bool> AdcFifo<'a, SHIFTED> {
     }
 }
 
-impl<'a> AdcFifo<'a, false> {
+impl<'a> AdcFifo<'a, u16> {
     /// Read a single value from the fifo (u16 version, not shifted)
     pub fn read(&mut self) -> u16 {
         self.read_from_fifo()
     }
 }
 
-impl<'a> AdcFifo<'a, true> {
+impl<'a> AdcFifo<'a, u8> {
     /// Read a single value from the fifo (u8 version, shifted)
     ///
     /// Also see [`AdcFifoBuilder::shift_8bit`].
     pub fn read(&mut self) -> u8 {
         self.read_from_fifo() as u8
+    }
+}
+
+/// Represents a ReadTarget for DMA transfers
+pub struct AdcReadTarget<Word>(u32, PhantomData<Word>);
+
+impl<Word> dma::ReadTarget for AdcReadTarget<Word> {
+    type ReceivedWord = Word;
+
+    fn rx_treq() -> Option<u8> {
+        Some(TREQ_SEL_A::ADC.into())
+    }
+
+    fn rx_address_count(&self) -> (u32, u32) {
+        (self.0, u32::MAX)
+    }
+
+    fn rx_increment(&self) -> bool {
+        false
     }
 }
 

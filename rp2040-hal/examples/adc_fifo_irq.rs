@@ -58,7 +58,7 @@ mod app {
 
     #[local]
     struct Local {
-        adc_fifo: Option<hal::adc::AdcFifo<'static, false>>,
+        adc_fifo: Option<hal::adc::AdcFifo<'static, u16>>,
     }
 
     #[init(local = [adc: Option<hal::Adc> = None])]
