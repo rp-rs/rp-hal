@@ -553,7 +553,7 @@ impl UsbBusTrait for UsbBus {
             inner
                 .ctrl_reg
                 .addr_endp
-                .modify(|_, w| unsafe { w.address().bits(addr & 0x3F) });
+                .modify(|_, w| unsafe { w.address().bits(addr & 0x7F) });
             // reset ep0
             inner.ctrl_dpram.ep_buffer_control[0].modify(|_, w| w.pid_0().set_bit());
             inner.ctrl_dpram.ep_buffer_control[1].modify(|_, w| w.pid_0().set_bit());
