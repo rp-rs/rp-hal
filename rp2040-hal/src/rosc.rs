@@ -65,6 +65,18 @@ impl RingOscillator<Disabled> {
             freq_hz: 6_500_000u32.Hz(),
         })
     }
+
+    /// Initializes the ROSC with a known frequency.
+    /// See sections 2.17.3. "Modifying the frequency", and 2.15.6.2. "Using the frequency counter"
+    /// in the rp2040 datasheet for guidance on how to do this before initialising the ROSC.
+    pub fn initialize_with_freq(self, known_freq_hz: u32) -> RingOscillator<Enabled> {
+        self.device.ctrl.write(|w| w.enable().enable());
+
+        use fugit::RateExtU32;
+        self.transition(Enabled {
+            freq_hz: known_freq_hz.Hz(),
+        })
+    }
 }
 
 impl RingOscillator<Enabled> {
