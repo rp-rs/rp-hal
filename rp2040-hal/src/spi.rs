@@ -342,15 +342,7 @@ macro_rules! impl_write {
         }
 
         #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1::SpiBusFlush for Spi<Enabled, D, P, $nr> {
-            fn flush(&mut self) -> Result<(), Self::Error> {
-                while self.is_busy() {}
-                Ok(())
-            }
-        }
-
-        #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1::SpiBusRead<$type> for Spi<Enabled, D, P, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1::SpiBus<$type> for Spi<Enabled, D, P, $nr> {
             fn read(&mut self, words: &mut [$type]) -> Result<(), Self::Error> {
                 for word in words.iter_mut() {
                     // write empty word
@@ -365,10 +357,7 @@ macro_rules! impl_write {
                 }
                 Ok(())
             }
-        }
 
-        #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1::SpiBusWrite<$type> for Spi<Enabled, D, P, $nr> {
             fn write(&mut self, words: &[$type]) -> Result<(), Self::Error> {
                 for word in words.iter() {
                     // write one word
@@ -383,10 +372,7 @@ macro_rules! impl_write {
                 }
                 Ok(())
             }
-        }
 
-        #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1::SpiBus<$type> for Spi<Enabled, D, P, $nr> {
             fn transfer(&mut self, read: &mut [$type], write: &[$type]) -> Result<(), Self::Error>{
                 let len = read.len().max(write.len());
                 for i in 0..len {
@@ -421,6 +407,11 @@ macro_rules! impl_write {
                     *word = self.device.sspdr.read().data().bits() as $type;
                 }
 
+                Ok(())
+            }
+
+            fn flush(&mut self) -> Result<(), Self::Error> {
+                while self.is_busy() {}
                 Ok(())
             }
         }
