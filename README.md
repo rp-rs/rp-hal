@@ -263,7 +263,7 @@ Conduct][CoC], and the maintainer of this crate, the [rp-rs team], promises
 to intervene to uphold that code of conduct.
 
 [CoC]: CODE_OF_CONDUCT.md
-[rp-rs team]: https://github.com/orgs/rp-rs/teams/rp-rs
+[rp-rs team]: https://github.com/orgs/rp-rs/people
 
 <!-- LICENSE -->
 ## License
