@@ -73,7 +73,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.62
+          toolchain: 1.63
           target: thumbv6m-none-eabi
       - name: Install cargo-hack
         uses: baptiste0928/cargo-install@v2
