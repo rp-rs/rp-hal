@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### MSRV
+
+The Minimum-Supported Rust Version (MSRV) for this release is 1.63
+
 ### Fixed
 
 - With rust nightly and beta 1.70.0, the multi-core spawn code could get miscompiled
