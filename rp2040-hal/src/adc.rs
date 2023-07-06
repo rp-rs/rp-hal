@@ -79,7 +79,8 @@
 //!
 //! Example:
 //! ```no_run
-//! use rp2040_hal::{adc::Adc, gpio::Pins, pac, Sio, dma::single_buffer};
+//! use rp2040_hal::{adc::Adc, gpio::Pins, pac, Sio, dma::{single_buffer, DMAExt}};
+//! use cortex_m::singleton;
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
 //! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
@@ -97,13 +98,13 @@
 //!   .prepare();
 //!
 //! // Set up a buffer, where the samples should be written:
-//! let buf = singleton!(: [u16; 500] = [0; 500]);
+//! let buf = singleton!(: [u16; 500] = [0; 500]).unwrap();
 //!
 //! // Start DMA transfer
 //! let transfer = single_buffer::Config::new(dma.ch0, fifo.dma_read_target(), buf).start();
 //!
 //! // Resume the FIFO to start capturing
-//! adc_fifo.resume();
+//! fifo.resume();
 //!
 //! // Wait for the transfer to complete:
 //! let (ch, adc_read_target, buf) = transfer.wait();
