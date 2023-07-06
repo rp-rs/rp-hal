@@ -72,9 +72,9 @@
 //! When the ADC is in free-running mode, it's possible to use DMA to transfer data from the FIFO elsewhere, without having to read the FIFO manually.
 //!
 //! This requires a number of steps:
-//! 1. Build and `AdcFifo`, with DMA enabled ([`AdcFifoBuilder::enable_dma`])
+//! 1. Build an `AdcFifo`, with DMA enabled ([`AdcFifoBuilder::enable_dma`])
 //! 2. Use [`AdcFifoBuilder::prepare`] instead of [`AdcFifoBuilder::start`], so that the FIFO is created in `paused` state
-//! 3. Start a DMA transfer ([`dma::single_buffer::Transfer`], [`dma::double_buffer::Transfer`], ...), using the [`AdcFifo::dma_read_target`] as the source
+//! 3. Start a DMA transfer ([`dma::single_buffer::Transfer`], [`dma::double_buffer::Transfer`], ...), using the [`AdcFifo::dma_read_target`] as the source (`from` parameter)
 //! 4. Finally unpause the FIFO by calling [`AdcFifo::resume`], to start capturing
 //!
 //! Example:
