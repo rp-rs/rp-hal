@@ -112,6 +112,7 @@
 //! //...
 //!
 //! ```
+//! //! See [examples/adc_fifo_dma.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/adc_fifo_dma.rs) for a more complete example.
 //!
 
 use core::convert::Infallible;
