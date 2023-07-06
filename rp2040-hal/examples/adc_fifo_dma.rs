@@ -1,7 +1,7 @@
-//! # ADC FIFO Example
+//! # ADC FIFO DMA Example
 //!
 //! This application demonstrates how to read ADC samples in free-running mode,
-//! and reading them from the FIFO by polling the fifo's `len()`.
+//! and reading them from the FIFO by using a DMA transfer.
 //!
 //! It may need to be adapted to your particular board layout and/or pin assignment.
 //!
@@ -102,7 +102,7 @@ fn main() -> ! {
         .unwrap();
 
     // Write to the UART
-    uart.write_full_blocking(b"ADC FIFO poll example\r\n");
+    uart.write_full_blocking(b"ADC FIFO DMA example\r\n");
 
     // Initialize DMA
     let dma = pac.DMA.split(&mut pac.RESETS);
@@ -147,6 +147,11 @@ fn main() -> ! {
 
     // initialize a timer, to measure the total sampling time (printed below)
     let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
+
+    // NOTE: in a real-world program, instead of calling `wait` now, you would probably:
+    // 1. Enable one of the DMA interrupts for the channel (e.g. `dma.ch0.listen_irq0()`)
+    // 2. Set up a handler for the respective `DMA_IRQ_*` interrupt
+    // 3. Call `wait` only within that interrupt, which will be fired once the transfer is complete.
 
     // the DMA unit takes care of shuffling data from the FIFO into the buffer.
     // We just sit here and wait... 😴
