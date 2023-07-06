@@ -89,11 +89,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           target: thumbv6m-none-eabi
-      - name: Install cargo-hack
-        uses: baptiste0928/cargo-install@v2
-        with:
-          crate: cargo-hack
       - name: Build on-target-tests
         run: |
           cd on-target-tests
-          cargo hack build --each-feature --exclude-all-features
+          cargo test --no-run
