@@ -19,10 +19,10 @@ use rp2040_hal as hal;
 
 // Some traits we need
 use core::fmt::Write;
-use fugit::RateExtU32;
-use rp2040_hal::Clock;
-use hal::dma::{single_buffer, DMAExt};
 use cortex_m::singleton;
+use fugit::RateExtU32;
+use hal::dma::{single_buffer, DMAExt};
+use rp2040_hal::Clock;
 
 // UART related types
 use hal::uart::{DataBits, StopBits, UartConfig};
@@ -116,11 +116,12 @@ fn main() -> ! {
     // Configure GPIO26 as an ADC input
     let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26.into_floating_input());
 
+    // we'll capture 1000 samples in total (500 per channel)
     // NOTE: when calling `shift_8bit` below, the type here must be changed from `u16` to `u8`
     let buf_for_samples = singleton!(: [u16; 1000] = [0; 1000]).unwrap();
 
     // Configure free-running mode:
-    let (dma_transfer, adc_fifo) = adc
+    let mut adc_fifo = adc
         .build_fifo()
         // Set clock divider to target a sample rate of 1000 samples per second (1ksps).
         // The value was calculated by `(48MHz / 1ksps) - 1 = 47999.0`.
@@ -132,10 +133,17 @@ fn main() -> ! {
         .round_robin((&mut adc_pin_0, &mut temperature_sensor))
         // Uncomment this line to produce 8-bit samples, instead of 12 bit (lower bits are discarded)
         //.shift_8bit()
-        // Start DMA channel & start sampling
-        .start_dma(|read_target| single_buffer::Config::new(dma.ch0, read_target, buf_for_samples).start());
+        // Enable DMA transfers for the FIFO
+        .enable_dma()
+        // Create the FIFO, but don't start it just yet
+        .prepare();
 
-    // we'll capture 1000 samples in total (500 per channel)
+    // Start a DMA transfer (must happen before resuming the ADC FIFO)
+    let dma_transfer =
+        single_buffer::Config::new(dma.ch0, adc_fifo.dma_read_target(), buf_for_samples).start();
+
+    // Resume the FIFO to start capturing
+    adc_fifo.resume();
 
     // initialize a timer, to measure the total sampling time (printed below)
     let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
@@ -144,7 +152,7 @@ fn main() -> ! {
     // We just sit here and wait... 😴
     let (_ch, _adc_read_target, buf_for_samples) = dma_transfer.wait();
 
-    // ^^^ the three results here (channel, AdcReadTarget, write target) can be reused
+    // ^^^ the three results here (channel, adc::DmaReadTarget, write target) can be reused
     // right away to start another transfer.
 
     let time_taken = timer.get_counter();
@@ -159,7 +167,8 @@ fn main() -> ! {
         writeln!(
             uart,
             "Temp:\t{}\tPin\t{}\r",
-            buf_for_samples[i*2], buf_for_samples[i*2+1]
+            buf_for_samples[i * 2],
+            buf_for_samples[i * 2 + 1]
         )
         .unwrap();
     }

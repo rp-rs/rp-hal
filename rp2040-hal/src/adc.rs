@@ -117,10 +117,10 @@
 use core::convert::Infallible;
 use core::marker::PhantomData;
 
-use hal::adc::{Channel, OneShot};
-use pac::{ADC, RESETS};
 use crate::dma;
+use hal::adc::{Channel, OneShot};
 use pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
+use pac::{ADC, RESETS};
 
 use crate::{
     gpio::{
@@ -293,7 +293,10 @@ impl Adc {
     /// Capturing is started by calling [`AdcFifoBuilder::start`], which
     /// returns an [`AdcFifo`] to read from.
     pub fn build_fifo(&mut self) -> AdcFifoBuilder<'_, u16> {
-        AdcFifoBuilder { adc: self, marker: PhantomData }
+        AdcFifoBuilder {
+            adc: self,
+            marker: PhantomData,
+        }
     }
 
     fn read(&mut self, chan: u8) -> u16 {
@@ -455,7 +458,10 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     /// When this method has been called, the resulting fifo's `read` method returns u8.
     pub fn shift_8bit(self) -> AdcFifoBuilder<'a, u8> {
         self.adc.device.fcs.modify(|_, w| w.shift().set_bit());
-        AdcFifoBuilder { adc: self.adc, marker: PhantomData }
+        AdcFifoBuilder {
+            adc: self.adc,
+            marker: PhantomData,
+        }
     }
 
     /// Enable DMA for the FIFO.
@@ -466,9 +472,10 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     /// The threshold is the same one as set by [`AdcFifoBuilder::enable_interrupt`]. If you want to enable FIFO
     /// interrupts, but also use DMA, the `threshold` parameter passed to `enable_interrupt` *must* be set to `1` as well.*
     pub fn enable_dma(self) -> Self {
-        self.adc.device.fcs.modify(|_, w| unsafe {
-            w.dreq_en().set_bit().thresh().bits(1)
-        });
+        self.adc
+            .device
+            .fcs
+            .modify(|_, w| unsafe { w.dreq_en().set_bit().thresh().bits(1) });
         self
     }
 
@@ -482,7 +489,10 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     pub fn start(self) -> AdcFifo<'a, Word> {
         self.adc.device.fcs.modify(|_, w| w.en().set_bit());
         self.adc.device.cs.modify(|_, w| w.start_many().set_bit());
-        AdcFifo { adc: self.adc, marker: PhantomData }
+        AdcFifo {
+            adc: self.adc,
+            marker: PhantomData,
+        }
     }
 
     /// Enable ADC FIFO, but do not start conversion yet
@@ -492,7 +502,10 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     /// Use [`AdcFifo::resume`] to start conversion.
     pub fn prepare(self) -> AdcFifo<'a, Word> {
         self.adc.device.fcs.modify(|_, w| w.en().set_bit());
-        AdcFifo { adc: self.adc, marker: PhantomData }
+        AdcFifo {
+            adc: self.adc,
+            marker: PhantomData,
+        }
     }
 }
 
