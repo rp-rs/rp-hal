@@ -154,7 +154,7 @@ impl<CH: ChannelIndex> ChannelRegs for Channel<CH> {
 ///
 /// The implementing type must be safe to use for DMA reads. This means:
 ///
-/// - The range returned by rx_address_count must pointer to a valid address,
+/// - The range returned by rx_address_count must point to a valid address,
 ///   and if rx_increment is true, count must fit into the allocated buffer.
 /// - As long as no `&mut self` method is called on the implementing object:
 ///   - `rx_address_count` must always return the same value, if called multiple
@@ -215,7 +215,7 @@ unsafe impl<B: ReadBuffer> ReadTarget for B {
 ///
 /// The implementing type must be safe to use for DMA writes. This means:
 ///
-/// - The range returned by tx_address_count must pointer to a valid address,
+/// - The range returned by tx_address_count must point to a valid address,
 ///   and if tx_increment is true, count must fit into the allocated buffer.
 /// - As long as no other `&mut self` method is called on the implementing object:
 ///   - `tx_address_count` must always return the same value, if called multiple
