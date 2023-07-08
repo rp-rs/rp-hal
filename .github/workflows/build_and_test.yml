@@ -64,6 +64,7 @@ jobs:
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-udeps
+          version: "=0.1.40"
       - name: Check unused deps
         run: cargo hack udeps --optional-deps --each-feature
   msrv:
