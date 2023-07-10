@@ -905,8 +905,8 @@ unsafe impl Word for CcFormat {}
 /// Format for DMA transfers to PWM TOP register.
 ///
 /// It is forbidden to use it as DMA write destination,
-/// it is safe but it might no be compatible with a future use of reserved register fields.
-#[derive(Clone, Copy, Eq, PartialEq)]
+/// it is safe but it might not be compatible with a future use of reserved register fields.
+#[derive(Clone, Copy, Eq)]
 #[repr(C)]
 #[repr(align(4))]
 pub struct TopFormat {
@@ -915,6 +915,12 @@ pub struct TopFormat {
     /// Reserved part.
     /// Should always be zero
     reserved: u16,
+}
+
+impl PartialEq<TopFormat> for TopFormat {
+    fn eq(&self, other: &TopFormat) -> bool {
+        self.top == other.top
+    }
 }
 
 impl TopFormat {
