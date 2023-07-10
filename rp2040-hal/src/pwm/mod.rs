@@ -872,12 +872,12 @@ impl<S: SliceId, M: ValidSliceMode<S>> From<Slice<S, M>> for SliceDmaWrite<S, M>
         Self {
             slice: value,
             top: SliceDmaWriteTop {
-                slice: PhantomData::<S> {},
-                mode: PhantomData::<M> {},
+                slice: PhantomData,
+                mode: PhantomData,
             },
             cc: SliceDmaWriteCc {
-                slice: PhantomData::<S> {},
-                mode: PhantomData::<M> {},
+                slice: PhantomData,
+                mode: PhantomData,
             },
         }
     }
