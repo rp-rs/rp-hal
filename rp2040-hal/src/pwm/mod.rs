@@ -808,7 +808,7 @@ pub struct SliceDmaWriteCc<S: SliceId, M: ValidSliceMode<S>> {
 /// ```no_run
 /// use cortex_m::{prelude::*, singleton};
 /// use rp2040_hal::dma::{double_buffer, DMAExt};
-/// use rp2040_hal::pwm::{SliceDmaWrite, Slices};
+/// use rp2040_hal::pwm::{SliceDmaWrite, Slices, TopFormat};
 ///
 ///
 /// let mut pac = rp2040_pac::Peripherals::take().unwrap();
@@ -824,8 +824,8 @@ pub struct SliceDmaWriteCc<S: SliceId, M: ValidSliceMode<S>> {
 /// pwm.channel_a.set_duty(0x1000);
 /// pwm.channel_b.set_duty(0x1000);
 ///
-/// let buf = singleton!(: [u16; 4] = [0x7fff; 4]).unwrap();
-/// let buf2 = singleton!(: [u16; 4] = [0xffff; 4]).unwrap();
+/// let buf = singleton!(: [TopFormat; 4] = [TopFormat::new(0x7fff); 4]).unwrap();
+/// let buf2 = singleton!(: [TopFormat; 4] = [TopFormat::new(0xffff); 4]).unwrap();
 ///
 /// let dma = pac.DMA.split(&mut pac.RESETS);
 ///
@@ -902,6 +902,36 @@ pub struct CcFormat {
 
 unsafe impl Word for CcFormat {}
 
+/// Format for DMA transfers to PWM TOP register.
+///
+/// It is forbidden to use it as DMA write destination,
+/// it is safe but it might no be compatible with a future use of reserved register fields.
+#[derive(Clone, Copy, Eq, PartialEq)]
+#[repr(C)]
+#[repr(align(4))]
+pub struct TopFormat {
+    /// Valid register part.
+    pub top: u16,
+    /// Reserved part.
+    /// Should always be zero
+    reserved: u16,
+}
+
+impl TopFormat {
+    /// Create a valid value.
+    pub fn new(top: u16) -> Self {
+        TopFormat { top, reserved: 0 }
+    }
+}
+
+impl Default for TopFormat {
+    fn default() -> Self {
+        Self::new(u16::MAX)
+    }
+}
+
+unsafe impl Word for TopFormat {}
+
 impl<S: SliceId, M: ValidSliceMode<S>> WriteTarget for SliceDmaWriteCc<S, M> {
     type TransmittedWord = CcFormat;
 
@@ -922,7 +952,7 @@ impl<S: SliceId, M: ValidSliceMode<S>> WriteTarget for SliceDmaWriteCc<S, M> {
 }
 
 impl<S: SliceId, M: ValidSliceMode<S>> WriteTarget for SliceDmaWriteTop<S, M> {
-    type TransmittedWord = u16;
+    type TransmittedWord = TopFormat;
 
     fn tx_treq() -> Option<u8> {
         Some(S::WRAP_DREQ)
