@@ -97,3 +97,8 @@ required-features = ["rt", "critical-section-impl"]
 # adc_fifo_irq example uses cortex-m-rt::interrupt, need rt feature for that
 name = "adc_fifo_irq"
 required-features = ["rt", "critical-section-impl"]
+
+[[example]]
+# adc_fifo_dma example uses cortex-m-rt::interrupt, need rt feature for that
+name = "adc_fifo_dma"
+required-features = ["rt", "critical-section-impl"]

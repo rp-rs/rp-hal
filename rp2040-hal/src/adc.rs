@@ -67,10 +67,61 @@
 //! ```
 //! See [examples/adc_fifo_poll.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/adc_fifo_poll.rs) for a more complete example.
 //!
+//! ### Using DMA
+//!
+//! When the ADC is in free-running mode, it's possible to use DMA to transfer data from the FIFO elsewhere, without having to read the FIFO manually.
+//!
+//! This requires a number of steps:
+//! 1. Build an `AdcFifo`, with DMA enabled ([`AdcFifoBuilder::enable_dma`])
+//! 2. Use [`AdcFifoBuilder::prepare`] instead of [`AdcFifoBuilder::start`], so that the FIFO is created in `paused` state
+//! 3. Start a DMA transfer ([`dma::single_buffer::Transfer`], [`dma::double_buffer::Transfer`], ...), using the [`AdcFifo::dma_read_target`] as the source (`from` parameter)
+//! 4. Finally unpause the FIFO by calling [`AdcFifo::resume`], to start capturing
+//!
+//! Example:
+//! ```no_run
+//! use rp2040_hal::{adc::Adc, gpio::Pins, pac, Sio, dma::{single_buffer, DMAExt}};
+//! use cortex_m::singleton;
+//! let mut peripherals = pac::Peripherals::take().unwrap();
+//! let sio = Sio::new(peripherals.SIO);
+//! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
+//! let dma = peripherals.DMA.split(&mut peripherals.RESETS);
+//! // Enable adc
+//! let mut adc = Adc::new(peripherals.ADC, &mut peripherals.RESETS);
+//! // Enable the temperature sensor
+//! let mut temperature_sensor = adc.take_temp_sensor().unwrap();
+//!
+//! // Configure & start capturing to the fifo:
+//! let mut fifo = adc.build_fifo()
+//!   .clock_divider(0, 0) // sample as fast as possible (500ksps. This is the default)
+//!   .set_channel(&mut temperature_sensor)
+//!   .enable_dma()
+//!   .prepare();
+//!
+//! // Set up a buffer, where the samples should be written:
+//! let buf = singleton!(: [u16; 500] = [0; 500]).unwrap();
+//!
+//! // Start DMA transfer
+//! let transfer = single_buffer::Config::new(dma.ch0, fifo.dma_read_target(), buf).start();
+//!
+//! // Resume the FIFO to start capturing
+//! fifo.resume();
+//!
+//! // Wait for the transfer to complete:
+//! let (ch, adc_read_target, buf) = transfer.wait();
+//!
+//! // do something with `buf` (it now contains 500 samples read from the ADC)
+//! //...
+//!
+//! ```
+//! //! See [examples/adc_fifo_dma.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/adc_fifo_dma.rs) for a more complete example.
+//!
 
 use core::convert::Infallible;
+use core::marker::PhantomData;
 
+use crate::dma;
 use hal::adc::{Channel, OneShot};
+use pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
 use pac::{ADC, RESETS};
 
 use crate::{
@@ -243,8 +294,11 @@ impl Adc {
     ///
     /// Capturing is started by calling [`AdcFifoBuilder::start`], which
     /// returns an [`AdcFifo`] to read from.
-    pub fn build_fifo(&mut self) -> AdcFifoBuilder<'_, false> {
-        AdcFifoBuilder { adc: self }
+    pub fn build_fifo(&mut self) -> AdcFifoBuilder<'_, u16> {
+        AdcFifoBuilder {
+            adc: self,
+            marker: PhantomData,
+        }
     }
 
     fn read(&mut self, chan: u8) -> u16 {
@@ -306,11 +360,12 @@ where
 /// Used to configure & build an [`AdcFifo`]
 ///
 /// See [`Adc::build_fifo`] for details, as well as the `adc_fifo_*` [examples](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples).
-pub struct AdcFifoBuilder<'a, const SHIFTED: bool> {
+pub struct AdcFifoBuilder<'a, Word> {
     adc: &'a mut Adc,
+    marker: PhantomData<Word>,
 }
 
-impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
+impl<'a, Word> AdcFifoBuilder<'a, Word> {
     /// Manually set clock divider to control sample rate
     ///
     /// The ADC is tied to the USB clock, normally running at 48MHz.
@@ -388,7 +443,6 @@ impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
     /// Enable the FIFO interrupt ([`ADC_IRQ_FIFO`](pac::Interrupt::ADC_IRQ_FIFO))
     ///
     /// It will be triggered whenever there are at least `threshold` samples waiting in the FIFO.
-    ///
     pub fn enable_interrupt(self, threshold: u8) -> Self {
         self.adc.device.inte.modify(|_, w| w.fifo().set_bit());
         self.adc
@@ -404,9 +458,27 @@ impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
     /// Shifting the values loses some precision, but produces smaller samples.
     ///
     /// When this method has been called, the resulting fifo's `read` method returns u8.
-    pub fn shift_8bit(self) -> AdcFifoBuilder<'a, true> {
+    pub fn shift_8bit(self) -> AdcFifoBuilder<'a, u8> {
         self.adc.device.fcs.modify(|_, w| w.shift().set_bit());
-        AdcFifoBuilder { adc: self.adc }
+        AdcFifoBuilder {
+            adc: self.adc,
+            marker: PhantomData,
+        }
+    }
+
+    /// Enable DMA for the FIFO.
+    ///
+    /// This must be called to be able to transfer data from the ADC using a DMA transfer.
+    ///
+    /// **NOTE:** *this method sets the FIFO interrupt threshold to `1`, which is required for DMA transfers to work.
+    /// The threshold is the same one as set by [`AdcFifoBuilder::enable_interrupt`]. If you want to enable FIFO
+    /// interrupts, but also use DMA, the `threshold` parameter passed to `enable_interrupt` *must* be set to `1` as well.*
+    pub fn enable_dma(self) -> Self {
+        self.adc
+            .device
+            .fcs
+            .modify(|_, w| unsafe { w.dreq_en().set_bit().thresh().bits(1) });
+        self
     }
 
     /// Enable ADC FIFO and start free-running conversion
@@ -414,10 +486,28 @@ impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
     /// Use the returned [`AdcFifo`] instance to access the captured data.
     ///
     /// To stop capturing, call [`AdcFifo::stop`].
-    pub fn start(self) -> AdcFifo<'a, SHIFTED> {
+    ///
+    /// Note: if you plan to use the FIFO for DMA transfers, [`AdcFifoBuilder::prepare`] instead.
+    pub fn start(self) -> AdcFifo<'a, Word> {
         self.adc.device.fcs.modify(|_, w| w.en().set_bit());
         self.adc.device.cs.modify(|_, w| w.start_many().set_bit());
-        AdcFifo { adc: self.adc }
+        AdcFifo {
+            adc: self.adc,
+            marker: PhantomData,
+        }
+    }
+
+    /// Enable ADC FIFO, but do not start conversion yet
+    ///
+    /// Same as [`AdcFifoBuilder::start`], except the FIFO is initially paused.
+    ///
+    /// Use [`AdcFifo::resume`] to start conversion.
+    pub fn prepare(self) -> AdcFifo<'a, Word> {
+        self.adc.device.fcs.modify(|_, w| w.en().set_bit());
+        AdcFifo {
+            adc: self.adc,
+            marker: PhantomData,
+        }
     }
 }
 
@@ -425,11 +515,12 @@ impl<'a, const SHIFTED: bool> AdcFifoBuilder<'a, SHIFTED> {
 ///
 /// Constructed by [`AdcFifoBuilder::start`], which is accessible through [`Adc::build_fifo`].
 ///
-pub struct AdcFifo<'a, const SHIFTED: bool> {
+pub struct AdcFifo<'a, Word> {
     adc: &'a mut Adc,
+    marker: PhantomData<Word>,
 }
 
-impl<'a, const SHIFTED: bool> AdcFifo<'a, SHIFTED> {
+impl<'a, Word> AdcFifo<'a, Word> {
     #[allow(clippy::len_without_is_empty)]
     /// Returns the number of elements currently in the fifo
     pub fn len(&mut self) -> u8 {
@@ -471,7 +562,7 @@ impl<'a, const SHIFTED: bool> AdcFifo<'a, SHIFTED> {
     ///
     /// Example:
     /// ```ignore
-    /// // start continously sampling values:
+    /// // start continuously sampling values:
     /// let mut fifo = adc.build_fifo().set_channel(&mut adc_pin).start();
     ///
     /// loop {
@@ -493,6 +584,49 @@ impl<'a, const SHIFTED: bool> AdcFifo<'a, SHIFTED> {
     /// to tell from which channel this sample came.
     pub fn read_single(&mut self) -> u16 {
         self.adc.read_single()
+    }
+
+    /// Returns `true` if conversion is currently paused.
+    ///
+    /// While paused, no samples will be added to the FIFO.
+    ///
+    /// There may be existing samples in the FIFO though, or a conversion may still be in progress.
+    pub fn is_paused(&mut self) -> bool {
+        self.adc.device.cs.read().start_many().bit_is_clear()
+    }
+
+    /// Temporarily pause conversion
+    ///
+    /// This method stops ADC conversion, but leaves everything else configured.
+    ///
+    /// No new samples are captured until [`AdcFifo::resume`] is called.
+    ///
+    /// Note that existing samples can still be read from the FIFO, and can possibly
+    /// cause interrupts and DMA transfer progress until the FIFO is emptied.
+    pub fn pause(&mut self) {
+        self.adc.device.cs.modify(|_, w| w.start_many().clear_bit());
+    }
+
+    /// Resume conversion after it was paused
+    ///
+    /// There are two situations when it makes sense to use this method:
+    /// - After having called [`AdcFifo::pause`] on an AdcFifo
+    /// - If the FIFO was initialized using [`AdcFifoBuilder::prepare`].
+    ///
+    /// Calling this method when conversion is already running has no effect.
+    pub fn resume(&mut self) {
+        self.adc.device.cs.modify(|_, w| w.start_many().set_bit());
+    }
+
+    /// Clears the FIFO, removing all values
+    ///
+    /// Reads and discards values from the FIFO until it is empty.
+    ///
+    /// This only makes sense to use while the FIFO is paused (see [`AdcFifo::pause`]).
+    pub fn clear(&mut self) {
+        while self.len() > 0 {
+            self.read_from_fifo();
+        }
     }
 
     /// Stop capturing in free running mode.
@@ -519,11 +653,11 @@ impl<'a, const SHIFTED: bool> AdcFifo<'a, SHIFTED> {
         while self.len() > 0 {
             self.read_from_fifo();
         }
-        // disable fifo and reset threshold to 0
+        // disable fifo, reset threshold to 0 and disable DMA
         self.adc
             .device
             .fcs
-            .modify(|_, w| unsafe { w.en().clear_bit().thresh().bits(0) });
+            .modify(|_, w| unsafe { w.en().clear_bit().thresh().bits(0).dreq_en().clear_bit() });
         // reset clock divider
         self.adc
             .device
@@ -542,16 +676,24 @@ impl<'a, const SHIFTED: bool> AdcFifo<'a, SHIFTED> {
     fn read_from_fifo(&mut self) -> u16 {
         self.adc.device.fifo.read().val().bits()
     }
+
+    /// Returns a read-target for initiating DMA transfers
+    ///
+    /// The [`DmaReadTarget`] returned by this function can be used to initiate DMA transfers
+    /// reading from the ADC.
+    pub fn dma_read_target(&self) -> DmaReadTarget<Word> {
+        DmaReadTarget(&self.adc.device.fifo as *const _ as u32, PhantomData)
+    }
 }
 
-impl<'a> AdcFifo<'a, false> {
+impl<'a> AdcFifo<'a, u16> {
     /// Read a single value from the fifo (u16 version, not shifted)
     pub fn read(&mut self) -> u16 {
         self.read_from_fifo()
     }
 }
 
-impl<'a> AdcFifo<'a, true> {
+impl<'a> AdcFifo<'a, u8> {
     /// Read a single value from the fifo (u8 version, shifted)
     ///
     /// Also see [`AdcFifoBuilder::shift_8bit`].
@@ -559,6 +701,31 @@ impl<'a> AdcFifo<'a, true> {
         self.read_from_fifo() as u8
     }
 }
+
+/// Represents a [`dma::ReadTarget`] for the [`AdcFifo`]
+///
+/// If [`AdcFifoBuilder::shift_8bit`] was called when constructing the FIFO,
+/// `Word` will be `u8`, otherwise it will be `u16`.
+///
+pub struct DmaReadTarget<Word>(u32, PhantomData<Word>);
+
+impl<Word> dma::ReadTarget for DmaReadTarget<Word> {
+    type ReceivedWord = Word;
+
+    fn rx_treq() -> Option<u8> {
+        Some(TREQ_SEL_A::ADC.into())
+    }
+
+    fn rx_address_count(&self) -> (u32, u32) {
+        (self.0, u32::MAX)
+    }
+
+    fn rx_increment(&self) -> bool {
+        false
+    }
+}
+
+impl<Word> dma::EndlessReadTarget for DmaReadTarget<Word> {}
 
 /// Internal struct representing values for the `CS.RROBIN` register.
 ///
