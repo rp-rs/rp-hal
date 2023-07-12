@@ -149,7 +149,7 @@ fn main() -> ! {
     let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
 
     // NOTE: in a real-world program, instead of calling `wait` now, you would probably:
-    // 1. Enable one of the DMA interrupts for the channel (e.g. `dma.ch0.listen_irq0()`)
+    // 1. Enable one of the DMA interrupts for the channel (e.g. `dma.ch0.enable_irq0()`)
     // 2. Set up a handler for the respective `DMA_IRQ_*` interrupt
     // 3. Call `wait` only within that interrupt, which will be fired once the transfer is complete.
 
