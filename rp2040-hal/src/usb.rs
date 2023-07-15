@@ -147,13 +147,18 @@ impl Endpoint {
         }
     }
 
-    fn get_buf(&self) -> &'static [u8] {
+    fn get_buf(&self) -> &[u8] {
+        // SAFETY:
+        // offset is checked by Inner::ep_allocate.
         unsafe {
             let (base, len) = self.get_buf_parts();
             core::slice::from_raw_parts(base as *const _, len)
         }
     }
-    fn get_buf_mut(&self) -> &'static mut [u8] {
+
+    fn get_buf_mut(&mut self) -> &mut [u8] {
+        // SAFETY:
+        // offset is checked by Inner::ep_allocate.
         unsafe {
             let (base, len) = self.get_buf_parts();
             core::slice::from_raw_parts_mut(base, len)
