@@ -17,16 +17,28 @@ pub trait SingleChannel: Sealed {
     /// Returns the index of the DMA channel.
     fn id(&self) -> u8;
 
+    #[deprecated(note = "Renamed to enable_irq0")]
     /// Enables the DMA_IRQ_0 signal for this channel.
     fn listen_irq0(&mut self) {
+        self.enable_irq0();
+    }
+
+    /// Enables the DMA_IRQ_0 signal for this channel.
+    fn enable_irq0(&mut self) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
             write_bitmask_set((*DMA::ptr()).inte0.as_ptr(), 1 << self.id());
         }
     }
 
+    #[deprecated(note = "Renamed to disable_irq0")]
     /// Disables the DMA_IRQ_0 signal for this channel.
     fn unlisten_irq0(&mut self) {
+        self.disable_irq0();
+    }
+
+    /// Disables the DMA_IRQ_0 signal for this channel.
+    fn disable_irq0(&mut self) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
             write_bitmask_clear((*DMA::ptr()).inte0.as_ptr(), 1 << self.id());
@@ -49,16 +61,28 @@ pub trait SingleChannel: Sealed {
         }
     }
 
+    #[deprecated(note = "Renamed to enable_irq1")]
     /// Enables the DMA_IRQ_1 signal for this channel.
     fn listen_irq1(&mut self) {
+        self.enable_irq1();
+    }
+
+    /// Enables the DMA_IRQ_1 signal for this channel.
+    fn enable_irq1(&mut self) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
             write_bitmask_set((*DMA::ptr()).inte1.as_ptr(), 1 << self.id());
         }
     }
 
+    #[deprecated(note = "Renamed to disable_irq1")]
     /// Disables the DMA_IRQ_1 signal for this channel.
     fn unlisten_irq1(&mut self) {
+        self.disable_irq1();
+    }
+
+    /// Disables the DMA_IRQ_1 signal for this channel.
+    fn disable_irq1(&mut self) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
             write_bitmask_clear((*DMA::ptr()).inte1.as_ptr(), 1 << self.id());
