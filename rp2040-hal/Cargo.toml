@@ -2,7 +2,7 @@
 name = "rp2040-hal"
 version = "0.9.0-alpha.1"
 authors = ["The rp-rs Developers"]
-edition = "2018"
+edition = "2021"
 homepage = "https://github.com/rp-rs/rp-hal"
 description = "A Rust Embeded-HAL impl for the rp2040 microcontroller"
 license = "MIT OR Apache-2.0"

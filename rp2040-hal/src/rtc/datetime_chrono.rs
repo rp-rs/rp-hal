@@ -1,5 +1,5 @@
+use crate::pac::rtc::{rtc_0, rtc_1, setup_0, setup_1};
 use chrono::{Datelike, Timelike};
-use rp2040_pac::rtc::{rtc_0, rtc_1, setup_0, setup_1};
 
 /// Alias for [`chrono::NaiveDateTime`]
 pub type DateTime = chrono::NaiveDateTime;

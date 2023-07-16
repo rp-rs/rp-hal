@@ -8,14 +8,16 @@
 //!
 //! See [Chapter 4 Section 6](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) of the datasheet for more details.
 
+use core::sync::atomic::{AtomicU8, Ordering};
 use fugit::{MicrosDurationU32, MicrosDurationU64, TimerInstantU64};
 
-use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
-use crate::clocks::ClocksManager;
-use crate::pac::{RESETS, TIMER};
-use crate::resets::SubsystemReset;
-use crate::typelevel::Sealed;
-use core::sync::atomic::{AtomicU8, Ordering};
+use crate::{
+    atomic_register_access::{write_bitmask_clear, write_bitmask_set},
+    clocks::ClocksManager,
+    pac::{self, RESETS, TIMER},
+    resets::SubsystemReset,
+    typelevel::Sealed,
+};
 
 /// Instant type used by the Timer & Alarm methods.
 pub type Instant = TimerInstantU64<1_000_000>;

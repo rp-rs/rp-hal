@@ -4,9 +4,9 @@
 
 use super::{FifoWatermark, UartDevice, ValidUartPinout};
 use crate::dma::{EndlessReadTarget, ReadTarget};
+use crate::pac::uart0::RegisterBlock;
 use embedded_hal::serial::Read;
 use nb::Error::*;
-use rp2040_pac::uart0::RegisterBlock;
 
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::serial as eh1;

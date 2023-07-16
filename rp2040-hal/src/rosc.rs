@@ -3,7 +3,7 @@
 
 use fugit::HertzU32;
 
-use crate::typelevel::Sealed;
+use crate::{pac::ROSC, typelevel::Sealed};
 
 /// State of the Ring Oscillator (typestate trait)
 pub trait State: Sealed {}
@@ -28,7 +28,7 @@ impl Sealed for Dormant {}
 
 /// A Ring Oscillator.
 pub struct RingOscillator<S: State> {
-    device: rp2040_pac::ROSC,
+    device: ROSC,
     state: S,
 }
 
@@ -42,14 +42,14 @@ impl<S: State> RingOscillator<S> {
     }
 
     /// Releases the underlying device.
-    pub fn free(self) -> rp2040_pac::ROSC {
+    pub fn free(self) -> ROSC {
         self.device
     }
 }
 
 impl RingOscillator<Disabled> {
     /// Creates a new RingOscillator from the underlying device.
-    pub fn new(dev: rp2040_pac::ROSC) -> Self {
+    pub fn new(dev: ROSC) -> Self {
         RingOscillator {
             device: dev,
             state: Disabled,

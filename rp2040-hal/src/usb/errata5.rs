@@ -7,7 +7,7 @@
 //! logic if it isn't func selected.
 
 use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
-use rp2040_pac::Peripherals;
+use crate::pac::Peripherals;
 
 pub struct ForceLineStateJ {
     prev_pads: u32,

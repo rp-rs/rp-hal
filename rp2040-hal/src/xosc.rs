@@ -7,7 +7,7 @@ use core::{convert::Infallible, ops::RangeInclusive};
 use fugit::HertzU32;
 use nb::Error::WouldBlock;
 
-use crate::typelevel::Sealed;
+use crate::{pac::XOSC, typelevel::Sealed};
 
 /// State of the Crystal Oscillator (typestate trait)
 pub trait State: Sealed {}
@@ -50,7 +50,7 @@ pub enum Error {
 
 /// Blocking helper method to setup the XOSC without going through all the steps.
 pub fn setup_xosc_blocking(
-    xosc_dev: rp2040_pac::XOSC,
+    xosc_dev: XOSC,
     frequency: HertzU32,
 ) -> Result<CrystalOscillator<Stable>, Error> {
     let initialized_xosc = CrystalOscillator::new(xosc_dev).initialize(frequency)?;
@@ -62,7 +62,7 @@ pub fn setup_xosc_blocking(
 
 /// A Crystal Oscillator.
 pub struct CrystalOscillator<S: State> {
-    device: rp2040_pac::XOSC,
+    device: XOSC,
     state: S,
 }
 
@@ -76,14 +76,14 @@ impl<S: State> CrystalOscillator<S> {
     }
 
     /// Releases the underlying device.
-    pub fn free(self) -> rp2040_pac::XOSC {
+    pub fn free(self) -> XOSC {
         self.device
     }
 }
 
 impl CrystalOscillator<Disabled> {
     /// Creates a new CrystalOscillator from the underlying device.
-    pub fn new(dev: rp2040_pac::XOSC) -> Self {
+    pub fn new(dev: XOSC) -> Self {
         CrystalOscillator {
             device: dev,
             state: Disabled,

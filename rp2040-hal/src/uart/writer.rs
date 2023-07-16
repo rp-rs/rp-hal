@@ -4,6 +4,7 @@
 
 use super::{FifoWatermark, UartDevice, ValidUartPinout};
 use crate::dma::{EndlessWriteTarget, WriteTarget};
+use crate::pac::uart0::RegisterBlock;
 use core::fmt;
 use core::{convert::Infallible, marker::PhantomData};
 #[cfg(feature = "eh1_0_alpha")]
@@ -12,7 +13,6 @@ use eh1_0_alpha::serial as eh1;
 use eh_nb_1_0_alpha::serial as eh1nb;
 use embedded_hal::serial::Write;
 use nb::Error::*;
-use rp2040_pac::uart0::RegisterBlock;
 
 /// Set tx FIFO watermark
 ///

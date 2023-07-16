@@ -19,7 +19,6 @@
 //! let spi = Spi::<_, _, _, 8>::new(peripherals.SPI0, (mosi, sclk)).init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), MODE_0);
 //! ```
 
-use crate::dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget};
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
 
 #[cfg(feature = "eh1_0_alpha")]
@@ -31,9 +30,13 @@ use embedded_hal::{
     spi::{FullDuplex, Phase, Polarity},
 };
 use fugit::{HertzU32, RateExtU32};
-use pac::{dma::ch::ch_ctrl_trig::TREQ_SEL_A, RESETS};
 
-use crate::{resets::SubsystemReset, typelevel::Sealed};
+use crate::{
+    dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget},
+    pac::{self, dma::ch::ch_ctrl_trig::TREQ_SEL_A, RESETS},
+    resets::SubsystemReset,
+    typelevel::Sealed,
+};
 
 mod pins;
 pub use pins::*;

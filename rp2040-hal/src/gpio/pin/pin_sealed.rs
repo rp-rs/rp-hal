@@ -1,6 +1,5 @@
-use crate::sio::CoreId;
-
 use super::{DynBankId, DynPinId};
+use crate::{pac, sio::CoreId};
 
 pub trait TypeLevelPinId: super::PinId {
     type Bank: super::BankId;
@@ -39,10 +38,10 @@ pub trait PinIdOps {
 macro_rules! accessor_fns {
     (sio $reg:ident) => {
         paste::paste! {
-            fn [<sio_ $reg:lower>](&self) -> &pac::sio::[<GPIO_ $reg:upper>] {
+            fn [<sio_ $reg:lower>](&self) -> &$crate::pac::sio::[<GPIO_ $reg:upper>] {
                 let pin = self.as_dyn();
                 unsafe {
-                    let sio = &*pac::SIO::PTR;
+                    let sio = &*$crate::pac::SIO::PTR;
                     match pin.bank {
                         DynBankId::Bank0 => &sio.[<gpio_ $reg:lower>],
                         DynBankId::Qspi => core::mem::transmute(&sio.[<gpio_hi_ $reg:lower>]),
@@ -53,15 +52,15 @@ macro_rules! accessor_fns {
     };
     (io $reg:ident) => {
         paste::paste! {
-            fn [<io_ $reg:lower>](&self) -> &pac::io_bank0::gpio::[<GPIO_ $reg:upper>] {
+            fn [<io_ $reg:lower>](&self) -> &$crate::pac::io_bank0::gpio::[<GPIO_ $reg:upper>] {
                 let pin = self.as_dyn();
                 match pin.bank {
                     DynBankId::Bank0 => {
-                        let gpio = unsafe { &*pac::IO_BANK0::PTR };
+                        let gpio = unsafe { &*$crate::pac::IO_BANK0::PTR };
                         &gpio.gpio[usize::from(pin.num)].[<gpio_ $reg:lower>]
                     }
                     DynBankId::Qspi => unsafe {
-                        let qspi = &*pac::IO_QSPI::PTR;
+                        let qspi = &*$crate::pac::IO_QSPI::PTR;
                         match pin.num {
                             0 => core::mem::transmute(&qspi.gpio_qspisclk.[<gpio_ $reg:lower>]),
                             1 => core::mem::transmute(&qspi.gpio_qspiss.[<gpio_ $reg:lower>]),
@@ -78,20 +77,20 @@ macro_rules! accessor_fns {
     };
     (int $reg:ident) => {
         paste::paste! {
-            fn [<proc_ $reg:lower>](&self, proc: CoreId) -> (&pac::io_bank0::[<PROC0_ $reg:upper>], usize) {
+            fn [<proc_ $reg:lower>](&self, proc: CoreId) -> (&$crate::pac::io_bank0::[<PROC0_ $reg:upper>], usize) {
                 let pin = self.as_dyn();
                 let (index, offset) = (pin.num / 8, pin.num % 8 * 4);
                 unsafe {
                     let reg = match pin.bank {
                         DynBankId::Bank0 => {
-                            let bank = &*pac::IO_BANK0::PTR;
+                            let bank = &*$crate::pac::IO_BANK0::PTR;
                             match proc {
                                 CoreId::Core0 => &bank.[<proc0_ $reg:lower>][usize::from(index)],
                                 CoreId::Core1 => core::mem::transmute(&bank.[<proc1_ $reg:lower>][usize::from(index)]),
                             }
                         }
                         DynBankId::Qspi => {
-                            let bank = &*pac::IO_QSPI::PTR;
+                            let bank = &*$crate::pac::IO_QSPI::PTR;
                             match proc {
                                 CoreId::Core0 => core::mem::transmute(&bank.[<proc0_ $reg:lower>]),
                                 CoreId::Core1 => core::mem::transmute(&bank.[<proc1_ $reg:lower>]),
@@ -105,17 +104,17 @@ macro_rules! accessor_fns {
     };
     (dormant $reg:ident) => {
         paste::paste! {
-            fn [< dormant_wake_ $reg:lower>](&self) -> (&pac::io_bank0::[< DORMANT_WAKE_ $reg:upper >], usize) {
+            fn [< dormant_wake_ $reg:lower>](&self) -> (&$crate::pac::io_bank0::[< DORMANT_WAKE_ $reg:upper >], usize) {
                 let pin = self.as_dyn();
                 let (index, offset) = (pin.num / 8, pin.num % 8 * 4);
                 unsafe {
                     let reg = match pin.bank {
                         DynBankId::Bank0 => {
-                            let bank = &*pac::IO_BANK0::PTR;
+                            let bank = &*$crate::pac::IO_BANK0::PTR;
                             &bank.[< dormant_wake_ $reg:lower>][usize::from(index)]
                         }
                         DynBankId::Qspi => {
-                            let bank = &*pac::IO_QSPI::PTR;
+                            let bank = &*$crate::pac::IO_QSPI::PTR;
                             core::mem::transmute(&bank.[< dormant_wake_ $reg:lower>])
                         }
                     };
@@ -166,7 +165,7 @@ where
     accessor_fns!(sio oe_clr);
     accessor_fns!(sio oe_xor);
 
-    fn proc_in_by_pass(&self) -> &rp2040_pac::syscfg::PROC_IN_SYNC_BYPASS {
+    fn proc_in_by_pass(&self) -> &crate::pac::syscfg::PROC_IN_SYNC_BYPASS {
         let pin = self.as_dyn();
         unsafe {
             let syscfg = &*pac::SYSCFG::PTR;

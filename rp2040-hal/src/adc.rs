@@ -118,17 +118,15 @@
 
 use core::convert::Infallible;
 use core::marker::PhantomData;
-
-use crate::dma;
-use hal::adc::{Channel, OneShot};
-use pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
-use pac::{ADC, RESETS};
+use embedded_hal::adc::{Channel, OneShot};
 
 use crate::{
+    dma,
     gpio::{
         bank0::{Gpio26, Gpio27, Gpio28, Gpio29},
         AnyPin, DynPinId, Function, OutputEnableOverride, Pin, PullType, ValidFunction,
     },
+    pac::{dma::ch::ch_ctrl_trig::TREQ_SEL_A, ADC, RESETS},
     resets::SubsystemReset,
 };
 
