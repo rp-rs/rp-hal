@@ -67,7 +67,8 @@ fn install_stack_guard(stack_limit: *mut usize) {
     let subregion_select = 0xff ^ (1 << ((addr >> 5) & 7));
     unsafe {
         core.MPU.ctrl.write(5); // enable mpu with background default map
-        core.MPU.rbar.write((addr & !0xff) | 0x8);
+        const RBAR_VALID: u32 = 0x10;
+        core.MPU.rbar.write((addr & !0xff) | RBAR_VALID);
         core.MPU.rasr.write(
             1 // enable region
                | (0x7 << 1) // size 2^(7 + 1) = 256
