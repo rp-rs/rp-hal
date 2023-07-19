@@ -21,12 +21,12 @@ use rp2040_hal as hal;
 // register access
 use hal::pac;
 
+use embedded_hal::digital::v2::OutputPin;
 use fugit::{HertzU32, RateExtU32};
-use hal::clocks::{Clock, StoppableClock, ClockSource, ClocksManager};
+use hal::clocks::{Clock, ClockSource, ClocksManager, StoppableClock};
 use hal::pac::rosc::ctrl::FREQ_RANGE_A;
 use hal::pac::{CLOCKS, ROSC};
 use hal::rosc::RingOscillator;
-use embedded_hal::digital::v2::OutputPin;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -224,7 +224,7 @@ fn reset_rosc_operating_frequency(rosc: &ROSC) {
     // Set divider to 1
     set_rosc_div(rosc, 1);
     rosc.ctrl.write(|w| w.freq_range().low());
-    write_freq_stages(&rosc, &[0, 0, 0, 0, 0, 0, 0, 0]);
+    write_freq_stages(rosc, &[0, 0, 0, 0, 0, 0, 0, 0]);
 }
 
 fn read_freq_stage(rosc: &ROSC, stage: u8) -> u8 {
@@ -246,8 +246,8 @@ fn increase_drive_strength(rosc: &ROSC) -> bool {
     const MAX_STAGE_DRIVE: u8 = 3;
     // Assume div is 1, and freq_range is high
     let mut stages: [u8; 8] = [0; 8];
-    for stage in 0..8 {
-        stages[stage] = read_freq_stage(&rosc, stage as u8)
+    for (stage_index, stage) in stages.iter_mut().enumerate() {
+        *stage = read_freq_stage(rosc, stage_index as u8)
     }
     let num_stages_at_drive_level = match rosc.ctrl.read().freq_range().variant() {
         Some(FREQ_RANGE_A::LOW) => 8,
@@ -275,7 +275,7 @@ fn increase_drive_strength(rosc: &ROSC) -> bool {
         for stage in &mut stages[num_stages_at_drive_level..] {
             *stage = min;
         }
-        write_freq_stages(&rosc, &stages);
+        write_freq_stages(rosc, &stages);
         true
     } else {
         false
@@ -287,46 +287,46 @@ fn write_freq_stages(rosc: &ROSC, stages: &[u8; 8]) {
     let passwd: u32 = 0x9696 << 16;
     let mut freq_a = passwd;
     let mut freq_b = passwd;
-    for stage in 0..4 {
-        freq_a |= ((stages[stage] & 0x07) as u32) << stage * 4;
+    for (stage_index, stage) in stages.iter().enumerate().take(4) {
+        freq_a |= ((*stage & 0x07) as u32) << (stage_index * 4);
     }
-    for stage in 4..8 {
-        freq_b |= ((stages[stage] & 0x07) as u32) << (stage - 4) * 4;
+    for (stage_index, stage) in stages.iter().enumerate().skip(4) {
+        freq_b |= ((*stage & 0x07) as u32) << ((stage_index - 4) * 4);
     }
     rosc.freqa.write(|w| unsafe { w.bits(freq_a) });
     rosc.freqb.write(|w| unsafe { w.bits(freq_b) });
 }
 
 /// Increase the rosc frequency range up to the next step.
+/// Returns a boolean to indicate whether the frequency was increased.
 fn increase_freq_range(rosc: &ROSC) -> bool {
-    let did_increase_freq_range = match rosc.ctrl.read().freq_range().variant() {
+    match rosc.ctrl.read().freq_range().variant() {
         None => {
             // Initial unset frequency range, move to LOW frequency range
             rosc.ctrl.write(|w| w.freq_range().low());
             // Reset all the drive strength bits.
-            write_freq_stages(&rosc, &[0, 0, 0, 0, 0, 0, 0, 0]);
+            write_freq_stages(rosc, &[0, 0, 0, 0, 0, 0, 0, 0]);
             true
         }
         Some(FREQ_RANGE_A::LOW) => {
             // Transition from LOW to MEDIUM frequency range
             rosc.ctrl.write(|w| w.freq_range().medium());
             // Reset all the drive strength bits.
-            write_freq_stages(&rosc, &[0, 0, 0, 0, 0, 0, 0, 0]);
+            write_freq_stages(rosc, &[0, 0, 0, 0, 0, 0, 0, 0]);
             true
         }
         Some(FREQ_RANGE_A::MEDIUM) => {
             // Transition from MEDIUM to HIGH frequency range
             rosc.ctrl.write(|w| w.freq_range().high());
             // Reset all the drive strength bits.
-            write_freq_stages(&rosc, &[0, 0, 0, 0, 0, 0, 0, 0]);
+            write_freq_stages(rosc, &[0, 0, 0, 0, 0, 0, 0, 0]);
             true
         }
         Some(FREQ_RANGE_A::HIGH) | Some(FREQ_RANGE_A::TOOHIGH) => {
             // Already in the HIGH frequency range, and can't increase
             false
         }
-    };
-    did_increase_freq_range
+    }
 }
 
 // End of file
