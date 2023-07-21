@@ -68,7 +68,7 @@ fn main() -> ! {
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
         16_000_000u32.Hz(),
-        embedded_hal::spi::MODE_0,
+        hal::spi::FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_0.into()),
     );
 
     // Initialize DMA.
