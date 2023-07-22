@@ -7,7 +7,7 @@
 //! ```no_run
 //! use embedded_hal::spi::MODE_0;
 //! use fugit::RateExtU32;
-//! use rp2040_hal::{spi::Spi, gpio::{Pins, FunctionSpi}, pac, Sio};
+//! use rp2040_hal::{spi::{Spi, FrameFormat}, gpio::{Pins, FunctionSpi}, pac, Sio};
 //!
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
@@ -16,7 +16,8 @@
 //! let sclk = pins.gpio2.into_function::<FunctionSpi>();
 //! let mosi = pins.gpio3.into_function::<FunctionSpi>();
 //!
-//! let spi = Spi::<_, _, _, 8>::new(peripherals.SPI0, (mosi, sclk)).init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), MODE_0);
+//! let spi = Spi::<_, _, _, 8>::new(peripherals.SPI0, (mosi, sclk))
+//!     .init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), FrameFormat::MotorolaSpi(MODE_0.into()));
 //! ```
 
 use crate::dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget};
