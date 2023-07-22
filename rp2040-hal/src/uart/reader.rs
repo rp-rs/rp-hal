@@ -14,6 +14,8 @@ use eh1_0_alpha::serial as eh1;
 use eh_nb_1_0_alpha::serial as eh1nb;
 
 /// When there's a read error.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug)]
 pub struct ReadError<'err> {
     /// The type of error
     pub err_type: ReadErrorType,
@@ -23,7 +25,8 @@ pub struct ReadError<'err> {
 }
 
 /// Possible types of read errors. See Chapter 4, Section 2 §8 - Table 436: "UARTDR Register"
-#[cfg_attr(feature = "eh1_0_alpha", derive(Debug))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug)]
 pub enum ReadErrorType {
     /// Triggered when the FIFO (or shift-register) is overflowed.
     Overrun,
