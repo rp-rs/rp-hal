@@ -88,6 +88,7 @@ pub use i2c::I2C;
 /// of `main`. As spinlocks are not automatically unlocked on software resets,
 /// this can prevent unexpected deadlocks when running from a debugger.
 pub use rp2040_hal_macros::entry;
+use sio::CoreId;
 pub use sio::Sio;
 pub use spi::Spi;
 pub use timer::Timer;
@@ -104,7 +105,7 @@ pub use watchdog::Watchdog;
 /// which breaks a running debug connection.
 pub fn reset() -> ! {
     unsafe {
-        if crate::Sio::core() == 0 {
+        if crate::Sio::core() == CoreId::Core0 {
             (*pac::PSM::PTR).frce_off.write(|w| w.proc1().set_bit());
             pac::SCB::sys_reset();
         } else {
@@ -126,7 +127,7 @@ pub fn halt() -> ! {
     unsafe {
         cortex_m::interrupt::disable();
         // Stop other core
-        if crate::Sio::core() == 0 {
+        if crate::Sio::core() == CoreId::Core0 {
             (*pac::PSM::PTR).frce_off.write(|w| w.proc1().set_bit());
         } else {
             (*pac::PSM::PTR).frce_off.write(|w| w.proc0().set_bit());
