@@ -96,22 +96,12 @@ pub use watchdog::Watchdog;
 
 /// Trigger full reset of the RP2040.
 ///
-/// When called from core0, it will shut down core1 and
-/// then call `SCB::sys_reset()`, which keeps the debug
-/// connection active.
-///
-/// This is not possible when called from core1. It will
-/// trigger a watchdog reset of the whole system instead,
-/// which breaks a running debug connection.
+/// Uses the watchdog and the power-on state machine (PSM) to reset all on-chip components.
 pub fn reset() -> ! {
     unsafe {
-        if crate::Sio::core() == CoreId::Core0 {
-            (*pac::PSM::PTR).frce_off.write(|w| w.proc1().set_bit());
-            pac::SCB::sys_reset();
-        } else {
-            (*pac::PSM::PTR).wdsel.write(|w| w.bits(0x0000ffff));
-            (*pac::WATCHDOG::PTR).ctrl.write(|w| w.trigger().set_bit());
-        }
+        cortex_m::interrupt::disable();
+        (*pac::PSM::PTR).wdsel.write(|w| w.bits(0x0001ffff));
+        (*pac::WATCHDOG::PTR).ctrl.write(|w| w.trigger().set_bit());
         #[allow(clippy::empty_loop)]
         loop {}
     }
@@ -122,7 +112,7 @@ pub fn reset() -> ! {
 /// Completely disables the other core, and parks the current core in an
 /// infinite loop with interrupts disabled.
 ///
-/// Doesn't stop other subsystems.
+/// Doesn't stop other subsystems, like the DMA controller.
 pub fn halt() -> ! {
     unsafe {
         cortex_m::interrupt::disable();
