@@ -42,9 +42,13 @@ jobs:
         with:
           crate: cargo-hack
       - name: Test
-        run: cargo hack test --tests --target x86_64-unknown-linux-gnu  --optional-deps --each-feature --features critical-section-impl
+        run: cargo hack test -p rp2040-hal --tests --target x86_64-unknown-linux-gnu  --optional-deps --each-feature --features critical-section-impl
       - name: Test docs
-        run: cargo hack test --doc --target x86_64-unknown-linux-gnu  --optional-deps --each-feature --features critical-section-impl
+        run: cargo hack test -p rp2040-hal --doc --target x86_64-unknown-linux-gnu  --optional-deps --each-feature --features critical-section-impl
+      - name: Test macros
+        run: cargo hack test -p rp2040-hal-macros --tests --target x86_64-unknown-linux-gnu  --optional-deps --each-feature
+      - name: Test macro docs
+        run: cargo hack test -p rp2040-hal-macros --doc --target x86_64-unknown-linux-gnu  --optional-deps --each-feature
       - name: Clean
         run: cargo clean
   udeps:
