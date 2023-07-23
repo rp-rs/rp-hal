@@ -340,7 +340,7 @@ macro_rules! impl_alarm {
                         timer.intf.as_ptr(),
                         $armed_bit_mask,
                     );
-                    timer.intr.write_with_zero(|w| w.$int_alarm().set_bit());
+                    timer.intr.write_with_zero(|w| w.$int_alarm().clear_bit_by_one());
                 }
             }
 

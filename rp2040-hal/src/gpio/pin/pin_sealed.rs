@@ -63,12 +63,12 @@ macro_rules! accessor_fns {
                     DynBankId::Qspi => unsafe {
                         let qspi = &*pac::IO_QSPI::PTR;
                         match pin.num {
-                            0 => core::mem::transmute(&qspi.gpio_qspisclk.[<gpio_ $reg:lower>]),
-                            1 => core::mem::transmute(&qspi.gpio_qspiss.[<gpio_ $reg:lower>]),
-                            2 => core::mem::transmute(&qspi.gpio_qspisd0.[<gpio_ $reg:lower>]),
-                            3 => core::mem::transmute(&qspi.gpio_qspisd1.[<gpio_ $reg:lower>]),
-                            4 => core::mem::transmute(&qspi.gpio_qspisd2.[<gpio_ $reg:lower>]),
-                            5 => core::mem::transmute(&qspi.gpio_qspisd3.[<gpio_ $reg:lower>]),
+                            0 => core::mem::transmute(&qspi.gpio_qspisclk().[<gpio_ $reg:lower>]),
+                            1 => core::mem::transmute(&qspi.gpio_qspiss().[<gpio_ $reg:lower>]),
+                            2 => core::mem::transmute(&qspi.gpio_qspisd0().[<gpio_ $reg:lower>]),
+                            3 => core::mem::transmute(&qspi.gpio_qspisd1().[<gpio_ $reg:lower>]),
+                            4 => core::mem::transmute(&qspi.gpio_qspisd2().[<gpio_ $reg:lower>]),
+                            5 => core::mem::transmute(&qspi.gpio_qspisd3().[<gpio_ $reg:lower>]),
                             _ => unreachable!("Invalid QSPI bank pin number."),
                         }
                     },

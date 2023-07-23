@@ -444,10 +444,10 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     pub fn get_drive_strength(&self) -> OutputDriveStrength {
         use pac::pads_bank0::gpio::DRIVE_A;
         match self.id.pad_ctrl().read().drive().variant() {
-            DRIVE_A::_2MA => OutputDriveStrength::TwoMilliAmps,
-            DRIVE_A::_4MA => OutputDriveStrength::FourMilliAmps,
-            DRIVE_A::_8MA => OutputDriveStrength::EightMilliAmps,
-            DRIVE_A::_12MA => OutputDriveStrength::TwelveMilliAmps,
+            DRIVE_A::_2M_A => OutputDriveStrength::TwoMilliAmps,
+            DRIVE_A::_4M_A => OutputDriveStrength::FourMilliAmps,
+            DRIVE_A::_8M_A => OutputDriveStrength::EightMilliAmps,
+            DRIVE_A::_12M_A => OutputDriveStrength::TwelveMilliAmps,
         }
     }
 
@@ -456,10 +456,10 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     pub fn set_drive_strength(&mut self, strength: OutputDriveStrength) {
         use pac::pads_bank0::gpio::DRIVE_A;
         let variant = match strength {
-            OutputDriveStrength::TwoMilliAmps => DRIVE_A::_2MA,
-            OutputDriveStrength::FourMilliAmps => DRIVE_A::_4MA,
-            OutputDriveStrength::EightMilliAmps => DRIVE_A::_8MA,
-            OutputDriveStrength::TwelveMilliAmps => DRIVE_A::_12MA,
+            OutputDriveStrength::TwoMilliAmps => DRIVE_A::_2M_A,
+            OutputDriveStrength::FourMilliAmps => DRIVE_A::_4M_A,
+            OutputDriveStrength::EightMilliAmps => DRIVE_A::_8M_A,
+            OutputDriveStrength::TwelveMilliAmps => DRIVE_A::_12M_A,
         };
         self.id.pad_ctrl().modify(|_, w| w.drive().variant(variant))
     }

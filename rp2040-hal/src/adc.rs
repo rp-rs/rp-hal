@@ -535,7 +535,7 @@ impl<'a, Word> AdcFifo<'a, Word> {
     pub fn is_over(&mut self) -> bool {
         let over = self.adc.device.fcs.read().over().bit();
         if over {
-            self.adc.device.fcs.modify(|_, w| w.over().set_bit());
+            self.adc.device.fcs.modify(|_, w| w.over().clear_bit_by_one());
         }
         over
     }
@@ -548,7 +548,7 @@ impl<'a, Word> AdcFifo<'a, Word> {
     pub fn is_under(&mut self) -> bool {
         let under = self.adc.device.fcs.read().under().bit();
         if under {
-            self.adc.device.fcs.modify(|_, w| w.under().set_bit());
+            self.adc.device.fcs.modify(|_, w| w.under().clear_bit_by_one());
         }
         under
     }
