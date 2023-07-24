@@ -40,7 +40,7 @@ impl VectorTable {
     }
 
     /// Initialise our vector table by copying the current table on top of it
-    pub fn init(&mut self, ppb: &mut pac::PPB) {
+    pub fn init(&mut self, ppb: &mut crate::pac::PPB) {
         let vector_table = ppb.vtor.read().bits();
         unsafe {
             crate::rom_data::memcpy44(
@@ -77,7 +77,7 @@ impl VectorTable {
     /// # Safety
     /// Until the vector table has valid entries, activating it will cause an unhandled hardfault!
     /// You must call init() first.
-    pub unsafe fn activate(&mut self, ppb: &mut pac::PPB) {
+    pub unsafe fn activate(&mut self, ppb: &mut crate::pac::PPB) {
         ppb.vtor
             .write(|w| w.bits(&mut self.table as *mut _ as *mut u32 as u32));
     }

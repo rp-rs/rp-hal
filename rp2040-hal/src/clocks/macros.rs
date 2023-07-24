@@ -81,7 +81,7 @@ macro_rules! clock {
                     false
                 }
                 fn variant(&self) -> [<$reg:camel SrcType>] {
-                    [<$reg:camel SrcType>]::Src(pac::clocks::[<$reg _ctrl>]::SRC_A::$src_variant)
+                    [<$reg:camel SrcType>]::Src($crate::pac::clocks::[<$reg _ctrl>]::SRC_A::$src_variant)
                 }
             })*
 
@@ -100,12 +100,12 @@ macro_rules! clock {
                 }
             }
 
-            #[doc = "Holds register value for ClockSource for `"$name"`"]
+            #[doc = "Holds register value for ClockSource for `" $name "`"]
             pub enum [<$reg:camel SrcType>] {
-                #[doc = "Contains a valid clock source register value that is to be used to set a clock as glitchless source for `"$name"`"]
-                Src(pac::clocks::[<$reg _ctrl>]::SRC_A),
-                #[doc = "Contains a valid clock source register value that is to be used to set a clock as aux source for `"$name"`"]
-                Aux(pac::clocks::[<$reg _ctrl>]::AUXSRC_A)
+                #[doc = "Contains a valid clock source register value that is to be used to set a clock as glitchless source for `" $name "`"]
+                Src($crate::pac::clocks::[<$reg _ctrl>]::SRC_A),
+                #[doc = "Contains a valid clock source register value that is to be used to set a clock as aux source for `" $name "`"]
+                Aux($crate::pac::clocks::[<$reg _ctrl>]::AUXSRC_A)
             }
 
             impl [<$reg:camel SrcType>] {
@@ -116,14 +116,14 @@ macro_rules! clock {
                     }
                 }
 
-                fn unwrap_src(&self) -> pac::clocks::[<$reg _ctrl>]::SRC_A{
+                fn unwrap_src(&self) -> $crate::pac::clocks::[<$reg _ctrl>]::SRC_A{
                     match self {
                         Self::Src(v) => *v,
                         Self::Aux(_) => panic!(),
                     }
                 }
 
-                fn unwrap_aux(&self) -> pac::clocks::[<$reg _ctrl>]::AUXSRC_A {
+                fn unwrap_aux(&self) -> $crate::pac::clocks::[<$reg _ctrl>]::AUXSRC_A {
                     match self {
                         Self::Src(_) => panic!(),
                         Self::Aux(v) => *v
@@ -166,7 +166,7 @@ macro_rules! clock {
 
                     ChangingClockToken{
                         clock: PhantomData::<$name>,
-                        clock_nr: pac::clocks::clk_ref_ctrl::SRC_A::CLKSRC_CLK_REF_AUX as u8,
+                        clock_nr: $crate::pac::clocks::clk_ref_ctrl::SRC_A::CLKSRC_CLK_REF_AUX as u8,
                     }
                 }
             }
@@ -174,12 +174,12 @@ macro_rules! clock {
             impl Clock for $name {
                 type Variant = [<$reg:camel SrcType>];
 
-                #[doc = "Get operating frequency for `"$name"`"]
+                #[doc = "Get operating frequency for `" $name "`"]
                 fn freq(&self) -> HertzU32 {
                     self.frequency
                 }
 
-                #[doc = "Configure `"$name"`"]
+                #[doc = "Configure `" $name "`"]
                 fn configure_clock<S: ValidSrc<$name>>(&mut self, src: &S, freq: HertzU32) -> Result<(), ClockError>{
                     let src_freq: HertzU32 = src.get_freq().into();
 
@@ -285,14 +285,14 @@ macro_rules! divisable_clock {
 macro_rules! stoppable_clock {
     ($name:ident, $reg:ident) => {
         $crate::paste::paste!{
-            #[doc = "Holds register value for ClockSource for `"$name"`"]
+            #[doc = "Holds register value for ClockSource for `" $name "`"]
             pub enum [<$reg:camel SrcType>] {
-                #[doc = "Contains a valid clock source register value that is to be used to set a clock as aux source for `"$name"`"]
-                Aux(pac::clocks::[<$reg _ctrl>]::AUXSRC_A)
+                #[doc = "Contains a valid clock source register value that is to be used to set a clock as aux source for `" $name "`"]
+                Aux($crate::pac::clocks::[<$reg _ctrl>]::AUXSRC_A)
             }
 
             impl [<$reg:camel SrcType>] {
-                fn unwrap_aux(&self) -> pac::clocks::[<$reg _ctrl>]::AUXSRC_A {
+                fn unwrap_aux(&self) -> $crate::pac::clocks::[<$reg _ctrl>]::AUXSRC_A {
                    match self {
                        Self::Aux(v) => *v
                    }
@@ -325,12 +325,12 @@ macro_rules! stoppable_clock {
             impl Clock for $name {
                 type Variant = [<$reg:camel SrcType>];
 
-                #[doc = "Get operating frequency for `"$name"`"]
+                #[doc = "Get operating frequency for `" $name "`"]
                 fn freq(&self) -> HertzU32 {
                     self.frequency
                 }
 
-                #[doc = "Configure `"$name"`"]
+                #[doc = "Configure `" $name "`"]
                 fn configure_clock<S: ValidSrc<$name>>(&mut self, src: &S, freq: HertzU32) -> Result<(), ClockError>{
                     let src_freq: HertzU32 = src.get_freq().into();
 
@@ -398,7 +398,7 @@ macro_rules! base_clock {
                     true
                 }
                 fn variant(&self) -> [<$reg:camel SrcType>] {
-                    [<$reg:camel SrcType>]::Aux(pac::clocks::[<$reg _ctrl>]::AUXSRC_A::$variant)
+                    [<$reg:camel SrcType>]::Aux($crate::pac::clocks::[<$reg _ctrl>]::AUXSRC_A::$variant)
                 }
             })*
 

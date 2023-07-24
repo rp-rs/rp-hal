@@ -106,19 +106,18 @@
 //! ```
 
 use core::cell::RefCell;
-
-use crate::clocks::UsbClock;
-use crate::pac::RESETS;
-use crate::pac::USBCTRL_DPRAM;
-use crate::pac::USBCTRL_REGS;
-use crate::resets::SubsystemReset;
-
 use critical_section::{self, Mutex};
 
 use usb_device::{
     bus::{PollResult, UsbBus as UsbBusTrait},
     endpoint::{EndpointAddress, EndpointType},
     Result as UsbResult, UsbDirection, UsbError,
+};
+
+use crate::{
+    clocks::UsbClock,
+    pac::{RESETS, USBCTRL_DPRAM, USBCTRL_REGS},
+    resets::SubsystemReset,
 };
 
 #[cfg(feature = "rp2040-e5")]
@@ -286,7 +285,7 @@ impl Inner {
         .enumerate()
         .filter_map(|(i, ep)| ep.as_ref().map(|ep| (i, ep)))
         {
-            use pac::usbctrl_dpram::ep_control::ENDPOINT_TYPE_A;
+            use crate::pac::usbctrl_dpram::ep_control::ENDPOINT_TYPE_A;
             let ep_type = match ep.ep_type {
                 EndpointType::Bulk => ENDPOINT_TYPE_A::BULK,
                 EndpointType::Isochronous => ENDPOINT_TYPE_A::ISOCHRONOUS,

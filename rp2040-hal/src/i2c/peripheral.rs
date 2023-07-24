@@ -1,9 +1,10 @@
 use core::{marker::PhantomData, ops::Deref};
 
-use crate::resets::SubsystemReset;
-use pac::{i2c0::RegisterBlock as I2CBlock, RESETS};
-
 use super::{Peripheral, ValidPinScl, ValidPinSda, I2C};
+use crate::{
+    pac::{i2c0::RegisterBlock as I2CBlock, RESETS},
+    resets::SubsystemReset,
+};
 
 /// I2C bus events
 #[derive(Debug, PartialEq, Eq)]

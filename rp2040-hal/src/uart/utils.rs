@@ -1,9 +1,9 @@
+use crate::pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
 use crate::pac::{uart0::RegisterBlock, UART0, UART1};
 use crate::resets::SubsystemReset;
 use crate::typelevel::Sealed;
 use core::ops::Deref;
 use fugit::HertzU32;
-use rp2040_pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
 
 /// Error type for UART operations.
 #[derive(Debug)]

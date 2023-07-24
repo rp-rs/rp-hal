@@ -26,6 +26,8 @@
 //! This modules bridges that gap by adding a trait definition per register type and implementing it
 //! for each of the relevant registers.
 
+use crate::typelevel::Sealed;
+
 use super::{DynFunction, DynPullType};
 
 pub(crate) mod pin_sealed;
@@ -41,16 +43,16 @@ pub enum DynBankId {
 }
 
 /// Type-level `enum` for the pin's bank ID.
-pub trait BankId: crate::typelevel::Sealed {}
+pub trait BankId: Sealed {}
 
 /// Type-level `variant` of `BankId`
 pub struct BankBank0;
-impl crate::typelevel::Sealed for BankBank0 {}
+impl Sealed for BankBank0 {}
 impl BankId for BankBank0 {}
 
 /// Type-level `variant` of `BankId`
 pub struct BankQspi;
-impl crate::typelevel::Sealed for BankQspi {}
+impl Sealed for BankQspi {}
 impl BankId for BankQspi {}
 
 /// Type-level `enum` for the pin Id (pin number + bank).
@@ -125,7 +127,7 @@ pub mod qspi {
 }
 
 pub(crate) fn set_function<P: PinId>(pin: &P, function: DynFunction) {
-    use pac::io_bank0::gpio::gpio_ctrl::FUNCSEL_A;
+    use crate::pac::io_bank0::gpio::gpio_ctrl::FUNCSEL_A;
     let funcsel = match function {
         DynFunction::Xip => FUNCSEL_A::JTAG,
         DynFunction::Spi => FUNCSEL_A::SPI,

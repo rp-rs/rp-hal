@@ -3,22 +3,21 @@
 //! This module brings together `uart::reader` and `uart::writer` to give a
 //! UartPeripheral object that can both read and write.
 
-use super::*;
-use crate::pac::uart0::uartlcr_h::W as UART_LCR_H_Writer;
-use crate::typelevel::OptionT;
-use core::convert::Infallible;
-use core::fmt;
+use core::{convert::Infallible, fmt};
 use embedded_hal::serial::{Read, Write};
 use fugit::HertzU32;
 use nb::Error::{Other, WouldBlock};
-use rp2040_pac::{UART0, UART1};
+
+use crate::{
+    pac::{self, uart0::uartlcr_h::W as UART_LCR_H_Writer, Peripherals, UART0, UART1},
+    typelevel::OptionT,
+    uart::*,
+};
 
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::serial as eh1;
 #[cfg(feature = "eh1_0_alpha")]
 use eh_nb_1_0_alpha::serial as eh1nb;
-
-use pac::Peripherals;
 
 /// An UART Peripheral based on an underlying UART device.
 pub struct UartPeripheral<S: State, D: UartDevice, P: ValidUartPinout<D>> {

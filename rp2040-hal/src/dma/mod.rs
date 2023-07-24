@@ -22,19 +22,22 @@
 //! automatic continuous ring buffers consisting of two aligned buffers being read or written
 //! alternatingly.
 
-use crate::{resets::SubsystemReset, typelevel::Sealed};
 use core::marker::PhantomData;
 use embedded_dma::{ReadBuffer, WriteBuffer};
-use rp2040_pac::DMA;
+
+use crate::{
+    pac::{self, DMA},
+    resets::SubsystemReset,
+    typelevel::Sealed,
+};
+// Export these types for easier use by external code
+pub use crate::dma::single_channel::SingleChannel;
 
 // Bring in our submodules
 pub mod bidirectional;
 pub mod double_buffer;
 pub mod single_buffer;
 mod single_channel;
-
-// Export these types for easier use by external code
-pub use crate::dma::single_channel::SingleChannel;
 
 /// DMA unit.
 pub trait DMAExt: Sealed {
@@ -134,16 +137,16 @@ channels! {
 }
 
 trait ChannelRegs {
-    unsafe fn ptr() -> *const rp2040_pac::dma::CH;
-    fn regs(&self) -> &rp2040_pac::dma::CH;
+    unsafe fn ptr() -> *const pac::dma::CH;
+    fn regs(&self) -> &pac::dma::CH;
 }
 
 impl<CH: ChannelIndex> ChannelRegs for Channel<CH> {
-    unsafe fn ptr() -> *const rp2040_pac::dma::CH {
-        &(*rp2040_pac::DMA::ptr()).ch[CH::id() as usize] as *const _
+    unsafe fn ptr() -> *const pac::dma::CH {
+        &(*pac::DMA::ptr()).ch[CH::id() as usize] as *const _
     }
 
-    fn regs(&self) -> &rp2040_pac::dma::CH {
+    fn regs(&self) -> &pac::dma::CH {
         unsafe { &*Self::ptr() }
     }
 }

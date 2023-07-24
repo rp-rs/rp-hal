@@ -44,14 +44,14 @@
 //! for a complete example
 
 use core::{marker::PhantomData, ops::Deref};
+use fugit::HertzU32;
 
 use crate::{
     gpio::{bank0::*, pin::pin_sealed::TypeLevelPinId, AnyPin, FunctionI2c},
+    pac::{self, i2c0::RegisterBlock as I2CBlock, I2C0, I2C1, RESETS},
     resets::SubsystemReset,
     typelevel::Sealed,
 };
-use fugit::HertzU32;
-use pac::{i2c0::RegisterBlock as I2CBlock, I2C0, I2C1, RESETS};
 
 /// Controller implementaion
 pub mod controller;
