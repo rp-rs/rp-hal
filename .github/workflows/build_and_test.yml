@@ -52,9 +52,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly
+          toolchain: nightly-2023-06-27
           target: thumbv6m-none-eabi
       - name: Install cargo-hack
         uses: baptiste0928/cargo-install@v2
@@ -64,6 +64,7 @@ jobs:
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-udeps
+          version: "=0.1.40"
       - name: Check unused deps
         run: cargo hack udeps --optional-deps --each-feature
   msrv:
