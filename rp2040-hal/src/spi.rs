@@ -38,7 +38,6 @@ use crate::{resets::SubsystemReset, typelevel::Sealed};
 mod pins;
 pub use pins::*;
 
-/// Spi mode
 
 impl From<embedded_hal::spi::Mode> for FrameFormat {
     fn from(f: embedded_hal::spi::Mode) -> Self {
@@ -53,6 +52,7 @@ impl From<&embedded_hal::spi::Mode> for FrameFormat {
 }
 
 /// SPI frame format
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FrameFormat
 {
     /// Motorola SPI format. See section 4.4.3.9 of RP2040 datasheet.
