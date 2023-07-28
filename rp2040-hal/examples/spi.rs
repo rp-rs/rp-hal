@@ -90,7 +90,7 @@ fn main() -> ! {
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
         16.MHz(),
-        hal::spi::FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_0.into()),
+        embedded_hal::spi::MODE_0,
     );
 
     // Write out 0, ignore return value
