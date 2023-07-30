@@ -125,6 +125,7 @@ use usb_device::{
 mod errata5;
 
 pub mod host_blocking;
+pub mod host;
 
 #[allow(clippy::bool_to_int_with_if)]
 fn ep_addr_to_ep_buf_ctrl_idx(ep_addr: EndpointAddress) -> usize {

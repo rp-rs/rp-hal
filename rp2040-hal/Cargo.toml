@@ -24,7 +24,7 @@ embedded-dma = "0.2.0"
 fugit = "0.3.6"
 itertools = { version = "0.10.1", default-features = false }
 nb = "1.0"
-rp2040-pac = "0.4.0"
+rp2040-pac = { path = "../rp2040-pac" }
 paste = "1.0"
 pio = "0.2.0"
 rp2040-hal-macros = { version = "0.1.0", path = "../rp2040-hal-macros" }
@@ -33,6 +33,7 @@ vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
 rand_core = "0.6.3"
 critical-section = { version = "1.0.0" }
+usbh = { path = "../../usbh" }
 
 chrono = { version = "0.4", default-features = false, optional = true }
 
