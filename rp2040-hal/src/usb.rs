@@ -124,7 +124,6 @@ use usb_device::{
 #[cfg(feature = "rp2040-e5")]
 mod errata5;
 
-pub mod host_blocking;
 pub mod host;
 
 #[allow(clippy::bool_to_int_with_if)]
