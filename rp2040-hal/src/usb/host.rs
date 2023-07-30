@@ -5,9 +5,7 @@ use usbh::{
         Event,
         Error,
     },
-    types::{
-        ConnectionSpeed,
-    },
+    types::ConnectionSpeed,
 };
 
 use critical_section::Mutex;
@@ -19,14 +17,6 @@ use crate::pac::{
     USBCTRL_REGS,
 };
 use crate::resets::SubsystemReset;
-use defmt::debug;
-
-// Endpoint management... how to do it?
-// - DPRAM_BASE + 0x180 is the start. We can allocate amount X there for control transfers
-// - what about huge descriptors? Do they get read in parts? (handle multiple BuffStatus before TransComplete)
-// - buffers for interrupt endpoints must be allocated when a device connects. How to handle that?
-//
-// How to handle delays?
 
 const CONTROL_BUFFER_SIZE: usize = 64;
 
@@ -50,7 +40,6 @@ impl UsbHostBus {
 
 impl HostBus for UsbHostBus {
     fn reset_controller(&mut self) {
-        debug!("[HostBus] reset_controller");
         critical_section::with(|cs| {
             let mut inner = self.inner.borrow(cs).borrow_mut();
             unsafe {
@@ -124,7 +113,6 @@ impl HostBus for UsbHostBus {
     }
 
     fn reset_bus(&mut self) {
-        debug!("[HostBus] reset_bus");
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             inner.ctrl_reg.sie_ctrl.write(|w| w.reset_bus().set_bit());
@@ -132,7 +120,6 @@ impl HostBus for UsbHostBus {
     }
 
     fn set_recipient(&mut self, dev_addr: Option<usbh::types::DeviceAddress>, endpoint: u8) {
-        debug!("[HostBus] set_recipient");
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             inner.ctrl_reg.addr_endp.write(|w| {
@@ -145,7 +132,6 @@ impl HostBus for UsbHostBus {
     }
 
     fn write_setup(&mut self, setup: usbh::types::SetupPacket) {
-        debug!("[HostBus] write_setup");
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             inner.ctrl_dpram.setup_packet_low.write(|w| {
@@ -166,7 +152,6 @@ impl HostBus for UsbHostBus {
     }
 
     fn write_data_in(&mut self, length: u16) {
-        debug!("[HostBus] write_data_in");
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             inner.ctrl_dpram.ep_buffer_control[0].write(|w| {
@@ -184,7 +169,6 @@ impl HostBus for UsbHostBus {
     }
 
     fn prepare_data_out(&mut self, data: &[u8]) {
-        debug!("[HostBus] prepare_data_out");
         critical_section::with(|cs| {
             let mut inner = self.inner.borrow(cs).borrow_mut();
             inner.control_buffer_mut()[0..data.len()].copy_from_slice(data);
@@ -202,7 +186,6 @@ impl HostBus for UsbHostBus {
     }
 
     fn write_data_out_prepared(&mut self) {
-        debug!("[HostBus] write_data_out_prepared");
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             inner.ctrl_reg.sie_ctrl.write(|w| w.send_data().set_bit().start_trans().set_bit());
@@ -210,7 +193,6 @@ impl HostBus for UsbHostBus {
     }
 
     fn poll(&mut self) -> PollResult {
-        debug!("[HostBus] poll");
         critical_section::with(|cs| {
             let mut inner = self.inner.borrow(cs).borrow_mut();
             PollResult {
@@ -221,7 +203,6 @@ impl HostBus for UsbHostBus {
     }
 
     fn process_received_data<F: FnOnce(&[u8]) -> T, T>(&self, f: F) -> T {
-        debug!("[HostBus] process_received_data");
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             let len = inner.ctrl_dpram.ep_buffer_control[0].read().length_0().bits() as usize;
