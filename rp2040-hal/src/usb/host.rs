@@ -5,7 +5,11 @@ use usbh::{
         Event,
         Error,
     },
-    types::ConnectionSpeed,
+    types::{
+        ConnectionSpeed,
+        DeviceAddress,
+        TransferType,
+    },
 };
 
 use critical_section::Mutex;
@@ -82,16 +86,6 @@ impl HostBus for UsbHostBus {
                     .error_bit_stuff().set_bit()
                     .error_rx_overflow().set_bit()
             });
-
-            // FIXME: put this elsewhere!
-            inner.ctrl_dpram.epx_control.write(|w| {
-                unsafe {
-                    w.enable().set_bit()
-                        .interrupt_per_buff().set_bit()
-                        .endpoint_type().control()
-                        .buffer_address().bits(0x180)
-                }
-            });
         });
     }
 
@@ -119,13 +113,27 @@ impl HostBus for UsbHostBus {
         });
     }
 
-    fn set_recipient(&mut self, dev_addr: Option<usbh::types::DeviceAddress>, endpoint: u8) {
+    fn set_recipient(&mut self, dev_addr: Option<usbh::types::DeviceAddress>, endpoint: u8, transfer_type: TransferType) {
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             inner.ctrl_reg.addr_endp.write(|w| {
                 unsafe {
                     w.address().bits(dev_addr.map(|addr| u8::from(addr)).unwrap_or(0));
                     w.endpoint().bits(endpoint)
+                }
+            });
+
+            inner.ctrl_dpram.epx_control.write(|w| {
+                unsafe {
+                    w.enable().set_bit()
+                        .interrupt_per_buff().set_bit()
+                        .buffer_address().bits(0x180);
+                    match transfer_type {
+                        TransferType::Control => w.endpoint_type().control(),
+                        TransferType::Isochronous => w.endpoint_type().isochronous(),
+                        TransferType::Bulk => w.endpoint_type().bulk(),
+                        TransferType::Interrupt => w.endpoint_type().interrupt(),
+                    }
                 }
             });
         });
@@ -209,6 +217,59 @@ impl HostBus for UsbHostBus {
             f(&inner.control_buffer()[0..len])
         })
     }
+
+    unsafe fn control_buffer(&self, len: usize) -> &[u8] {
+        const DPRAM_BASE: *const u8 = USBCTRL_DPRAM::ptr() as *const u8;
+        unsafe { core::slice::from_raw_parts(DPRAM_BASE.offset(0x180), len) }
+    }
+
+    fn create_interrupt_pipe(&mut self, device_address: DeviceAddress, endpoint_number: u8, size: u16) -> u32 {
+        critical_section::with(|cs| {
+            let inner = self.inner.borrow(cs).borrow_mut();
+            // TODO: handle more than one interrupt
+            inner.ctrl_dpram.ep_control[0].write(|w| {
+//                 w.bits(
+//                     /*
+//                       uint32_t ep_reg = EP_CTRL_ENABLE_BITS
+//                     | EP_CTRL_INTERRUPT_PER_BUFFER
+//                     | (ep->transfer_type << EP_CTRL_BUFFER_TYPE_LSB)
+//                     | dpram_offset;
+//   if ( bmInterval )
+//   {
+//     ep_reg |= (uint32_t) ((bmInterval - 1) << EP_CTRL_HOST_INTERRUPT_INTERVAL_LSB);
+//   }
+// */
+//                 );
+                w.interrupt_per_buff().set_bit();
+                w.double_buffered().clear_bit();
+                w.endpoint_type().interrupt();
+                unsafe { w.buffer_address().bits(0x180 + CONTROL_BUFFER_SIZE as u16) }
+            });
+            inner.ctrl_dpram.ep_control[0].modify(|r, w| {
+                unsafe { w.bits(r.bits() | (9 << 18)) }
+            });
+            cortex_m::asm::delay(12);
+            inner.ctrl_dpram.ep_control[0].write(|w| w.enable().set_bit());
+            let ep_ctrl_bits = inner.ctrl_dpram.ep_control[0].read().bits();
+            inner.ctrl_dpram.ep_buffer_control[1].write(|w| {
+                w.available_0().set_bit();
+                w.full_0().clear_bit();
+                unsafe { w.length_0().bits(size) }
+            });
+            inner.ctrl_reg.addr_endp1.write(|w| {
+                unsafe {
+                    w.address().bits(device_address.into());
+                    w.endpoint().bits(endpoint_number);
+                    w.intep_dir().clear_bit() // IN (FIXME)
+                }
+            });
+            cortex_m::asm::delay(12);
+            inner.ctrl_reg.int_ep_ctrl.write(|w| {
+                unsafe { w.int_ep_active().bits(1) }
+            });
+            ep_ctrl_bits
+        })
+    }
 }
 
 struct Inner {
@@ -272,10 +333,16 @@ impl Inner {
             return Some(Event::Error(Error::DataSequence));
         }
         if ints.buff_status().bit_is_set() {
-            // let status = self.ctrl_reg.buff_status.read().bits();
+            let status = self.ctrl_reg.buff_status.read().bits();
             self.ctrl_reg.buff_status.write(|w| unsafe { w.bits(0xFFFFFFFF) });
             // TODO: handle buffer updates more gracefully. Currently we always wait for TransComplete,
             //   which only works for transfers that fit into a single buffer.
+
+            for i in 0..32 {
+                if (status >> i) & 1 == 1 {
+                    return Some(Event::InterruptData(i as u8));
+                }
+            }
         }
         None
     }
