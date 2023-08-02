@@ -123,7 +123,7 @@ impl<P: PIOExt> PIO<P> {
         self.pio
     }
 
-    /// This PIO0's interrupts.
+    /// This PIO's IRQ0 interrupt.
     pub fn irq0(&self) -> Interrupt<'_, P, 0> {
         Interrupt {
             block: self.pio.deref(),
@@ -131,7 +131,7 @@ impl<P: PIOExt> PIO<P> {
         }
     }
 
-    /// This PIO0's interrupts.
+    /// This PIO's IRQ1 interrupt.
     pub fn irq1(&self) -> Interrupt<'_, P, 1> {
         Interrupt {
             block: self.pio.deref(),
