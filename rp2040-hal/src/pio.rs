@@ -625,7 +625,7 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     /// Check if the current instruction is stalled.
     pub fn stalled(&self) -> bool {
         // Safety: read only access without side effect
-        unsafe { self.sm.sm().sm_execctrl.read().exec_stalled().bits() }
+        unsafe { self.sm.sm().sm_execctrl.read().exec_stalled().bit() }
     }
 
     /// Drain Tx fifo.
