@@ -11,6 +11,7 @@ use usbh::{
         TransferType,
     },
 };
+use usb_device::UsbDirection;
 
 use critical_section::Mutex;
 use core::cell::RefCell;
@@ -67,7 +68,6 @@ impl HostBus for UsbHostBus {
                 w.sof_en().set_bit()
                     .keep_alive_en().set_bit()
                     .pulldown_en().set_bit()
-                    .sof_sync().set_bit()
             });
             inner.ctrl_reg.main_ctrl.modify(|_, w| {
                 w.host_ndevice().set_bit()
@@ -92,8 +92,8 @@ impl HostBus for UsbHostBus {
     fn enable_sof(&mut self) {
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
-            inner.ctrl_reg.sie_ctrl.write(|w| {
-                w.sof_en().set_bit().keep_alive_en().set_bit()
+            inner.ctrl_reg.sie_ctrl.modify(|_, w| {
+                w.sof_en().set_bit().keep_alive_en().set_bit().pulldown_en().set_bit()
             });
         });
     }
@@ -109,7 +109,7 @@ impl HostBus for UsbHostBus {
     fn reset_bus(&mut self) {
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
-            inner.ctrl_reg.sie_ctrl.write(|w| w.reset_bus().set_bit());
+            inner.ctrl_reg.sie_ctrl.modify(|_, w| w.reset_bus().set_bit());
         });
     }
 
@@ -123,7 +123,7 @@ impl HostBus for UsbHostBus {
                 }
             });
 
-            inner.ctrl_dpram.epx_control.write(|w| {
+            inner.ctrl_dpram.epx_control.modify(|_, w| {
                 unsafe {
                     w.enable().set_bit()
                         .interrupt_per_buff().set_bit()
@@ -155,24 +155,24 @@ impl HostBus for UsbHostBus {
                     w.wlength().bits(setup.length)
                 }
             });
-            inner.ctrl_reg.sie_ctrl.write(|w| w.send_setup().set_bit().start_trans().set_bit());
+            inner.ctrl_reg.sie_ctrl.modify(|_, w| w.send_data().clear_bit().receive_data().clear_bit().send_setup().set_bit().start_trans().set_bit());
         });
     }
 
-    fn write_data_in(&mut self, length: u16) {
+    fn write_data_in(&mut self, length: u16, pid: bool) {
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             inner.ctrl_dpram.ep_buffer_control[0].write(|w| {
                 unsafe {
-                    w.available_0().set_bit()
-                        .pid_0().set_bit()
-                        .full_0().clear_bit()
+                    w.available_0().set_bit();
+                    w.pid_0().bit(pid);
+                    w.full_0().clear_bit()
                         .length_0().bits(length)
                         .last_0().set_bit()
                         .reset().set_bit()
                 }
             });
-            inner.ctrl_reg.sie_ctrl.write(|w| w.receive_data().set_bit().start_trans().set_bit());
+            inner.ctrl_reg.sie_ctrl.modify(|_, w| w.send_data().clear_bit().send_setup().clear_bit().receive_data().set_bit().start_trans().set_bit());
         });
     }
 
@@ -196,7 +196,7 @@ impl HostBus for UsbHostBus {
     fn write_data_out_prepared(&mut self) {
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
-            inner.ctrl_reg.sie_ctrl.write(|w| w.send_data().set_bit().start_trans().set_bit());
+            inner.ctrl_reg.sie_ctrl.modify(|_, w| w.send_setup().clear_bit().receive_data().clear_bit().send_data().set_bit().start_trans().set_bit());
         });
     }
 
@@ -223,54 +223,103 @@ impl HostBus for UsbHostBus {
         unsafe { core::slice::from_raw_parts(DPRAM_BASE.offset(0x180), len) }
     }
 
-    fn create_interrupt_pipe(&mut self, device_address: DeviceAddress, endpoint_number: u8, size: u16) -> u32 {
+    fn create_interrupt_pipe(&mut self, device_address: DeviceAddress, endpoint_number: u8, direction: UsbDirection, size: u16, interval: u8) -> Option<(*mut u8, u8)> {
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
-            // TODO: handle more than one interrupt
             inner.ctrl_dpram.ep_control[0].write(|w| {
-//                 w.bits(
-//                     /*
-//                       uint32_t ep_reg = EP_CTRL_ENABLE_BITS
-//                     | EP_CTRL_INTERRUPT_PER_BUFFER
-//                     | (ep->transfer_type << EP_CTRL_BUFFER_TYPE_LSB)
-//                     | dpram_offset;
-//   if ( bmInterval )
-//   {
-//     ep_reg |= (uint32_t) ((bmInterval - 1) << EP_CTRL_HOST_INTERRUPT_INTERVAL_LSB);
-//   }
-// */
-//                 );
-                w.interrupt_per_buff().set_bit();
-                w.double_buffered().clear_bit();
-                w.endpoint_type().interrupt();
-                unsafe { w.buffer_address().bits(0x180 + CONTROL_BUFFER_SIZE as u16) }
+                unsafe {
+                    w.bits(
+                        (0x180 + CONTROL_BUFFER_SIZE as u32) |
+                        ((TransferType::Interrupt as u8 as u32) << 26) |
+                        (1 << 29) | // interrupt per buf
+                        (1 << 31) | // enable
+                        ((interval as u32 - 1) << 16)
+                    )
+                }
             });
-            inner.ctrl_dpram.ep_control[0].modify(|r, w| {
-                unsafe { w.bits(r.bits() | (9 << 18)) }
-            });
-            cortex_m::asm::delay(12);
-            inner.ctrl_dpram.ep_control[0].write(|w| w.enable().set_bit());
+            inner.ctrl_reg.sie_ctrl.modify(|_, w| w.sof_sync().set_bit());
             let ep_ctrl_bits = inner.ctrl_dpram.ep_control[0].read().bits();
-            inner.ctrl_dpram.ep_buffer_control[1].write(|w| {
-                w.available_0().set_bit();
+            inner.ctrl_dpram.ep_buffer_control[2].write(|w| {
+                w.last_0().set_bit();
+                w.pid_0().clear_bit();
                 w.full_0().clear_bit();
+                w.reset().set_bit();
                 unsafe { w.length_0().bits(size) }
             });
+            cortex_m::asm::delay(12);
+            inner.ctrl_dpram.ep_buffer_control[2].modify(|_, w| w.available_0().set_bit());
+            let buf_control = inner.ctrl_dpram.ep_buffer_control[2].read().bits();
             inner.ctrl_reg.addr_endp1.write(|w| {
                 unsafe {
+                    w.intep_preamble().clear_bit();
                     w.address().bits(device_address.into());
                     w.endpoint().bits(endpoint_number);
-                    w.intep_dir().clear_bit() // IN (FIXME)
+                    w.intep_dir().bit(direction == UsbDirection::Out)
                 }
             });
             cortex_m::asm::delay(12);
-            inner.ctrl_reg.int_ep_ctrl.write(|w| {
-                unsafe { w.int_ep_active().bits(1) }
+            inner.ctrl_reg.int_ep_ctrl.modify(|_, w| {
+                unsafe { w.int_ep_active().bits(0x01) }
             });
-            ep_ctrl_bits
+
+            const DPRAM_BASE: *mut u8 = USBCTRL_DPRAM::ptr() as *mut u8;
+            let buf_ptr = unsafe { DPRAM_BASE.offset(0x180 + CONTROL_BUFFER_SIZE as isize) };
+            Some((buf_ptr, 2))
         })
     }
+
+    fn release_interrupt_pipe(&mut self, pipe_ref: u8) {}
+
+    fn received_len(&self) -> u16 {
+        critical_section::with(|cs| {
+            let inner = self.inner.borrow(cs).borrow_mut();
+            inner.ctrl_dpram.ep_buffer_control[0].read().length_0().bits()
+        })
+    }
+
+    fn dump_dpram(&self) {
+        const DPRAM_BASE: *const u8 = USBCTRL_DPRAM::ptr() as *const u8;
+        let dpram = unsafe { core::slice::from_raw_parts(DPRAM_BASE, 0x180) };
+        defmt::info!("DPRAM: {}", dpram);
+        let regs = unsafe { core::slice::from_raw_parts(USBCTRL_REGS::ptr() as *const u8, 156) };
+        defmt::info!("REGS: {}", regs);
+    }
+
+    fn pipe_buf(&self, pipe_index: u8) -> &[u8] {
+        const DPRAM_BASE: *const u8 = USBCTRL_DPRAM::ptr() as *const u8;
+        unsafe { core::slice::from_raw_parts(DPRAM_BASE.offset(0x180 + CONTROL_BUFFER_SIZE as isize), 8) }
+    }
+
+    fn pipe_continue(&self, pipe_index: u8) {
+        critical_section::with(|cs| {
+            let inner = self.inner.borrow(cs).borrow_mut();
+            let buf_control = inner.ctrl_dpram.ep_buffer_control[2].read().bits();
+            //defmt::debug!("BUF CONTROL (continue): {:#X}, ep int ctr: {:#X}", buf_control, inner.ctrl_reg.int_ep_ctrl.read().bits());
+            inner.ctrl_dpram.ep_buffer_control[2].modify(|r, w| {
+                w.last_0().set_bit();
+                w.pid_0().bit(!r.pid_0().bit());
+                w.full_0().clear_bit();
+                w.reset().set_bit();
+                unsafe { w.length_0().bits(8) }
+            });
+            cortex_m::asm::delay(12);
+            inner.ctrl_dpram.ep_buffer_control[2].modify(|_, w| w.available_0().set_bit());
+            // inner.ctrl_dpram.ep_buffer_control[2].modify(|_, w| {
+            //     w.full_0().clear_bit();
+            //     w.available_0().set_bit()
+            // });
+        })
+    }
+
+    fn interrupt_on_sof(&mut self, enable: bool) {
+        critical_section::with(|cs| {
+            let inner = self.inner.borrow(cs).borrow_mut();
+            inner.ctrl_reg.inte.modify(|_, w| w.host_sof().bit(enable));
+        });
+    }
 }
+
+unsafe impl Send for UsbHostBus {}
 
 struct Inner {
     ctrl_reg: USBCTRL_REGS,
@@ -297,52 +346,58 @@ impl Inner {
                 0b10 => Event::Attached(ConnectionSpeed::Full),
                 _ => Event::Detached,
             };
-            self.ctrl_reg.sie_status.write(|w| unsafe { w.speed().bits(0b11) });
+            self.ctrl_reg.sie_status.modify(|_, w| unsafe { w.speed().bits(0b11) });
             return Some(event)
         }
         if ints.host_resume().bit_is_set() {
-            self.ctrl_reg.sie_status.write(|w| w.resume().set_bit());
+            self.ctrl_reg.sie_status.modify(|_, w| w.resume().set_bit());
             return Some(Event::Resume);
         }
         if ints.stall().bit_is_set() {
-            self.ctrl_reg.sie_status.write(|w| w.stall_rec().set_bit());
+            self.ctrl_reg.sie_status.modify(|_, w| w.stall_rec().set_bit());
             return Some(Event::Stall);
         }
-        if ints.trans_complete().bit_is_set() {
-            self.ctrl_reg.sie_status.write(|w| w.trans_complete().set_bit());
-            return Some(Event::WriteComplete);
-        }
         if ints.error_crc().bit_is_set() {
-            self.ctrl_reg.sie_status.write(|w| w.crc_error().set_bit());
+            self.ctrl_reg.sie_status.modify(|_, w| w.crc_error().set_bit());
             return Some(Event::Error(Error::Crc));
         }
         if ints.error_bit_stuff().bit_is_set() {
-            self.ctrl_reg.sie_status.write(|w| w.bit_stuff_error().set_bit());
+            self.ctrl_reg.sie_status.modify(|_, w| w.bit_stuff_error().set_bit());
             return Some(Event::Error(Error::BitStuffing));
         }
         if ints.error_rx_overflow().bit_is_set() {
-            self.ctrl_reg.sie_status.write(|w| w.rx_overflow().set_bit());
+            self.ctrl_reg.sie_status.modify(|_, w| w.rx_overflow().set_bit());
             return Some(Event::Error(Error::RxOverflow));
         }
         if ints.error_rx_timeout().bit_is_set() {
-            self.ctrl_reg.sie_status.write(|w| w.rx_timeout().set_bit());
+            self.ctrl_reg.sie_status.modify(|_, w| w.rx_timeout().set_bit());
             return Some(Event::Error(Error::RxTimeout));
         }
         if ints.error_data_seq().bit_is_set() {
-            self.ctrl_reg.sie_status.write(|w| w.data_seq_error().set_bit());
+            self.ctrl_reg.sie_status.modify(|_, w| w.data_seq_error().set_bit());
             return Some(Event::Error(Error::DataSequence));
         }
         if ints.buff_status().bit_is_set() {
             let status = self.ctrl_reg.buff_status.read().bits();
-            self.ctrl_reg.buff_status.write(|w| unsafe { w.bits(0xFFFFFFFF) });
             // TODO: handle buffer updates more gracefully. Currently we always wait for TransComplete,
             //   which only works for transfers that fit into a single buffer.
 
             for i in 0..32 {
                 if (status >> i) & 1 == 1 {
-                    return Some(Event::InterruptData(i as u8));
+                    self.ctrl_reg.buff_status.modify(|_, w| unsafe { w.bits(1 << i) });
+                    // control transfers (buffer 0) 
+                    if i != 0 {
+                        return Some(Event::InterruptPipe(i as u8));
+                    }
                 }
             }
+        }
+        if ints.trans_complete().bit_is_set() {
+            self.ctrl_reg.sie_status.modify(|_, w| w.trans_complete().set_bit());
+            return Some(Event::TransComplete);
+        }
+        if ints.host_sof().bit_is_set() {
+            return Some(Event::Sof);
         }
         None
     }
