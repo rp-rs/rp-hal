@@ -1222,7 +1222,7 @@ macro_rules! bsp_pins {
             ///
             /// like this:
             ///```no_run
-            /// use rp2040_hal::{pac, gpio::{bank0::Gpio12, Pin, Pins, PushPullOutput}, sio::Sio};
+            /// use rp2040_hal::{pac, gpio::{bank0::Gpio12, Pin, Pins}, sio::Sio};
             ///
             /// let mut peripherals = pac::Peripherals::take().unwrap();
             /// let sio = Sio::new(peripherals.SIO);
