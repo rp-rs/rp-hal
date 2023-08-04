@@ -118,17 +118,15 @@
 
 use core::convert::Infallible;
 use core::marker::PhantomData;
-
-use crate::dma;
-use hal::adc::{Channel, OneShot};
-use pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
-use pac::{ADC, RESETS};
+use embedded_hal::adc::{Channel, OneShot};
 
 use crate::{
+    dma,
     gpio::{
         bank0::{Gpio26, Gpio27, Gpio28, Gpio29},
         AnyPin, DynPinId, Function, OutputEnableOverride, Pin, PullType, ValidFunction,
     },
+    pac::{dma::ch::ch_ctrl_trig::TREQ_SEL_A, ADC, RESETS},
     resets::SubsystemReset,
 };
 
@@ -535,7 +533,10 @@ impl<'a, Word> AdcFifo<'a, Word> {
     pub fn is_over(&mut self) -> bool {
         let over = self.adc.device.fcs.read().over().bit();
         if over {
-            self.adc.device.fcs.modify(|_, w| w.over().set_bit());
+            self.adc
+                .device
+                .fcs
+                .modify(|_, w| w.over().clear_bit_by_one());
         }
         over
     }
@@ -548,7 +549,10 @@ impl<'a, Word> AdcFifo<'a, Word> {
     pub fn is_under(&mut self) -> bool {
         let under = self.adc.device.fcs.read().under().bit();
         if under {
-            self.adc.device.fcs.modify(|_, w| w.under().set_bit());
+            self.adc
+                .device
+                .fcs
+                .modify(|_, w| w.under().clear_bit_by_one());
         }
         under
     }

@@ -42,9 +42,13 @@ jobs:
         with:
           crate: cargo-hack
       - name: Test
-        run: cargo hack test --tests --target x86_64-unknown-linux-gnu  --optional-deps --each-feature
+        run: cargo hack test -p rp2040-hal --tests --target x86_64-unknown-linux-gnu  --optional-deps --each-feature --features critical-section-impl
       - name: Test docs
-        run: cargo hack test --doc --target x86_64-unknown-linux-gnu  --optional-deps --each-feature
+        run: cargo hack test -p rp2040-hal --doc --target x86_64-unknown-linux-gnu  --optional-deps --each-feature --features critical-section-impl
+      - name: Test macros
+        run: cargo hack test -p rp2040-hal-macros --tests --target x86_64-unknown-linux-gnu  --optional-deps --each-feature
+      - name: Test macro docs
+        run: cargo hack test -p rp2040-hal-macros --doc --target x86_64-unknown-linux-gnu  --optional-deps --each-feature
       - name: Clean
         run: cargo clean
   udeps:
@@ -52,9 +56,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly
+          toolchain: nightly-2023-06-27
           target: thumbv6m-none-eabi
       - name: Install cargo-hack
         uses: baptiste0928/cargo-install@v2
@@ -64,6 +68,7 @@ jobs:
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-udeps
+          version: "=0.1.40"
       - name: Check unused deps
         run: cargo hack udeps --optional-deps --each-feature
   msrv:
@@ -71,7 +76,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.63
           target: thumbv6m-none-eabi

@@ -10,9 +10,8 @@ use core::{
 use fugit::{HertzU32, RateExtU32};
 
 use nb::Error::WouldBlock;
-use pac::RESETS;
 
-use crate::{clocks::ClocksManager, resets::SubsystemReset, typelevel::Sealed};
+use crate::{clocks::ClocksManager, pac::RESETS, resets::SubsystemReset, typelevel::Sealed};
 
 /// State of the PLL
 pub trait State: Sealed {}
@@ -47,14 +46,14 @@ impl Sealed for Locking {}
 
 /// Trait to handle both underlying devices from the PAC (PLL_SYS & PLL_USB)
 pub trait PhaseLockedLoopDevice:
-    Deref<Target = rp2040_pac::pll_sys::RegisterBlock> + SubsystemReset + Sealed
+    Deref<Target = crate::pac::pll_sys::RegisterBlock> + SubsystemReset + Sealed
 {
 }
 
-impl PhaseLockedLoopDevice for rp2040_pac::PLL_SYS {}
-impl Sealed for rp2040_pac::PLL_SYS {}
-impl PhaseLockedLoopDevice for rp2040_pac::PLL_USB {}
-impl Sealed for rp2040_pac::PLL_USB {}
+impl PhaseLockedLoopDevice for crate::pac::PLL_SYS {}
+impl Sealed for crate::pac::PLL_SYS {}
+impl PhaseLockedLoopDevice for crate::pac::PLL_USB {}
+impl Sealed for crate::pac::PLL_USB {}
 
 /// A PLL.
 pub struct PhaseLockedLoop<S: State, D: PhaseLockedLoopDevice> {
@@ -200,7 +199,7 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
     }
 
     /// Configures and starts the PLL : it switches to Locking state.
-    pub fn initialize(self, resets: &mut rp2040_pac::RESETS) -> PhaseLockedLoop<Locking, D> {
+    pub fn initialize(self, resets: &mut crate::pac::RESETS) -> PhaseLockedLoop<Locking, D> {
         self.device.reset_bring_up(resets);
 
         // Turn off PLL in case it is already running

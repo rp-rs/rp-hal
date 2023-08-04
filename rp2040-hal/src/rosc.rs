@@ -3,7 +3,7 @@
 
 use fugit::HertzU32;
 
-use crate::typelevel::Sealed;
+use crate::{pac::ROSC, typelevel::Sealed};
 
 /// State of the Ring Oscillator (typestate trait)
 pub trait State: Sealed {}
@@ -28,7 +28,7 @@ impl Sealed for Dormant {}
 
 /// A Ring Oscillator.
 pub struct RingOscillator<S: State> {
-    device: rp2040_pac::ROSC,
+    device: ROSC,
     state: S,
 }
 
@@ -42,14 +42,14 @@ impl<S: State> RingOscillator<S> {
     }
 
     /// Releases the underlying device.
-    pub fn free(self) -> rp2040_pac::ROSC {
+    pub fn free(self) -> ROSC {
         self.device
     }
 }
 
 impl RingOscillator<Disabled> {
     /// Creates a new RingOscillator from the underlying device.
-    pub fn new(dev: rp2040_pac::ROSC) -> Self {
+    pub fn new(dev: ROSC) -> Self {
         RingOscillator {
             device: dev,
             state: Disabled,
@@ -63,6 +63,17 @@ impl RingOscillator<Disabled> {
         use fugit::RateExtU32;
         self.transition(Enabled {
             freq_hz: 6_500_000u32.Hz(),
+        })
+    }
+
+    /// Initializes the ROSC with a known frequency.
+    /// See sections 2.17.3. "Modifying the frequency", and 2.15.6.2. "Using the frequency counter"
+    /// in the rp2040 datasheet for guidance on how to do this before initialising the ROSC.
+    /// Also see `rosc_as_system_clock` example for usage.
+    pub fn initialize_with_freq(self, known_freq: HertzU32) -> RingOscillator<Enabled> {
+        self.device.ctrl.write(|w| w.enable().enable());
+        self.transition(Enabled {
+            freq_hz: known_freq,
         })
     }
 }

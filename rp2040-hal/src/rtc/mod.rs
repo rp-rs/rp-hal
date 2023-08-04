@@ -23,7 +23,7 @@
 
 use crate::clocks::Clock;
 use crate::clocks::RtcClock;
-use rp2040_pac::{RESETS, RTC};
+use crate::pac::{RESETS, RTC};
 
 mod filter;
 

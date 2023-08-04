@@ -1,4 +1,4 @@
-use rp2040_pac::rtc::{rtc_0, rtc_1, setup_0, setup_1};
+use crate::pac::rtc::{rtc_0, rtc_1, setup_0, setup_1};
 
 /// Errors regarding the [`DateTime`] and [`DateTimeFilter`] structs.
 ///

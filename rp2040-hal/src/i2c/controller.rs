@@ -1,14 +1,15 @@
 use core::{marker::PhantomData, ops::Deref};
-
-use crate::resets::SubsystemReset;
+use embedded_hal::blocking::i2c::{Read, Write, WriteRead};
 use fugit::HertzU32;
-use hal::blocking::i2c::{Read, Write, WriteRead};
-use pac::{i2c0::RegisterBlock as Block, RESETS};
 
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::i2c as eh1;
 
 use super::{i2c_reserved_addr, Controller, Error, ValidPinScl, ValidPinSda, I2C};
+use crate::{
+    pac::{i2c0::RegisterBlock as Block, RESETS},
+    resets::SubsystemReset,
+};
 
 impl<T, Sda, Scl> I2C<T, (Sda, Scl), Controller>
 where

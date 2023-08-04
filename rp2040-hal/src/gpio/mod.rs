@@ -43,6 +43,7 @@ pub use embedded_hal::digital::v2::PinState;
 
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
+    pac,
     sio::Sio,
     typelevel::{self, Sealed},
 };
@@ -169,8 +170,8 @@ pub struct Pin<I: PinId, F: func::Function, P: PullType> {
 /// The uniqueness of the pin is not verified. User must make sure no other instance of that specific
 /// pin exists at the same time.
 pub unsafe fn new_pin(id: DynPinId) -> Pin<DynPinId, DynFunction, DynPullType> {
+    use pac::io_bank0::gpio::gpio_ctrl::FUNCSEL_A;
     use pin::pin_sealed::PinIdOps;
-    use rp2040_pac::io_bank0::gpio::gpio_ctrl::FUNCSEL_A;
 
     let funcsel = id
         .io_ctrl()
@@ -444,10 +445,10 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     pub fn get_drive_strength(&self) -> OutputDriveStrength {
         use pac::pads_bank0::gpio::DRIVE_A;
         match self.id.pad_ctrl().read().drive().variant() {
-            DRIVE_A::_2MA => OutputDriveStrength::TwoMilliAmps,
-            DRIVE_A::_4MA => OutputDriveStrength::FourMilliAmps,
-            DRIVE_A::_8MA => OutputDriveStrength::EightMilliAmps,
-            DRIVE_A::_12MA => OutputDriveStrength::TwelveMilliAmps,
+            DRIVE_A::_2M_A => OutputDriveStrength::TwoMilliAmps,
+            DRIVE_A::_4M_A => OutputDriveStrength::FourMilliAmps,
+            DRIVE_A::_8M_A => OutputDriveStrength::EightMilliAmps,
+            DRIVE_A::_12M_A => OutputDriveStrength::TwelveMilliAmps,
         }
     }
 
@@ -456,10 +457,10 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     pub fn set_drive_strength(&mut self, strength: OutputDriveStrength) {
         use pac::pads_bank0::gpio::DRIVE_A;
         let variant = match strength {
-            OutputDriveStrength::TwoMilliAmps => DRIVE_A::_2MA,
-            OutputDriveStrength::FourMilliAmps => DRIVE_A::_4MA,
-            OutputDriveStrength::EightMilliAmps => DRIVE_A::_8MA,
-            OutputDriveStrength::TwelveMilliAmps => DRIVE_A::_12MA,
+            OutputDriveStrength::TwoMilliAmps => DRIVE_A::_2M_A,
+            OutputDriveStrength::FourMilliAmps => DRIVE_A::_4M_A,
+            OutputDriveStrength::EightMilliAmps => DRIVE_A::_8M_A,
+            OutputDriveStrength::TwelveMilliAmps => DRIVE_A::_12M_A,
         };
         self.id.pad_ctrl().modify(|_, w| w.drive().variant(variant))
     }
@@ -941,8 +942,8 @@ macro_rules! gpio {
         paste::paste!{
             #[doc = "Pin bank " [<$bank>] ]
             pub mod [<$bank:snake>] {
+                use $crate::pac::{[<IO_ $bank:upper>],[<PADS_ $bank:upper>]};
                 use crate::sio::[<SioGpio $bank>];
-                use pac::{[<IO_ $bank:upper>],[<PADS_ $bank:upper>]};
                 use super::{Pin, pin, pull, func};
                 $(pub use super::pin::[<$bank:lower>]::[<$prefix $id>];)*
 
@@ -956,7 +957,7 @@ macro_rules! gpio {
 
                 impl Pins {
                     /// Take ownership of the PAC peripherals and SIO slice and split it into discrete [`Pin`]s
-                    pub fn new(io : [<IO_ $bank:upper>], pads: [<PADS_ $bank:upper>], sio: [<SioGpio $bank>], reset : &mut pac::RESETS) -> Self {
+                    pub fn new(io : [<IO_ $bank:upper>], pads: [<PADS_ $bank:upper>], sio: [<SioGpio $bank>], reset : &mut $crate::pac::RESETS) -> Self {
                         use crate::resets::SubsystemReset;
                         pads.reset_bring_down(reset);
                         io.reset_bring_down(reset);
@@ -964,7 +965,7 @@ macro_rules! gpio {
                         {
                             use $crate::gpio::pin::DynBankId;
                             // SAFETY: this function owns the whole bank that will be affected.
-                            let sio = unsafe { &*pac::SIO::PTR };
+                            let sio = unsafe { &*$crate::pac::SIO::PTR };
                             if DynBankId::$bank == DynBankId::Bank0 {
                                 sio.gpio_oe.reset();
                                 sio.gpio_out.reset();
@@ -1221,7 +1222,7 @@ macro_rules! bsp_pins {
             ///
             /// like this:
             ///```no_run
-            /// use rp2040_hal::{pac, gpio::{bank0::Gpio12, Pin, Pins, PushPullOutput}, sio::Sio};
+            /// use rp2040_hal::{pac, gpio::{bank0::Gpio12, Pin, Pins}, sio::Sio};
             ///
             /// let mut peripherals = pac::Peripherals::take().unwrap();
             /// let sio = Sio::new(peripherals.SIO);

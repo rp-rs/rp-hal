@@ -1,16 +1,16 @@
 //! Programmable IO (PIO)
 //! See [Chapter 3 of the datasheet](https://rptl.io/rp2040-datasheet#section_pio) for more details.
 use core::ops::Deref;
+use pio::{Instruction, InstructionOperands, Program, SideSet, Wrap};
 
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
     dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget},
     gpio::{Function, FunctionPio0, FunctionPio1},
+    pac::{self, dma::ch::ch_ctrl_trig::TREQ_SEL_A, pio0::RegisterBlock, PIO0, PIO1},
     resets::SubsystemReset,
     typelevel::Sealed,
 };
-use pio::{Instruction, InstructionOperands, Program, SideSet, Wrap};
-use rp2040_pac::{dma::ch::ch_ctrl_trig::TREQ_SEL_A, pio0::RegisterBlock, PIO0, PIO1};
 
 const PIO_INSTRUCTION_COUNT: usize = 32;
 
@@ -26,7 +26,7 @@ pub trait PIOExt: Deref<Target = RegisterBlock> + SubsystemReset + Sized + Send 
     #[allow(clippy::type_complexity)] // Required for symmetry with PIO::free().
     fn split(
         self,
-        resets: &mut pac::RESETS,
+        resets: &mut crate::pac::RESETS,
     ) -> (
         PIO<Self>,
         UninitStateMachine<(Self, SM0)>,
@@ -123,7 +123,7 @@ impl<P: PIOExt> PIO<P> {
         self.pio
     }
 
-    /// This PIO0's interrupts.
+    /// This PIO's IRQ0 interrupt.
     pub fn irq0(&self) -> Interrupt<'_, P, 0> {
         Interrupt {
             block: self.pio.deref(),
@@ -131,7 +131,7 @@ impl<P: PIOExt> PIO<P> {
         }
     }
 
-    /// This PIO0's interrupts.
+    /// This PIO's IRQ1 interrupt.
     pub fn irq1(&self) -> Interrupt<'_, P, 1> {
         Interrupt {
             block: self.pio.deref(),
@@ -481,7 +481,7 @@ pub enum PinDir {
 #[derive(Debug)]
 pub struct UninitStateMachine<SM: ValidStateMachine> {
     block: *const RegisterBlock,
-    sm: *const rp2040_pac::pio0::SM,
+    sm: *const crate::pac::pio0::SM,
     _phantom: core::marker::PhantomData<SM>,
 }
 
@@ -538,7 +538,7 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
         }
     }
 
-    unsafe fn sm(&self) -> &rp2040_pac::pio0::SM {
+    unsafe fn sm(&self) -> &crate::pac::pio0::SM {
         &*self.sm
     }
 
@@ -625,7 +625,7 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     /// Check if the current instruction is stalled.
     pub fn stalled(&self) -> bool {
         // Safety: read only access without side effect
-        unsafe { self.sm.sm().sm_execctrl.read().exec_stalled().bits() }
+        unsafe { self.sm.sm().sm_execctrl.read().exec_stalled().bit() }
     }
 
     /// Drain Tx fifo.
@@ -1780,7 +1780,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         &*self.block
     }
 
-    unsafe fn irq(&self) -> &rp2040_pac::pio0::SM_IRQ {
+    unsafe fn irq(&self) -> &crate::pac::pio0::SM_IRQ {
         &self.block().sm_irq[IRQ]
     }
 }

@@ -1,11 +1,10 @@
 use core::marker::PhantomData;
 
-use crate::gpio::{pin::pin_sealed::TypeLevelPinId, AnyPin, FunctionSpi};
 use crate::{
-    gpio::bank0::*,
+    gpio::{bank0::*, pin::pin_sealed::TypeLevelPinId, AnyPin, FunctionSpi},
+    pac::{SPI0, SPI1},
     typelevel::{OptionT, OptionTNone, OptionTSome, Sealed},
 };
-use pac::{SPI0, SPI1};
 
 use super::SpiDevice;
 

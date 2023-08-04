@@ -1,5 +1,7 @@
-use super::dyn_slice::{DynSliceId, DynSliceMode};
-use pac::pwm::CH;
+use crate::{
+    pac::{self, pwm::CH},
+    pwm::dyn_slice::{DynSliceId, DynSliceMode},
+};
 
 /// # Safety
 ///

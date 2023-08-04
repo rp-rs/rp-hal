@@ -34,9 +34,10 @@
 //! ```
 //! See [examples/watchdog.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/watchdog.rs) for a more complete example
 
-use crate::pac::WATCHDOG;
 use embedded_hal::watchdog;
 use fugit::MicrosDurationU32;
+
+use crate::pac::{self, WATCHDOG};
 
 /// Watchdog peripheral
 pub struct Watchdog {

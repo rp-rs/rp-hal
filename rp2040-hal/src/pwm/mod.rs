@@ -78,17 +78,17 @@
 
 use core::marker::PhantomData;
 
+use embedded_dma::Word;
+use embedded_hal::PwmPin;
+
 use crate::{
+    atomic_register_access::{write_bitmask_clear, write_bitmask_set},
     dma::{EndlessWriteTarget, WriteTarget},
     gpio::{bank0::*, AnyPin, FunctionPwm, Pin, ValidFunction},
+    pac::{self, dma::ch::ch_al1_ctrl::TREQ_SEL_A, PWM},
     resets::SubsystemReset,
     typelevel::{Is, Sealed},
 };
-use embedded_dma::Word;
-use embedded_hal::PwmPin;
-use pac::{dma::ch::ch_al1_ctrl::TREQ_SEL_A, PWM};
-
-use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
 
 pub mod dyn_slice;
 pub use dyn_slice::*;
@@ -514,7 +514,7 @@ macro_rules! pwm {
 
             impl Slices {
                 /// Take ownership of the PAC peripheral and split it into discrete [`Slice`]s
-                pub fn new(pwm: $PWMX, reset : &mut pac::RESETS) -> Self {
+                pub fn new(pwm: $PWMX, reset : &mut crate::pac::RESETS) -> Self {
                     pwm.reset_bring_up(reset);
                     unsafe {
                         Self {

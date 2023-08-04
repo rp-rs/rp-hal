@@ -38,13 +38,10 @@
 #![warn(missing_docs)]
 #![no_std]
 
-extern crate cortex_m;
-extern crate embedded_hal as hal;
-extern crate nb;
 pub use paste;
 
 /// Re-export of the PAC
-pub extern crate rp2040_pac as pac;
+pub use rp2040_pac as pac;
 
 #[macro_use]
 mod intrinsics;

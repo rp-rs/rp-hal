@@ -106,19 +106,18 @@
 //! ```
 
 use core::cell::RefCell;
-
-use crate::clocks::UsbClock;
-use crate::pac::RESETS;
-use crate::pac::USBCTRL_DPRAM;
-use crate::pac::USBCTRL_REGS;
-use crate::resets::SubsystemReset;
-
 use critical_section::{self, Mutex};
 
 use usb_device::{
     bus::{PollResult, UsbBus as UsbBusTrait},
     endpoint::{EndpointAddress, EndpointType},
     Result as UsbResult, UsbDirection, UsbError,
+};
+
+use crate::{
+    clocks::UsbClock,
+    pac::{RESETS, USBCTRL_DPRAM, USBCTRL_REGS},
+    resets::SubsystemReset,
 };
 
 #[cfg(feature = "rp2040-e5")]
@@ -288,7 +287,7 @@ impl Inner {
         .enumerate()
         .filter_map(|(i, ep)| ep.as_ref().map(|ep| (i, ep)))
         {
-            use pac::usbctrl_dpram::ep_control::ENDPOINT_TYPE_A;
+            use crate::pac::usbctrl_dpram::ep_control::ENDPOINT_TYPE_A;
             let ep_type = match ep.ep_type {
                 EndpointType::Bulk => ENDPOINT_TYPE_A::BULK,
                 EndpointType::Isochronous => ENDPOINT_TYPE_A::ISOCHRONOUS,
@@ -377,7 +376,9 @@ impl Inner {
             // Next packet will be on DATA1 so clear pid_0 so it gets flipped by next buf config
             self.ctrl_dpram.ep_buffer_control[0].modify(|_, w| w.pid_0().clear_bit());
             // clear setup request flag
-            self.ctrl_reg.sie_status.write(|w| w.setup_rec().set_bit());
+            self.ctrl_reg
+                .sie_status
+                .write(|w| w.setup_rec().clear_bit_by_one());
 
             // clear any out standing out flag e.g. in case a zlp got discarded
             self.ctrl_reg.buff_status.write(|w| unsafe { w.bits(2) });
@@ -539,7 +540,10 @@ impl UsbBusTrait for UsbBus {
             let mut inner = self.inner.borrow(cs).borrow_mut();
 
             // clear reset flag
-            inner.ctrl_reg.sie_status.write(|w| w.bus_reset().set_bit());
+            inner
+                .ctrl_reg
+                .sie_status
+                .write(|w| w.bus_reset().clear_bit_by_one());
             inner
                 .ctrl_reg
                 .buff_status
@@ -641,10 +645,16 @@ impl UsbBusTrait for UsbBus {
                 return PollResult::Reset;
             } else if buff_status == 0 && ints.setup_req().bit_is_clear() {
                 if ints.dev_suspend().bit_is_set() {
-                    inner.ctrl_reg.sie_status.write(|w| w.suspended().set_bit());
+                    inner
+                        .ctrl_reg
+                        .sie_status
+                        .write(|w| w.suspended().clear_bit_by_one());
                     return PollResult::Suspend;
                 } else if ints.dev_resume_from_host().bit_is_set() {
-                    inner.ctrl_reg.sie_status.write(|w| w.resume().set_bit());
+                    inner
+                        .ctrl_reg
+                        .sie_status
+                        .write(|w| w.resume().clear_bit_by_one());
                     return PollResult::Resume;
                 }
                 return PollResult::None;

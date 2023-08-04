@@ -1,4 +1,4 @@
-use rp2040_pac::DMA;
+use crate::pac::DMA;
 
 use super::{Channel, ChannelIndex, Pace, ReadTarget, WriteTarget};
 use crate::{
@@ -13,7 +13,7 @@ pub trait SingleChannel: Sealed {
     /// Returns the registers associated with this DMA channel.
     ///
     /// In the case of channel pairs, this returns the first channel.
-    fn ch(&self) -> &rp2040_pac::dma::CH;
+    fn ch(&self) -> &crate::pac::dma::CH;
     /// Returns the index of the DMA channel.
     fn id(&self) -> u8;
 
@@ -113,13 +113,13 @@ pub trait SingleChannel: Sealed {
 pub trait ChannelPair: SingleChannel + Sealed {
     /// Returns the registers associated with the second DMA channel associated with this channel
     /// pair.
-    fn ch2(&self) -> &rp2040_pac::dma::CH;
+    fn ch2(&self) -> &crate::pac::dma::CH;
     /// Returns the index of the second DMA channel.
     fn id2(&self) -> u8;
 }
 
 impl<CH: ChannelIndex> SingleChannel for Channel<CH> {
-    fn ch(&self) -> &rp2040_pac::dma::CH {
+    fn ch(&self) -> &crate::pac::dma::CH {
         self.regs()
     }
 
@@ -131,7 +131,7 @@ impl<CH: ChannelIndex> SingleChannel for Channel<CH> {
 impl<CH: ChannelIndex> Sealed for Channel<CH> {}
 
 impl<CH1: ChannelIndex, CH2: ChannelIndex> SingleChannel for (Channel<CH1>, Channel<CH2>) {
-    fn ch(&self) -> &rp2040_pac::dma::CH {
+    fn ch(&self) -> &crate::pac::dma::CH {
         self.0.regs()
     }
 
@@ -245,7 +245,7 @@ impl<CH: SingleChannel> ChannelConfig for CH {
     fn start(&mut self) {
         // Safety: The write does not interfere with any other writes, it only affects this
         // channel.
-        unsafe { &*rp2040_pac::DMA::ptr() }
+        unsafe { &*crate::pac::DMA::ptr() }
             .multi_chan_trigger
             .write(|w| unsafe { w.bits(1 << self.id()) });
     }
@@ -254,7 +254,7 @@ impl<CH: SingleChannel> ChannelConfig for CH {
         // Safety: The write does not interfere with any other writes, it only affects this
         // channel and other (which we have an exclusive borrow of).
         let channel_flags = 1 << self.id() | 1 << other.id();
-        unsafe { &*rp2040_pac::DMA::ptr() }
+        unsafe { &*crate::pac::DMA::ptr() }
             .multi_chan_trigger
             .write(|w| unsafe { w.bits(channel_flags) });
     }
