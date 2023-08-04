@@ -277,14 +277,6 @@ impl HostBus for UsbHostBus {
         })
     }
 
-    fn dump_dpram(&self) {
-        const DPRAM_BASE: *const u8 = USBCTRL_DPRAM::ptr() as *const u8;
-        let dpram = unsafe { core::slice::from_raw_parts(DPRAM_BASE, 0x180) };
-        defmt::info!("DPRAM: {}", dpram);
-        let regs = unsafe { core::slice::from_raw_parts(USBCTRL_REGS::ptr() as *const u8, 156) };
-        defmt::info!("REGS: {}", regs);
-    }
-
     fn pipe_buf(&self, pipe_index: u8) -> &[u8] {
         const DPRAM_BASE: *const u8 = USBCTRL_DPRAM::ptr() as *const u8;
         unsafe { core::slice::from_raw_parts(DPRAM_BASE.offset(0x180 + CONTROL_BUFFER_SIZE as isize), 8) }
@@ -294,7 +286,6 @@ impl HostBus for UsbHostBus {
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             let buf_control = inner.ctrl_dpram.ep_buffer_control[2].read().bits();
-            //defmt::debug!("BUF CONTROL (continue): {:#X}, ep int ctr: {:#X}", buf_control, inner.ctrl_reg.int_ep_ctrl.read().bits());
             inner.ctrl_dpram.ep_buffer_control[2].modify(|r, w| {
                 w.last_0().set_bit();
                 w.pid_0().bit(!r.pid_0().bit());
@@ -350,31 +341,31 @@ impl Inner {
             return Some(event)
         }
         if ints.host_resume().bit_is_set() {
-            self.ctrl_reg.sie_status.modify(|_, w| w.resume().set_bit());
+            self.ctrl_reg.sie_status.modify(|_, w| w.resume().clear_bit_by_one());
             return Some(Event::Resume);
         }
         if ints.stall().bit_is_set() {
-            self.ctrl_reg.sie_status.modify(|_, w| w.stall_rec().set_bit());
+            self.ctrl_reg.sie_status.modify(|_, w| w.stall_rec().clear_bit_by_one());
             return Some(Event::Stall);
         }
         if ints.error_crc().bit_is_set() {
-            self.ctrl_reg.sie_status.modify(|_, w| w.crc_error().set_bit());
+            self.ctrl_reg.sie_status.modify(|_, w| w.crc_error().clear_bit_by_one());
             return Some(Event::Error(Error::Crc));
         }
         if ints.error_bit_stuff().bit_is_set() {
-            self.ctrl_reg.sie_status.modify(|_, w| w.bit_stuff_error().set_bit());
+            self.ctrl_reg.sie_status.modify(|_, w| w.bit_stuff_error().clear_bit_by_one());
             return Some(Event::Error(Error::BitStuffing));
         }
         if ints.error_rx_overflow().bit_is_set() {
-            self.ctrl_reg.sie_status.modify(|_, w| w.rx_overflow().set_bit());
+            self.ctrl_reg.sie_status.modify(|_, w| w.rx_overflow().clear_bit_by_one());
             return Some(Event::Error(Error::RxOverflow));
         }
         if ints.error_rx_timeout().bit_is_set() {
-            self.ctrl_reg.sie_status.modify(|_, w| w.rx_timeout().set_bit());
+            self.ctrl_reg.sie_status.modify(|_, w| w.rx_timeout().clear_bit_by_one());
             return Some(Event::Error(Error::RxTimeout));
         }
         if ints.error_data_seq().bit_is_set() {
-            self.ctrl_reg.sie_status.modify(|_, w| w.data_seq_error().set_bit());
+            self.ctrl_reg.sie_status.modify(|_, w| w.data_seq_error().clear_bit_by_one());
             return Some(Event::Error(Error::DataSequence));
         }
         if ints.buff_status().bit_is_set() {
@@ -393,7 +384,7 @@ impl Inner {
             }
         }
         if ints.trans_complete().bit_is_set() {
-            self.ctrl_reg.sie_status.modify(|_, w| w.trans_complete().set_bit());
+            self.ctrl_reg.sie_status.modify(|_, w| w.trans_complete().clear_bit_by_one());
             return Some(Event::TransComplete);
         }
         if ints.host_sof().bit_is_set() {
