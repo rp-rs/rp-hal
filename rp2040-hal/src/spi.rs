@@ -38,7 +38,6 @@ use crate::{resets::SubsystemReset, typelevel::Sealed};
 mod pins;
 pub use pins::*;
 
-
 impl From<embedded_hal::spi::Mode> for FrameFormat {
     fn from(f: embedded_hal::spi::Mode) -> Self {
         Self::MotorolaSpi(f)
@@ -53,8 +52,7 @@ impl From<&embedded_hal::spi::Mode> for FrameFormat {
 
 /// SPI frame format
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub enum FrameFormat
-{
+pub enum FrameFormat {
     /// Motorola SPI format. See section 4.4.3.9 of RP2040 datasheet.
     MotorolaSpi(embedded_hal::spi::Mode),
     /// Texas Instruments synchronous serial frame format. See section 4.4.3.8 of RP2040 datasheet.
@@ -229,21 +227,17 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
     /// Set format and datasize
     fn set_format(&mut self, data_bits: u8, frame_format: FrameFormat) {
         self.device.sspcr0.modify(|_, w| unsafe {
-            w.dss()
-                .bits(data_bits - 1)
-                .frf()
-                .bits(match &frame_format {
-                    FrameFormat::MotorolaSpi(_) => 0x00,
-                    FrameFormat::TexasInstrumentsSynchronousSerial => 0x01,
-                    FrameFormat::NationalSemiconductorMicrowire => 0x10,
-                });
+            w.dss().bits(data_bits - 1).frf().bits(match &frame_format {
+                FrameFormat::MotorolaSpi(_) => 0x00,
+                FrameFormat::TexasInstrumentsSynchronousSerial => 0x01,
+                FrameFormat::NationalSemiconductorMicrowire => 0x10,
+            });
 
             /*
              * Clock polarity (SPO) and clock phase (SPH) are only applicable to
              * the Motorola SPI frame format.
              */
-            if let FrameFormat::MotorolaSpi(ref mode) = frame_format
-            {
+            if let FrameFormat::MotorolaSpi(ref mode) = frame_format {
                 w.spo()
                     .bit(mode.polarity == Polarity::IdleHigh)
                     .sph()
@@ -299,11 +293,21 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
     }
 
     /// Initialize the SPI in slave mode
-    pub fn init_slave<M: Into<FrameFormat>>(self, resets: &mut RESETS, frame_format: M) -> Spi<Enabled, D, P, DS> {
+    pub fn init_slave<M: Into<FrameFormat>>(
+        self,
+        resets: &mut RESETS,
+        frame_format: M,
+    ) -> Spi<Enabled, D, P, DS> {
         // Use dummy values for frequency and baudrate.
         // With both values 0, set_baudrate will set prescale == u8::MAX, which will break if debug assertions are enabled.
         // u8::MAX is outside the allowed range 2..=254 for CPSDVSR, which might interfere with proper operation in slave mode.
-        self.init_spi(resets, 1000u32.Hz(), 1000u32.Hz(), frame_format.into(), true)
+        self.init_spi(
+            resets,
+            1000u32.Hz(),
+            1000u32.Hz(),
+            frame_format.into(),
+            true,
+        )
     }
 }
 
