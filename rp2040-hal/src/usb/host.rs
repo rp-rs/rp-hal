@@ -1,7 +1,14 @@
+//! USB host support
+//!
+//! This module implements host mode for the USB. Host mode means the RP2040 controls the USB devices connected to it,
+//! it does not act as a USB device itself.
+//!
+//! Host-mode and device-mode are mutually exclusive. The controller can only operate as one of them at a time.
+//!
+
 use usbh::{
     bus::{
         HostBus,
-        PollResult,
         Event,
         Error,
     },
@@ -25,11 +32,15 @@ use crate::resets::SubsystemReset;
 
 const CONTROL_BUFFER_SIZE: usize = 64;
 
+/// USB host bus implementation
 pub struct UsbHostBus {
     inner: Mutex<RefCell<Inner>>,
 }
 
 impl UsbHostBus {
+    /// Initialize USB host bus
+    ///
+    /// The host bus implements [`usbh::bus::HostBus`].
     pub fn new(
         ctrl_reg: USBCTRL_REGS,
         ctrl_dpram: USBCTRL_DPRAM,
@@ -46,7 +57,7 @@ impl UsbHostBus {
 impl HostBus for UsbHostBus {
     fn reset_controller(&mut self) {
         critical_section::with(|cs| {
-            let mut inner = self.inner.borrow(cs).borrow_mut();
+            let inner = self.inner.borrow(cs).borrow_mut();
             unsafe {
                 let raw_ctrl_reg =
                     core::slice::from_raw_parts_mut(USBCTRL_REGS::ptr() as *mut u32, 1 + 0x98 / 4);
@@ -200,21 +211,10 @@ impl HostBus for UsbHostBus {
         });
     }
 
-    fn poll(&mut self) -> PollResult {
+    fn poll(&mut self) -> Option<Event> {
         critical_section::with(|cs| {
             let mut inner = self.inner.borrow(cs).borrow_mut();
-            PollResult {
-                event: inner.ints_to_event(),
-                poll_again_after: None,
-            }
-        })
-    }
-
-    fn process_received_data<F: FnOnce(&[u8]) -> T, T>(&self, f: F) -> T {
-        critical_section::with(|cs| {
-            let inner = self.inner.borrow(cs).borrow_mut();
-            let len = inner.ctrl_dpram.ep_buffer_control[0].read().length_0().bits() as usize;
-            f(&inner.control_buffer()[0..len])
+            inner.ints_to_event()
         })
     }
 
@@ -223,7 +223,14 @@ impl HostBus for UsbHostBus {
         unsafe { core::slice::from_raw_parts(DPRAM_BASE.offset(0x180), len) }
     }
 
-    fn create_interrupt_pipe(&mut self, device_address: DeviceAddress, endpoint_number: u8, direction: UsbDirection, size: u16, interval: u8) -> Option<(*mut u8, u8)> {
+    fn create_interrupt_pipe(
+        &mut self,
+        device_address: DeviceAddress,
+        endpoint_number: u8,
+        direction: UsbDirection,
+        size: u16,
+        interval: u8,
+    ) -> Option<(*mut u8, u8)> {
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             inner.ctrl_dpram.ep_control[0].write(|w| {
@@ -238,7 +245,6 @@ impl HostBus for UsbHostBus {
                 }
             });
             inner.ctrl_reg.sie_ctrl.modify(|_, w| w.sof_sync().set_bit());
-            let ep_ctrl_bits = inner.ctrl_dpram.ep_control[0].read().bits();
             inner.ctrl_dpram.ep_buffer_control[2].write(|w| {
                 w.last_0().set_bit();
                 w.pid_0().clear_bit();
@@ -248,10 +254,8 @@ impl HostBus for UsbHostBus {
             });
             cortex_m::asm::delay(12);
             inner.ctrl_dpram.ep_buffer_control[2].modify(|_, w| w.available_0().set_bit());
-            let buf_control = inner.ctrl_dpram.ep_buffer_control[2].read().bits();
             inner.ctrl_reg.addr_endp1.write(|w| {
                 unsafe {
-                    w.intep_preamble().clear_bit();
                     w.address().bits(device_address.into());
                     w.endpoint().bits(endpoint_number);
                     w.intep_dir().bit(direction == UsbDirection::Out)
@@ -285,7 +289,6 @@ impl HostBus for UsbHostBus {
     fn pipe_continue(&self, pipe_index: u8) {
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
-            let buf_control = inner.ctrl_dpram.ep_buffer_control[2].read().bits();
             inner.ctrl_dpram.ep_buffer_control[2].modify(|r, w| {
                 w.last_0().set_bit();
                 w.pid_0().bit(!r.pid_0().bit());
@@ -295,10 +298,6 @@ impl HostBus for UsbHostBus {
             });
             cortex_m::asm::delay(12);
             inner.ctrl_dpram.ep_buffer_control[2].modify(|_, w| w.available_0().set_bit());
-            // inner.ctrl_dpram.ep_buffer_control[2].modify(|_, w| {
-            //     w.full_0().clear_bit();
-            //     w.available_0().set_bit()
-            // });
         })
     }
 
@@ -310,19 +309,12 @@ impl HostBus for UsbHostBus {
     }
 }
 
-unsafe impl Send for UsbHostBus {}
-
 struct Inner {
     ctrl_reg: USBCTRL_REGS,
     ctrl_dpram: USBCTRL_DPRAM,
 }
 
 impl Inner {
-    fn control_buffer(&self) -> &[u8] {
-        const DPRAM_BASE: *const u8 = USBCTRL_DPRAM::ptr() as *const u8;
-        unsafe { core::slice::from_raw_parts(DPRAM_BASE.offset(0x180), CONTROL_BUFFER_SIZE) }
-    }
-
     fn control_buffer_mut(&mut self) -> &mut [u8] {
         const DPRAM_BASE: *mut u8 = USBCTRL_DPRAM::ptr() as *mut u8;
         unsafe { core::slice::from_raw_parts_mut(DPRAM_BASE.offset(0x180), CONTROL_BUFFER_SIZE) }
