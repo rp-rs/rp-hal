@@ -2,7 +2,7 @@
 name = "rp2040-hal"
 version = "0.9.0-alpha.1"
 authors = ["The rp-rs Developers"]
-edition = "2018"
+edition = "2021"
 homepage = "https://github.com/rp-rs/rp-hal"
 description = "A Rust Embeded-HAL impl for the rp2040 microcontroller"
 license = "MIT OR Apache-2.0"
@@ -24,7 +24,7 @@ embedded-dma = "0.2.0"
 fugit = "0.3.6"
 itertools = { version = "0.10.1", default-features = false }
 nb = "1.0"
-rp2040-pac = { git = "https://github.com/nilclass/rp2040-pac", branch = "usb-host-support" }
+rp2040-pac = { git = "https://github.com/nilclass/rp2040-pac", branch = "usb-host-support", features = ["critical-section"] }
 paste = "1.0"
 pio = "0.2.0"
 rp2040-hal-macros = { version = "0.1.0", path = "../rp2040-hal-macros" }
@@ -103,3 +103,95 @@ required-features = ["rt", "critical-section-impl"]
 # adc_fifo_dma example uses cortex-m-rt::interrupt, need rt feature for that
 name = "adc_fifo_dma"
 required-features = ["rt", "critical-section-impl"]
+
+[[example]]
+name = "adc"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "adc_fifo_poll"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "blinky"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "dht11"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "gpio_in_out"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "i2c"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "lcd_display"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "mem_to_mem_dma"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "multicore_fifo_blink"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "multicore_polyblink"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "pio_blink"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "pio_dma"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "pio_proc_blink"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "pio_side_set"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "pio_synchronized"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "pwm_blink"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "rom_funcs"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "rosc_as_system_clock"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "spi"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "spi_dma"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "uart"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "uart_dma"
+required-features = ["critical-section-impl"]
+
+[[example]]
+name = "watchdog"
+required-features = ["critical-section-impl"]
