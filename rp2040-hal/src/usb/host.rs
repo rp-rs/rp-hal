@@ -146,8 +146,7 @@ impl HostBus for UsbHostBus {
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             inner.ctrl_reg.addr_endp.write(|w| unsafe {
-                w.address()
-                    .bits(dev_addr.map(u8::from).unwrap_or(0));
+                w.address().bits(dev_addr.map(u8::from).unwrap_or(0));
                 w.endpoint().bits(endpoint)
             });
 
