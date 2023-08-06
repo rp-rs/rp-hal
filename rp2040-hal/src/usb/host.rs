@@ -147,7 +147,7 @@ impl HostBus for UsbHostBus {
             let inner = self.inner.borrow(cs).borrow_mut();
             inner.ctrl_reg.addr_endp.write(|w| unsafe {
                 w.address()
-                    .bits(dev_addr.map(|addr| u8::from(addr)).unwrap_or(0));
+                    .bits(dev_addr.map(u8::from).unwrap_or(0));
                 w.endpoint().bits(endpoint)
             });
 
@@ -395,13 +395,16 @@ impl Inner {
             return None;
         }
         let ap = self.allocated_pipes;
-        let free_index = (0..15).into_iter().find(|i| ap & (1 << i) == 0)? as u8;
+        let free_index = (0..15).find(|i| ap & (1 << i) == 0)? as u8;
 
         // for simplicity, all pipes are considered to be 64 bytes long for now.
         // This is the maximum supported size for pipes other than Isochronous, which are not implemented yet.
-        let DPRAM_BASE: *mut u8 = USBCTRL_DPRAM::ptr() as *mut u8;
+        let dpram_base: *mut u8 = USBCTRL_DPRAM::ptr() as *mut u8;
+
+        // Safety: this is the only place where offsets larger than 0x180+CONTROL_BUFFER_SIZE are used.
+        //   Since the highest index is 15, all offsets are below `0x180 + 16 * 64 = 1408`, which is below the 4096 bytes available in DPRAM.
         let ptr = unsafe {
-            DPRAM_BASE.offset(0x180 + CONTROL_BUFFER_SIZE as isize + free_index as isize * 64)
+            dpram_base.offset(0x180 + CONTROL_BUFFER_SIZE as isize + free_index as isize * 64)
         };
 
         self.allocated_pipes |= 1 << free_index;
