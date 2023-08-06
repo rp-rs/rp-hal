@@ -11,6 +11,7 @@ use usbh::{
         HostBus,
         Event,
         Error,
+        InterruptPipe,
     },
     types::{
         ConnectionSpeed,
@@ -218,7 +219,7 @@ impl HostBus for UsbHostBus {
         })
     }
 
-    unsafe fn control_buffer(&self, len: usize) -> &[u8] {
+    fn received_data(&self, len: usize) -> &[u8] {
         const DPRAM_BASE: *const u8 = USBCTRL_DPRAM::ptr() as *const u8;
         unsafe { core::slice::from_raw_parts(DPRAM_BASE.offset(0x180), len) }
     }
@@ -230,19 +231,16 @@ impl HostBus for UsbHostBus {
         direction: UsbDirection,
         size: u16,
         interval: u8,
-    ) -> Option<(*mut u8, u8)> {
+    ) -> Option<InterruptPipe> {
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
+
             inner.ctrl_dpram.ep_control[0].write(|w| {
-                unsafe {
-                    w.bits(
-                        (0x180 + CONTROL_BUFFER_SIZE as u32) |
-                        ((TransferType::Interrupt as u8 as u32) << 26) |
-                        (1 << 29) | // interrupt per buf
-                        (1 << 31) | // enable
-                        ((interval as u32 - 1) << 16)
-                    )
-                }
+                w.endpoint_type().interrupt();
+                w.interrupt_per_buff().set_bit();
+                unsafe { w.host_poll_interval().bits(interval as u16 - 1) };
+                unsafe { w.buffer_address().bits(0x180 + CONTROL_BUFFER_SIZE as u16) };
+                w.enable().set_bit()
             });
             inner.ctrl_reg.sie_ctrl.modify(|_, w| w.sof_sync().set_bit());
             inner.ctrl_dpram.ep_buffer_control[2].write(|w| {
@@ -268,25 +266,16 @@ impl HostBus for UsbHostBus {
 
             const DPRAM_BASE: *mut u8 = USBCTRL_DPRAM::ptr() as *mut u8;
             let buf_ptr = unsafe { DPRAM_BASE.offset(0x180 + CONTROL_BUFFER_SIZE as isize) };
-            Some((buf_ptr, 2))
+            Some(InterruptPipe {
+                bus_ref: 2,
+                ptr: buf_ptr,
+            })
         })
     }
 
     fn release_interrupt_pipe(&mut self, pipe_ref: u8) {}
 
-    fn received_len(&self) -> u16 {
-        critical_section::with(|cs| {
-            let inner = self.inner.borrow(cs).borrow_mut();
-            inner.ctrl_dpram.ep_buffer_control[0].read().length_0().bits()
-        })
-    }
-
-    fn pipe_buf(&self, pipe_index: u8) -> &[u8] {
-        const DPRAM_BASE: *const u8 = USBCTRL_DPRAM::ptr() as *const u8;
-        unsafe { core::slice::from_raw_parts(DPRAM_BASE.offset(0x180 + CONTROL_BUFFER_SIZE as isize), 8) }
-    }
-
-    fn pipe_continue(&self, pipe_index: u8) {
+    fn pipe_continue(&self, pipe_ref: u8) {
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             inner.ctrl_dpram.ep_buffer_control[2].modify(|r, w| {
