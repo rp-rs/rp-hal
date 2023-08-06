@@ -51,7 +51,7 @@ impl UsbHostBus {
         ctrl_reg.reset_bring_down(resets);
         ctrl_reg.reset_bring_up(resets);
 
-        Self { inner: Mutex::new(RefCell::new(Inner { ctrl_reg, ctrl_dpram })) }
+        Self { inner: Mutex::new(RefCell::new(Inner::new(ctrl_reg, ctrl_dpram))) }
     }
 }
 
@@ -233,9 +233,15 @@ impl HostBus for UsbHostBus {
         interval: u8,
     ) -> Option<InterruptPipe> {
         critical_section::with(|cs| {
-            let inner = self.inner.borrow(cs).borrow_mut();
+            let mut inner = self.inner.borrow(cs).borrow_mut();
 
-            inner.ctrl_dpram.ep_control[0].write(|w| {
+            let interrupt_pipe = inner.alloc_pipe(size)?;
+            let index = interrupt_pipe.bus_ref as usize;
+            let ep_control = &inner.ctrl_dpram.ep_control[index];
+            let ep_buffer_control = &inner.ctrl_dpram.ep_buffer_control[2 * (index + 1)];
+            let addr_endp = &inner.ctrl_reg.host_addr_endp[index];
+
+            ep_control.write(|w| {
                 w.endpoint_type().interrupt();
                 w.interrupt_per_buff().set_bit();
                 unsafe { w.host_poll_interval().bits(interval as u16 - 1) };
@@ -243,7 +249,7 @@ impl HostBus for UsbHostBus {
                 w.enable().set_bit()
             });
             inner.ctrl_reg.sie_ctrl.modify(|_, w| w.sof_sync().set_bit());
-            inner.ctrl_dpram.ep_buffer_control[2].write(|w| {
+            ep_buffer_control.write(|w| {
                 w.last_0().set_bit();
                 w.pid_0().clear_bit();
                 w.full_0().clear_bit();
@@ -251,8 +257,8 @@ impl HostBus for UsbHostBus {
                 unsafe { w.length_0().bits(size) }
             });
             cortex_m::asm::delay(12);
-            inner.ctrl_dpram.ep_buffer_control[2].modify(|_, w| w.available_0().set_bit());
-            inner.ctrl_reg.addr_endp1.write(|w| {
+            ep_buffer_control.modify(|_, w| w.available_0().set_bit());
+            addr_endp.write(|w| {
                 unsafe {
                     w.address().bits(device_address.into());
                     w.endpoint().bits(endpoint_number);
@@ -260,33 +266,53 @@ impl HostBus for UsbHostBus {
                 }
             });
             cortex_m::asm::delay(12);
-            inner.ctrl_reg.int_ep_ctrl.modify(|_, w| {
-                unsafe { w.int_ep_active().bits(0x01) }
+            inner.ctrl_reg.int_ep_ctrl.modify(|r, w| {
+                unsafe { w.int_ep_active().bits(r.int_ep_active().bits() | 1 << index) }
             });
 
-            const DPRAM_BASE: *mut u8 = USBCTRL_DPRAM::ptr() as *mut u8;
-            let buf_ptr = unsafe { DPRAM_BASE.offset(0x180 + CONTROL_BUFFER_SIZE as isize) };
-            Some(InterruptPipe {
-                bus_ref: 2,
-                ptr: buf_ptr,
-            })
+            Some(interrupt_pipe)
         })
     }
 
-    fn release_interrupt_pipe(&mut self, pipe_ref: u8) {}
+    fn release_interrupt_pipe(&mut self, pipe_ref: u8) {
+        assert!(pipe_ref <= 15);
+        critical_section::with(|cs| {
+            let mut inner = self.inner.borrow(cs).borrow_mut();
+            let index = pipe_ref as usize;
+            let ep_control = &inner.ctrl_dpram.ep_control[index];
+            let ep_buffer_control = &inner.ctrl_dpram.ep_buffer_control[2 * (index + 1)];
+            let addr_endp = &inner.ctrl_reg.host_addr_endp[index];
+
+            // disable endpoint polling
+            inner.ctrl_reg.int_ep_ctrl.modify(|r, w| {
+                unsafe { w.int_ep_active().bits(r.int_ep_active().bits() & !(1 << index)) }
+            });
+
+            // clear all related registers
+            ep_control.write(|w| unsafe { w.bits(0) });
+            ep_buffer_control.write(|w| unsafe { w.bits(0) });
+            addr_endp.write(|w| unsafe { w.bits(0) });
+
+            // mark pipe as released
+            inner.release_pipe(pipe_ref);
+        });        
+    }
 
     fn pipe_continue(&self, pipe_ref: u8) {
+        assert!(pipe_ref <= 15);
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
-            inner.ctrl_dpram.ep_buffer_control[2].modify(|r, w| {
+            let index = pipe_ref as usize;
+            let ep_buffer_control = &inner.ctrl_dpram.ep_buffer_control[2 * (index + 1)];
+
+            ep_buffer_control.modify(|r, w| {
                 w.last_0().set_bit();
                 w.pid_0().bit(!r.pid_0().bit());
                 w.full_0().clear_bit();
-                w.reset().set_bit();
-                unsafe { w.length_0().bits(8) }
+                w.reset().set_bit()
             });
             cortex_m::asm::delay(12);
-            inner.ctrl_dpram.ep_buffer_control[2].modify(|_, w| w.available_0().set_bit());
+            ep_buffer_control.modify(|_, w| w.available_0().set_bit());
         })
     }
 
@@ -301,9 +327,44 @@ impl HostBus for UsbHostBus {
 struct Inner {
     ctrl_reg: USBCTRL_REGS,
     ctrl_dpram: USBCTRL_DPRAM,
+    // bitfield to keep track of which interrupt pipes are in use
+    // bits 0..15 correspond to registers ADDR_ENDP1-ADDR_ENDP15.
+    allocated_pipes: u16,
 }
 
 impl Inner {
+    fn new(ctrl_reg: USBCTRL_REGS, ctrl_dpram: USBCTRL_DPRAM) -> Self {
+        Self {
+            ctrl_reg,
+            ctrl_dpram,
+            allocated_pipes: 0,
+        }
+    }
+
+    fn alloc_pipe(&mut self, size: u16) -> Option<InterruptPipe> {
+        if size > 64 {
+            return None
+        }
+        let ap = self.allocated_pipes;
+        let free_index = (0..15).into_iter().find(|i| ap & (1 << i) == 0)? as u8;
+
+        // for simplicity, all pipes are considered to be 64 bytes long for now.
+        // This is the maximum supported size for pipes other than Isochronous, which are not implemented yet.
+        let DPRAM_BASE: *mut u8 = USBCTRL_DPRAM::ptr() as *mut u8;
+        let ptr = unsafe { DPRAM_BASE.offset(0x180 + CONTROL_BUFFER_SIZE as isize + free_index as isize * 64) };
+
+        self.allocated_pipes |= 1 << free_index;
+
+        Some(InterruptPipe {
+            bus_ref: free_index,
+            ptr,
+        })
+    }
+
+    fn release_pipe(&mut self, pipe_ref: u8) {
+        self.allocated_pipes &= !(1 << pipe_ref);
+    }
+
     fn control_buffer_mut(&mut self) -> &mut [u8] {
         const DPRAM_BASE: *mut u8 = USBCTRL_DPRAM::ptr() as *mut u8;
         unsafe { core::slice::from_raw_parts_mut(DPRAM_BASE.offset(0x180), CONTROL_BUFFER_SIZE) }
@@ -357,9 +418,9 @@ impl Inner {
             for i in 0..32 {
                 if (status >> i) & 1 == 1 {
                     self.ctrl_reg.buff_status.modify(|_, w| unsafe { w.bits(1 << i) });
-                    // control transfers (buffer 0) 
+                    // control transfers (buffer 0)
                     if i != 0 {
-                        return Some(Event::InterruptPipe(i as u8));
+                        return Some(Event::InterruptPipe((i / 2) - 1));
                     }
                 }
             }
