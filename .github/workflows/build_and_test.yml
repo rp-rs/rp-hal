@@ -13,6 +13,7 @@ jobs:
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-hack
+          version: "=0.5.28"
       - name: Build rp2040-hal's workspace (without the examples)
         run: cargo hack build --optional-deps --each-feature
   examples-builds:
@@ -27,6 +28,7 @@ jobs:
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-hack
+          version: "=0.5.28"
       - name: Build workspace
         run: cargo hack build --examples --optional-deps --each-feature
   tests:
@@ -41,6 +43,7 @@ jobs:
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-hack
+          version: "=0.5.28"
       - name: Test
         run: cargo hack test -p rp2040-hal --tests --target x86_64-unknown-linux-gnu  --optional-deps --each-feature --features critical-section-impl
       - name: Test docs
@@ -64,6 +67,7 @@ jobs:
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-hack
+          version: "=0.5.28"
       - name: Install cargo-udeps
         uses: baptiste0928/cargo-install@v2
         with:
@@ -84,6 +88,7 @@ jobs:
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-hack
+          version: "=0.5.28"
       - name: Verifiy MSRV
         run: cargo hack build --examples --optional-deps --each-feature
   on-target-build:
