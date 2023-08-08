@@ -41,42 +41,50 @@ use crate::{
 mod pins;
 pub use pins::*;
 
-/// Spi mode
-pub struct Mode(embedded_hal::spi::Mode);
-
-impl From<embedded_hal::spi::Mode> for Mode {
+impl From<embedded_hal::spi::Mode> for FrameFormat {
     fn from(f: embedded_hal::spi::Mode) -> Self {
-        Mode(f)
+        Self::MotorolaSpi(f)
     }
 }
 
-impl From<&embedded_hal::spi::Mode> for Mode {
+impl From<&embedded_hal::spi::Mode> for FrameFormat {
     fn from(f: &embedded_hal::spi::Mode) -> Self {
-        Mode(*f)
+        Self::MotorolaSpi(*f)
     }
+}
+
+/// SPI frame format
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum FrameFormat {
+    /// Motorola SPI format. See section 4.4.3.9 of RP2040 datasheet.
+    MotorolaSpi(embedded_hal::spi::Mode),
+    /// Texas Instruments synchronous serial frame format. See section 4.4.3.8 of RP2040 datasheet.
+    TexasInstrumentsSynchronousSerial,
+    /// National Semiconductor Microwire frame format. See section 4.4.3.14 of RP2040 datasheet.
+    NationalSemiconductorMicrowire,
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl From<eh1_0_alpha::spi::Mode> for Mode {
+impl From<eh1_0_alpha::spi::Mode> for FrameFormat {
     fn from(f: eh1_0_alpha::spi::Mode) -> Self {
         let eh1_0_alpha::spi::Mode { polarity, phase } = f;
         match (polarity, phase) {
             (
                 eh1_0_alpha::spi::Polarity::IdleLow,
                 eh1_0_alpha::spi::Phase::CaptureOnFirstTransition,
-            ) => Mode(embedded_hal::spi::MODE_0),
+            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_0),
             (
                 eh1_0_alpha::spi::Polarity::IdleLow,
                 eh1_0_alpha::spi::Phase::CaptureOnSecondTransition,
-            ) => Mode(embedded_hal::spi::MODE_1),
+            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_1),
             (
                 eh1_0_alpha::spi::Polarity::IdleHigh,
                 eh1_0_alpha::spi::Phase::CaptureOnFirstTransition,
-            ) => Mode(embedded_hal::spi::MODE_2),
+            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_2),
             (
                 eh1_0_alpha::spi::Polarity::IdleHigh,
                 eh1_0_alpha::spi::Phase::CaptureOnSecondTransition,
-            ) => Mode(embedded_hal::spi::MODE_3),
+            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_3),
         }
     }
 }
@@ -220,14 +228,25 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
     }
 
     /// Set format and datasize
-    fn set_format(&mut self, data_bits: u8, mode: Mode) {
+    fn set_format(&mut self, data_bits: u8, frame_format: FrameFormat) {
         self.device.sspcr0.modify(|_, w| unsafe {
-            w.dss()
-                .bits(data_bits - 1)
-                .spo()
-                .bit(mode.0.polarity == Polarity::IdleHigh)
-                .sph()
-                .bit(mode.0.phase == Phase::CaptureOnSecondTransition)
+            w.dss().bits(data_bits - 1).frf().bits(match &frame_format {
+                FrameFormat::MotorolaSpi(_) => 0x00,
+                FrameFormat::TexasInstrumentsSynchronousSerial => 0x01,
+                FrameFormat::NationalSemiconductorMicrowire => 0x10,
+            });
+
+            /*
+             * Clock polarity (SPO) and clock phase (SPH) are only applicable to
+             * the Motorola SPI frame format.
+             */
+            if let FrameFormat::MotorolaSpi(ref mode) = frame_format {
+                w.spo()
+                    .bit(mode.polarity == Polarity::IdleHigh)
+                    .sph()
+                    .bit(mode.phase == Phase::CaptureOnSecondTransition);
+            }
+            w
         });
     }
 
@@ -245,14 +264,14 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
         resets: &mut RESETS,
         peri_frequency: F,
         baudrate: B,
-        mode: Mode,
+        frame_format: FrameFormat,
         slave: bool,
     ) -> Spi<Enabled, D, P, DS> {
         self.device.reset_bring_down(resets);
         self.device.reset_bring_up(resets);
 
         self.set_baudrate(peri_frequency, baudrate);
-        self.set_format(DS, mode);
+        self.set_format(DS, frame_format);
         self.set_slave(slave);
         // Always enable DREQ signals -- harmless if DMA is not listening
         self.device
@@ -266,22 +285,32 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
     }
 
     /// Initialize the SPI in master mode
-    pub fn init<F: Into<HertzU32>, B: Into<HertzU32>, M: Into<Mode>>(
+    pub fn init<F: Into<HertzU32>, B: Into<HertzU32>, M: Into<FrameFormat>>(
         self,
         resets: &mut RESETS,
         peri_frequency: F,
         baudrate: B,
-        mode: M,
+        frame_format: M,
     ) -> Spi<Enabled, D, P, DS> {
-        self.init_spi(resets, peri_frequency, baudrate, mode.into(), false)
+        self.init_spi(resets, peri_frequency, baudrate, frame_format.into(), false)
     }
 
     /// Initialize the SPI in slave mode
-    pub fn init_slave<M: Into<Mode>>(self, resets: &mut RESETS, mode: M) -> Spi<Enabled, D, P, DS> {
+    pub fn init_slave<M: Into<FrameFormat>>(
+        self,
+        resets: &mut RESETS,
+        frame_format: M,
+    ) -> Spi<Enabled, D, P, DS> {
         // Use dummy values for frequency and baudrate.
         // With both values 0, set_baudrate will set prescale == u8::MAX, which will break if debug assertions are enabled.
         // u8::MAX is outside the allowed range 2..=254 for CPSDVSR, which might interfere with proper operation in slave mode.
-        self.init_spi(resets, 1000u32.Hz(), 1000u32.Hz(), mode.into(), true)
+        self.init_spi(
+            resets,
+            1000u32.Hz(),
+            1000u32.Hz(),
+            frame_format.into(),
+            true,
+        )
     }
 }
 
