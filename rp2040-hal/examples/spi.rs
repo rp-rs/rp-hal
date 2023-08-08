@@ -80,17 +80,17 @@ fn main() -> ! {
     );
 
     // These are implicitly used by the spi driver if they are in the correct mode
-    let _spi_sclk = pins.gpio6.into_mode::<hal::gpio::FunctionSpi>();
-    let _spi_mosi = pins.gpio7.into_mode::<hal::gpio::FunctionSpi>();
-    let _spi_miso = pins.gpio4.into_mode::<hal::gpio::FunctionSpi>();
-    let spi = hal::Spi::<_, _, 8>::new(pac.SPI0);
+    let spi_mosi = pins.gpio7.into_function::<hal::gpio::FunctionSpi>();
+    let spi_miso = pins.gpio4.into_function::<hal::gpio::FunctionSpi>();
+    let spi_sclk = pins.gpio6.into_function::<hal::gpio::FunctionSpi>();
+    let spi = hal::spi::Spi::<_, _, _, 8>::new(pac.SPI0, (spi_mosi, spi_miso, spi_sclk));
 
     // Exchange the uninitialised SPI driver for an initialised one
     let mut spi = spi.init(
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
         16.MHz(),
-        &embedded_hal::spi::MODE_0,
+        embedded_hal::spi::MODE_0,
     );
 
     // Write out 0, ignore return value

@@ -1,5 +1,5 @@
 use super::Float;
-use crate::rom_data;
+use crate::{pac, rom_data};
 
 // Make sure this stays as a separate call, because when it's inlined the
 // compiler will move the save of the registers used to contain the divider

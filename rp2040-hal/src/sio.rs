@@ -23,6 +23,17 @@ use crate::typelevel::Sealed;
 use super::*;
 use core::convert::Infallible;
 
+/// Id of the core.
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum CoreId {
+    #[allow(missing_docs)]
+    Core0 = 0,
+    #[allow(missing_docs)]
+    Core1 = 1,
+}
+
 /// Marker struct for ownership of SIO gpio bank0
 pub struct SioGpioBank0 {
     _private: (),
@@ -88,10 +99,19 @@ impl Sio {
         }
     }
 
+    /// Reads the whole bank0 at once.
+    pub fn read_bank0() -> u32 {
+        unsafe { (*pac::SIO::PTR).gpio_in.read().bits() }
+    }
+
     /// Returns whether we are running on Core 0 (`0`) or Core 1 (`1`).
-    pub fn core() -> u8 {
+    pub fn core() -> CoreId {
         // Safety: it is always safe to read this read-only register
-        unsafe { (*pac::SIO::ptr()).cpuid.read().bits() as u8 }
+        match unsafe { (*pac::SIO::ptr()).cpuid.read().bits() as u8 } {
+            0 => CoreId::Core0,
+            1 => CoreId::Core1,
+            _ => unreachable!("This MCU only has 2 cores."),
+        }
     }
 }
 

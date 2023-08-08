@@ -1,5 +1,5 @@
 use super::DayOfWeek;
-use rp2040_pac::rtc::{irq_setup_0, irq_setup_1};
+use crate::pac::rtc::{irq_setup_0, irq_setup_1};
 
 /// A filter used for [`RealTimeClock::schedule_alarm`].
 ///

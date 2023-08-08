@@ -1,11 +1,9 @@
 //! Subsystem Resets
 // See [Chapter 2 Section 14](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
-use rp2040_pac as pac;
-
 mod private {
     pub trait SubsystemReset {
-        fn reset_bring_up(&self, resets: &mut pac::RESETS);
-        fn reset_bring_down(&self, resets: &mut pac::RESETS);
+        fn reset_bring_up(&self, resets: &mut crate::pac::RESETS);
+        fn reset_bring_down(&self, resets: &mut crate::pac::RESETS);
     }
 }
 
@@ -13,12 +11,12 @@ pub(crate) use private::SubsystemReset;
 
 macro_rules! generate_reset {
     ($MODULE:ident, $module:ident) => {
-        impl SubsystemReset for pac::$MODULE {
-            fn reset_bring_up(&self, resets: &mut pac::RESETS) {
+        impl SubsystemReset for $crate::pac::$MODULE {
+            fn reset_bring_up(&self, resets: &mut $crate::pac::RESETS) {
                 resets.reset.modify(|_, w| w.$module().clear_bit());
                 while resets.reset_done.read().$module().bit_is_clear() {}
             }
-            fn reset_bring_down(&self, resets: &mut pac::RESETS) {
+            fn reset_bring_down(&self, resets: &mut $crate::pac::RESETS) {
                 resets.reset.modify(|_, w| w.$module().set_bit());
             }
         }

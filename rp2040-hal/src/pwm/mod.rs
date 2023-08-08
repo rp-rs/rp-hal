@@ -78,15 +78,17 @@
 
 use core::marker::PhantomData;
 
-use crate::{
-    gpio::{bank0::*, FunctionPwm, Pin, PinId, PinMode, ValidPinMode},
-    resets::SubsystemReset,
-    typelevel::Sealed,
-};
+use embedded_dma::Word;
 use embedded_hal::PwmPin;
-use pac::PWM;
 
-use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
+use crate::{
+    atomic_register_access::{write_bitmask_clear, write_bitmask_set},
+    dma::{EndlessWriteTarget, WriteTarget},
+    gpio::{bank0::*, AnyPin, FunctionPwm, Pin, ValidFunction},
+    pac::{self, dma::ch::ch_al1_ctrl::TREQ_SEL_A, PWM},
+    resets::SubsystemReset,
+    typelevel::{Is, Sealed},
+};
 
 pub mod dyn_slice;
 pub use dyn_slice::*;
@@ -130,7 +132,7 @@ pub struct CountRisingEdge;
 pub struct CountFallingEdge;
 
 /// Type-level marker for tracking which slice modes are valid for which slices
-pub trait ValidSliceMode<I: SliceId>: Sealed {}
+pub trait ValidSliceMode<I: SliceId>: Sealed + SliceMode {}
 
 /// Type-level marker for tracking which slice modes are valid for which slices
 pub trait ValidSliceInputMode<I: SliceId>: Sealed + ValidSliceMode<I> {}
@@ -176,6 +178,9 @@ pub trait SliceId: Sealed {
     const DYN: DynSliceId;
     /// [`SliceMode`] at reset
     type Reset;
+
+    /// Get DREQ number of PWM wrap.
+    const WRAP_DREQ: u8 = TREQ_SEL_A::PWM_WRAP0 as u8 + Self::DYN.num;
 }
 
 macro_rules! slice_id {
@@ -191,6 +196,54 @@ macro_rules! slice_id {
         }
     };
 }
+
+//==============================================================================
+//  AnySlice
+//==============================================================================
+
+/// Type class for [`Slice`] types
+///
+/// This trait uses the [`AnyKind`] trait pattern to create a [type class] for
+/// [`Slice`] types. See the `AnyKind` documentation for more details on the
+/// pattern.
+///
+/// [`AnyKind`]: crate::typelevel#anykind-trait-pattern
+/// [type class]: crate::typelevel#type-classes
+pub trait AnySlice
+where
+    Self: Sealed,
+    Self: Is<Type = SpecificSlice<Self>>,
+    <Self as AnySlice>::Mode: ValidSliceMode<<Self as AnySlice>::Id>,
+{
+    /// [`SliceId`] of the corresponding [`Slice`]
+    type Id: SliceId;
+    /// [`SliceMode`] of the corresponding [`Slice`]
+    type Mode: SliceMode;
+}
+
+impl<S, M> Sealed for Slice<S, M>
+where
+    S: SliceId,
+    M: ValidSliceMode<S>,
+{
+}
+
+impl<S, M> AnySlice for Slice<S, M>
+where
+    S: SliceId,
+    M: ValidSliceMode<S>,
+{
+    type Id = S;
+    type Mode = M;
+}
+
+/// Type alias to recover the specific [`Slice`] type from an implementation of
+/// [`AnySlice`]
+///
+/// See the [`AnyKind`] documentation for more details on the pattern.
+///
+/// [`AnyKind`]: crate::typelevel#anykind-trait-pattern
+type SpecificSlice<S> = Slice<<S as AnySlice>::Id, <S as AnySlice>::Mode>;
 
 //==============================================================================
 //  Registers
@@ -228,7 +281,7 @@ impl<I: SliceId> Registers<I> {
     /// Provide a type-level equivalent for the
     /// [`RegisterInterface::change_mode`] method.
     #[inline]
-    fn change_mode<M: SliceMode + ValidSliceMode<I>>(&mut self) {
+    fn change_mode<M: ValidSliceMode<I>>(&mut self) {
         RegisterInterface::do_change_mode(self, M::DYN);
     }
 }
@@ -237,20 +290,20 @@ impl<I: SliceId> Registers<I> {
 pub struct Slice<I, M>
 where
     I: SliceId,
-    M: SliceMode + ValidSliceMode<I>,
+    M: ValidSliceMode<I>,
 {
     regs: Registers<I>,
     mode: PhantomData<M>,
     /// Channel A (always output)
-    pub channel_a: Channel<I, M, A>,
+    pub channel_a: Channel<Self, A>,
     /// Channel B (input or output)
-    pub channel_b: Channel<I, M, B>,
+    pub channel_b: Channel<Self, B>,
 }
 
 impl<I, M> Slice<I, M>
 where
     I: SliceId,
-    M: SliceMode + ValidSliceMode<I>,
+    M: ValidSliceMode<I>,
 {
     /// Create a new [`Slice`]
     ///
@@ -271,7 +324,7 @@ where
 
     /// Convert the slice to the requested [`SliceMode`]
     #[inline]
-    pub fn into_mode<N: SliceMode + ValidSliceMode<I>>(mut self) -> Slice<I, N> {
+    pub fn into_mode<N: ValidSliceMode<I>>(mut self) -> Slice<I, N> {
         if N::DYN != M::DYN {
             self.regs.change_mode::<N>();
         }
@@ -461,7 +514,7 @@ macro_rules! pwm {
 
             impl Slices {
                 /// Take ownership of the PAC peripheral and split it into discrete [`Slice`]s
-                pub fn new(pwm: $PWMX, reset : &mut pac::RESETS) -> Self {
+                pub fn new(pwm: $PWMX, reset : &mut crate::pac::RESETS) -> Self {
                     pwm.reset_bring_up(reset);
                     unsafe {
                         Self {
@@ -491,9 +544,9 @@ pwm! {
 }
 
 /// Marker trait for valid input pins (Channel B only)
-pub trait ValidPwmInputPin<S: SliceId>: Sealed {}
+pub trait ValidPwmInputPin<S: SliceId>: ValidFunction<FunctionPwm> + Sealed {}
 /// Marker trait for valid output pins
-pub trait ValidPwmOutputPin<S: SliceId, C: ChannelId>: Sealed {}
+pub trait ValidPwmOutputPin<S: SliceId, C: ChannelId>: ValidFunction<FunctionPwm> + Sealed {}
 
 impl Slices {
     /// Free the pwm registers from the pwm hal struct while consuming it.
@@ -518,7 +571,7 @@ impl Slices {
     //     C: ChannelId,
     //     G: PinId + BankPinId + ValidPwmOutputPin<S, C>,
     //     PM: PinMode + ValidPinMode<G>,
-    //     SM: SliceMode + ValidSliceMode<S>,
+    //     SM:  ValidSliceMode<S>,
     // >(&mut self, _: &Pin<G, PM>) -> &mut Slice<S, SM>{
     //     match S::DYN {
     //         DynSliceId{num} if num == 0 => &mut self.pwm0,
@@ -537,15 +590,15 @@ impl Slices {
 /// A Channel from the Pwm subsystem.
 ///
 /// Its attached to one of the eight slices and can be an A or B side channel
-pub struct Channel<S: SliceId, M: SliceMode, C: ChannelId> {
-    regs: Registers<S>,
-    slice_mode: PhantomData<M>,
+pub struct Channel<S: AnySlice, C: ChannelId> {
+    regs: Registers<S::Id>,
+    slice_mode: PhantomData<S::Mode>,
     channel_id: PhantomData<C>,
     duty_cycle: u16,
     enabled: bool,
 }
 
-impl<S: SliceId, M: SliceMode, C: ChannelId> Channel<S, M, C> {
+impl<S: AnySlice, C: ChannelId> Channel<S, C> {
     pub(super) unsafe fn new(duty_cycle: u16) -> Self {
         Channel {
             regs: Registers::new(),
@@ -557,9 +610,9 @@ impl<S: SliceId, M: SliceMode, C: ChannelId> Channel<S, M, C> {
     }
 }
 
-impl<S: SliceId, M: SliceMode, C: ChannelId> Sealed for Channel<S, M, C> {}
+impl<S: AnySlice, C: ChannelId> Sealed for Channel<S, C> {}
 
-impl<S: SliceId, M: SliceMode> PwmPin for Channel<S, M, A> {
+impl<S: AnySlice> PwmPin for Channel<S, A> {
     type Duty = u16;
 
     /// We cant disable the channel without disturbing the other channel.
@@ -599,7 +652,7 @@ impl<S: SliceId, M: SliceMode> PwmPin for Channel<S, M, A> {
     }
 }
 
-impl<S: SliceId, M: SliceMode> PwmPin for Channel<S, M, B> {
+impl<S: AnySlice> PwmPin for Channel<S, B> {
     type Duty = u16;
 
     /// We cant disable the channel without disturbing the other channel.
@@ -639,16 +692,13 @@ impl<S: SliceId, M: SliceMode> PwmPin for Channel<S, M, B> {
     }
 }
 
-impl<S: SliceId, M: SliceMode + ValidSliceMode<S>> Channel<S, M, A> {
+impl<S: AnySlice> Channel<S, A> {
     /// Capture a gpio pin and use it as pwm output for channel A
-    pub fn output_to<
-        G: PinId + BankPinId + ValidPwmOutputPin<S, A>,
-        PM: PinMode + ValidPinMode<G>,
-    >(
-        &mut self,
-        pin: Pin<G, PM>,
-    ) -> Pin<G, FunctionPwm> {
-        pin.into_mode()
+    pub fn output_to<P: AnyPin>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm, P::Pull>
+    where
+        P::Id: ValidPwmOutputPin<S::Id, A>,
+    {
+        pin.into().into_function()
     }
 
     /// Invert channel output
@@ -664,16 +714,13 @@ impl<S: SliceId, M: SliceMode + ValidSliceMode<S>> Channel<S, M, A> {
     }
 }
 
-impl<S: SliceId, M: SliceMode + ValidSliceMode<S>> Channel<S, M, B> {
+impl<S: AnySlice> Channel<S, B> {
     /// Capture a gpio pin and use it as pwm output for channel B
-    pub fn output_to<
-        G: PinId + BankPinId + ValidPwmOutputPin<S, B>,
-        PM: PinMode + ValidPinMode<G>,
-    >(
-        &mut self,
-        pin: Pin<G, PM>,
-    ) -> Pin<G, FunctionPwm> {
-        pin.into_mode()
+    pub fn output_to<P: AnyPin>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm, P::Pull>
+    where
+        P::Id: ValidPwmOutputPin<S::Id, B>,
+    {
+        pin.into().into_function()
     }
 
     /// Invert channel output
@@ -689,36 +736,244 @@ impl<S: SliceId, M: SliceMode + ValidSliceMode<S>> Channel<S, M, B> {
     }
 }
 
-impl<S: SliceId, M: SliceMode + ValidSliceInputMode<S>> Channel<S, M, B> {
+impl<S: AnySlice> Channel<S, B>
+where
+    S::Mode: ValidSliceInputMode<S::Id>,
+{
     /// Capture a gpio pin and use it as pwm input for channel B
-    pub fn input_from<G: PinId + BankPinId + ValidPwmInputPin<S>, PM: PinMode + ValidPinMode<G>>(
-        &mut self,
-        pin: Pin<G, PM>,
-    ) -> Pin<G, FunctionPwm> {
-        pin.into_mode()
+    pub fn input_from<P: AnyPin>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm, P::Pull>
+    where
+        P::Id: ValidPwmInputPin<S::Id>,
+    {
+        pin.into().into_function()
     }
 }
 
-impl<S: SliceId, M: SliceMode + ValidSliceMode<S>> Slice<S, M> {
+impl<S: SliceId, M: ValidSliceMode<S>> Slice<S, M> {
     /// Capture a gpio pin and use it as pwm output
-    pub fn output_to<
-        G: PinId + BankPinId + ValidPwmOutputPin<S, C>,
-        PM: PinMode + ValidPinMode<G>,
-        C: ChannelId,
-    >(
-        &mut self,
-        pin: Pin<G, PM>,
-    ) -> Pin<G, FunctionPwm> {
-        pin.into_mode()
+    pub fn output_to<P: AnyPin, C: ChannelId>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm, P::Pull>
+    where
+        P::Id: ValidPwmOutputPin<S, C>,
+    {
+        pin.into().into_function()
     }
 }
 
-impl<S: SliceId, M: SliceMode + ValidSliceInputMode<S>> Slice<S, M> {
+impl<S: SliceId, M: ValidSliceInputMode<S>> Slice<S, M> {
     /// Capture a gpio pin and use it as pwm input for channel B
-    pub fn input_from<G: PinId + BankPinId + ValidPwmInputPin<S>, PM: PinMode + ValidPinMode<G>>(
-        &mut self,
-        pin: Pin<G, PM>,
-    ) -> Pin<G, FunctionPwm> {
-        pin.into_mode()
+    pub fn input_from<P: AnyPin>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm, P::Pull>
+    where
+        P::Id: ValidPwmInputPin<S>,
+    {
+        pin.into().into_function()
     }
 }
+
+/// Type representing DMA access to PWM cc register.
+///
+/// Both channels are accessed together, because of narrow write replication.
+///
+/// ```no_run
+/// use cortex_m::singleton;
+/// use rp2040_hal::dma::{double_buffer, DMAExt};
+/// use rp2040_hal::pwm::{CcFormat, SliceDmaWrite, Slices};
+///
+///
+/// let mut pac = rp2040_pac::Peripherals::take().unwrap();
+///
+/// // Init PWMs
+/// let pwm_slices = Slices::new(pac.PWM, &mut pac.RESETS);
+///
+/// // Configure PWM4
+/// let mut pwm = pwm_slices.pwm4;
+/// pwm.enable();
+///
+/// let buf = singleton!(: [CcFormat; 4] = [CcFormat{a: 0x1000, b: 0x9000}; 4]).unwrap();
+/// let buf2 = singleton!(: [CcFormat; 4] = [CcFormat{a: 0xf000, b: 0x5000}; 4]).unwrap();
+///
+/// let dma = pac.DMA.split(&mut pac.RESETS);
+///
+/// let dma_pwm = SliceDmaWrite::from(pwm);
+///
+/// let dma_conf = double_buffer::Config::new((dma.ch0, dma.ch1), buf, dma_pwm.cc);
+/// ```
+pub struct SliceDmaWriteCc<S: SliceId, M: ValidSliceMode<S>> {
+    slice: PhantomData<S>,
+    mode: PhantomData<M>,
+}
+
+/// Type representing DMA access to PWM top register.
+///
+/// ```no_run
+/// use cortex_m::{prelude::*, singleton};
+/// use rp2040_hal::dma::{double_buffer, DMAExt};
+/// use rp2040_hal::pwm::{SliceDmaWrite, Slices, TopFormat};
+///
+///
+/// let mut pac = rp2040_pac::Peripherals::take().unwrap();
+///
+/// // Init PWMs
+/// let pwm_slices = Slices::new(pac.PWM, &mut pac.RESETS);
+///
+/// // Configure PWM4
+/// let mut pwm = pwm_slices.pwm4;
+/// pwm.enable();
+///
+/// // Just set to something mesurable.
+/// pwm.channel_a.set_duty(0x1000);
+/// pwm.channel_b.set_duty(0x1000);
+///
+/// let buf = singleton!(: [TopFormat; 4] = [TopFormat::new(0x7fff); 4]).unwrap();
+/// let buf2 = singleton!(: [TopFormat; 4] = [TopFormat::new(0xffff); 4]).unwrap();
+///
+/// let dma = pac.DMA.split(&mut pac.RESETS);
+///
+/// // Reserve PWM slice for dma.
+/// let dma_pwm = SliceDmaWrite::from(pwm);
+///
+/// let dma_conf = double_buffer::Config::new((dma.ch0, dma.ch1), buf, dma_pwm.top);
+/// ```
+
+pub struct SliceDmaWriteTop<S: SliceId, M: ValidSliceMode<S>> {
+    slice: PhantomData<S>,
+    mode: PhantomData<M>,
+}
+
+/// PWM slice while used for DMA writes.
+/// ```no_run
+/// use rp2040_hal::{prelude::*, pwm::{SliceDmaWrite, Slices}};
+///
+///
+/// let mut pac = rp2040_pac::Peripherals::take().unwrap();
+///
+/// // Init PWMs
+/// let pwm_slices = Slices::new(pac.PWM, &mut pac.RESETS);
+///
+/// // Configure PWM4
+/// let mut pwm = pwm_slices.pwm4;
+/// pwm.enable();
+///
+/// // Use for DMA usage
+/// let dma_pwm = SliceDmaWrite::from(pwm);
+/// ```
+///
+pub struct SliceDmaWrite<S: SliceId, M: ValidSliceMode<S>> {
+    /// Part for top writes.
+    pub top: SliceDmaWriteTop<S, M>,
+
+    /// Part for cc writes.
+    pub cc: SliceDmaWriteCc<S, M>,
+    slice: Slice<S, M>,
+}
+
+impl<S: SliceId, M: ValidSliceMode<S>> From<Slice<S, M>> for SliceDmaWrite<S, M> {
+    fn from(value: Slice<S, M>) -> Self {
+        Self {
+            slice: value,
+            top: SliceDmaWriteTop {
+                slice: PhantomData,
+                mode: PhantomData,
+            },
+            cc: SliceDmaWriteCc {
+                slice: PhantomData,
+                mode: PhantomData,
+            },
+        }
+    }
+}
+
+impl<S: SliceId, M: ValidSliceMode<S>> From<SliceDmaWrite<S, M>> for Slice<S, M> {
+    fn from(value: SliceDmaWrite<S, M>) -> Self {
+        value.slice
+    }
+}
+
+/// Format for DMA transfers to PWM CC register.
+#[derive(Clone, Copy, Eq, PartialEq)]
+#[repr(C)]
+#[repr(align(4))]
+pub struct CcFormat {
+    /// CC register part for channel a.
+    pub a: u16,
+    /// CC register part for channel b.
+    pub b: u16,
+}
+
+unsafe impl Word for CcFormat {}
+
+/// Format for DMA transfers to PWM TOP register.
+///
+/// It is forbidden to use it as DMA write destination,
+/// it is safe but it might not be compatible with a future use of reserved register fields.
+#[derive(Clone, Copy, Eq)]
+#[repr(C)]
+#[repr(align(4))]
+pub struct TopFormat {
+    /// Valid register part.
+    pub top: u16,
+    /// Reserved part.
+    /// Should always be zero
+    reserved: u16,
+}
+
+impl PartialEq<TopFormat> for TopFormat {
+    fn eq(&self, other: &TopFormat) -> bool {
+        self.top == other.top
+    }
+}
+
+impl TopFormat {
+    /// Create a valid value.
+    pub fn new(top: u16) -> Self {
+        TopFormat { top, reserved: 0 }
+    }
+}
+
+impl Default for TopFormat {
+    fn default() -> Self {
+        Self::new(u16::MAX)
+    }
+}
+
+unsafe impl Word for TopFormat {}
+
+impl<S: SliceId, M: ValidSliceMode<S>> WriteTarget for SliceDmaWriteCc<S, M> {
+    type TransmittedWord = CcFormat;
+
+    fn tx_treq() -> Option<u8> {
+        Some(S::WRAP_DREQ)
+    }
+
+    fn tx_address_count(&mut self) -> (u32, u32) {
+        let regs = Registers {
+            id: PhantomData::<S> {},
+        };
+        (regs.ch().cc.as_ptr() as u32, u32::MAX)
+    }
+
+    fn tx_increment(&self) -> bool {
+        false
+    }
+}
+
+impl<S: SliceId, M: ValidSliceMode<S>> WriteTarget for SliceDmaWriteTop<S, M> {
+    type TransmittedWord = TopFormat;
+
+    fn tx_treq() -> Option<u8> {
+        Some(S::WRAP_DREQ)
+    }
+
+    fn tx_address_count(&mut self) -> (u32, u32) {
+        let regs = Registers {
+            id: PhantomData::<S> {},
+        };
+        (regs.ch().top.as_ptr() as u32, u32::MAX)
+    }
+
+    fn tx_increment(&self) -> bool {
+        false
+    }
+}
+
+impl<S: SliceId, M: ValidSliceMode<S>> EndlessWriteTarget for SliceDmaWriteCc<S, M> {}
+impl<S: SliceId, M: ValidSliceMode<S>> EndlessWriteTarget for SliceDmaWriteTop<S, M> {}

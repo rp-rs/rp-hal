@@ -7,13 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+### MSRV
 
-- Re-enabled implementations of traits from embedded-hal-nb 1.0.0-alpha.1 - @jannic
+The Minimum-Supported Rust Version (MSRV) for this release is 1.63
+
+### Fixed
+
+- With rust nightly and beta 1.70.0, the multi-core spawn code could get miscompiled
+  due to undefined behavior in our code. This was first found in embassy (which
+  uses similar code) and reported to us by @Dirbaio. - #612 @ithinuel
+- Fixed embedded-hal 1.0-alpha implementation of SPI - #611 @tomgilligan
+- Fixed the on-target tests - #601 @jannic
 
 ### Changed
 
-- pwm::Slice::has_overflown() returns the raw interrupt flag, without masking/forcing. - @jannic
+- multicore: remove the requirement on the closure to never return - #594 @ithinuel
+- Updated dependency on rp2040-boot2 to version 0.3.0. - @jannic
+  This doubles the flash access speed to the value used by the C SDK by
+  default. So it should usually be safe. However, if you are overclocking
+  the RP2040, you might need to lower the flash speed accordingly.
+- Doc: Several improvements have been made to documentation: #607 #597
+- DMA: Check for valid word sizes at compile time - #600 @jannic
+- Use an enum for core identification. - @ithinuel
+- Merge DynPin and Pin into Pin. The type class used in Pin now have a runtime variant allowing for
+  the creation of uniform array of pins (eg: `[Pin<DynPinId, PinFnSio, PullDown>]`). - @ithinuel
+- Fix miss defined ValidPinMode bound allowing any Bank0 pin to be Xip and any Qspi pin to be any
+  other function (except for clock). - @ithinuel
+- Use `let _ =` to ignore result rather than `.ok();` as this gives a false sense the result is
+  checked. - @ithinuel
+- Reduce code repetition in i2c modules. - @ithinuel
+- Rename `DontInvert` to `Normal`. - @ithinuel
+- Prevent the creation of multiple instances of `adc::TempSensor` - @ithinuel
+
+### Added
+
+- timer::Timer implements the embedded-hal delay traits and Copy/Clone - #614 @ithinuel @jannic
+- DMA: Allow access to the DMA engine's byteswapping feature - #603 @Gip-Gip
+- Added `AdcPin` wrapper to disable digital function for ADC operations - @ithinuel
+- Added `Sealed` supertrait to `PIOExt` - @ithinuel
+- Added pins to `Spi` to fix inconsistencies in gpio bounds in peripheral (i2c, uart, spi) - @ithinuel
+- Added `sio::Sio::read_bank0() -> u32` to provide single instruction multiple io read.
+
+## [0.8.1] - 2023-05-05
+
+### Added
+
+- Re-enabled implementations of traits from embedded-hal-nb 1.0.0-alpha.1 - #569 @jannic
+- PIO: Added `set_mov_status_config` to `PIOBuilder` - #566 @Gip-gip
+- memory.x: Added SRAM4 and SRAM5 blocks - #578 @jannic
+- DMA: Added memory-to-memory example - #579 @jlpettersson
+
+### Changed
+
+- pwm::Slice::has_overflown() returns the raw interrupt flag, without masking/forcing. - #562 @jannic
+- Update embedded-hal alpha support to version 1.0.0-alpha.10 - #582 @jannic
+- Update embedded-hal-nb alpha support to version 1.0.0-alpha.2 - #582 @jannic
+- DMA: Fixed an issue where `check_irq0` would check `irq1` on channel 1 - #580 @jlpettersson
+- Serial: Fixed possible overflow of the baudrate calculation - #583 @ArchUsr64
+- Doc: Several improvements have been made to documentation: #567 #570 #574 #575 #577 #586
+- CI: A few improvements have been made to CI pipelines: #555 #587 #588
 
 ## [0.8.0] - 2023-02-16
 
@@ -247,7 +299,8 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.54.
 
 - Initial release
 
-[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/rp-rs/rp-hal/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/rp-rs/rp-hal/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/rp-rs/rp-hal/compare/v0.6.0...v0.7.0
 [0.6.1]: https://github.com/rp-rs/rp-hal/compare/v0.6.0...v0.6.1

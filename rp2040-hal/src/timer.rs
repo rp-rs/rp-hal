@@ -8,14 +8,16 @@
 //!
 //! See [Chapter 4 Section 6](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) of the datasheet for more details.
 
+use core::sync::atomic::{AtomicU8, Ordering};
 use fugit::{MicrosDurationU32, MicrosDurationU64, TimerInstantU64};
 
-use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
-use crate::pac::{RESETS, TIMER};
-use crate::resets::SubsystemReset;
-use crate::typelevel::Sealed;
-use core::marker::PhantomData;
-use core::sync::atomic::{AtomicU8, Ordering};
+use crate::{
+    atomic_register_access::{write_bitmask_clear, write_bitmask_set},
+    clocks::ClocksManager,
+    pac::{self, RESETS, TIMER},
+    resets::SubsystemReset,
+    typelevel::Sealed,
+};
 
 /// Instant type used by the Timer & Alarm methods.
 pub type Instant = TimerInstantU64<1_000_000>;
@@ -35,39 +37,54 @@ fn release_alarm(mask: u8) {
     });
 }
 
-fn get_counter(timer: &crate::pac::timer::RegisterBlock) -> Instant {
-    let mut hi0 = timer.timerawh.read().bits();
-    let timestamp = loop {
-        let low = timer.timerawl.read().bits();
-        let hi1 = timer.timerawh.read().bits();
-        if hi0 == hi1 {
-            break (u64::from(hi0) << 32) | u64::from(low);
-        }
-        hi0 = hi1;
-    };
-    TimerInstantU64::from_ticks(timestamp)
-}
 /// Timer peripheral
+//
+// This struct logically wraps a `pac::TIMER`, but doesn't actually store it:
+// As after initialization all accesses are read-only anyways, the `pac::TIMER` can
+// be summoned unsafely instead. This allows timer to be cloned.
+//
+// (Alarms do use write operations, but they are local to the respective alarm, and
+// those are still owned singletons.)
+//
+// As the timer peripheral needs to be started first, this struct can only be
+// constructed by calling `Timer::new(...)`.
+#[derive(Clone, Copy)]
 pub struct Timer {
-    timer: TIMER,
+    _private: (),
 }
 
 impl Timer {
     /// Create a new [`Timer`]
-    pub fn new(timer: TIMER, resets: &mut RESETS) -> Self {
+    ///
+    /// Make sure that clocks and watchdog are configured, so
+    /// that timer ticks happen at a frequency of 1MHz.
+    /// Otherwise, `Timer` won't work as expected.
+    pub fn new(timer: TIMER, resets: &mut RESETS, _clocks: &ClocksManager) -> Self {
         timer.reset_bring_down(resets);
         timer.reset_bring_up(resets);
-        Self { timer }
+        Self { _private: () }
     }
 
     /// Get the current counter value.
     pub fn get_counter(&self) -> Instant {
-        get_counter(&self.timer)
+        // Safety: Only used for reading current timer value
+        let timer = unsafe { &*pac::TIMER::PTR };
+        let mut hi0 = timer.timerawh.read().bits();
+        let timestamp = loop {
+            let low = timer.timerawl.read().bits();
+            let hi1 = timer.timerawh.read().bits();
+            if hi0 == hi1 {
+                break (u64::from(hi0) << 32) | u64::from(low);
+            }
+            hi0 = hi1;
+        };
+        TimerInstantU64::from_ticks(timestamp)
     }
 
     /// Get the value of the least significant word of the counter.
     pub fn get_counter_low(&self) -> u32 {
-        self.timer.timerawl.read().bits()
+        // Safety: Only used for reading current timer value
+        unsafe { &*pac::TIMER::PTR }.timerawl.read().bits()
     }
 
     /// Initialized a Count Down instance without starting it.
@@ -80,27 +97,81 @@ impl Timer {
     }
     /// Retrieve a reference to alarm 0. Will only return a value the first time this is called
     pub fn alarm_0(&mut self) -> Option<Alarm0> {
-        take_alarm(1 << 0).then_some(Alarm0(PhantomData))
+        take_alarm(1 << 0).then_some(Alarm0(*self))
     }
 
     /// Retrieve a reference to alarm 1. Will only return a value the first time this is called
     pub fn alarm_1(&mut self) -> Option<Alarm1> {
-        take_alarm(1 << 1).then_some(Alarm1(PhantomData))
+        take_alarm(1 << 1).then_some(Alarm1(*self))
     }
 
     /// Retrieve a reference to alarm 2. Will only return a value the first time this is called
     pub fn alarm_2(&mut self) -> Option<Alarm2> {
-        take_alarm(1 << 2).then_some(Alarm2(PhantomData))
+        take_alarm(1 << 2).then_some(Alarm2(*self))
     }
 
     /// Retrieve a reference to alarm 3. Will only return a value the first time this is called
     pub fn alarm_3(&mut self) -> Option<Alarm3> {
-        take_alarm(1 << 3).then_some(Alarm3(PhantomData))
+        take_alarm(1 << 3).then_some(Alarm3(*self))
+    }
+
+    /// Pauses execution for at minimum `us` microseconds.
+    fn delay_us_internal(&self, mut us: u32) {
+        let mut start = self.get_counter_low();
+        // If we knew that the loop ran at least once per timer tick,
+        // this could be simplified to:
+        // ```
+        // while timer.timelr.read().bits().wrapping_sub(start) <= us {
+        //     cortex_m::asm::nop();
+        // }
+        // ```
+        // However, due to interrupts, for `us == u32::MAX`, we could
+        // miss the moment where the loop should terminate if the loop skips
+        // a timer tick.
+        loop {
+            let now = self.get_counter_low();
+            let waited = now.wrapping_sub(start);
+            if waited >= us {
+                break;
+            }
+            start = now;
+            us -= waited;
+        }
     }
 }
 
-// safety: all write operations are synchronised and all reads are atomic
-unsafe impl Sync for Timer {}
+macro_rules! impl_delay_traits {
+    ($($t:ty),+) => {
+        $(
+        impl embedded_hal::blocking::delay::DelayUs<$t> for Timer {
+            fn delay_us(&mut self, us: $t) {
+                #![allow(unused_comparisons)]
+                assert!(us >= 0); // Only meaningful for i32
+                self.delay_us_internal(us as u32)
+            }
+        }
+        impl embedded_hal::blocking::delay::DelayMs<$t> for Timer {
+            fn delay_ms(&mut self, ms: $t) {
+                #![allow(unused_comparisons)]
+                assert!(ms >= 0); // Only meaningful for i32
+                for _ in 0..ms {
+                    self.delay_us_internal(1000);
+                }
+            }
+        }
+        )*
+    }
+}
+
+// The implementation for i32 is a workaround to allow `delay_ms(42)` construction without specifying a type.
+impl_delay_traits!(u8, u16, u32, i32);
+
+#[cfg(feature = "eh1_0_alpha")]
+impl eh1_0_alpha::delay::DelayUs for Timer {
+    fn delay_us(&mut self, us: u32) {
+        self.delay_us_internal(us)
+    }
+}
 
 /// Implementation of the embedded_hal::Timer traits using rp2040_hal::timer counter
 ///
@@ -110,8 +181,11 @@ unsafe impl Sync for Timer {}
 /// use fugit::ExtU32;
 /// use rp2040_hal;
 /// let mut pac = rp2040_hal::pac::Peripherals::take().unwrap();
+/// // Make sure to initialize clocks, otherwise the timer wouldn't work
+/// // properly. Omitted here for terseness.
+/// let clocks: rp2040_hal::clocks::ClocksManager = todo!();
 /// // Configure the Timer peripheral in count-down mode
-/// let timer = rp2040_hal::Timer::new(pac.TIMER, &mut pac.RESETS);
+/// let timer = rp2040_hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
 /// let mut count_down = timer.count_down();
 /// // Create a count_down timer for 500 milliseconds
 /// count_down.start(500.millis());
@@ -217,14 +291,12 @@ pub trait Alarm: Sealed {
 macro_rules! impl_alarm {
     ($name:ident  { rb: $timer_alarm:ident, int: $int_alarm:ident, int_name: $int_name:tt, armed_bit_mask: $armed_bit_mask: expr }) => {
         /// An alarm that can be used to schedule events in the future. Alarms can also be configured to trigger interrupts.
-        pub struct $name(PhantomData<()>);
+        pub struct $name(Timer);
         impl $name {
-            fn schedule_internal(
-                &mut self,
-                timer: &crate::pac::timer::RegisterBlock,
-                timestamp: Instant,
-            ) -> Result<(), ScheduleAlarmError> {
+            fn schedule_internal(&mut self, timestamp: Instant) -> Result<(), ScheduleAlarmError> {
                 let timestamp_low = (timestamp.ticks() & 0xFFFF_FFFF) as u32;
+                // Safety: Only used to access bits belonging exclusively to this alarm
+                let timer = unsafe { &*pac::TIMER::PTR };
 
                 // This lock is for time-criticality
                 cortex_m::interrupt::free(|_| {
@@ -234,7 +306,7 @@ macro_rules! impl_alarm {
                     alarm.write(|w| unsafe { w.bits(timestamp_low) });
 
                     // If it is not set, it has already triggered.
-                    let now = get_counter(timer);
+                    let now = self.0.get_counter();
                     if now > timestamp && (timer.armed.read().bits() & $armed_bit_mask) != 0 {
                         // timestamp was set to a value in the past
 
@@ -270,7 +342,9 @@ macro_rules! impl_alarm {
                         timer.intf.as_ptr(),
                         $armed_bit_mask,
                     );
-                    timer.intr.write_with_zero(|w| w.$int_alarm().set_bit());
+                    timer
+                        .intr
+                        .write_with_zero(|w| w.$int_alarm().clear_bit_by_one());
                 }
             }
 
@@ -311,11 +385,8 @@ macro_rules! impl_alarm {
             ///
             /// [enable_interrupt]: #method.enable_interrupt
             fn schedule(&mut self, countdown: MicrosDurationU32) -> Result<(), ScheduleAlarmError> {
-                // safety: Only read operations are made on the timer and they should not have any UB
-                let timer = unsafe { &*TIMER::ptr() };
-                let timestamp = get_counter(timer) + countdown;
-
-                self.schedule_internal(timer, timestamp)
+                let timestamp = self.0.get_counter() + countdown;
+                self.schedule_internal(timestamp)
             }
 
             /// Schedule the alarm to be finished at the given timestamp. If [enable_interrupt] is
@@ -328,15 +399,13 @@ macro_rules! impl_alarm {
             ///
             /// [enable_interrupt]: #method.enable_interrupt
             fn schedule_at(&mut self, timestamp: Instant) -> Result<(), ScheduleAlarmError> {
-                // safety: Only read operations are made on the timer and they should not have any UB
-                let timer = unsafe { &*TIMER::ptr() };
-                let now = get_counter(timer);
+                let now = self.0.get_counter();
                 let duration = timestamp.ticks().saturating_sub(now.ticks());
                 if duration > u32::max_value().into() {
                     return Err(ScheduleAlarmError::AlarmTooLate);
                 }
 
-                self.schedule_internal(timer, timestamp)
+                self.schedule_internal(timestamp)
             }
 
             /// Return true if this alarm is finished. The returned value is undefined if the alarm

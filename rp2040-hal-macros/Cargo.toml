@@ -5,6 +5,7 @@ name = "rp2040-hal-macros"
 readme = "README.md"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/rp-rs/rp-hal"
 
 [lib]
 proc-macro = true
@@ -14,6 +15,6 @@ quote = "1.0"
 proc-macro2 = "1.0"
 
 [dependencies.syn]
-features = ["extra-traits", "full"]
-version = "1.0"
+features = ["full"]
+version = "2.0"
 

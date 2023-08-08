@@ -1,4 +1,4 @@
-use rp2040_pac::DMA;
+use crate::pac::DMA;
 
 use super::{Channel, ChannelIndex, Pace, ReadTarget, WriteTarget};
 use crate::{
@@ -13,20 +13,32 @@ pub trait SingleChannel: Sealed {
     /// Returns the registers associated with this DMA channel.
     ///
     /// In the case of channel pairs, this returns the first channel.
-    fn ch(&self) -> &rp2040_pac::dma::CH;
+    fn ch(&self) -> &crate::pac::dma::CH;
     /// Returns the index of the DMA channel.
     fn id(&self) -> u8;
 
+    #[deprecated(note = "Renamed to enable_irq0")]
     /// Enables the DMA_IRQ_0 signal for this channel.
     fn listen_irq0(&mut self) {
+        self.enable_irq0();
+    }
+
+    /// Enables the DMA_IRQ_0 signal for this channel.
+    fn enable_irq0(&mut self) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
             write_bitmask_set((*DMA::ptr()).inte0.as_ptr(), 1 << self.id());
         }
     }
 
+    #[deprecated(note = "Renamed to disable_irq0")]
     /// Disables the DMA_IRQ_0 signal for this channel.
     fn unlisten_irq0(&mut self) {
+        self.disable_irq0();
+    }
+
+    /// Disables the DMA_IRQ_0 signal for this channel.
+    fn disable_irq0(&mut self) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
             write_bitmask_clear((*DMA::ptr()).inte0.as_ptr(), 1 << self.id());
@@ -49,16 +61,28 @@ pub trait SingleChannel: Sealed {
         }
     }
 
+    #[deprecated(note = "Renamed to enable_irq1")]
     /// Enables the DMA_IRQ_1 signal for this channel.
     fn listen_irq1(&mut self) {
+        self.enable_irq1();
+    }
+
+    /// Enables the DMA_IRQ_1 signal for this channel.
+    fn enable_irq1(&mut self) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
             write_bitmask_set((*DMA::ptr()).inte1.as_ptr(), 1 << self.id());
         }
     }
 
+    #[deprecated(note = "Renamed to disable_irq1")]
     /// Disables the DMA_IRQ_1 signal for this channel.
     fn unlisten_irq1(&mut self) {
+        self.disable_irq1();
+    }
+
+    /// Disables the DMA_IRQ_1 signal for this channel.
+    fn disable_irq1(&mut self) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
             write_bitmask_clear((*DMA::ptr()).inte1.as_ptr(), 1 << self.id());
@@ -89,13 +113,13 @@ pub trait SingleChannel: Sealed {
 pub trait ChannelPair: SingleChannel + Sealed {
     /// Returns the registers associated with the second DMA channel associated with this channel
     /// pair.
-    fn ch2(&self) -> &rp2040_pac::dma::CH;
+    fn ch2(&self) -> &crate::pac::dma::CH;
     /// Returns the index of the second DMA channel.
     fn id2(&self) -> u8;
 }
 
 impl<CH: ChannelIndex> SingleChannel for Channel<CH> {
-    fn ch(&self) -> &rp2040_pac::dma::CH {
+    fn ch(&self) -> &crate::pac::dma::CH {
         self.regs()
     }
 
@@ -107,7 +131,7 @@ impl<CH: ChannelIndex> SingleChannel for Channel<CH> {
 impl<CH: ChannelIndex> Sealed for Channel<CH> {}
 
 impl<CH1: ChannelIndex, CH2: ChannelIndex> SingleChannel for (Channel<CH1>, Channel<CH2>) {
-    fn ch(&self) -> &rp2040_pac::dma::CH {
+    fn ch(&self) -> &crate::pac::dma::CH {
         self.0.regs()
     }
 
@@ -116,14 +140,13 @@ impl<CH1: ChannelIndex, CH2: ChannelIndex> SingleChannel for (Channel<CH1>, Chan
     }
 }
 
-impl<CH1: ChannelIndex, CH2: ChannelIndex> Sealed for (Channel<CH1>, Channel<CH2>) {}
-
 pub(crate) trait ChannelConfig {
     fn config<WORD, FROM, TO>(
         &mut self,
         from: &FROM,
         to: &mut TO,
         pace: Pace,
+        bswap: bool,
         chain_to: Option<u8>,
         start: bool,
     ) where
@@ -135,12 +158,28 @@ pub(crate) trait ChannelConfig {
     fn start_both<CH: SingleChannel>(&mut self, other: &mut CH);
 }
 
+// RP2040's DMA engine only works with certain word sizes. Make sure that other
+// word sizes will fail to compile.
+struct IsValidWordSize<WORD> {
+    w: core::marker::PhantomData<WORD>,
+}
+
+impl<WORD> IsValidWordSize<WORD> {
+    const OK: usize = {
+        match mem::size_of::<WORD>() {
+            1 | 2 | 4 => 0, // ok
+            _ => panic!("Unsupported DMA word size"),
+        }
+    };
+}
+
 impl<CH: SingleChannel> ChannelConfig for CH {
     fn config<WORD, FROM, TO>(
         &mut self,
         from: &FROM,
         to: &mut TO,
         pace: Pace,
+        bswap: bool,
         chain_to: Option<u8>,
         start: bool,
     ) where
@@ -148,10 +187,8 @@ impl<CH: SingleChannel> ChannelConfig for CH {
         TO: WriteTarget<TransmittedWord = WORD>,
     {
         // Configure the DMA channel.
-        assert!(
-            mem::size_of::<WORD>() != 8,
-            "DMA does not support transferring 64bit data"
-        );
+        let _ = IsValidWordSize::<WORD>::OK;
+
         let (src, src_count) = from.rx_address_count();
         let src_incr = from.rx_increment();
         let (dest, dest_count) = to.tx_address_count();
@@ -167,6 +204,7 @@ impl<CH: SingleChannel> ChannelConfig for CH {
             w.incr_read().bit(src_incr);
             w.incr_write().bit(dest_incr);
             w.treq_sel().bits(treq);
+            w.bswap().bit(bswap);
             w.chain_to().bits(chain_to.unwrap_or_else(|| self.id()));
             w.en().bit(true);
             w
@@ -207,7 +245,7 @@ impl<CH: SingleChannel> ChannelConfig for CH {
     fn start(&mut self) {
         // Safety: The write does not interfere with any other writes, it only affects this
         // channel.
-        unsafe { &*rp2040_pac::DMA::ptr() }
+        unsafe { &*crate::pac::DMA::ptr() }
             .multi_chan_trigger
             .write(|w| unsafe { w.bits(1 << self.id()) });
     }
@@ -216,7 +254,7 @@ impl<CH: SingleChannel> ChannelConfig for CH {
         // Safety: The write does not interfere with any other writes, it only affects this
         // channel and other (which we have an exclusive borrow of).
         let channel_flags = 1 << self.id() | 1 << other.id();
-        unsafe { &*rp2040_pac::DMA::ptr() }
+        unsafe { &*crate::pac::DMA::ptr() }
             .multi_chan_trigger
             .write(|w| unsafe { w.bits(channel_flags) });
     }

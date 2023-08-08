@@ -12,7 +12,7 @@
 //!
 //! static mut CORE1_STACK: Stack<4096> = Stack::new();
 //!
-//! fn core1_task() -> ! {
+//! fn core1_task() {
 //!     loop {}
 //! }
 //!
@@ -52,7 +52,7 @@ pub enum Error {
 }
 
 #[inline(always)]
-fn install_stack_guard(stack_bottom: *mut usize) {
+fn install_stack_guard(stack_limit: *mut usize) {
     let core = unsafe { pac::CorePeripherals::steal() };
 
     // Trap if MPU is already configured
@@ -62,12 +62,13 @@ fn install_stack_guard(stack_bottom: *mut usize) {
 
     // The minimum we can protect is 32 bytes on a 32 byte boundary, so round up which will
     // just shorten the valid stack range a tad.
-    let addr = (stack_bottom as u32 + 31) & !31;
+    let addr = (stack_limit as u32 + 31) & !31;
     // Mask is 1 bit per 32 bytes of the 256 byte range... clear the bit for the segment we want
     let subregion_select = 0xff ^ (1 << ((addr >> 5) & 7));
     unsafe {
         core.MPU.ctrl.write(5); // enable mpu with background default map
-        core.MPU.rbar.write((addr & !0xff) | 0x8);
+        const RBAR_VALID: u32 = 0x10;
+        core.MPU.rbar.write((addr & !0xff) | RBAR_VALID);
         core.MPU.rasr.write(
             1 // enable region
                | (0x7 << 1) // size 2^(7 + 1) = 256
@@ -78,8 +79,8 @@ fn install_stack_guard(stack_bottom: *mut usize) {
 }
 
 #[inline(always)]
-fn core1_setup(stack_bottom: *mut usize) {
-    install_stack_guard(stack_bottom);
+fn core1_setup(stack_limit: *mut usize) {
+    install_stack_guard(stack_limit);
     // TODO: irq priorities
 }
 
@@ -144,23 +145,36 @@ impl<'p> Core<'p> {
     }
 
     /// Spawn a function on this core.
+    ///
+    /// The closure should not return. It is currently defined as `-> ()` because `-> !` is not yet
+    /// stable.
+    ///
+    /// Core 1 will be reset from core 0 in order to spawn another task.
+    ///
+    /// Resetting a single core of a running program can have undesired consequences. Deadlocks are
+    /// likely if the core being reset happens to be inside a critical section.
+    /// It may even break safety assumptions of some unsafe code. So, be careful when calling this method
+    /// more than once.
     pub fn spawn<F>(&mut self, stack: &'static mut [usize], entry: F) -> Result<(), Error>
     where
-        F: FnOnce() -> bad::Never + Send + 'static,
+        F: FnOnce() + Send + 'static,
     {
         if let Some((psm, ppb, fifo)) = self.inner.as_mut() {
             // The first two ignored `u64` parameters are there to take up all of the registers,
             // which means that the rest of the arguments are taken from the stack,
             // where we're able to put them from core 0.
-            extern "C" fn core1_startup<F: FnOnce() -> bad::Never>(
+            extern "C" fn core1_startup<F: FnOnce()>(
                 _: u64,
                 _: u64,
-                entry: &mut ManuallyDrop<F>,
-                stack_bottom: *mut usize,
+                entry: *mut ManuallyDrop<F>,
+                stack_limit: *mut usize,
             ) -> ! {
-                core1_setup(stack_bottom);
+                core1_setup(stack_limit);
 
-                let entry = unsafe { ManuallyDrop::take(entry) };
+                let entry = unsafe { ManuallyDrop::take(&mut *entry) };
+
+                // make sure the preceding read doesn't get reordered past the following fifo write
+                compiler_fence(Ordering::SeqCst);
 
                 // Signal that it's safe for core 0 to get rid of the original value now.
                 //
@@ -170,10 +184,17 @@ impl<'p> Core<'p> {
                 let mut sio = Sio::new(peripherals.SIO);
                 sio.fifo.write_blocking(1);
 
-                entry()
+                entry();
+                loop {
+                    cortex_m::asm::wfe()
+                }
             }
 
             // Reset the core
+            // TODO: resetting without prior check that the core is actually stowed is not great.
+            // But there does not seem to be any obvious way to check that. A marker flag could be
+            // set from this method and cleared for the wrapper after `entry` returned. But doing
+            // so wouldn't be zero cost.
             psm.frce_off.modify(|_, w| w.proc1().set_bit());
             while !psm.frce_off.read().proc1().bit_is_set() {
                 cortex_m::asm::nop();
@@ -181,20 +202,28 @@ impl<'p> Core<'p> {
             psm.frce_off.modify(|_, w| w.proc1().clear_bit());
 
             // Set up the stack
-            let mut stack_ptr = unsafe { stack.as_mut_ptr().add(stack.len()) };
+            // AAPCS requires in 6.2.1.2 that the stack is 8bytes aligned., we may need to trim the
+            // array size to guaranty that the base of the stack (the end of the array) meets that requirement.
+            // The start of the array does not need to be aligned.
+
+            let mut stack_ptr = stack.as_mut_ptr_range().end;
+            // on rp2040, usize are 4 bytes, so align_offset(8) on a *mut usize returns either 0 or 1.
+            let misalignement_offset = stack_ptr.align_offset(8);
 
             // We don't want to drop this, since it's getting moved to the other core.
             let mut entry = ManuallyDrop::new(entry);
 
             // Push the arguments to `core1_startup` onto the stack.
             unsafe {
-                // Push `stack_bottom`.
+                stack_ptr = stack_ptr.sub(misalignement_offset);
+
+                // Push `stack_limit`.
                 stack_ptr = stack_ptr.sub(1);
                 stack_ptr.cast::<*mut usize>().write(stack.as_mut_ptr());
 
                 // Push `entry`.
                 stack_ptr = stack_ptr.sub(1);
-                stack_ptr.cast::<&mut ManuallyDrop<F>>().write(&mut entry);
+                stack_ptr.cast::<*mut ManuallyDrop<F>>().write(&mut entry);
             }
 
             // Make sure the compiler does not reorder the stack writes after to after the
@@ -254,19 +283,4 @@ impl<'p> Core<'p> {
             Err(Error::InvalidCore)
         }
     }
-}
-
-// https://github.com/nvzqz/bad-rs/blob/master/src/never.rs
-mod bad {
-    pub(crate) type Never = <F as HasOutput>::Output;
-
-    pub trait HasOutput {
-        type Output;
-    }
-
-    impl<O> HasOutput for fn() -> O {
-        type Output = O;
-    }
-
-    type F = fn() -> !;
 }

@@ -33,7 +33,7 @@ static mut RAM_VTABLE: VectorTable = VectorTable::new();
 
 // Give our LED and Alarm a type alias to make it easier to refer to them
 type LedAndAlarm = (
-    hal::gpio::Pin<hal::gpio::bank0::Gpio25, hal::gpio::PushPullOutput>,
+    hal::gpio::Pin<hal::gpio::bank0::Gpio25, hal::gpio::FunctionSioOutput, hal::gpio::PullDown>,
     hal::timer::Alarm0,
 );
 
@@ -110,7 +110,7 @@ fn main() -> ! {
     // Configure GPIO25 as an output
     let led_pin = pins.gpio25.into_push_pull_output();
 
-    let mut timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS);
+    let mut timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
     critical_section::with(|cs| {
         let mut alarm = timer.alarm_0().unwrap();
         // Schedule an alarm in 1 second

@@ -1,5 +1,5 @@
+use crate::pac::rtc::{rtc_0, rtc_1, setup_0, setup_1};
 use chrono::{Datelike, Timelike};
-use rp2040_pac::rtc::{rtc_0, rtc_1, setup_0, setup_1};
 
 /// Alias for [`chrono::NaiveDateTime`]
 pub type DateTime = chrono::NaiveDateTime;
@@ -10,6 +10,7 @@ pub type DayOfWeek = chrono::Weekday;
 ///
 /// [`DateTimeFilter`]: struct.DateTimeFilter.html
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[allow(clippy::enum_variant_names)]
 pub enum Error {
     /// The [DateTime] has an invalid year. The year must be between 0 and 4095.
     InvalidYear,

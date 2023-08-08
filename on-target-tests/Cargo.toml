@@ -17,19 +17,11 @@ name = "dma_m2m_u32"
 harness = false
 
 [[test]]
-name = "dma_m2m_u64"
-harness = false
-
-[[test]]
 name = "dma_spi_loopback_u8"
 harness = false
 
 [[test]]
 name = "dma_spi_loopback_u16"
-harness = false
-
-[[test]]
-name = "dma_drop"
 harness = false
 
 [[test]]
@@ -46,16 +38,15 @@ defmt-rtt = "0.4"
 defmt-test = "0.3"
 panic-probe = { version = "0.3", features = ["print-defmt"] }
 
-rp2040-hal = { path = "../rp2040-hal", version = "0.6", features = [
+rp2040-hal = { path = "../rp2040-hal", features = [
     "defmt",
     "critical-section-impl",
 ] }
 # Needed to set spi frequencies
 fugit = "0.3.6"
 
-rp2040-boot2 = "0.2"
+rp2040-boot2 = "0.3.0"
 critical-section = "1.0.0"
-
 
 [features]
 default = ['defmt-trace']

@@ -4,16 +4,44 @@
 //! traits for the RP2040 microcontroller
 //!
 //! NOTE This HAL is still under active development. This API will remain volatile until 1.0.0
+//!
+//! # Crate features
+//!
+//! * **chrono** -
+//!   Modifies some RTC access functions to use chrono types instead of a rp2040-hal specific
+//!   DateTime type
+//! * **critical-section-impl** -
+//!   critical section that is safe for multicore use
+//! * **defmt** -
+//!   Implement `defmt::Format` for several types.
+//! * **disable-intrinsics** -
+//!   Disable automatic mapping of language features (like floating point math) to ROM functions
+//! * **eh1_0_alpha** -
+//!   Support alpha release of embedded-hal
+//! * **rom-func-cache** -
+//!   Memoize(cache) ROM function pointers on first use to improve performance
+//! * **rt** -
+//!   Minimal startup / runtime for Cortex-M microcontrollers
+//! * **rom-v2-intrinsics** -
+//!   This enables ROM functions for f64 math that were not present in the earliest RP2040s
+//! * **rp2040-e5** -
+//!   This enables a fix for USB errata 5: USB device fails to exit RESET state on busy USB bus.
+//!   Only required for RP2040 B0 and RP2040 B1, but it also works for RP2040 B2 and above.
+//!   **Note that the workaround takes control of pin 15 (bank0) during usb reset so the bank needs
+//!   to be taken out of reset before calling `UsbBus::new`**.
+//!   Using `let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);`
+//!   is enough to take the Bank 0 out of reset.
+//! * **rtic-monotonic** -
+//!   Implement
+//!   `rtic_monotonic::Monotonic` based on the RP2040 timer peripheral
 
 #![warn(missing_docs)]
 #![no_std]
 
-extern crate cortex_m;
-extern crate embedded_hal as hal;
-extern crate nb;
 pub use paste;
 
-pub extern crate rp2040_pac as pac;
+/// Re-export of the PAC
+pub use rp2040_pac as pac;
 
 #[macro_use]
 mod intrinsics;

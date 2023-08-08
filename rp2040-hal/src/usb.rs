@@ -31,7 +31,7 @@
 //! // Use the usb_bus as usual.
 //! ```
 //!
-//! See [pico_usb_serial.rs](https://github.com/rp-rs/rp-hal/tree/main/boards/pico/examples/pico_usb_serial.rs) for more complete examples
+//! See [pico_usb_serial.rs](https://github.com/rp-rs/rp-hal-boards/blob/main/boards/rp-pico/examples/pico_usb_serial.rs) for more complete examples
 //!
 //!
 //! ## Enumeration issue with small EP0 max packet size
@@ -106,19 +106,18 @@
 //! ```
 
 use core::cell::RefCell;
-
-use crate::clocks::UsbClock;
-use crate::pac::RESETS;
-use crate::pac::USBCTRL_DPRAM;
-use crate::pac::USBCTRL_REGS;
-use crate::resets::SubsystemReset;
-
 use critical_section::{self, Mutex};
 
 use usb_device::{
     bus::{PollResult, UsbBus as UsbBusTrait},
     endpoint::{EndpointAddress, EndpointType},
     Result as UsbResult, UsbDirection, UsbError,
+};
+
+use crate::{
+    clocks::UsbClock,
+    pac::{RESETS, USBCTRL_DPRAM, USBCTRL_REGS},
+    resets::SubsystemReset,
 };
 
 #[cfg(feature = "rp2040-e5")]
@@ -147,13 +146,18 @@ impl Endpoint {
         }
     }
 
-    fn get_buf(&self) -> &'static [u8] {
+    fn get_buf(&self) -> &[u8] {
+        // SAFETY:
+        // offset is checked by Inner::ep_allocate.
         unsafe {
             let (base, len) = self.get_buf_parts();
             core::slice::from_raw_parts(base as *const _, len)
         }
     }
-    fn get_buf_mut(&self) -> &'static mut [u8] {
+
+    fn get_buf_mut(&mut self) -> &mut [u8] {
+        // SAFETY:
+        // offset is checked by Inner::ep_allocate.
         unsafe {
             let (base, len) = self.get_buf_parts();
             core::slice::from_raw_parts_mut(base, len)
@@ -281,7 +285,7 @@ impl Inner {
         .enumerate()
         .filter_map(|(i, ep)| ep.as_ref().map(|ep| (i, ep)))
         {
-            use pac::usbctrl_dpram::ep_control::ENDPOINT_TYPE_A;
+            use crate::pac::usbctrl_dpram::ep_control::ENDPOINT_TYPE_A;
             let ep_type = match ep.ep_type {
                 EndpointType::Bulk => ENDPOINT_TYPE_A::BULK,
                 EndpointType::Isochronous => ENDPOINT_TYPE_A::ISOCHRONOUS,
@@ -370,7 +374,9 @@ impl Inner {
             // Next packet will be on DATA1 so clear pid_0 so it gets flipped by next buf config
             self.ctrl_dpram.ep_buffer_control[0].modify(|_, w| w.pid_0().clear_bit());
             // clear setup request flag
-            self.ctrl_reg.sie_status.write(|w| w.setup_rec().set_bit());
+            self.ctrl_reg
+                .sie_status
+                .write(|w| w.setup_rec().clear_bit_by_one());
 
             // clear any out standing out flag e.g. in case a zlp got discarded
             self.ctrl_reg.buff_status.write(|w| unsafe { w.bits(2) });
@@ -435,6 +441,9 @@ impl UsbBus {
         force_vbus_detect_bit: bool,
         resets: &mut RESETS,
     ) -> Self {
+        #[cfg(feature = "rp2040-e5")]
+        errata5::Errata5State::check_bank0_reset();
+
         ctrl_reg.reset_bring_down(resets);
         ctrl_reg.reset_bring_up(resets);
 
@@ -529,7 +538,10 @@ impl UsbBusTrait for UsbBus {
             let mut inner = self.inner.borrow(cs).borrow_mut();
 
             // clear reset flag
-            inner.ctrl_reg.sie_status.write(|w| w.bus_reset().set_bit());
+            inner
+                .ctrl_reg
+                .sie_status
+                .write(|w| w.bus_reset().clear_bit_by_one());
             inner
                 .ctrl_reg
                 .buff_status
@@ -550,7 +562,7 @@ impl UsbBusTrait for UsbBus {
             inner
                 .ctrl_reg
                 .addr_endp
-                .modify(|_, w| unsafe { w.address().bits(addr & 0x3F) });
+                .modify(|_, w| unsafe { w.address().bits(addr & 0x7F) });
             // reset ep0
             inner.ctrl_dpram.ep_buffer_control[0].modify(|_, w| w.pid_0().set_bit());
             inner.ctrl_dpram.ep_buffer_control[1].modify(|_, w| w.pid_0().set_bit());
@@ -631,10 +643,16 @@ impl UsbBusTrait for UsbBus {
                 return PollResult::Reset;
             } else if buff_status == 0 && ints.setup_req().bit_is_clear() {
                 if ints.dev_suspend().bit_is_set() {
-                    inner.ctrl_reg.sie_status.write(|w| w.suspended().set_bit());
+                    inner
+                        .ctrl_reg
+                        .sie_status
+                        .write(|w| w.suspended().clear_bit_by_one());
                     return PollResult::Suspend;
                 } else if ints.dev_resume_from_host().bit_is_set() {
-                    inner.ctrl_reg.sie_status.write(|w| w.resume().set_bit());
+                    inner
+                        .ctrl_reg
+                        .sie_status
+                        .write(|w| w.resume().clear_bit_by_one());
                     return PollResult::Resume;
                 }
                 return PollResult::None;

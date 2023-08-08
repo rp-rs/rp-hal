@@ -7,7 +7,7 @@
 //! logic if it isn't func selected.
 
 use crate::atomic_register_access::{write_bitmask_clear, write_bitmask_set};
-use rp2040_pac::Peripherals;
+use crate::pac::Peripherals;
 
 pub struct ForceLineStateJ {
     prev_pads: u32,
@@ -23,21 +23,17 @@ impl Errata5State {
         Self::WaitEndOfReset
     }
     /// SAFETY: This method steals the peripherals.
-    /// It makes read only use of TIMER and read/write access to USBCTRL_REGS.
+    /// It makes read only use of TIMER and SYSINFO and read/write access to USBCTRL_REGS.
     /// Both peripherals must be initialized & running.
     pub unsafe fn update(self) -> Option<Self> {
         let pac = crate::pac::Peripherals::steal();
         match self {
             Self::WaitEndOfReset => {
-                if pac.USBCTRL_REGS.sie_status.read().line_state().is_se0() {
+                if pac.SYSINFO.chip_id.read().revision().bits() >= 2 {
+                    None
+                } else if pac.USBCTRL_REGS.sie_status.read().line_state().is_se0() {
                     Some(self)
                 } else {
-                    let reset_state = pac.RESETS.reset.read();
-                    assert!(
-                        reset_state.io_bank0().bit_is_clear()
-                            && reset_state.pads_bank0().bit_is_clear(),
-                        "IO Bank 0 must be out of reset for this work around to function properly."
-                    );
                     Some(Self::ForceLineStateJ(start_force_j(&pac)))
                 }
             }
@@ -56,6 +52,18 @@ impl Errata5State {
                 }
             }
         }
+    }
+
+    /// Make sure bank0 is out of reset, which is necessary for the rp2040-e5 workaround.
+    /// If it is not, panic.
+    pub fn check_bank0_reset() {
+        // SAFETY: Only used for reading the reset state.
+        let pac = unsafe { crate::pac::Peripherals::steal() };
+        let reset_state = pac.RESETS.reset.read();
+        assert!(
+            reset_state.io_bank0().bit_is_clear() && reset_state.pads_bank0().bit_is_clear(),
+            "IO Bank 0 must be out of reset for this work around to function properly."
+        );
     }
 }
 

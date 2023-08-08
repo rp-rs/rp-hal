@@ -3,21 +3,21 @@
 //! This module brings together `uart::reader` and `uart::writer` to give a
 //! UartPeripheral object that can both read and write.
 
-use super::*;
-use crate::pac::uart0::uartlcr_h::W as UART_LCR_H_Writer;
-use core::convert::Infallible;
-use core::fmt;
+use core::{convert::Infallible, fmt};
 use embedded_hal::serial::{Read, Write};
 use fugit::HertzU32;
 use nb::Error::{Other, WouldBlock};
-use rp2040_pac::{UART0, UART1};
+
+use crate::{
+    pac::{self, uart0::uartlcr_h::W as UART_LCR_H_Writer, Peripherals, UART0, UART1},
+    typelevel::OptionT,
+    uart::*,
+};
 
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::serial as eh1;
 #[cfg(feature = "eh1_0_alpha")]
 use eh_nb_1_0_alpha::serial as eh1nb;
-
-use pac::Peripherals;
 
 /// An UART Peripheral based on an underlying UART device.
 pub struct UartPeripheral<S: State, D: UartDevice, P: ValidUartPinout<D>> {
@@ -73,10 +73,10 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
         // Enable the UART, and the TX,RC,CTS and RTS based on the pins
         device.uartcr.write(|w| {
             w.uarten().set_bit();
-            w.txe().bit(P::TX_ENABLED);
-            w.rxe().bit(P::RX_ENABLED);
-            w.ctsen().bit(P::CTS_ENABLED);
-            w.rtsen().bit(P::RTS_ENABLED);
+            w.txe().bit(P::Tx::IS_SOME);
+            w.rxe().bit(P::Rx::IS_SOME);
+            w.ctsen().bit(P::Cts::IS_SOME);
+            w.rtsen().bit(P::Rts::IS_SOME);
 
             w
         });
@@ -274,8 +274,8 @@ fn calculate_baudrate_dividers(
 }
 
 /// Baudrate configuration. Code loosely inspired from the C SDK.
-fn configure_baudrate(
-    device: &mut dyn UartDevice,
+fn configure_baudrate<U: UartDevice>(
+    device: &mut U,
     wanted_baudrate: HertzU32,
     frequency: HertzU32,
 ) -> Result<HertzU32, Error> {
@@ -298,7 +298,7 @@ fn configure_baudrate(
     device.uartlcr_h.modify(|_, w| w);
 
     Ok(HertzU32::from_raw(
-        (4 * frequency.to_Hz()) / (64 * baud_div_int + baud_div_frac) as u32,
+        (4 * frequency.to_Hz()) / (64 * baud_div_int as u32 + baud_div_frac as u32),
     ))
 }
 

@@ -13,26 +13,81 @@
 //! let sio = Sio::new(peripherals.SIO);
 //! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
 //!
-//! let _ = pins.gpio2.into_mode::<FunctionSpi>();
-//! let _ = pins.gpio3.into_mode::<FunctionSpi>();
+//! let sclk = pins.gpio2.into_function::<FunctionSpi>();
+//! let mosi = pins.gpio3.into_function::<FunctionSpi>();
 //!
-//! let spi = Spi::<_, _, 8>::new(peripherals.SPI0).init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), &MODE_0);
+//! let spi = Spi::<_, _, _, 8>::new(peripherals.SPI0, (mosi, sclk)).init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), MODE_0);
 //! ```
 
-use crate::dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget};
-use crate::resets::SubsystemReset;
-use crate::typelevel::Sealed;
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
+
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::spi as eh1;
 #[cfg(feature = "eh1_0_alpha")]
 use eh_nb_1_0_alpha::spi as eh1nb;
-use embedded_hal::blocking::spi;
-use embedded_hal::spi::{FullDuplex, Mode, Phase, Polarity};
-use fugit::HertzU32;
-use fugit::RateExtU32;
-use pac::dma::ch::ch_ctrl_trig::TREQ_SEL_A;
-use pac::RESETS;
+use embedded_hal::{
+    blocking::spi,
+    spi::{FullDuplex, Phase, Polarity},
+};
+use fugit::{HertzU32, RateExtU32};
+
+use crate::{
+    dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget},
+    pac::{self, dma::ch::ch_ctrl_trig::TREQ_SEL_A, RESETS},
+    resets::SubsystemReset,
+    typelevel::Sealed,
+};
+
+mod pins;
+pub use pins::*;
+
+impl From<embedded_hal::spi::Mode> for FrameFormat {
+    fn from(f: embedded_hal::spi::Mode) -> Self {
+        Self::MotorolaSpi(f)
+    }
+}
+
+impl From<&embedded_hal::spi::Mode> for FrameFormat {
+    fn from(f: &embedded_hal::spi::Mode) -> Self {
+        Self::MotorolaSpi(*f)
+    }
+}
+
+/// SPI frame format
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum FrameFormat {
+    /// Motorola SPI format. See section 4.4.3.9 of RP2040 datasheet.
+    MotorolaSpi(embedded_hal::spi::Mode),
+    /// Texas Instruments synchronous serial frame format. See section 4.4.3.8 of RP2040 datasheet.
+    TexasInstrumentsSynchronousSerial,
+    /// National Semiconductor Microwire frame format. See section 4.4.3.14 of RP2040 datasheet.
+    NationalSemiconductorMicrowire,
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl From<eh1_0_alpha::spi::Mode> for FrameFormat {
+    fn from(f: eh1_0_alpha::spi::Mode) -> Self {
+        let eh1_0_alpha::spi::Mode { polarity, phase } = f;
+        match (polarity, phase) {
+            (
+                eh1_0_alpha::spi::Polarity::IdleLow,
+                eh1_0_alpha::spi::Phase::CaptureOnFirstTransition,
+            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_0),
+            (
+                eh1_0_alpha::spi::Polarity::IdleLow,
+                eh1_0_alpha::spi::Phase::CaptureOnSecondTransition,
+            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_1),
+            (
+                eh1_0_alpha::spi::Polarity::IdleHigh,
+                eh1_0_alpha::spi::Phase::CaptureOnFirstTransition,
+            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_2),
+            (
+                eh1_0_alpha::spi::Polarity::IdleHigh,
+                eh1_0_alpha::spi::Phase::CaptureOnSecondTransition,
+            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_3),
+        }
+    }
+}
 
 /// State of the SPI
 pub trait State: Sealed {}
@@ -54,13 +109,18 @@ impl Sealed for Enabled {}
 
 /// Pac SPI device
 pub trait SpiDevice: Deref<Target = pac::spi0::RegisterBlock> + SubsystemReset + Sealed {
+    /// Index of the peripheral.
+    const ID: usize;
+
     /// The DREQ number for which TX DMA requests are triggered.
     fn tx_dreq() -> u8;
     /// The DREQ number for which RX DMA requests are triggered.
     fn rx_dreq() -> u8;
 }
 
+impl Sealed for pac::SPI0 {}
 impl SpiDevice for pac::SPI0 {
+    const ID: usize = 0;
     fn tx_dreq() -> u8 {
         TREQ_SEL_A::SPI0_TX.into()
     }
@@ -68,8 +128,9 @@ impl SpiDevice for pac::SPI0 {
         TREQ_SEL_A::SPI0_RX.into()
     }
 }
-impl Sealed for pac::SPI0 {}
+impl Sealed for pac::SPI1 {}
 impl SpiDevice for pac::SPI1 {
+    const ID: usize = 1;
     fn tx_dreq() -> u8 {
         TREQ_SEL_A::SPI1_TX.into()
     }
@@ -77,7 +138,6 @@ impl SpiDevice for pac::SPI1 {
         TREQ_SEL_A::SPI1_RX.into()
     }
 }
-impl Sealed for pac::SPI1 {}
 
 /// Data size used in spi
 pub trait DataSize: Sealed {}
@@ -88,15 +148,17 @@ impl Sealed for u8 {}
 impl Sealed for u16 {}
 
 /// Spi
-pub struct Spi<S: State, D: SpiDevice, const DS: u8> {
+pub struct Spi<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> {
     device: D,
+    pins: P,
     state: PhantomData<S>,
 }
 
-impl<S: State, D: SpiDevice, const DS: u8> Spi<S, D, DS> {
-    fn transition<To: State>(self, _: To) -> Spi<To, D, DS> {
+impl<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<S, D, P, DS> {
+    fn transition<To: State>(self, _: To) -> Spi<To, D, P, DS> {
         Spi {
             device: self.device,
+            pins: self.pins,
             state: PhantomData,
         }
     }
@@ -155,24 +217,36 @@ impl<S: State, D: SpiDevice, const DS: u8> Spi<S, D, DS> {
     }
 }
 
-impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
+impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
     /// Create new spi device
-    pub fn new(device: D) -> Spi<Disabled, D, DS> {
+    pub fn new(device: D, pins: P) -> Spi<Disabled, D, P, DS> {
         Spi {
             device,
+            pins,
             state: PhantomData,
         }
     }
 
     /// Set format and datasize
-    fn set_format(&mut self, data_bits: u8, mode: &Mode) {
+    fn set_format(&mut self, data_bits: u8, frame_format: FrameFormat) {
         self.device.sspcr0.modify(|_, w| unsafe {
-            w.dss()
-                .bits(data_bits - 1)
-                .spo()
-                .bit(mode.polarity == Polarity::IdleHigh)
-                .sph()
-                .bit(mode.phase == Phase::CaptureOnSecondTransition)
+            w.dss().bits(data_bits - 1).frf().bits(match &frame_format {
+                FrameFormat::MotorolaSpi(_) => 0x00,
+                FrameFormat::TexasInstrumentsSynchronousSerial => 0x01,
+                FrameFormat::NationalSemiconductorMicrowire => 0x10,
+            });
+
+            /*
+             * Clock polarity (SPO) and clock phase (SPH) are only applicable to
+             * the Motorola SPI frame format.
+             */
+            if let FrameFormat::MotorolaSpi(ref mode) = frame_format {
+                w.spo()
+                    .bit(mode.polarity == Polarity::IdleHigh)
+                    .sph()
+                    .bit(mode.phase == Phase::CaptureOnSecondTransition);
+            }
+            w
         });
     }
 
@@ -190,14 +264,14 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
         resets: &mut RESETS,
         peri_frequency: F,
         baudrate: B,
-        mode: &Mode,
+        frame_format: FrameFormat,
         slave: bool,
-    ) -> Spi<Enabled, D, DS> {
+    ) -> Spi<Enabled, D, P, DS> {
         self.device.reset_bring_down(resets);
         self.device.reset_bring_up(resets);
 
         self.set_baudrate(peri_frequency, baudrate);
-        self.set_format(DS, mode);
+        self.set_format(DS, frame_format);
         self.set_slave(slave);
         // Always enable DREQ signals -- harmless if DMA is not listening
         self.device
@@ -211,26 +285,36 @@ impl<D: SpiDevice, const DS: u8> Spi<Disabled, D, DS> {
     }
 
     /// Initialize the SPI in master mode
-    pub fn init<F: Into<HertzU32>, B: Into<HertzU32>>(
+    pub fn init<F: Into<HertzU32>, B: Into<HertzU32>, M: Into<FrameFormat>>(
         self,
         resets: &mut RESETS,
         peri_frequency: F,
         baudrate: B,
-        mode: &Mode,
-    ) -> Spi<Enabled, D, DS> {
-        self.init_spi(resets, peri_frequency, baudrate, mode, false)
+        frame_format: M,
+    ) -> Spi<Enabled, D, P, DS> {
+        self.init_spi(resets, peri_frequency, baudrate, frame_format.into(), false)
     }
 
     /// Initialize the SPI in slave mode
-    pub fn init_slave(self, resets: &mut RESETS, mode: &Mode) -> Spi<Enabled, D, DS> {
+    pub fn init_slave<M: Into<FrameFormat>>(
+        self,
+        resets: &mut RESETS,
+        frame_format: M,
+    ) -> Spi<Enabled, D, P, DS> {
         // Use dummy values for frequency and baudrate.
         // With both values 0, set_baudrate will set prescale == u8::MAX, which will break if debug assertions are enabled.
         // u8::MAX is outside the allowed range 2..=254 for CPSDVSR, which might interfere with proper operation in slave mode.
-        self.init_spi(resets, 1000u32.Hz(), 1000u32.Hz(), mode, true)
+        self.init_spi(
+            resets,
+            1000u32.Hz(),
+            1000u32.Hz(),
+            frame_format.into(),
+            true,
+        )
     }
 }
 
-impl<D: SpiDevice, const DS: u8> Spi<Enabled, D, DS> {
+impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Enabled, D, P, DS> {
     fn is_writable(&self) -> bool {
         self.device.sspsr.read().tnf().bit_is_set()
     }
@@ -244,7 +328,7 @@ impl<D: SpiDevice, const DS: u8> Spi<Enabled, D, DS> {
     }
 
     /// Disable the spi to reset its configuration
-    pub fn disable(self) -> Spi<Disabled, D, DS> {
+    pub fn disable(self) -> Spi<Disabled, D, P, DS> {
         self.device.sspcr1.modify(|_, w| w.sse().clear_bit());
 
         self.transition(Disabled { __private: () })
@@ -255,7 +339,7 @@ macro_rules! impl_write {
     ($type:ident, [$($nr:expr),+]) => {
 
         $(
-        impl<D: SpiDevice> FullDuplex<$type> for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> FullDuplex<$type> for Spi<Enabled, D, P, $nr> {
             type Error = Infallible;
 
             fn read(&mut self) -> Result<$type, nb::Error<Infallible>> {
@@ -280,25 +364,17 @@ macro_rules! impl_write {
             }
         }
 
-        impl<D: SpiDevice> spi::write::Default<$type> for Spi<Enabled, D, $nr> {}
-        impl<D: SpiDevice> spi::transfer::Default<$type> for Spi<Enabled, D, $nr> {}
-        impl<D: SpiDevice> spi::write_iter::Default<$type> for Spi<Enabled, D, $nr> {}
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi::write::Default<$type> for Spi<Enabled, D, P, $nr> {}
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi::transfer::Default<$type> for Spi<Enabled, D, P, $nr> {}
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi::write_iter::Default<$type> for Spi<Enabled, D, P, $nr> {}
 
         #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice> eh1::ErrorType for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1::ErrorType for Spi<Enabled, D, P, $nr> {
             type Error = Infallible;
         }
 
         #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice> eh1::SpiBusFlush for Spi<Enabled, D, $nr> {
-            fn flush(&mut self) -> Result<(), Self::Error> {
-                while self.is_busy() {}
-                Ok(())
-            }
-        }
-
-        #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice> eh1::SpiBusRead<$type> for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1::SpiBus<$type> for Spi<Enabled, D, P, $nr> {
             fn read(&mut self, words: &mut [$type]) -> Result<(), Self::Error> {
                 for word in words.iter_mut() {
                     // write empty word
@@ -313,10 +389,7 @@ macro_rules! impl_write {
                 }
                 Ok(())
             }
-        }
 
-        #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice> eh1::SpiBusWrite<$type> for Spi<Enabled, D, $nr> {
             fn write(&mut self, words: &[$type]) -> Result<(), Self::Error> {
                 for word in words.iter() {
                     // write one word
@@ -331,10 +404,7 @@ macro_rules! impl_write {
                 }
                 Ok(())
             }
-        }
 
-        #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice> eh1::SpiBus<$type> for Spi<Enabled, D, $nr> {
             fn transfer(&mut self, read: &mut [$type], write: &[$type]) -> Result<(), Self::Error>{
                 let len = read.len().max(write.len());
                 for i in 0..len {
@@ -371,10 +441,15 @@ macro_rules! impl_write {
 
                 Ok(())
             }
+
+            fn flush(&mut self) -> Result<(), Self::Error> {
+                while self.is_busy() {}
+                Ok(())
+            }
         }
 
         #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice> eh1nb::FullDuplex<$type> for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1nb::FullDuplex<$type> for Spi<Enabled, D, P, $nr> {
             fn read(&mut self) -> Result<$type, nb::Error<Infallible>> {
                 if !self.is_readable() {
                     return Err(nb::Error::WouldBlock);
@@ -397,7 +472,7 @@ macro_rules! impl_write {
             }
         }
 
-        impl<D: SpiDevice> ReadTarget for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> ReadTarget for Spi<Enabled, D, P, $nr> {
             type ReceivedWord = $type;
 
             fn rx_treq() -> Option<u8> {
@@ -416,9 +491,9 @@ macro_rules! impl_write {
             }
         }
 
-        impl<D: SpiDevice> EndlessReadTarget for Spi<Enabled, D, $nr> {}
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> EndlessReadTarget for Spi<Enabled, D, P, $nr> {}
 
-        impl<D: SpiDevice> WriteTarget for Spi<Enabled, D, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> WriteTarget for Spi<Enabled, D, P, $nr> {
             type TransmittedWord = $type;
 
             fn tx_treq() -> Option<u8> {
@@ -437,11 +512,11 @@ macro_rules! impl_write {
             }
         }
 
-        impl<D: SpiDevice> EndlessWriteTarget for Spi<Enabled, D, $nr> {}
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> EndlessWriteTarget for Spi<Enabled, D, P, $nr> {}
     )+
 
     };
 }
 
 impl_write!(u8, [4, 5, 6, 7, 8]);
-impl_write!(u16, [9, 10, 11, 22, 13, 14, 15, 16]);
+impl_write!(u16, [9, 10, 11, 12, 13, 14, 15, 16]);

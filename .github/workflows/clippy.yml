@@ -2,6 +2,7 @@ on: [push, pull_request]
 name: Clippy check
 jobs:
   clippy_check:
+    name: Run Clippy
     runs-on: ubuntu-20.04
     env:
       RUSTFLAGS: "-D warnings"
@@ -12,3 +13,7 @@ jobs:
           target: thumbv6m-none-eabi
           components: clippy
       - run: cargo clippy --workspace --examples -- -Dwarnings
+      - run: cargo clippy --workspace --examples --all-features -- -Dwarnings
+      - run: |
+          cd on-target-tests
+          cargo clippy -- -Dwarnings

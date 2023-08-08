@@ -1,7 +1,7 @@
-//! # ADC Example
+//! # ADC FIFO Example
 //!
-//! This application demonstrates how to read ADC samples from the temperature
-//! sensor and pin and output them to the UART on pins 1 and 2 at 9600 baud.
+//! This application demonstrates how to read ADC samples in free-running mode,
+//! and reading them from the FIFO by polling the fifo's `len()`.
 //!
 //! It may need to be adapted to your particular board layout and/or pin assignment.
 //!
@@ -19,7 +19,6 @@ use rp2040_hal as hal;
 
 // Some traits we need
 use core::fmt::Write;
-use embedded_hal::adc::OneShot;
 use fugit::RateExtU32;
 use rp2040_hal::Clock;
 
@@ -95,13 +94,13 @@ fn main() -> ! {
     // Create a UART driver
     let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
-            UartConfig::new(9600.Hz(), DataBits::Eight, None, StopBits::One),
+            UartConfig::new(115200.Hz(), DataBits::Eight, None, StopBits::One),
             clocks.peripheral_clock.freq(),
         )
         .unwrap();
 
     // Write to the UART
-    uart.write_full_blocking(b"ADC example\r\n");
+    uart.write_full_blocking(b"ADC FIFO poll example\r\n");
 
     // Enable ADC
     let mut adc = hal::Adc::new(pac.ADC, &mut pac.RESETS);
@@ -110,16 +109,85 @@ fn main() -> ! {
     let mut temperature_sensor = adc.take_temp_sensor().unwrap();
 
     // Configure GPIO26 as an ADC input
-    let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26);
+    let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26.into_floating_input());
+
+    // Configure free-running mode:
+    let mut adc_fifo = adc
+        .build_fifo()
+        // Set clock divider to target a sample rate of 1000 samples per second (1ksps).
+        // The value was calculated by `(48MHz / 1ksps) - 1 = 47999.0`.
+        // Please check the `clock_divider` method documentation for details.
+        .clock_divider(47999, 0)
+        // sample the temperature sensor first
+        .set_channel(&mut temperature_sensor)
+        // then alternate between GPIO26 and the temperature sensor
+        .round_robin((&mut adc_pin_0, &mut temperature_sensor))
+        // Uncomment this line to produce 8-bit samples, instead of 12 bit (lower bits are discarded)
+        //.shift_8bit()
+        // start sampling
+        .start();
+
+    // we'll capture 1000 samples in total (500 per channel)
+    let mut temp_samples = [0; 500];
+    let mut pin_samples = [0; 500];
+    let mut i = 0;
+
+    // initialize a timer, to measure the total sampling time (printed below)
+    let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
+
     loop {
-        // Read the raw ADC counts from the temperature sensor channel.
-        let temp_sens_adc_counts: u16 = adc.read(&mut temperature_sensor).unwrap();
-        let pin_adc_counts: u16 = adc.read(&mut adc_pin_0).unwrap();
+        // busy-wait until the FIFO contains at least two samples:
+        while adc_fifo.len() < 2 {}
+
+        // fetch two values from the fifo
+        let temp_result = adc_fifo.read();
+        let pin_result = adc_fifo.read();
+
+        // uncomment this line, to trigger an "underrun" condition
+        //let _extra_sample = adc_fifo.read();
+
+        if adc_fifo.is_over() {
+            // samples were pushed into the fifo faster they were read
+            uart.write_full_blocking(b"FIFO overrun!\r\n");
+        }
+        if adc_fifo.is_under() {
+            // we tried to read samples more quickly than they were pushed into the fifo
+            uart.write_full_blocking(b"FIFO underrun!\r\n");
+        }
+
+        temp_samples[i] = temp_result;
+        pin_samples[i] = pin_result;
+
+        i += 1;
+
+        // uncomment this line to trigger an "overrun" condition
+        //delay.delay_ms(1000);
+
+        if i == 500 {
+            break;
+        }
+    }
+
+    let time_taken = timer.get_counter();
+
+    uart.write_full_blocking(b"Done sampling, printing results:\r\n");
+
+    // Stop free-running mode (the returned `adc` can be reused for future captures)
+    let _adc = adc_fifo.stop();
+
+    // Print the measured values
+    for i in 0..500 {
         writeln!(
             uart,
-            "ADC readings: Temperature: {temp_sens_adc_counts:02} Pin: {pin_adc_counts:02}\r\n"
+            "Temp:\t{}\tPin\t{}\r",
+            temp_samples[i], pin_samples[i]
         )
         .unwrap();
+    }
+
+    writeln!(uart, "Sampling took: {}\r", time_taken).unwrap();
+
+    loop {
         delay.delay_ms(1000);
     }
 }

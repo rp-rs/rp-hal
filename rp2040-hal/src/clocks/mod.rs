@@ -61,8 +61,11 @@
 //! ```
 //!
 //! See [Chapter 2 Section 15](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
+use core::{convert::Infallible, marker::PhantomData};
+use fugit::{HertzU32, RateExtU32};
 
 use crate::{
+    pac::{self, CLOCKS, PLL_SYS, PLL_USB, RESETS, XOSC},
     pll::{
         common_configs::{PLL_SYS_125MHZ, PLL_USB_48MHZ},
         setup_pll_blocking, Error as PllError, Locked, PhaseLockedLoop,
@@ -71,10 +74,6 @@ use crate::{
     watchdog::Watchdog,
     xosc::{setup_xosc_blocking, CrystalOscillator, Error as XoscError, Stable},
 };
-use core::{convert::Infallible, marker::PhantomData};
-use fugit::HertzU32;
-use fugit::RateExtU32;
-use pac::{CLOCKS, PLL_SYS, PLL_USB, RESETS, XOSC};
 
 #[macro_use]
 mod macros;

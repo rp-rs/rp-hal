@@ -36,7 +36,7 @@ impl RpSpinlockCs {
         // Store the initial interrupt state and current core id in stack variables
         let interrupts_active = cortex_m::register::primask::read().is_active();
         // We reserved 0 as our `LOCK_UNOWNED` value, so add 1 to core_id so we get 1 for core0, 2 for core1.
-        let core = crate::Sio::core() + 1_u8;
+        let core = crate::Sio::core() as u8 + 1_u8;
         // Do we already own the spinlock?
         if LOCK_OWNER.load(Ordering::Acquire) == core {
             // We already own the lock, so we must have called acquire within a critical_section.

@@ -1,9 +1,6 @@
-//! # SPI DMA Example
+//! # Memory to memory DMA transfer Example
 //!
-//! This application demonstrates how to use DMA for SPI transfers.
-//!
-//! The application expects the MISO and MOSI pins to be wired together so that it is able to check
-//! whether the data was sent and received correctly.
+//! This application demonstrates how to use DMA to transfer data from memory to memory buffers.
 //!
 //! See the `Cargo.toml` file for Copyright and licence details.
 #![no_std]
@@ -12,8 +9,7 @@
 use cortex_m::singleton;
 use cortex_m_rt::entry;
 use embedded_hal::digital::v2::OutputPin;
-use fugit::RateExtU32;
-use hal::dma::{bidirectional, DMAExt};
+use hal::dma::{single_buffer, DMAExt};
 use hal::pac;
 use panic_halt as _;
 use rp2040_hal as hal;
@@ -57,20 +53,6 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    // These are implicitly used by the spi driver if they are in the correct mode
-    let spi_mosi = pins.gpio7.into_function::<hal::gpio::FunctionSpi>();
-    let spi_miso = pins.gpio4.into_function::<hal::gpio::FunctionSpi>();
-    let spi_sclk = pins.gpio6.into_function::<hal::gpio::FunctionSpi>();
-    let spi = hal::spi::Spi::<_, _, _, 8>::new(pac.SPI0, (spi_mosi, spi_miso, spi_sclk));
-
-    // Exchange the uninitialised SPI driver for an initialised one
-    let spi = spi.init(
-        &mut pac.RESETS,
-        clocks.peripheral_clock.freq(),
-        16_000_000u32.Hz(),
-        embedded_hal::spi::MODE_0,
-    );
-
     // Initialize DMA.
     let dma = pac.DMA.split(&mut pac.RESETS);
     // Configure GPIO25 as an output
@@ -81,29 +63,19 @@ fn main() -> ! {
     let tx_buf = singleton!(: [u8; 16] = [0x42; 16]).unwrap();
     let rx_buf = singleton!(: [u8; 16] = [0; 16]).unwrap();
 
-    // Use BidirectionalConfig to simultaneously write to spi from tx_buf and read into rx_buf
-    let transfer = bidirectional::Config::new((dma.ch0, dma.ch1), tx_buf, spi, rx_buf).start();
+    // Use a single_buffer to read from tx_buf and write into rx_buf
+    let transfer = single_buffer::Config::new(dma.ch0, tx_buf, rx_buf).start();
     // Wait for both DMA channels to finish
-    let ((_ch0, _ch1), tx_buf, _spi, rx_buf) = transfer.wait();
+    let (_ch, tx_buf, rx_buf) = transfer.wait();
 
     // Compare buffers to see if the data was transferred correctly
-    for i in 0..rx_buf.len() {
-        if rx_buf[i] != tx_buf[i] {
-            // Fast blink on error
-            loop {
-                led_pin.set_high().unwrap();
-                delay.delay_ms(100);
-                led_pin.set_low().unwrap();
-                delay.delay_ms(100);
-            }
-        }
-    }
+    // Slow blink on success, fast on failure
+    let delay_ms = if tx_buf == rx_buf { 1000 } else { 100 };
 
-    // Slow blink on success
     loop {
         led_pin.set_high().unwrap();
-        delay.delay_ms(500);
+        delay.delay_ms(delay_ms);
         led_pin.set_low().unwrap();
-        delay.delay_ms(500);
+        delay.delay_ms(delay_ms);
     }
 }
