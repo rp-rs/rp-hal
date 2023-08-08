@@ -501,17 +501,16 @@ impl Slices {
         self._pwm
     }
 
-    //     /// Enable multiple slices at the same time to make their counters sync up.
-    //     ///
-    //     /// You still need to call `slice` to get an actual slice
-    //     pub fn enable_simultaneous<S: SliceId>(&mut self, bits: u8) {
-    //         // Enable all slices at the same time
-    //         unsafe {
-    //             &(*pac::PWM::ptr())
-    //                 .en
-    //                 .modify(|r, w| w.bits(((r.bits() as u8) | bits) as u32));
-    //         }
-    //     }
+    /// Enable multiple slices at the same time to make their counters sync up.
+    ///
+    /// You still need to call `slice` to get an actual slice
+    pub fn enable_simultaneous(&mut self, bits: u8) {
+        // Enable multiple slices at the same time
+        unsafe {
+            let reg = self._pwm.en.as_ptr();
+            write_bitmask_set(reg, bits as u32);
+        }
+    }
 
     // /// Get pwm slice based on gpio pin
     // pub fn borrow_mut_from_pin<
