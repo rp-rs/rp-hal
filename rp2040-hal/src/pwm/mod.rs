@@ -507,9 +507,8 @@ impl Slices {
     pub fn enable_simultaneous(&mut self, bits: u8) {
         // Enable all slices at the same time
         unsafe {
-            let _ = &(*pac::PWM::ptr())
-                .en
-                .modify(|r, w| w.bits(((r.bits() as u8) | bits) as u32));
+            let reg = self._pwm.en.as_ptr();                                                  
+            write_bitmask_set(reg, bits as u32);           
         }
     }
 
