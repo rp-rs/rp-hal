@@ -146,7 +146,7 @@ fn main() -> ! {
     adc_fifo.resume();
 
     // initialize a timer, to measure the total sampling time (printed below)
-    let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
+    let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks.reference_clock);
 
     // NOTE: in a real-world program, instead of calling `wait` now, you would probably:
     // 1. Enable one of the DMA interrupts for the channel (e.g. `dma.ch0.enable_irq0()`)

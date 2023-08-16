@@ -110,7 +110,7 @@ fn main() -> ! {
     // Configure GPIO25 as an output
     let led_pin = pins.gpio25.into_push_pull_output();
 
-    let mut timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
+    let mut timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks.reference_clock);
     critical_section::with(|cs| {
         let mut alarm = timer.alarm_0().unwrap();
         // Schedule an alarm in 1 second
