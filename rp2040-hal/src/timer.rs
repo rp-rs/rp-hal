@@ -16,7 +16,7 @@ use crate::{
     clocks::ReferenceClock,
     pac::{self, RESETS, TIMER},
     resets::SubsystemReset,
-    typelevel::Sealed,
+    typelevel::Sealed, Clock,
 };
 
 /// Instant type used by the Timer & Alarm methods.
@@ -59,7 +59,8 @@ impl Timer {
     /// Make sure that clocks and watchdog are configured, so
     /// that timer ticks happen at a frequency of 1MHz.
     /// Otherwise, `Timer` won't work as expected.
-    pub fn new(timer: TIMER, resets: &mut RESETS, _clocks: &ReferenceClock) -> Self {
+    pub fn new(timer: TIMER, resets: &mut RESETS, clocks: &ReferenceClock) -> Self {
+        assert_eq!(clocks.freq().to_Hz(), 1_000_000);
         timer.reset_bring_down(resets);
         timer.reset_bring_up(resets);
         Self { _private: () }
