@@ -64,7 +64,12 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let mut timer = rp2040_hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks.reference_clock);
+    let mut timer = rp2040_hal::Timer::new(
+        pac.TIMER,
+        &mut pac.RESETS,
+        &watchdog,
+        &clocks.reference_clock,
+    );
 
     // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);

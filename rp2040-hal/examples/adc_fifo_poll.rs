@@ -133,7 +133,12 @@ fn main() -> ! {
     let mut i = 0;
 
     // initialize a timer, to measure the total sampling time (printed below)
-    let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks.reference_clock);
+    let timer = hal::Timer::new(
+        pac.TIMER,
+        &mut pac.RESETS,
+        &watchdog,
+        &clocks.reference_clock,
+    );
 
     loop {
         // busy-wait until the FIFO contains at least two samples:

@@ -60,12 +60,19 @@ impl Watchdog {
     ///
     /// * `cycles` - Total number of tick cycles before the next tick is generated.
     ///   It is expected to be the frequency in MHz of clk_ref.
-    pub fn enable_tick_generation(&mut self, cycles: u8) {
+    pub fn enable_tick_generation(&mut self, cycles: u16) {
         const WATCHDOG_TICK_ENABLE_BITS: u32 = 0x200;
+
+        assert_eq!(cycles & !0x1FF, 0);
 
         self.watchdog
             .tick
             .write(|w| unsafe { w.bits(WATCHDOG_TICK_ENABLE_BITS | cycles as u32) })
+    }
+
+    /// Returns the number of `clk_ref` cycles between each watchdog (and Timer) ticks.
+    pub fn cycles_per_ticks(&self) -> u16 {
+        self.watchdog.tick.read().cycles().bits()
     }
 
     /// Defines whether or not the watchdog timer should be paused when processor(s) are in debug mode
