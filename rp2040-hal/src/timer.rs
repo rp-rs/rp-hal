@@ -67,8 +67,8 @@ impl Timer {
         clocks: &ReferenceClock,
     ) -> Self {
         assert_eq!(
-            clocks.freq().to_Hz() / u32::from(watchdog.cycles_per_ticks()),
-            1_000_000
+            clocks.freq().to_Hz(),
+            1_000_000 * u32::from(watchdog.cycles_per_ticks())
         );
         timer.reset_bring_down(resets);
         timer.reset_bring_up(resets);
