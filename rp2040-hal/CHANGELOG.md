@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### MSRV
 
-The Minimum-Supported Rust Version (MSRV) for this release is 1.63
+The Minimum-Supported Rust Version (MSRV) for this release is 1.64
 
 ### Fixed
 
