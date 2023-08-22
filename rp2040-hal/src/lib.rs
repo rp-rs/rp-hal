@@ -117,10 +117,9 @@ pub fn halt() -> ! {
     unsafe {
         cortex_m::interrupt::disable();
         // Stop other core
-        if crate::Sio::core() == CoreId::Core0 {
-            (*pac::PSM::PTR).frce_off.write(|w| w.proc1().set_bit());
-        } else {
-            (*pac::PSM::PTR).frce_off.write(|w| w.proc0().set_bit());
+        match crate::Sio::core() {
+            CoreId::Core0 => (*pac::PSM::PTR).frce_off.write(|w| w.proc1().set_bit()),
+            CoreId::Core1 => (*pac::PSM::PTR).frce_off.write(|w| w.proc0().set_bit()),
         }
         // Keep current core running, so debugging stays possible
         loop {
