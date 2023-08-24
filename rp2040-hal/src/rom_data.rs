@@ -696,7 +696,7 @@ pub mod double_funcs {
         /// representation to the nearest double value, rounding to even on tie. `n`
         /// specifies the position of the binary point in fixed point, so `f =
         /// nearest(v/(2^n))`
-        0x60 fix64_to_doubl(v: i64, n: i32) -> f64;
+        0x60 fix64_to_double(v: i64, n: i32) -> f64;
         /// Converts an unsigned 64-bit integer to the
         /// nearest double value, rounding to even on tie
         0x64 uint64_to_double(v: u64) -> f64;
