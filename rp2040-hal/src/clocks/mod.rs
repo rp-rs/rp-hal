@@ -63,6 +63,7 @@
 //! See [Chapter 2 Section 15](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 use core::{convert::Infallible, marker::PhantomData};
 use fugit::{HertzU32, RateExtU32};
+use pac::clocks::{sleep_en0, sleep_en1};
 
 use crate::{
     pac::{self, CLOCKS, PLL_SYS, PLL_USB, RESETS, XOSC},
@@ -299,6 +300,22 @@ impl ClocksManager {
         // Normally choose clk_sys or clk_usb
         self.peripheral_clock
             .configure_clock(&self.system_clock, self.system_clock.freq())
+    }
+
+    /// Configure the clocks staying ON during deep-sleep.
+    pub fn configure_sleep_en<F0, F1>(&mut self, sleep_en0: F0, sleep_en1: F1)
+    where
+        F0: for<'w> FnOnce(
+            &sleep_en0::R,
+            &'w mut sleep_en0::W,
+        ) -> &'w mut pac::generic::W<sleep_en0::SLEEP_EN0_SPEC>,
+        F1: for<'w> FnOnce(
+            &sleep_en1::R,
+            &'w mut sleep_en1::W,
+        ) -> &'w mut pac::generic::W<sleep_en1::SLEEP_EN1_SPEC>,
+    {
+        self.clocks.sleep_en0.modify(sleep_en0);
+        self.clocks.sleep_en1.modify(sleep_en1);
     }
 
     /// Releases the CLOCKS block
