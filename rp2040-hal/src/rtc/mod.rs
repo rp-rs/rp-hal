@@ -137,38 +137,37 @@ impl RealTimeClock {
         self::datetime::datetime_from_registers(rtc_0, rtc_1).map_err(RtcError::InvalidDateTime)
     }
 
-    /// Disable the alarm that was scheduled with [`schedule_alarm`].
-    ///
-    /// [`schedule_alarm`]: #method.schedule_alarm
-    pub fn disable_alarm(&mut self) {
-        self.rtc
-            .irq_setup_0
-            .modify(|_, s| s.match_ena().clear_bit());
-
-        while self.rtc.irq_setup_0.read().match_active().bit() {
+    fn set_match_ena(&mut self, ena: bool) {
+        // Set the enable bit and check if it is set
+        self.rtc.irq_setup_0.modify(|_, w| w.match_ena().bit(ena));
+        while self.rtc.irq_setup_0.read().match_active().bit() != ena {
             core::hint::spin_loop();
         }
     }
 
+    /// Disable the alarm that was scheduled with [`schedule_alarm`].
+    ///
+    /// [`schedule_alarm`]: #method.schedule_alarm
+    pub fn disable_alarm(&mut self) {
+        self.set_match_ena(false)
+    }
+
     /// Schedule an alarm. The `filter` determines at which point in time this alarm is set.
     ///
-    /// Keep in mind that the filter only triggers on the specified time. If you want to schedule this alarm every minute, you have to call:
+    /// If not all fields are set, the alarm will repeat each time the RTC reaches these values.
+    /// For example, to fire every minute, set:
     /// ```no_run
-    /// # #[cfg(feature = "chrono")]
-    /// # fn main() { }
-    /// # #[cfg(not(feature = "chrono"))]
-    /// # fn main() {
+    /// fn main() {
+    ///     // ...init omited...
     /// # use rp2040_hal::rtc::{RealTimeClock, DateTimeFilter};
     /// # let mut real_time_clock: RealTimeClock = unsafe { core::mem::zeroed() };
-    /// let now = real_time_clock.now().unwrap();
-    /// real_time_clock.schedule_alarm(
-    ///     DateTimeFilter::default()
-    ///         .minute(if now.minute == 59 { 0 } else { now.minute + 1 })
-    /// );
-    /// # }
+    ///     real_time_clock.schedule_alarm(DateTimeFilter::default().second(0));
+    /// }
     /// ```
+    ///
+    /// It is worth nothing that the alarm will not fire on schedule if the current time matches.
     pub fn schedule_alarm(&mut self, filter: DateTimeFilter) {
-        self.disable_alarm();
+        self.set_match_ena(false);
 
         self.rtc.irq_setup_0.write(|w| {
             filter.write_setup_0(w);
@@ -179,19 +178,26 @@ impl RealTimeClock {
             w
         });
 
-        // Set the enable bit and check if it is set
-        self.rtc.irq_setup_0.modify(|_, w| w.match_ena().set_bit());
-        while self.rtc.irq_setup_0.read().match_active().bit_is_clear() {
-            core::hint::spin_loop();
-        }
+        self.set_match_ena(true);
     }
 
-    /// Clear the interrupt. This should be called every time the `RTC_IRQ` interrupt is triggered,
-    /// or the next [`schedule_alarm`] will never fire.
+    /// Enable the propagation of alarm to the NVIC.
+    pub fn enable_interrupt(&mut self) {
+        self.rtc.inte.modify(|_, w| w.rtc().set_bit());
+    }
+
+    /// Disable the propagation of the alarm to the NVIC.
+    pub fn disable_interrupt(&mut self) {
+        self.rtc.inte.modify(|_, w| w.rtc().clear_bit());
+    }
+
+    /// Clear the interrupt.
     ///
-    /// [`schedule_alarm`]: #method.schedule_alarm
+    /// This should be called every time the `RTC_IRQ` interrupt is triggered of the interrupt will
+    /// continually fire..
     pub fn clear_interrupt(&mut self) {
-        self.disable_alarm();
+        self.set_match_ena(false);
+        self.set_match_ena(true);
     }
 }
 
