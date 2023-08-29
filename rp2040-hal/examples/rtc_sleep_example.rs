@@ -159,10 +159,14 @@ fn main() -> ! {
 fn RTC_IRQ() {
     critical_section::with(|cs| {
         // clear the interrupt flag so that it stops firing for now and can be triggered again.
-        GLOBAL_SHARED
-            .borrow_ref_mut(cs) // borrow the content of the Mutexed RefCell.
-            .as_mut() // borrow the content of the Option
-            .map(|rtc| rtc.clear_interrupt());
+        if let Some(rtc) = GLOBAL_SHARED
+            // borrow the content of the Mutexed RefCell.
+            .borrow_ref_mut(cs)
+            // borrow the content of the Option
+            .as_mut()
+        {
+            rtc.clear_interrupt();
+        }
     });
 }
 

@@ -29,8 +29,6 @@ mod filter;
 
 pub use self::filter::DateTimeFilter;
 
-#[cfg_attr(feature = "chrono", path = "datetime_chrono.rs")]
-#[cfg_attr(not(feature = "chrono"), path = "datetime_no_deps.rs")]
 mod datetime;
 
 pub use self::datetime::{DateTime, DayOfWeek, Error as DateTimeError};
@@ -157,12 +155,9 @@ impl RealTimeClock {
     /// If not all fields are set, the alarm will repeat each time the RTC reaches these values.
     /// For example, to fire every minute, set:
     /// ```no_run
-    /// fn main() {
-    ///     // ...init omited...
     /// # use rp2040_hal::rtc::{RealTimeClock, DateTimeFilter};
     /// # let mut real_time_clock: RealTimeClock = unsafe { core::mem::zeroed() };
-    ///     real_time_clock.schedule_alarm(DateTimeFilter::default().second(0));
-    /// }
+    /// real_time_clock.schedule_alarm(DateTimeFilter::default().second(0));
     /// ```
     ///
     /// It is worth nothing that the alarm will not fire on schedule if the current time matches.
