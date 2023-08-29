@@ -146,7 +146,7 @@ fn main() -> ! {
 
     cortex_m::asm::delay(XTAL_FREQ_HZ.to_Hz() / 2);
     loop {
-        // interrupts handle everything else in this example.
+        // Wait to be awaken by an interrupt
         cortex_m::asm::wfi();
 
         // Toggle the led
@@ -158,13 +158,12 @@ fn main() -> ! {
 #[interrupt]
 fn RTC_IRQ() {
     critical_section::with(|cs| {
-        // clear the interrupt flag so that it stops firing for now and can be triggered again.
-        if let Some(rtc) = GLOBAL_SHARED
-            // borrow the content of the Mutexed RefCell.
-            .borrow_ref_mut(cs)
-            // borrow the content of the Option
-            .as_mut()
-        {
+        // borrow the content of the Mutexed RefCell.
+        let mut maybe_rtc = GLOBAL_SHARED.borrow_ref_mut(cs);
+
+        // borrow the content of the Option
+        if let Some(rtc) = maybe_rtc.as_mut() {
+            // clear the interrupt flag so that it stops firing for now and can be triggered again.
             rtc.clear_interrupt();
         }
     });

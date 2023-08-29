@@ -159,6 +159,11 @@ fn RTC_IRQ() {
     }
 
     // Need to check if our Option<LedAndButtonPins> contains our pins
+    // LED_AND_RTC is an `&'static mut Option<LedAndRtc>` thanks to the interrupt macro's magic.
+    // The pattern binding mode handles an ergonomic conversion of the match from `if let Some(led_and_rtc)`
+    // to `if let Some(ref mut led_and_rtc)`.
+    //
+    // https://doc.rust-lang.org/reference/patterns.html#binding-modes
     if let Some(led_and_rtc) = LED_AND_RTC {
         // borrow led and rtc by *destructuring* the tuple
         // these will be of type `&mut LedPin` and `&mut RealTimeClock`, so we don't have
