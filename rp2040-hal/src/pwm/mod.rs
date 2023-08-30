@@ -938,7 +938,9 @@ impl Default for TopFormat {
 
 unsafe impl Word for TopFormat {}
 
-impl<S: SliceId, M: ValidSliceMode<S>> WriteTarget for SliceDmaWriteCc<S, M> {
+/// Safety: tx_address_count points to a register which is always a valid
+/// write target.
+unsafe impl<S: SliceId, M: ValidSliceMode<S>> WriteTarget for SliceDmaWriteCc<S, M> {
     type TransmittedWord = CcFormat;
 
     fn tx_treq() -> Option<u8> {
@@ -957,7 +959,9 @@ impl<S: SliceId, M: ValidSliceMode<S>> WriteTarget for SliceDmaWriteCc<S, M> {
     }
 }
 
-impl<S: SliceId, M: ValidSliceMode<S>> WriteTarget for SliceDmaWriteTop<S, M> {
+/// Safety: tx_address_count points to a register which is always a valid
+/// write target.
+unsafe impl<S: SliceId, M: ValidSliceMode<S>> WriteTarget for SliceDmaWriteTop<S, M> {
     type TransmittedWord = TopFormat;
 
     fn tx_treq() -> Option<u8> {

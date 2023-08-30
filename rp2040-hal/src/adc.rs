@@ -713,7 +713,9 @@ impl<'a> AdcFifo<'a, u8> {
 ///
 pub struct DmaReadTarget<Word>(u32, PhantomData<Word>);
 
-impl<Word> dma::ReadTarget for DmaReadTarget<Word> {
+/// Safety: rx_address_count points to a register which is always a valid
+/// read target.
+unsafe impl<Word> dma::ReadTarget for DmaReadTarget<Word> {
     type ReceivedWord = Word;
 
     fn rx_treq() -> Option<u8> {
