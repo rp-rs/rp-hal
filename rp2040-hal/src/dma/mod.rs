@@ -152,7 +152,19 @@ impl<CH: ChannelIndex> ChannelRegs for Channel<CH> {
 }
 
 /// Trait which is implemented by anything that can be read via DMA.
-pub trait ReadTarget {
+///
+/// # Safety
+///
+/// The implementing type must be safe to use for DMA reads. This means:
+///
+/// - The range returned by rx_address_count must point to a valid address,
+///   and if rx_increment is true, count must fit into the allocated buffer.
+/// - As long as no `&mut self` method is called on the implementing object:
+///   - `rx_address_count` must always return the same value, if called multiple
+///     times.
+///   - The memory specified by the pointer and size returned by `rx_address_count`
+///     must not be freed during the transfer it is used in as long as `self` is not dropped.
+pub unsafe trait ReadTarget {
     /// Type which is transferred in a single DMA transfer.
     type ReceivedWord;
 
@@ -182,7 +194,8 @@ pub trait ReadTarget {
 /// two DMA channels. In the case of peripherals, the function can always return the same values.
 pub trait EndlessReadTarget: ReadTarget {}
 
-impl<B: ReadBuffer> ReadTarget for B {
+/// Safety: ReadBuffer and ReadTarget have the same safety requirements.
+unsafe impl<B: ReadBuffer> ReadTarget for B {
     type ReceivedWord = <B as ReadBuffer>::Word;
 
     fn rx_treq() -> Option<u8> {
@@ -200,7 +213,19 @@ impl<B: ReadBuffer> ReadTarget for B {
 }
 
 /// Trait which is implemented by anything that can be written via DMA.
-pub trait WriteTarget {
+///
+/// # Safety
+///
+/// The implementing type must be safe to use for DMA writes. This means:
+///
+/// - The range returned by tx_address_count must point to a valid address,
+///   and if tx_increment is true, count must fit into the allocated buffer.
+/// - As long as no other `&mut self` method is called on the implementing object:
+///   - `tx_address_count` must always return the same value, if called multiple
+///     times.
+///   - The memory specified by the pointer and size returned by `tx_address_count`
+///     must not be freed during the transfer it is used in as long as `self` is not dropped.
+pub unsafe trait WriteTarget {
     /// Type which is transferred in a single DMA transfer.
     type TransmittedWord;
 
@@ -224,7 +249,8 @@ pub trait WriteTarget {
 /// two DMA channels. In the case of peripherals, the function can always return the same values.
 pub trait EndlessWriteTarget: WriteTarget {}
 
-impl<B: WriteBuffer> WriteTarget for B {
+/// Safety: WriteBuffer and WriteTarget have the same safety requirements.
+unsafe impl<B: WriteBuffer> WriteTarget for B {
     type TransmittedWord = <B as WriteBuffer>::Word;
 
     fn tx_treq() -> Option<u8> {

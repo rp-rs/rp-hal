@@ -184,7 +184,9 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for Writer<D, P> {
     }
 }
 
-impl<D: UartDevice, P: ValidUartPinout<D>> WriteTarget for Writer<D, P> {
+// Safety: This only writes to the TX fifo, so it doesn't
+// interact with rust-managed memory.
+unsafe impl<D: UartDevice, P: ValidUartPinout<D>> WriteTarget for Writer<D, P> {
     type TransmittedWord = u8;
 
     fn tx_treq() -> Option<u8> {
