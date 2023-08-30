@@ -17,7 +17,7 @@ use rp2040_hal as hal;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access and to the gpio and rtc modules.
-use hal::{gpio, pac, rtc};
+use hal::{clocks::ClockGate, gpio, pac, rtc};
 
 // Some traits we need
 use embedded_hal::digital::v2::ToggleableOutputPin;
@@ -82,13 +82,9 @@ fn main() -> ! {
     // use xosc at 12MHz/256 for clk_rtc
     clocks.rtc_clock.configure_clock(&xosc, 46875.Hz()).unwrap();
     // Only leave the rtc's clock enabled while in deep sleep.
-    clocks.configure_sleep_en(
-        |_, w| unsafe {
-            // SAFETY: set bits as a shortcut to clear all fields to 0.
-            w.bits(0).clk_rtc_rtc().set_bit()
-        },
-        |_, w| w,
-    );
+    let mut config = ClockGate::default();
+    config.set_rtc_rtc(true);
+    clocks.configure_sleep_enable(config);
 
     // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);
