@@ -83,8 +83,16 @@ pub enum Error {
     /// I2C abort with error
     Abort(u32),
     /// User passed in a read buffer that was 0 length
+    ///
+    /// This is a limitation of the RP2040 I2C peripheral.
+    /// If the slave ACKs its address, the I2C peripheral must read
+    /// at least one byte before sending the STOP condition.
     InvalidReadBufferLength,
     /// User passed in a write buffer that was 0 length
+    ///
+    /// This is a limitation of the RP2040 I2C peripheral.
+    /// If the slave ACKs its address, the I2C peripheral must write
+    /// at least one byte before sending the STOP condition.
     InvalidWriteBufferLength,
     /// Target i2c address is out of range
     AddressOutOfRange(u16),
