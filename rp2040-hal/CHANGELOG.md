@@ -23,6 +23,7 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.64
 - Fix on target tests - #624 @jannic
 - Make sure clocks are initialized before creating a Timer - #618 @jannic
 - Mark ReadTarget and WriteTarget as unsafe - #621 @jannic
+- Fix typo in rom_data.rs - #675 @jlpettersson
 
 ### Changed
 
@@ -31,7 +32,7 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.64
   This doubles the flash access speed to the value used by the C SDK by
   default. So it should usually be safe. However, if you are overclocking
   the RP2040, you might need to lower the flash speed accordingly.
-- Doc: Several improvements have been made to documentation: #607 #597 #661 #633 #632 #629
+- Doc: Several improvements have been made to documentation: #607 #597 #661 #633 #632 #629 #679
 - DMA: Check for valid word sizes at compile time - #600 @jannic
 - Use an enum for core identification. - @ithinuel
 - Merge DynPin and Pin into Pin. The type class used in Pin now have a runtime variant allowing for
@@ -61,6 +62,7 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.64
 - Add the ability to initialise the ring oscillator with a known frequency - #640 @hardiesoft
 - Add ADC free-running mode & FIFO - #626 @nilclass
 - Add DMA support for free-running ADC capture - #636 @nilclass
+- Make SPI set_format accept frame format - #653 @NelsonAPenn
 
 ## [0.8.1] - 2023-05-05
 
