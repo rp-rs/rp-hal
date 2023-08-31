@@ -9,8 +9,6 @@ use embedded_hal::serial::Read;
 use nb::Error::*;
 
 #[cfg(feature = "eh1_0_alpha")]
-use eh1_0_alpha::serial as eh1;
-#[cfg(feature = "eh1_0_alpha")]
 use eh_nb_1_0_alpha::serial as eh1nb;
 
 /// When there's a read error.
@@ -42,13 +40,13 @@ pub enum ReadErrorType {
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl eh1_0_alpha::serial::Error for ReadErrorType {
-    fn kind(&self) -> eh1_0_alpha::serial::ErrorKind {
+impl eh1nb::Error for ReadErrorType {
+    fn kind(&self) -> eh1nb::ErrorKind {
         match self {
-            ReadErrorType::Overrun => eh1_0_alpha::serial::ErrorKind::Overrun,
-            ReadErrorType::Break => eh1_0_alpha::serial::ErrorKind::Other,
-            ReadErrorType::Parity => eh1_0_alpha::serial::ErrorKind::Parity,
-            ReadErrorType::Framing => eh1_0_alpha::serial::ErrorKind::FrameFormat,
+            ReadErrorType::Overrun => eh1nb::ErrorKind::Overrun,
+            ReadErrorType::Break => eh1nb::ErrorKind::Other,
+            ReadErrorType::Parity => eh1nb::ErrorKind::Parity,
+            ReadErrorType::Framing => eh1nb::ErrorKind::FrameFormat,
         }
     }
 }
@@ -260,7 +258,7 @@ unsafe impl<D: UartDevice, P: ValidUartPinout<D>> ReadTarget for Reader<D, P> {
 impl<D: UartDevice, P: ValidUartPinout<D>> EndlessReadTarget for Reader<D, P> {}
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1::ErrorType for Reader<D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::ErrorType for Reader<D, P> {
     type Error = ReadErrorType;
 }
 

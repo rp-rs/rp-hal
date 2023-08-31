@@ -15,8 +15,6 @@ use crate::{
 };
 
 #[cfg(feature = "eh1_0_alpha")]
-use eh1_0_alpha::serial as eh1;
-#[cfg(feature = "eh1_0_alpha")]
 use eh_nb_1_0_alpha::serial as eh1nb;
 
 /// An UART Peripheral based on an underlying UART device.
@@ -356,7 +354,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Read<u8> for UartPeripheral<Enabled, 
 }
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1::ErrorType for UartPeripheral<Enabled, D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::ErrorType for UartPeripheral<Enabled, D, P> {
     type Error = ReadErrorType;
 }
 
