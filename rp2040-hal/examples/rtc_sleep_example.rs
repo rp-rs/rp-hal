@@ -140,7 +140,6 @@ fn main() -> ! {
         pac::NVIC::unmask(pac::Interrupt::RTC_IRQ);
     }
 
-    cortex_m::asm::delay(XTAL_FREQ_HZ.to_Hz() / 2);
     loop {
         // Wait to be awaken by an interrupt
         cortex_m::asm::wfi();

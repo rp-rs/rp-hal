@@ -188,7 +188,7 @@ impl RealTimeClock {
 
     /// Clear the interrupt.
     ///
-    /// This should be called every time the `RTC_IRQ` interrupt is triggered of the interrupt will
+    /// This should be called every time the `RTC_IRQ` interrupt is triggered or the interrupt will
     /// continually fire..
     pub fn clear_interrupt(&mut self) {
         self.set_match_ena(false);
