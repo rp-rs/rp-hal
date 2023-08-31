@@ -70,7 +70,7 @@ https://github.com/rp-rs/rp-hal-boards/ for more details.
 To include this crate in your project, amend your `Cargo.toml` file to include
 
 ```toml
-rp2040-hal = "0.8.1"
+rp2040-hal = "0.9.0"
 ```
 
 To obtain a copy of the source code (e.g. if you want to propose a bug-fix or

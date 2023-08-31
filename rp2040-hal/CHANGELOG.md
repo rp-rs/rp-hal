@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.9.0]
 
 ### MSRV
 
@@ -18,6 +18,12 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.64
   uses similar code) and reported to us by @Dirbaio. - #612 @ithinuel
 - Fixed embedded-hal 1.0-alpha implementation of SPI - #611 @tomgilligan
 - Fixed the on-target tests - #601 @jannic
+- Fix calculation of MPU RBAR value - #653 @9names @jannic
+- Fix of usb device address mask - #639 @mrdxxm
+- Fix on target tests - #624 @jannic
+- Make sure clocks are initialized before creating a Timer - #618 @jannic
+- Mark ReadTarget and WriteTarget as unsafe - #621 @jannic
+- Fix typo in rom_data.rs - #675 @jlpettersson
 
 ### Changed
 
@@ -26,7 +32,7 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.64
   This doubles the flash access speed to the value used by the C SDK by
   default. So it should usually be safe. However, if you are overclocking
   the RP2040, you might need to lower the flash speed accordingly.
-- Doc: Several improvements have been made to documentation: #607 #597
+- Doc: Several improvements have been made to documentation: #607 #597 #661 #633 #632 #629 #679
 - DMA: Check for valid word sizes at compile time - #600 @jannic
 - Use an enum for core identification. - @ithinuel
 - Merge DynPin and Pin into Pin. The type class used in Pin now have a runtime variant allowing for
@@ -38,6 +44,11 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.64
 - Reduce code repetition in i2c modules. - @ithinuel
 - Rename `DontInvert` to `Normal`. - @ithinuel
 - Prevent the creation of multiple instances of `adc::TempSensor` - @ithinuel
+- Update dependency on rp2040-pac to 0.5.0 - #662 @jannic
+- Migrate rp2040-hal to edition 2021 - #651 @ithinuel
+- Fix lifetimes and mutability of get_buf and get_buf_mut - #649 @adrianparvino
+- Rename dma::SingleChannel::listen_irq* to enable_irq* - #648 @nilclass
+- Update embedded-hal alpha support to version 1.0.0-alpha.11 - #642 @jannic
 
 ### Added
 
@@ -47,6 +58,11 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.64
 - Added `Sealed` supertrait to `PIOExt` - @ithinuel
 - Added pins to `Spi` to fix inconsistencies in gpio bounds in peripheral (i2c, uart, spi) - @ithinuel
 - Added `sio::Sio::read_bank0() -> u32` to provide single instruction multiple io read.
+- Implement WriteTarget for PWM top and cc registers. - #646 @mBornand
+- Add the ability to initialise the ring oscillator with a known frequency - #640 @hardiesoft
+- Add ADC free-running mode & FIFO - #626 @nilclass
+- Add DMA support for free-running ADC capture - #636 @nilclass
+- Make SPI set_format accept frame format - #653 @NelsonAPenn
 
 ## [0.8.1] - 2023-05-05
 
@@ -299,7 +315,8 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.54.
 
 - Initial release
 
-[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/rp-rs/rp-hal/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/rp-rs/rp-hal/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/rp-rs/rp-hal/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/rp-rs/rp-hal/compare/v0.6.0...v0.7.0
