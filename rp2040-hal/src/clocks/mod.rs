@@ -79,9 +79,9 @@ use crate::{
 mod macros;
 mod clock_sources;
 
-use clock_sources::PllSys;
+pub use clock_sources::{GPin0, GPin1};
 
-use self::clock_sources::{GPin0, GPin1, PllUsb, Rosc, Xosc};
+use clock_sources::{PllSys, PllUsb, Rosc, Xosc};
 
 #[derive(Copy, Clone)]
 /// Provides refs to the CLOCKS block.

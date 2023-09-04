@@ -76,18 +76,32 @@ impl ClockSource for RingOscillator<Enabled> {
     }
 }
 
-// GPIN0
-pub(crate) type GPin0<M = PullNone> = Pin<Gpio20, FunctionClock, M>;
+/// Gpio20 in clock function associated with a frequency.
+pub struct GPin0<M: PullType = PullNone>(Pin<Gpio20, FunctionClock, M>, HertzU32);
+impl<M: PullType> GPin0<M> {
+    /// Assemble Gpio20 and a frequency into a clock source.
+    pub fn new(p: Pin<Gpio20, FunctionClock, M>, freq: HertzU32) -> Self {
+        GPin0(p, freq)
+    }
+}
+impl<M: PullType> Sealed for GPin0<M> {}
 impl<M: PullType> ClockSource for GPin0<M> {
     fn get_freq(&self) -> HertzU32 {
-        todo!()
+        self.1
     }
 }
 
-// GPIN1
-pub(crate) type GPin1<M = PullNone> = Pin<Gpio22, FunctionClock, M>;
-impl<M: PullType> ClockSource for Pin<Gpio22, FunctionClock, M> {
+/// Gpio22 in clock function associated with a frequency.
+pub struct GPin1<M: PullType = PullNone>(Pin<Gpio22, FunctionClock, M>, HertzU32);
+impl<M: PullType> GPin1<M> {
+    /// Assemble Gpio22 and a frequency into a clock source.
+    pub fn new(p: Pin<Gpio22, FunctionClock, M>, freq: HertzU32) -> Self {
+        GPin1(p, freq)
+    }
+}
+impl<M: PullType> Sealed for GPin1<M> {}
+impl<M: PullType> ClockSource for GPin1<M> {
     fn get_freq(&self) -> HertzU32 {
-        todo!()
+        self.1
     }
 }
