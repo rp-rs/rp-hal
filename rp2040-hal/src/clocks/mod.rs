@@ -89,6 +89,7 @@ use clock_sources::{PllSys, PllUsb, Rosc, Xosc};
 /// See: https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf#table-fc-test-interval
 #[repr(u8)]
 #[allow(missing_docs)]
+#[allow(clippy::enum_variant_names)]
 pub enum FCAccuracy {
     _2048kHz = 0,
     _1024kHz,
@@ -135,6 +136,11 @@ pub enum ClockError {
     /// The desired frequency is too low (divider can't reach the desired value)
     FrequencyTooLow,
 }
+
+/// The clock stopped while its frequency was being measured.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct ClockDiedError;
 
 /// For clocks
 pub trait Clock: Sealed + Sized {
@@ -334,7 +340,7 @@ impl ClocksManager {
         &mut self,
         _trg_clk: C,
         accuracy: FCAccuracy,
-    ) -> HertzU32 {
+    ) -> Result<HertzU32, ClockDiedError> {
         // Wait for the frequency counter to be ready
         while self.clocks.fc0_status.read().running().bit_is_set() {
             core::hint::spin_loop()
@@ -369,15 +375,21 @@ impl ClocksManager {
             .write(|w| w.fc0_src().variant(C::FCOUNTER_SRC));
 
         // Wait until the measurement is ready
-        while self.clocks.fc0_status.read().done().bit_is_clear() {
-            core::hint::spin_loop()
+        let mut status;
+        loop {
+            status = self.clocks.fc0_status.read();
+            if status.done().bit_is_set() {
+                break;
+            }
         }
 
-        // TODO: the result may not be valid (eg clock stopped during measurement). We may want to
-        // return a Result instead. Is it worth the hassle though?
-        let result = self.clocks.fc0_result.read();
-        let speed_hz = result.khz().bits() * 1000 + result.frac().bits();
-        speed_hz.Hz()
+        if status.fail().bit_is_set() {
+            Err(ClockDiedError)
+        } else {
+            let result = self.clocks.fc0_result.read();
+            let speed_hz = result.khz().bits() * 1000 + u32::from(result.frac().bits());
+            Ok(speed_hz.Hz())
+        }
     }
 
     /// Releases the CLOCKS block
