@@ -63,6 +63,7 @@
 //! See [Chapter 2 Section 15](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 use core::{convert::Infallible, marker::PhantomData};
 use fugit::{HertzU32, RateExtU32};
+use pac::clocks::fc0_src::FC0_SRC_A;
 
 use crate::{
     pac::{self, CLOCKS, PLL_SYS, PLL_USB, RESETS, XOSC},
@@ -167,6 +168,9 @@ pub trait StoppableClock: Sealed {
 
 /// Trait for things that can be used as clock source
 pub trait ClockSource: Sealed {
+    /// Associated Frequency counter source.
+    const FCOUNTER_SRC: FC0_SRC_A;
+
     /// Get the operating frequency for this source
     ///
     /// Used to determine the divisor
@@ -299,6 +303,43 @@ impl ClocksManager {
         // Normally choose clk_sys or clk_usb
         self.peripheral_clock
             .configure_clock(&self.system_clock, self.system_clock.freq())
+    }
+
+    /// Approximates the frequency of the given clock source.
+    pub fn approximate_frequency<C: ClockSource>(&mut self, _trg_clk: C) -> HertzU32 {
+        // Wait for the frequency counter to be ready
+        while self.clocks.fc0_status.read().running().bit_is_set() {
+            core::hint::spin_loop()
+        }
+
+        // Set the speed of the reference clock in kHz.
+        self.clocks
+            .fc0_ref_khz
+            .write(|w| unsafe { w.fc0_ref_khz().bits(self.reference_clock.get_freq().to_kHz()) });
+
+        // Corresponds to a 1ms test time, which seems to give good enough accuracy
+        self.clocks
+            .fc0_interval
+            .write(|w| unsafe { w.fc0_interval().bits(10) });
+
+        // We don't really care about the min/max, so these are just set to min/max values.
+        self.clocks
+            .fc0_min_khz
+            .write(|w| unsafe { w.fc0_min_khz().bits(0) });
+        self.clocks
+            .fc0_max_khz
+            .write(|w| unsafe { w.fc0_max_khz().bits(0xffffffff) });
+
+        // To measure rosc directly we use the value 0x03.
+        self.clocks.fc0_src.write(|w| { w.fc0_src().variant(C::FCOUNTER_SRC) });
+
+        // Wait until the measurement is ready
+        while self.clocks.fc0_status.read().done().bit_is_clear() {
+            core::hint::spin_loop()
+        }
+
+        let speed_hz = self.clocks.fc0_result.read().khz().bits() * 1000;
+        speed_hz.Hz()
     }
 
     /// Releases the CLOCKS block
