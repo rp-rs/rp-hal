@@ -313,9 +313,10 @@ impl ClocksManager {
         }
 
         // Set the speed of the reference clock in kHz.
-        self.clocks
-            .fc0_ref_khz
-            .write(|w| unsafe { w.fc0_ref_khz().bits(self.reference_clock.get_freq().to_kHz()) });
+        self.clocks.fc0_ref_khz.write(|w| unsafe {
+            w.fc0_ref_khz()
+                .bits(self.reference_clock.get_freq().to_kHz())
+        });
 
         // Corresponds to a 1ms test time, which seems to give good enough accuracy
         self.clocks
@@ -331,7 +332,9 @@ impl ClocksManager {
             .write(|w| unsafe { w.fc0_max_khz().bits(0xffffffff) });
 
         // To measure rosc directly we use the value 0x03.
-        self.clocks.fc0_src.write(|w| { w.fc0_src().variant(C::FCOUNTER_SRC) });
+        self.clocks
+            .fc0_src
+            .write(|w| w.fc0_src().variant(C::FCOUNTER_SRC));
 
         // Wait until the measurement is ready
         while self.clocks.fc0_status.read().done().bit_is_clear() {
