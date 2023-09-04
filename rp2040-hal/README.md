@@ -96,16 +96,14 @@ proposed features (and known issues).
 
 We plan to support embedded-hal 1.0 soon after it is released.
 
-For now, there is preliminary support for alpha versions of embedded-hal, which can
+For now, there is preliminary support for alpha/rc versions of embedded-hal, which can
 be enabled with the feature `eh1_0_alpha`. Please note that this support does not
 provide any semver compatibility guarantees: With that feature activated, there
 will be breaking changes even in minor versions of rp2040-hal.
 
-Support for embedded-hal 1.0(-alpha) exists in parallel to support for
+Support for embedded-hal 1.0(-alpha/rc) exists in parallel to support for
 embedded-hal 0.2: Traits of both versions are implemented and can be used
 at the same time.
-The new blocking [SPI traits](https://docs.rs/embedded-hal/1.0.0-alpha.8/embedded_hal/spi/blocking/index.html)
-are not yet implemented.
 
 <!-- CONTRIBUTING -->
 ## Contributing

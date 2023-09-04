@@ -8,8 +8,6 @@ use crate::pac::uart0::RegisterBlock;
 use core::fmt;
 use core::{convert::Infallible, marker::PhantomData};
 #[cfg(feature = "eh1_0_alpha")]
-use eh1_0_alpha::serial as eh1;
-#[cfg(feature = "eh1_0_alpha")]
 use eh_nb_1_0_alpha::serial as eh1nb;
 use embedded_hal::serial::Write;
 use nb::Error::*;
@@ -205,7 +203,7 @@ unsafe impl<D: UartDevice, P: ValidUartPinout<D>> WriteTarget for Writer<D, P> {
 impl<D: UartDevice, P: ValidUartPinout<D>> EndlessWriteTarget for Writer<D, P> {}
 
 #[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1::ErrorType for Writer<D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::ErrorType for Writer<D, P> {
     type Error = core::convert::Infallible;
 }
 
