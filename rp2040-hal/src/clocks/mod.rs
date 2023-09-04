@@ -84,6 +84,30 @@ pub use clock_sources::{GPin0, GPin1};
 
 use clock_sources::{PllSys, PllUsb, Rosc, Xosc};
 
+/// Frequency counter accuracy
+///
+/// See: https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf#table-fc-test-interval
+#[repr(u8)]
+#[allow(missing_docs)]
+pub enum FCAccuracy {
+    _2048kHz = 0,
+    _1024kHz,
+    _512kHz,
+    _256kHz,
+    _128kHz,
+    _64kHz,
+    _32kHz,
+    _16kHz,
+    _8kHz,
+    _4kHz,
+    _2kHz,
+    _1kHz,
+    _500Hz,
+    _250Hz,
+    _125Hz,
+    _62_5Hz,
+}
+
 #[derive(Copy, Clone)]
 /// Provides refs to the CLOCKS block.
 struct ShareableClocks {
@@ -305,8 +329,12 @@ impl ClocksManager {
             .configure_clock(&self.system_clock, self.system_clock.freq())
     }
 
-    /// Approximates the frequency of the given clock source.
-    pub fn approximate_frequency<C: ClockSource>(&mut self, _trg_clk: C) -> HertzU32 {
+    /// Measure the frequency of the given clock source by approximation.
+    pub fn measure_frequency<C: ClockSource>(
+        &mut self,
+        _trg_clk: C,
+        accuracy: FCAccuracy,
+    ) -> HertzU32 {
         // Wait for the frequency counter to be ready
         while self.clocks.fc0_status.read().running().bit_is_set() {
             core::hint::spin_loop()
@@ -318,10 +346,14 @@ impl ClocksManager {
                 .bits(self.reference_clock.get_freq().to_kHz())
         });
 
-        // Corresponds to a 1ms test time, which seems to give good enough accuracy
+        // > The test interval is 0.98us * 2**interval, but let's call it 1us * 2**interval.
+        // > The default gives a test interval of 250us
+        //
+        // https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf#reg-clocks-FC0_INTERVAL
+        // https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf#table-fc-test-interval
         self.clocks
             .fc0_interval
-            .write(|w| unsafe { w.fc0_interval().bits(10) });
+            .write(|w| unsafe { w.fc0_interval().bits(accuracy as u8) });
 
         // We don't really care about the min/max, so these are just set to min/max values.
         self.clocks
@@ -331,7 +363,7 @@ impl ClocksManager {
             .fc0_max_khz
             .write(|w| unsafe { w.fc0_max_khz().bits(0xffffffff) });
 
-        // To measure rosc directly we use the value 0x03.
+        // Select which clock to measure.
         self.clocks
             .fc0_src
             .write(|w| w.fc0_src().variant(C::FCOUNTER_SRC));
@@ -341,7 +373,10 @@ impl ClocksManager {
             core::hint::spin_loop()
         }
 
-        let speed_hz = self.clocks.fc0_result.read().khz().bits() * 1000;
+        // TODO: the result may not be valid (eg clock stopped during measurement). We may want to
+        // return a Result instead. Is it worth the hassle though?
+        let result = self.clocks.fc0_result.read();
+        let speed_hz = result.khz().bits() * 1000 + result.frac().bits();
         speed_hz.Hz()
     }
 
