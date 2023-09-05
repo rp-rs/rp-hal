@@ -47,7 +47,7 @@ use core::{marker::PhantomData, ops::Deref};
 use fugit::HertzU32;
 
 use crate::{
-    gpio::{bank0::*, pin::pin_sealed::TypeLevelPinId, AnyPin, FunctionI2c},
+    gpio::{bank0::*, pin::pin_sealed::TypeLevelPinId, AnyPin, DynPinId, FunctionI2c},
     pac::{self, i2c0::RegisterBlock as I2CBlock, I2C0, I2C1, RESETS},
     resets::SubsystemReset,
     typelevel::Sealed,
@@ -60,8 +60,13 @@ pub mod peripheral;
 
 /// Pac I2C device
 pub trait I2cDevice: Deref<Target = pac::i2c0::RegisterBlock> + SubsystemReset + Sealed {
-    /// Index of the peripheral.
+    /// Index of the peripheral. Will be `usize::MAX` for `DynI2c`.
     const ID: usize;
+
+    /// Index of the peripheral
+    fn id(&self) -> usize {
+        Self::ID
+    }
 }
 impl Sealed for pac::I2C0 {}
 impl I2cDevice for pac::I2C0 {
@@ -185,8 +190,8 @@ macro_rules! pin_validation {
                 /// Validate a pin's function on a i2c peripheral.
                 ///
                 #[doc = "Will err if the pin cannot be used as a " $p " pin for that I2C."]
-                pub fn validate(p: P, _u: &S) -> Result<Self, P> {
-                    if [<$p:upper>].contains(&(p.borrow().id().num, S::ID)) &&
+                pub fn validate(p: P, u: &S) -> Result<Self, P> {
+                    if [<$p:upper>].contains(&(p.borrow().id().num, u.id())) &&
                         p.borrow().id().bank == crate::gpio::DynBankId::Bank0 {
                         Ok(Self(p, PhantomData))
                     } else {
@@ -217,6 +222,9 @@ macro_rules! valid_pins {
 
         const SDA: &[(u8, usize)] = &[$($(($sda::ID.num, $i2c::ID)),*),*];
         const SCL: &[(u8, usize)] = &[$($(($scl::ID.num, $i2c::ID)),*),*];
+
+        $(impl ValidPinIdSda<$i2c> for DynPinId {})*
+        $(impl ValidPinIdScl<$i2c> for DynPinId {})*
     };
 }
 valid_pins! {
@@ -229,6 +237,10 @@ valid_pins! {
         scl: [Gpio3, Gpio7, Gpio11, Gpio15, Gpio19, Gpio23, Gpio27]
     }
 }
+
+impl Sealed for crate::gpio::DynPinId {}
+impl<I2C> ValidPinScl<I2C> for crate::gpio::DynPinId {}
+impl<I2C> ValidPinSda<I2C> for crate::gpio::DynPinId {}
 
 /// Operational mode of the I2C peripheral.
 pub trait I2CMode: Sealed {
@@ -313,6 +325,10 @@ impl<Block: Deref<Target = I2CBlock>, PINS, Mode> I2C<Block, PINS, Mode> {
     }
 }
 
+/// Dynamic I2C peripheral
+pub struct DynI2c(WhichI2c);
+impl Sealed for DynI2c {}
+
 macro_rules! hal {
     ($($I2CX:ident: ($i2cX:ident),)+) => {
         $(
@@ -334,9 +350,54 @@ macro_rules! hal {
                     Self::new_controller(i2c, sda_pin, scl_pin, freq.into(), resets, system_clock.into())
                 }
             }
+
+            impl DynI2c {
+                /// Creates a DynI2c from a `$I2CX`
+                pub fn $i2cX(i2c: $I2CX) -> Self {
+                    Self(WhichI2c::$I2CX(i2c))
+                }
+            }
         )+
+
+        enum WhichI2c {$(
+             $I2CX($I2CX),
+        )+}
+
+        impl Deref for DynI2c {
+            type Target = pac::i2c0::RegisterBlock;
+
+            fn deref(&self) -> &Self::Target {
+                match &self.0 {$(
+                    WhichI2c::$I2CX($i2cX) => $i2cX.deref(),
+                )+}
+            }
+        }
+
+        impl SubsystemReset for DynI2c {
+            fn reset_bring_up(&self, resets: &mut crate::pac::RESETS) {
+                match &self.0 {$(
+                    WhichI2c::$I2CX($i2cX) => $i2cX.reset_bring_up(resets),
+                )+}
+            }
+
+            fn reset_bring_down(&self, resets: &mut crate::pac::RESETS) {
+                match &self.0 {$(
+                    WhichI2c::$I2CX($i2cX) => $i2cX.reset_bring_down(resets),
+                )+}
+            }
+        }
+
+        impl I2cDevice for DynI2c {
+            const ID: usize = usize::MAX;
+            fn id(&self) -> usize {
+                match &self.0 {$(
+                    WhichI2c::$I2CX($i2cX) => $i2cX.id(),
+                )+}
+            }
+        }
     }
 }
+
 hal! {
     I2C0: (i2c0),
     I2C1: (i2c1),

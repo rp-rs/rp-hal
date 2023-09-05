@@ -120,6 +120,10 @@ name = "dht11"
 required-features = ["critical-section-impl"]
 
 [[example]]
+name = "dyn-i2c"
+required-features = ["critical-section-impl"]
+
+[[example]]
 name = "gpio_in_out"
 required-features = ["critical-section-impl"]
 

@@ -78,7 +78,7 @@ pub mod xosc;
 // Provide access to common datastructures to avoid repeating ourselves
 pub use adc::Adc;
 pub use clocks::Clock;
-pub use i2c::I2C;
+pub use i2c::{DynI2c, I2C};
 /// Attribute to declare the entry point of the program
 ///
 /// This is based on and can be used like the [entry attribute from
