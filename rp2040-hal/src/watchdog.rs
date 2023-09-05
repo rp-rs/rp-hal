@@ -45,6 +45,10 @@ pub struct Watchdog {
     load_value: u32, // decremented by 2 per tick (µs)
 }
 
+#[derive(Debug)]
+/// Tried to access a non-existing watchdog scratch register
+pub struct NoSuchRegister;
+
 impl Watchdog {
     /// Create a new [`Watchdog`]
     pub fn new(watchdog: WATCHDOG) -> Self {
@@ -91,6 +95,37 @@ impl Watchdog {
 
     fn enable(&self, bit: bool) {
         self.watchdog.ctrl.write(|w| w.enable().bit(bit))
+    }
+
+    /// Read a scratch register
+    pub fn read_scratch(&self, idx: u8) -> Result<u32, NoSuchRegister> {
+        Ok(match idx {
+            0 => self.watchdog.scratch0.read().bits(),
+            1 => self.watchdog.scratch1.read().bits(),
+            2 => self.watchdog.scratch2.read().bits(),
+            3 => self.watchdog.scratch3.read().bits(),
+            4 => self.watchdog.scratch4.read().bits(),
+            5 => self.watchdog.scratch5.read().bits(),
+            6 => self.watchdog.scratch6.read().bits(),
+            7 => self.watchdog.scratch7.read().bits(),
+            _ => return Err(NoSuchRegister),
+        })
+    }
+
+    /// Write a scratch register
+    pub fn write_scratch(&mut self, idx: u8, value: u32) -> Result<(), NoSuchRegister> {
+        match idx {
+            0 => self.watchdog.scratch0.write(|w| unsafe { w.bits(value) }),
+            1 => self.watchdog.scratch1.write(|w| unsafe { w.bits(value) }),
+            2 => self.watchdog.scratch2.write(|w| unsafe { w.bits(value) }),
+            3 => self.watchdog.scratch3.write(|w| unsafe { w.bits(value) }),
+            4 => self.watchdog.scratch4.write(|w| unsafe { w.bits(value) }),
+            5 => self.watchdog.scratch5.write(|w| unsafe { w.bits(value) }),
+            6 => self.watchdog.scratch6.write(|w| unsafe { w.bits(value) }),
+            7 => self.watchdog.scratch7.write(|w| unsafe { w.bits(value) }),
+            _ => return Err(NoSuchRegister),
+        }
+        Ok(())
     }
 
     /// Configure which hardware will be reset by the watchdog
