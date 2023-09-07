@@ -46,8 +46,18 @@ pub struct Watchdog {
 }
 
 #[derive(Debug)]
-/// Tried to access a non-existing watchdog scratch register
-pub struct NoSuchRegister;
+#[allow(missing_docs)]
+/// Scratch registers of the watchdog peripheral
+pub enum ScratchRegister {
+    Scratch0,
+    Scratch1,
+    Scratch2,
+    Scratch3,
+    Scratch4,
+    Scratch5,
+    Scratch6,
+    Scratch7,
+}
 
 impl Watchdog {
     /// Create a new [`Watchdog`]
@@ -98,34 +108,31 @@ impl Watchdog {
     }
 
     /// Read a scratch register
-    pub fn read_scratch(&self, idx: u8) -> Result<u32, NoSuchRegister> {
-        Ok(match idx {
-            0 => self.watchdog.scratch0.read().bits(),
-            1 => self.watchdog.scratch1.read().bits(),
-            2 => self.watchdog.scratch2.read().bits(),
-            3 => self.watchdog.scratch3.read().bits(),
-            4 => self.watchdog.scratch4.read().bits(),
-            5 => self.watchdog.scratch5.read().bits(),
-            6 => self.watchdog.scratch6.read().bits(),
-            7 => self.watchdog.scratch7.read().bits(),
-            _ => return Err(NoSuchRegister),
-        })
+    pub fn read_scratch(&self, reg: ScratchRegister) -> u32 {
+        match reg {
+            ScratchRegister::Scratch0 => self.watchdog.scratch0.read().bits(),
+            ScratchRegister::Scratch1 => self.watchdog.scratch1.read().bits(),
+            ScratchRegister::Scratch2 => self.watchdog.scratch2.read().bits(),
+            ScratchRegister::Scratch3 => self.watchdog.scratch3.read().bits(),
+            ScratchRegister::Scratch4 => self.watchdog.scratch4.read().bits(),
+            ScratchRegister::Scratch5 => self.watchdog.scratch5.read().bits(),
+            ScratchRegister::Scratch6 => self.watchdog.scratch6.read().bits(),
+            ScratchRegister::Scratch7 => self.watchdog.scratch7.read().bits(),
+        }
     }
 
     /// Write a scratch register
-    pub fn write_scratch(&mut self, idx: u8, value: u32) -> Result<(), NoSuchRegister> {
-        match idx {
-            0 => self.watchdog.scratch0.write(|w| unsafe { w.bits(value) }),
-            1 => self.watchdog.scratch1.write(|w| unsafe { w.bits(value) }),
-            2 => self.watchdog.scratch2.write(|w| unsafe { w.bits(value) }),
-            3 => self.watchdog.scratch3.write(|w| unsafe { w.bits(value) }),
-            4 => self.watchdog.scratch4.write(|w| unsafe { w.bits(value) }),
-            5 => self.watchdog.scratch5.write(|w| unsafe { w.bits(value) }),
-            6 => self.watchdog.scratch6.write(|w| unsafe { w.bits(value) }),
-            7 => self.watchdog.scratch7.write(|w| unsafe { w.bits(value) }),
-            _ => return Err(NoSuchRegister),
+    pub fn write_scratch(&mut self, reg: ScratchRegister, value: u32) {
+        match reg {
+            ScratchRegister::Scratch0 => self.watchdog.scratch0.write(|w| unsafe { w.bits(value) }),
+            ScratchRegister::Scratch1 => self.watchdog.scratch1.write(|w| unsafe { w.bits(value) }),
+            ScratchRegister::Scratch2 => self.watchdog.scratch2.write(|w| unsafe { w.bits(value) }),
+            ScratchRegister::Scratch3 => self.watchdog.scratch3.write(|w| unsafe { w.bits(value) }),
+            ScratchRegister::Scratch4 => self.watchdog.scratch4.write(|w| unsafe { w.bits(value) }),
+            ScratchRegister::Scratch5 => self.watchdog.scratch5.write(|w| unsafe { w.bits(value) }),
+            ScratchRegister::Scratch6 => self.watchdog.scratch6.write(|w| unsafe { w.bits(value) }),
+            ScratchRegister::Scratch7 => self.watchdog.scratch7.write(|w| unsafe { w.bits(value) }),
         }
-        Ok(())
     }
 
     /// Configure which hardware will be reset by the watchdog
