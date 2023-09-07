@@ -1,7 +1,8 @@
 use core::{marker::PhantomData, ops::Deref};
 
-use super::{Peripheral, ValidPinScl, ValidPinSda, I2C};
+use super::{configure_for_i2c, Peripheral, ValidPinScl, ValidPinSda, I2C};
 use crate::{
+    gpio::AnyPin,
     pac::{i2c0::RegisterBlock as I2CBlock, RESETS},
     resets::SubsystemReset,
 };
@@ -38,8 +39,8 @@ pub struct I2CPeripheralEventIterator<Block, Pins> {
 impl<T, Sda, Scl> I2C<T, (Sda, Scl), Peripheral>
 where
     T: SubsystemReset + Deref<Target = I2CBlock>,
-    Sda: ValidPinSda<T>,
-    Scl: ValidPinScl<T>,
+    Sda: ValidPinSda<T> + AnyPin,
+    Scl: ValidPinScl<T> + AnyPin,
 {
     /// Configures the I2C peripheral to work in peripheral mode
     ///
@@ -54,6 +55,9 @@ where
     ) -> I2CPeripheralEventIterator<T, (Sda, Scl)> {
         i2c.reset_bring_down(resets);
         i2c.reset_bring_up(resets);
+
+        let sda_pin = configure_for_i2c(sda_pin);
+        let scl_pin = configure_for_i2c(scl_pin);
 
         i2c.ic_enable.write(|w| w.enable().disabled());
 

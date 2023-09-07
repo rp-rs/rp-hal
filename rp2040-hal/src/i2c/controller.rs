@@ -5,8 +5,11 @@ use fugit::HertzU32;
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::i2c as eh1;
 
-use super::{i2c_reserved_addr, Controller, Error, ValidPinScl, ValidPinSda, I2C};
+use super::{
+    configure_for_i2c, i2c_reserved_addr, Controller, Error, ValidPinScl, ValidPinSda, I2C,
+};
 use crate::{
+    gpio::AnyPin,
     pac::{i2c0::RegisterBlock as Block, RESETS},
     resets::SubsystemReset,
 };
@@ -14,8 +17,8 @@ use crate::{
 impl<T, Sda, Scl> I2C<T, (Sda, Scl), Controller>
 where
     T: SubsystemReset + Deref<Target = Block>,
-    Sda: ValidPinSda<T>,
-    Scl: ValidPinScl<T>,
+    Sda: ValidPinSda<T> + AnyPin,
+    Scl: ValidPinScl<T> + AnyPin,
 {
     /// Configures the I2C peripheral to work in controller mode
     pub fn new_controller(
@@ -29,6 +32,9 @@ where
         let freq = freq.to_Hz();
         assert!(freq <= 1_000_000);
         assert!(freq > 0);
+
+        let sda_pin = configure_for_i2c(sda_pin);
+        let scl_pin = configure_for_i2c(scl_pin);
 
         i2c.reset_bring_down(resets);
         i2c.reset_bring_up(resets);
@@ -188,7 +194,6 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
 
             *byte = self.i2c.ic_data_cmd.read().dat().bits();
         }
-
         Ok(())
     }
 

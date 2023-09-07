@@ -74,20 +74,24 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    // Create the I²C drive. The pins are acquired without taking
-    // ownership from `pins` - the developer is in charge of ensuring
-    // that nothing else uses I2C0 and the pins.
+    // Create the I²C drive, using the two pre-configured pins. This will fail
+    // at compile time if the pins are in the wrong mode, or wrong pull type.
+    // It is your responsibility to ensure that the pins aren't being used
+    // elsewhere, and that they match the I²C peripheral! The pins will be
+    // automatically configured to have the correct schmitt mode and slew rate.
     let mut i2c = hal::I2C::new_controller(
         unsafe { pac::Peripherals::steal().I2C0 },
         unsafe {
             new_pin(pins.gpio18.id())
                 .try_into_function()
                 .unwrap_or_else(|_| panic!("gpio18 couldn't be allocated"))
+                .into_pull_type()
         },
         unsafe {
             new_pin(pins.gpio19.id())
                 .try_into_function()
                 .unwrap_or_else(|_| panic!("gpio19 couldn't be allocated"))
+                .into_pull_type()
         },
         400.kHz().into(),
         &mut pac.RESETS,

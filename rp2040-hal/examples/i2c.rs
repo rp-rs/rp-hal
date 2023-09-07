@@ -74,14 +74,22 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    // Configure two pins as being I²C, not GPIO
-    let sda_pin = pins.gpio18.into_function::<hal::gpio::FunctionI2C>();
-    let scl_pin = pins.gpio19.into_function::<hal::gpio::FunctionI2C>();
+    // Configure two pins as being I²C and pull-up (per the datasheet), not
+    // GPIO
+    let sda_pin = pins
+        .gpio18
+        .into_function::<hal::gpio::FunctionI2C>()
+        .into_pull_type::<hal::gpio::PullUp>();
+    let scl_pin = pins
+        .gpio19
+        .into_function::<hal::gpio::FunctionI2C>()
+        .into_pull_type::<hal::gpio::PullUp>();
     // let not_an_scl_pin = pins.gpio20.into_function::<hal::gpio::FunctionI2C>();
 
     // Create the I²C drive, using the two pre-configured pins. This will fail
-    // at compile time if the pins are in the wrong mode, or if this I²C
-    // peripheral isn't available on these pins!
+    // at compile time if the pins are in the wrong mode, wrong pull type, or
+    // if this I²C peripheral isn't available on these pins! The pins will be
+    // automatically configured to have the correct schmitt mode and slew rate.
     let mut i2c = hal::I2C::i2c1(
         pac.I2C1,
         sda_pin,

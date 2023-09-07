@@ -12,8 +12,8 @@
 //!
 //! let mut i2c = I2C::i2c1(
 //!     peripherals.I2C1,
-//!     pins.gpio18.into_function(), // sda
-//!     pins.gpio19.into_function(), // scl
+//!     pins.gpio18.into_function().into_pull_type(), // sda
+//!     pins.gpio19.into_function().into_pull_type(), // scl
 //!     400.kHz(),
 //!     &mut peripherals.RESETS,
 //!     125_000_000.Hz(),
@@ -41,13 +41,18 @@
 //! ```
 //!
 //! See [examples/i2c.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/i2c.rs)
-//! for a complete example
+//! for a complete example, or
+//! [examples/dyn-i2c.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/dyn-i2c.rs)
+//! for a dynamic example.
 
 use core::{marker::PhantomData, ops::Deref};
 use fugit::HertzU32;
 
 use crate::{
-    gpio::{bank0::*, pin::pin_sealed::TypeLevelPinId, AnyPin, DynPinId, FunctionI2c},
+    gpio::{
+        bank0::*, pin::pin_sealed::TypeLevelPinId, AnyPin, DynPinId, FunctionI2c, OutputSlewRate,
+        PullUp, SpecificPin,
+    },
     pac::{self, i2c0::RegisterBlock as I2CBlock, I2C0, I2C1, RESETS},
     resets::SubsystemReset,
     typelevel::Sealed,
@@ -58,22 +63,32 @@ pub mod controller;
 /// Peripheral implementation
 pub mod peripheral;
 
-/// Pac I2C device
-pub trait I2cDevice: Deref<Target = pac::i2c0::RegisterBlock> + SubsystemReset + Sealed {
+/// Pac I2C device with an ID known at compile time
+pub trait ConstI2cDevice: I2cDevice {
     /// Index of the peripheral. Will be `usize::MAX` for `DynI2c`.
     const ID: usize;
-
+}
+/// Pac I2C device
+pub trait I2cDevice: Deref<Target = pac::i2c0::RegisterBlock> + SubsystemReset + Sealed {
     /// Index of the peripheral
+    fn id(&self) -> usize;
+}
+impl Sealed for pac::I2C0 {}
+impl I2cDevice for pac::I2C0 {
     fn id(&self) -> usize {
         Self::ID
     }
 }
-impl Sealed for pac::I2C0 {}
-impl I2cDevice for pac::I2C0 {
+impl ConstI2cDevice for pac::I2C0 {
     const ID: usize = 0;
 }
 impl Sealed for pac::I2C1 {}
 impl I2cDevice for pac::I2C1 {
+    fn id(&self) -> usize {
+        Self::ID
+    }
+}
+impl ConstI2cDevice for pac::I2C1 {
     const ID: usize = 1;
 }
 
@@ -173,7 +188,7 @@ macro_rules! pin_validation {
 
             impl<T, U: I2cDevice> [<ValidPin $p>]<U> for T
             where
-                T: AnyPin<Function = FunctionI2c>,
+                T: AnyPin<Function = FunctionI2c, Pull = PullUp>,
                 T::Id: [<ValidPinId $p>]<U>,
             {
             }
@@ -222,9 +237,6 @@ macro_rules! valid_pins {
 
         const SDA: &[(u8, usize)] = &[$($(($sda::ID.num, $i2c::ID)),*),*];
         const SCL: &[(u8, usize)] = &[$($(($scl::ID.num, $i2c::ID)),*),*];
-
-        $(impl ValidPinIdSda<$i2c> for DynPinId {})*
-        $(impl ValidPinIdScl<$i2c> for DynPinId {})*
     };
 }
 valid_pins! {
@@ -238,9 +250,9 @@ valid_pins! {
     }
 }
 
-impl Sealed for crate::gpio::DynPinId {}
-impl<I2C> ValidPinScl<I2C> for crate::gpio::DynPinId {}
-impl<I2C> ValidPinSda<I2C> for crate::gpio::DynPinId {}
+impl Sealed for DynPinId {}
+impl<I2C: I2cDevice> ValidPinIdScl<I2C> for DynPinId {}
+impl<I2C: I2cDevice> ValidPinIdSda<I2C> for DynPinId {}
 
 /// Operational mode of the I2C peripheral.
 pub trait I2CMode: Sealed {
@@ -272,6 +284,19 @@ const RX_FIFO_SIZE: u8 = 16;
 
 fn i2c_reserved_addr(addr: u16) -> bool {
     (addr & 0x78) == 0 || (addr & 0x78) == 0x78
+}
+
+fn configure_for_i2c<P: AnyPin>(pin: P) -> P {
+    // https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf
+    // Page 441: 4.3.1.3. IOs
+    // • pull-up enabled
+    // • slew rate limited
+    // • schmitt trigger enabled
+
+    let mut pin: SpecificPin<P> = pin.into();
+    pin.set_schmitt_enabled(true);
+    pin.set_slew_rate(OutputSlewRate::Fast);
+    pin.into()
 }
 
 impl<Block, Sda, Scl, Mode> I2C<Block, (Sda, Scl), Mode>
@@ -332,7 +357,7 @@ impl Sealed for DynI2c {}
 macro_rules! hal {
     ($($I2CX:ident: ($i2cX:ident),)+) => {
         $(
-            impl<Sda, Scl> I2C<$I2CX, (Sda, Scl)> {
+            impl<Sda: AnyPin, Scl: AnyPin> I2C<$I2CX, (Sda, Scl)> {
                 /// Configures the I2C peripheral to work in master mode
                 pub fn $i2cX<F, SystemF>(
                     i2c: $I2CX,
@@ -388,7 +413,6 @@ macro_rules! hal {
         }
 
         impl I2cDevice for DynI2c {
-            const ID: usize = usize::MAX;
             fn id(&self) -> usize {
                 match &self.0 {$(
                     WhichI2c::$I2CX($i2cX) => $i2cX.id(),
