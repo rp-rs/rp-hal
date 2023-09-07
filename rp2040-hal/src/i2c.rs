@@ -65,7 +65,7 @@ pub mod peripheral;
 
 /// Pac I2C device with an ID known at compile time
 pub trait ConstI2cDevice: I2cDevice {
-    /// Index of the peripheral. Will be `usize::MAX` for `DynI2c`.
+    /// Index of the peripheral
     const ID: usize;
 }
 /// Pac I2C device
