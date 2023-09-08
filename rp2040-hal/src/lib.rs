@@ -88,7 +88,42 @@ pub use i2c::I2C;
 /// of `main`. As spinlocks are not automatically unlocked on software resets,
 /// this can prevent unexpected deadlocks when running from a debugger.
 pub use rp2040_hal_macros::entry;
+use sio::CoreId;
 pub use sio::Sio;
 pub use spi::Spi;
 pub use timer::Timer;
 pub use watchdog::Watchdog;
+
+/// Trigger full reset of the RP2040.
+///
+/// Uses the watchdog and the power-on state machine (PSM) to reset all on-chip components.
+pub fn reset() -> ! {
+    unsafe {
+        cortex_m::interrupt::disable();
+        (*pac::PSM::PTR).wdsel.write(|w| w.bits(0x0001ffff));
+        (*pac::WATCHDOG::PTR).ctrl.write(|w| w.trigger().set_bit());
+        #[allow(clippy::empty_loop)]
+        loop {}
+    }
+}
+
+/// Halt the RP2040.
+///
+/// Completely disables the other core, and parks the current core in an
+/// infinite loop with interrupts disabled.
+///
+/// Doesn't stop other subsystems, like the DMA controller.
+pub fn halt() -> ! {
+    unsafe {
+        cortex_m::interrupt::disable();
+        // Stop other core
+        match crate::Sio::core() {
+            CoreId::Core0 => (*pac::PSM::PTR).frce_off.write(|w| w.proc1().set_bit()),
+            CoreId::Core1 => (*pac::PSM::PTR).frce_off.write(|w| w.proc0().set_bit()),
+        }
+        // Keep current core running, so debugging stays possible
+        loop {
+            cortex_m::asm::wfe()
+        }
+    }
+}
