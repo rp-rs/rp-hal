@@ -127,10 +127,10 @@ pub mod common_configs {
 
     /// Default, nominal configuration for PLL_USB.
     pub const PLL_USB_48MHZ: PLLConfig = PLLConfig {
-        vco_freq: HertzU32::MHz(480),
+        vco_freq: HertzU32::MHz(960),
         refdiv: 1,
         post_div1: 5,
-        post_div2: 2,
+        post_div2: 4,
     };
 }
 
@@ -141,18 +141,22 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
         xosc_frequency: HertzU32,
         config: PLLConfig,
     ) -> Result<PhaseLockedLoop<Disabled, D>, Error> {
-        const VCO_FREQ_RANGE: RangeInclusive<HertzU32> = HertzU32::MHz(400)..=HertzU32::MHz(1_600);
+        const VCO_FREQ_RANGE: RangeInclusive<HertzU32> = HertzU32::MHz(750)..=HertzU32::MHz(1_600);
         const POSTDIV_RANGE: Range<u8> = 1..7;
         const FBDIV_RANGE: Range<u16> = 16..320;
 
-        let vco_freq = config.vco_freq;
+        let PLLConfig {
+            vco_freq,
+            refdiv,
+            post_div1,
+            post_div2,
+        } = config;
 
         if !VCO_FREQ_RANGE.contains(&vco_freq) {
             return Err(Error::VcoFreqOutOfRange);
         }
 
-        if !POSTDIV_RANGE.contains(&config.post_div1) || !POSTDIV_RANGE.contains(&config.post_div2)
-        {
+        if !POSTDIV_RANGE.contains(&post_div1) || !POSTDIV_RANGE.contains(&post_div2) {
             return Err(Error::PostDivOutOfRage);
         }
 
@@ -161,7 +165,7 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
 
         let ref_freq_hz: HertzU32 = xosc_frequency
             .to_Hz()
-            .checked_div(u32::from(config.refdiv))
+            .checked_div(u32::from(refdiv))
             .ok_or(Error::BadArgument)?
             .Hz();
 
@@ -180,9 +184,6 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
             return Err(Error::FeedbackDivOutOfRange);
         }
 
-        let refdiv = config.refdiv;
-        let post_div1 = config.post_div1;
-        let post_div2 = config.post_div2;
         let frequency: HertzU32 = ((ref_freq_hz / u32::from(refdiv)) * u32::from(fbdiv))
             / (u32::from(post_div1) * u32::from(post_div2));
 

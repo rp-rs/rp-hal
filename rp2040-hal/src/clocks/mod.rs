@@ -63,6 +63,7 @@
 //! See [Chapter 2 Section 15](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 use core::{convert::Infallible, marker::PhantomData};
 use fugit::{HertzU32, RateExtU32};
+use pac::clocks::fc0_src::FC0_SRC_A;
 
 use crate::{
     pac::{self, CLOCKS, PLL_SYS, PLL_USB, RESETS, XOSC},
@@ -79,9 +80,34 @@ use crate::{
 mod macros;
 mod clock_sources;
 
-use clock_sources::PllSys;
+pub use clock_sources::{GPin0, GPin1};
 
-use self::clock_sources::{GPin0, GPin1, PllUsb, Rosc, Xosc};
+use clock_sources::{PllSys, PllUsb, Rosc, Xosc};
+
+/// Frequency counter accuracy
+///
+/// See: https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf#table-fc-test-interval
+#[repr(u8)]
+#[allow(missing_docs)]
+#[allow(clippy::enum_variant_names)]
+pub enum FCAccuracy {
+    _2048kHz = 0,
+    _1024kHz,
+    _512kHz,
+    _256kHz,
+    _128kHz,
+    _64kHz,
+    _32kHz,
+    _16kHz,
+    _8kHz,
+    _4kHz,
+    _2kHz,
+    _1kHz,
+    _500Hz,
+    _250Hz,
+    _125Hz,
+    _62_5Hz,
+}
 
 #[derive(Copy, Clone)]
 /// Provides refs to the CLOCKS block.
@@ -110,6 +136,11 @@ pub enum ClockError {
     /// The desired frequency is too low (divider can't reach the desired value)
     FrequencyTooLow,
 }
+
+/// The clock stopped while its frequency was being measured.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct ClockDiedError;
 
 /// For clocks
 pub trait Clock: Sealed + Sized {
@@ -167,6 +198,9 @@ pub trait StoppableClock: Sealed {
 
 /// Trait for things that can be used as clock source
 pub trait ClockSource: Sealed {
+    /// Associated Frequency counter source.
+    const FCOUNTER_SRC: FC0_SRC_A;
+
     /// Get the operating frequency for this source
     ///
     /// Used to determine the divisor
@@ -299,6 +333,63 @@ impl ClocksManager {
         // Normally choose clk_sys or clk_usb
         self.peripheral_clock
             .configure_clock(&self.system_clock, self.system_clock.freq())
+    }
+
+    /// Measure the frequency of the given clock source by approximation.
+    pub fn measure_frequency<C: ClockSource>(
+        &mut self,
+        _trg_clk: C,
+        accuracy: FCAccuracy,
+    ) -> Result<HertzU32, ClockDiedError> {
+        // Wait for the frequency counter to be ready
+        while self.clocks.fc0_status.read().running().bit_is_set() {
+            core::hint::spin_loop()
+        }
+
+        // Set the speed of the reference clock in kHz.
+        self.clocks.fc0_ref_khz.write(|w| unsafe {
+            w.fc0_ref_khz()
+                .bits(self.reference_clock.get_freq().to_kHz())
+        });
+
+        // > The test interval is 0.98us * 2**interval, but let's call it 1us * 2**interval.
+        // > The default gives a test interval of 250us
+        //
+        // https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf#reg-clocks-FC0_INTERVAL
+        // https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf#table-fc-test-interval
+        self.clocks
+            .fc0_interval
+            .write(|w| unsafe { w.fc0_interval().bits(accuracy as u8) });
+
+        // We don't really care about the min/max, so these are just set to min/max values.
+        self.clocks
+            .fc0_min_khz
+            .write(|w| unsafe { w.fc0_min_khz().bits(0) });
+        self.clocks
+            .fc0_max_khz
+            .write(|w| unsafe { w.fc0_max_khz().bits(0xffffffff) });
+
+        // Select which clock to measure.
+        self.clocks
+            .fc0_src
+            .write(|w| w.fc0_src().variant(C::FCOUNTER_SRC));
+
+        // Wait until the measurement is ready
+        let mut status;
+        loop {
+            status = self.clocks.fc0_status.read();
+            if status.done().bit_is_set() {
+                break;
+            }
+        }
+
+        if status.fail().bit_is_set() {
+            Err(ClockDiedError)
+        } else {
+            let result = self.clocks.fc0_result.read();
+            let speed_hz = result.khz().bits() * 1000 + u32::from(result.frac().bits());
+            Ok(speed_hz.Hz())
+        }
     }
 
     /// Releases the CLOCKS block
