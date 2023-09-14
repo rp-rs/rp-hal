@@ -127,10 +127,10 @@ pub mod common_configs {
 
     /// Default, nominal configuration for PLL_USB.
     pub const PLL_USB_48MHZ: PLLConfig = PLLConfig {
-        vco_freq: HertzU32::MHz(480),
+        vco_freq: HertzU32::MHz(1200),
         refdiv: 1,
         post_div1: 5,
-        post_div2: 2,
+        post_div2: 5,
     };
 }
 
