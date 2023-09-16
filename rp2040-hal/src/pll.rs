@@ -183,8 +183,8 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
         let refdiv = config.refdiv;
         let post_div1 = config.post_div1;
         let post_div2 = config.post_div2;
-        let frequency: HertzU32 = ((ref_freq_hz / u32::from(refdiv)) * u32::from(fbdiv))
-            / (u32::from(post_div1) * u32::from(post_div2));
+        let frequency: HertzU32 =
+            (ref_freq_hz * u32::from(fbdiv)) / (u32::from(post_div1) * u32::from(post_div2));
 
         Ok(PhaseLockedLoop {
             state: Disabled {
