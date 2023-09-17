@@ -743,6 +743,17 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
             }
         }
     }
+
+    /// Return a wrapper that implements InputPin.
+    ///
+    /// This allows to read from the pin independen from the selected function.
+    /// Depending on the pad configuration, reading from the pin may not return a
+    /// meaninful result. Check the datasheet.
+    ///
+    /// Calling this function does not set the pad's input enable bit.
+    pub fn as_input(&self) -> AsInputPin<I, F, P> {
+        AsInputPin(self)
+    }
 }
 impl<I: PinId, C: SioConfig, P: PullType> Pin<I, FunctionSio<C>, P> {
     /// Is bypass enabled
@@ -842,6 +853,9 @@ impl<I: PinId, F: func::Function> Pin<I, F, DynPullType> {
     }
 }
 
+/// Wrapper providing input pin functions for GPIO pins independent of the configured mode.
+pub struct AsInputPin<'a, I: PinId, F: func::Function, P: PullType>(&'a Pin<I, F, P>);
+
 //==============================================================================
 //  Embedded-HAL
 //==============================================================================
@@ -867,6 +881,8 @@ where
     }
 }
 
+/// Deprecated: Instead of implicitly implementing InputPin for function SioOutput,
+/// use `pin.as_input()` to get access to input values indepentent of the selected function.
 impl<I, P> embedded_hal::digital::v2::InputPin for Pin<I, FunctionSio<SioOutput>, P>
 where
     I: PinId,
@@ -880,6 +896,20 @@ where
 
     fn is_low(&self) -> Result<bool, Self::Error> {
         Ok(self._is_low())
+    }
+}
+
+impl<'a, I: PinId, F: func::Function, P: PullType> embedded_hal::digital::v2::InputPin
+    for AsInputPin<'a, I, F, P>
+{
+    type Error = core::convert::Infallible;
+
+    fn is_high(&self) -> Result<bool, Self::Error> {
+        Ok(self.0._is_high())
+    }
+
+    fn is_low(&self) -> Result<bool, Self::Error> {
+        Ok(self.0._is_low())
     }
 }
 
@@ -1448,6 +1478,26 @@ mod eh1 {
 
         fn is_low(&self) -> Result<bool, Self::Error> {
             Ok(self._is_low())
+        }
+    }
+
+    impl<'a, I, F, P> ErrorType for super::AsInputPin<'a, I, F, P>
+    where
+        I: PinId,
+        F: super::func::Function,
+        P: PullType,
+    {
+        type Error = Error;
+    }
+    impl<'a, I: PinId, F: super::func::Function, P: PullType> InputPin
+        for super::AsInputPin<'a, I, F, P>
+    {
+        fn is_high(&self) -> Result<bool, Self::Error> {
+            Ok(self.0._is_high())
+        }
+
+        fn is_low(&self) -> Result<bool, Self::Error> {
+            Ok(self.0._is_low())
         }
     }
 }
