@@ -867,22 +867,6 @@ where
     }
 }
 
-impl<I, P> embedded_hal::digital::v2::InputPin for Pin<I, FunctionSio<SioOutput>, P>
-where
-    I: PinId,
-    P: PullType,
-{
-    type Error = Error;
-
-    fn is_high(&self) -> Result<bool, Self::Error> {
-        Ok(self._is_high())
-    }
-
-    fn is_low(&self) -> Result<bool, Self::Error> {
-        Ok(self._is_low())
-    }
-}
-
 impl<I, P> embedded_hal::digital::v2::StatefulOutputPin for Pin<I, FunctionSio<SioOutput>, P>
 where
     I: PinId,
@@ -909,9 +893,10 @@ where
         Ok(())
     }
 }
-impl<I, P> embedded_hal::digital::v2::InputPin for Pin<I, FunctionSio<SioInput>, P>
+impl<I, F, P> embedded_hal::digital::v2::InputPin for Pin<I, F, P>
 where
     I: PinId,
+    F: Function,
     P: PullType,
 {
     type Error = Error;
