@@ -53,9 +53,7 @@ use crate::{
     typelevel::Sealed,
 };
 
-/// Controller implementaion
-pub mod controller;
-/// Peripheral implementation
+mod controller;
 pub mod peripheral;
 
 /// Pac I2C device
