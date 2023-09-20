@@ -1429,20 +1429,6 @@ mod eh1 {
         }
     }
 
-    impl<I, P> InputPin for Pin<I, FunctionSio<SioOutput>, P>
-    where
-        I: PinId,
-        P: PullType,
-    {
-        fn is_high(&self) -> Result<bool, Self::Error> {
-            Ok(self._is_high())
-        }
-
-        fn is_low(&self) -> Result<bool, Self::Error> {
-            Ok(self._is_low())
-        }
-    }
-
     impl<I, P> StatefulOutputPin for Pin<I, FunctionSio<SioOutput>, P>
     where
         I: PinId,
@@ -1467,6 +1453,7 @@ mod eh1 {
             Ok(())
         }
     }
+
     impl<I, P> InputPin for Pin<I, FunctionSio<SioInput>, P>
     where
         I: PinId,
@@ -1489,6 +1476,7 @@ mod eh1 {
     {
         type Error = Error;
     }
+
     impl<'a, I: PinId, F: super::func::Function, P: PullType> InputPin
         for super::AsInputPin<'a, I, F, P>
     {
