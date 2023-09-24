@@ -40,6 +40,8 @@ impl VectorTable {
     }
 
     /// Initialise our vector table by copying the current table on top of it
+    #[allow(unknown_lints)]
+    #[allow(clippy::needless_pass_by_ref_mut)]
     pub fn init(&mut self, ppb: &mut crate::pac::PPB) {
         let vector_table = ppb.vtor.read().bits();
         unsafe {
@@ -77,6 +79,8 @@ impl VectorTable {
     /// # Safety
     /// Until the vector table has valid entries, activating it will cause an unhandled hardfault!
     /// You must call init() first.
+    #[allow(unknown_lints)]
+    #[allow(clippy::needless_pass_by_ref_mut)]
     pub unsafe fn activate(&mut self, ppb: &mut crate::pac::PPB) {
         ppb.vtor
             .write(|w| w.bits(&mut self.table as *mut _ as *mut u32 as u32));

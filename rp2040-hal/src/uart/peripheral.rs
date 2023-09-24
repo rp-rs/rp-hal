@@ -272,6 +272,8 @@ fn calculate_baudrate_dividers(
 }
 
 /// Baudrate configuration. Code loosely inspired from the C SDK.
+#[allow(unknown_lints)]
+#[allow(clippy::needless_pass_by_ref_mut)]
 fn configure_baudrate<U: UartDevice>(
     device: &mut U,
     wanted_baudrate: HertzU32,
