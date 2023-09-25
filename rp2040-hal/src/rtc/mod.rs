@@ -51,6 +51,8 @@ impl RealTimeClock {
     ///
     /// [`ClocksManager`]: ../clocks/struct.ClocksManager.html
     /// [`clocks`]: ../clocks/index.html
+    #[allow(unknown_lints)]
+    #[allow(clippy::needless_pass_by_ref_mut)]
     pub fn new(
         rtc: RTC,
         clock: RtcClock,
