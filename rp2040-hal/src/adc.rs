@@ -299,7 +299,7 @@ impl Adc {
         }
     }
 
-    fn read(&mut self, chan: u8) -> u16 {
+    fn inner_read(&mut self, chan: u8) -> u16 {
         while !self.device.cs.read().ready().bit_is_set() {
             cortex_m::asm::nop();
         }
@@ -327,7 +327,7 @@ where
     fn read(&mut self, _pin: &mut SRC) -> nb::Result<WORD, Self::Error> {
         let chan = SRC::channel();
 
-        Ok(self.read(chan).into())
+        Ok(self.inner_read(chan).into())
     }
 }
 
@@ -351,7 +351,7 @@ where
             return Err(nb::Error::Other(InvalidPinError));
         };
 
-        Ok(self.read(chan).into())
+        Ok(self.inner_read(chan).into())
     }
 }
 
