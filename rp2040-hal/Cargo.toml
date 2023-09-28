@@ -194,3 +194,7 @@ required-features = ["critical-section-impl"]
 [[example]]
 name = "watchdog"
 required-features = ["critical-section-impl"]
+
+[[example]]
+name = "gpio_dyn_pin_array"
+required-features = ["critical-section-impl"]
