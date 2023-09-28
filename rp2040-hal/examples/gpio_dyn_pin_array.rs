@@ -18,7 +18,7 @@
 use hal::gpio::DynPinId;
 use hal::gpio::FunctionSioOutput;
 use hal::gpio::Pin;
-use hal::gpio::PullDown;
+use hal::gpio::PullNone;
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
@@ -91,11 +91,23 @@ fn main() -> ! {
     // To put pins into an array we have to convert them to Dynamically Typed pins.
     // This means they'll carry their pin and bank numbers around with them at run time,
     // rather than relying on the Type of the pin to track that.
-    let mut pinarray: [Pin<DynPinId, FunctionSioOutput, PullDown>; 4] = [
-        pins.gpio2.into_push_pull_output().into_dyn_pin(),
-        pins.gpio3.into_push_pull_output().into_dyn_pin(),
-        pins.gpio4.into_push_pull_output().into_dyn_pin(),
-        pins.gpio5.into_push_pull_output().into_dyn_pin(),
+    let mut pinarray: [Pin<DynPinId, FunctionSioOutput, PullNone>; 4] = [
+        pins.gpio2
+            .into_push_pull_output()
+            .into_dyn_pin()
+            .into_pull_type(),
+        pins.gpio3
+            .into_push_pull_output()
+            .into_dyn_pin()
+            .into_pull_type(),
+        pins.gpio4
+            .into_push_pull_output()
+            .into_dyn_pin()
+            .into_pull_type(),
+        pins.gpio5
+            .into_push_pull_output()
+            .into_dyn_pin()
+            .into_pull_type(),
     ];
 
     // Also set a pin as a dynamic input. We won't use this, it is just to demonstrate that
