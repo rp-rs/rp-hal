@@ -746,9 +746,9 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
 
     /// Return a wrapper that implements InputPin.
     ///
-    /// This allows to read from the pin independen from the selected function.
+    /// This allows to read from the pin independent of the selected function.
     /// Depending on the pad configuration, reading from the pin may not return a
-    /// meaninful result. Check the datasheet.
+    /// meaningful result.
     ///
     /// Calling this function does not set the pad's input enable bit.
     pub fn as_input(&self) -> AsInputPin<I, F, P> {
