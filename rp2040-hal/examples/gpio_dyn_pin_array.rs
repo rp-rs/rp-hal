@@ -15,10 +15,7 @@
 #![no_std]
 #![no_main]
 
-use hal::gpio::DynPinId;
-use hal::gpio::FunctionSioOutput;
-use hal::gpio::Pin;
-use hal::gpio::PullNone;
+use hal::gpio::{DynPinId, FunctionSioOutput, Pin, PullNone, PullUp};
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
