@@ -94,25 +94,30 @@ fn main() -> ! {
     let mut pinarray: [Pin<DynPinId, FunctionSioOutput, PullNone>; 4] = [
         pins.gpio2
             .into_push_pull_output()
-            .into_dyn_pin()
-            .into_pull_type(),
+            .into_pull_type()
+            .into_dyn_pin(),
         pins.gpio3
             .into_push_pull_output()
-            .into_dyn_pin()
-            .into_pull_type(),
+            .into_pull_type()
+            .into_dyn_pin(),
         pins.gpio4
             .into_push_pull_output()
-            .into_dyn_pin()
-            .into_pull_type(),
+            .into_pull_type()
+            .into_dyn_pin(),
         pins.gpio5
             .into_push_pull_output()
-            .into_dyn_pin()
-            .into_pull_type(),
+            .into_pull_type()
+            .into_dyn_pin(),
     ];
 
     // Also set a pin as a dynamic input. We won't use this, it is just to demonstrate that
     // pins can have other functions and still be Dynamically typed.
     let _in_pin = pins.gpio23.into_floating_input().into_dyn_pin();
+
+    // You can also let the target type set the pin mode, using the type system to guide it.
+    // Once again, we're not going to use this array. The only reason it is here is to demonstrate a less verbose way to set pin modes
+    let mut _type_coerce: [Pin<DynPinId, FunctionSioOutput, PullUp>; 1] =
+        [pins.gpio22.reconfigure().into_dyn_pin()];
 
     // Light one LED at a time. Start at GPIO2 and go through to GPIO5, then reverse.
     loop {
