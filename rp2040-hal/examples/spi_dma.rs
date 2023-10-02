@@ -57,7 +57,7 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    // These are implicitly used by the spi driver if they are in the correct mode
+    // Set up our SPI pins into the correct mode
     let spi_mosi = pins.gpio7.into_function::<hal::gpio::FunctionSpi>();
     let spi_miso = pins.gpio4.into_function::<hal::gpio::FunctionSpi>();
     let spi_sclk = pins.gpio6.into_function::<hal::gpio::FunctionSpi>();
