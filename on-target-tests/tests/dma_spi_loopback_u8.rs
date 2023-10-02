@@ -95,7 +95,7 @@ mod tests {
             &mut pac.RESETS,
         );
 
-        // These are implicitly used by the spi driver if they are in the correct mode
+        // Set up our SPI pins into the correct mode
         let spi_sclk = pins.gpio6.reconfigure();
         let spi_mosi = pins.gpio7.reconfigure();
         let spi_miso = pins.gpio4.reconfigure();
