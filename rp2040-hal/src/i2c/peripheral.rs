@@ -1,3 +1,26 @@
+//! # I2C Peripheral (slave) implementation
+//!
+//! The RP2040 I2C block can behave as a peripheral node on an I2C bus.
+//!
+//! In order to handle peripheral transactions this driver exposes an iterator streaming I2C event
+//! that the usercode must handle to properly handle the I2C communitation. See [`I2CEvent`] for a
+//! list of events to handle.
+//!
+//! Although [`Start`](I2CEvent::Start), [`Restart`](I2CEvent::Restart) and [`Stop`](I2CEvent::Stop)
+//! events may not require any action on the device, [`TransferRead`](I2CEvent::TransferRead) and
+//! [`TransferWrite`](I2CEvent::TransferWrite) require some action:
+//!
+//! - [`TransferRead`](I2CEvent::TransferRead): A controller is attempting to read from this peripheral.  
+//!   The I2C block holds the SCL line low (clock stretching) until data is pushed to the transmission
+//!   FIFO by the user application using [`write`](I2CPeripheralEventIterator::write).  
+//!   Data remaining in the FIFO when the bus constroller stops the transfer are ignored & the fifo
+//!   is flushed.
+//! - [`TransferWrite`](I2CEvent::TransferWrite): A controller is sending data to this peripheral.  
+//!   The I2C block holds the SCL line (clock stretching) until there is room for more data in the
+//!   Rx FIFO using [`read`](I2CPeripheralEventIterator::read).  
+//!   Data are automatically acknowledged by the I2C block and it is not possible to NACK incoming
+//!   data comming to the rp2040.
+
 use core::{marker::PhantomData, ops::Deref};
 
 use super::{Peripheral, ValidPinScl, ValidPinSda, I2C};

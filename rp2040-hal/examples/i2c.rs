@@ -21,8 +21,11 @@ use fugit::RateExtU32;
 use rp2040_hal as hal;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
-// register access
-use hal::pac;
+// register access and a gpio related types.
+use hal::{
+    gpio::{FunctionI2C, Pin, PullUp},
+    pac,
+};
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -75,9 +78,9 @@ fn main() -> ! {
     );
 
     // Configure two pins as being I²C, not GPIO
-    let sda_pin = pins.gpio18.into_function::<hal::gpio::FunctionI2C>();
-    let scl_pin = pins.gpio19.into_function::<hal::gpio::FunctionI2C>();
-    // let not_an_scl_pin = pins.gpio20.into_function::<hal::gpio::FunctionI2C>();
+    let sda_pin: Pin<_, FunctionI2C, PullUp> = pins.gpio18.reconfigure();
+    let scl_pin: Pin<_, FunctionI2C, PullUp> = pins.gpio19.reconfigure();
+    // let not_an_scl_pin: Pin<_, FunctionI2C, PullUp> = pins.gpio20.reconfigure();
 
     // Create the I²C drive, using the two pre-configured pins. This will fail
     // at compile time if the pins are in the wrong mode, or if this I²C
