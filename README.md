@@ -73,7 +73,7 @@ You may also want to install these helpful tools:
 # Useful to creating UF2 images for the RP2040 USB Bootloader
 cargo install elf2uf2-rs --locked
 # Useful for flashing over the SWD pins using a supported JTAG probe
-cargo install probe-run
+cargo install probe-rs --features cli --locked
 ```
 
 ## Packages
@@ -171,26 +171,23 @@ file and copy it to your RP2040.
 $ cargo run --release --example pwm_blink
 ```
 
-### Loading with probe-run
-
-The Knurling project has a tool called
-[probe-run](https://github.com/knurling-rs/probe-run). This is a command-line
-tool which can flash a wide variety of microcontrollers using a wide variety of
-debug/JTAG probes. It is based on a library called
-[probe-rs](https://github.com/probe-rs/probe-rs). Unlike using, say, OpenOCD,
+### Loading with probe-rs
+[probe-rs](https://github.com/probe-rs/probe-rs) is a library and a
+command-line tool which can flash a wide variety of microcontrollers
+using a wide variety of debug/JTAG probes. Unlike using, say, OpenOCD,
 probe-rs can autodetect your debug probe, which can make it easier to use.
 
-*Step 1* - Install `probe-run`:
+*Step 1* - Install `probe-rs`:
 
 ```console
-$ cargo install probe-run
+$ cargo install probe-rs --features cli --locked
 ```
 
 *Step 2* - Make sure your .cargo/config contains the following:
 
 ```toml
 [target.thumbv6m-none-eabi]
-runner = "probe-run --chip RP2040"
+runner = "probe-rs run --chip RP2040"
 ```
 
 *Step 3* - Connect your USB JTAG/debug probe (such as a Raspberry Pi Pico
@@ -199,8 +196,8 @@ programming pins on your RP2040 board. Check the probe has been found by
 running:
 
 ```console
-$ probe-run --list-probes
-The following devices were found:
+$ probe-rs list
+The following debug probes were found:
 [0]: J-Link (J-Link) (VID: 1366, PID: 0101, Serial: 000099999999, JLink)
 ```
 
@@ -208,7 +205,7 @@ There is a SEGGER J-Link connected in the example above - the message you see
 will reflect the probe you have connected.
 
 *Step 4* - Use `cargo run`, which will compile the code and start the specified
-'runner'. As the 'runner' is the `probe-run` tool, it will connect to the
+'runner'. As the 'runner' is the `probe-rs` tool, it will connect to the
 RP2040 via the first probe it finds, and install your firmware into the Flash
 connected to the RP2040.
 
