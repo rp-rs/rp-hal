@@ -89,6 +89,8 @@ jobs:
         with:
           crate: cargo-hack
           version: "=0.5.28"
+      - name: Use older version of regex
+        run: cargo update -p regex --precise 1.9.3
       - name: Verifiy MSRV
         run: cargo hack build --examples --optional-deps --each-feature
   on-target-build:
