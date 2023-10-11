@@ -1,7 +1,7 @@
 [target.'cfg(all(target_arch = "arm", target_os = "none"))']
 # we need probe-run to run target tests
 # note: this will be overridden by the top-level config.toml
-runner = "probe-run --chip RP2040"
+runner = "probe-rs run --chip RP2040"
 
 rustflags = [
   "-C", "link-arg=-Tdefmt.x",
