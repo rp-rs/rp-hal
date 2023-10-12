@@ -26,7 +26,9 @@ pub struct Stable {
 }
 
 /// XOSC is in dormant mode (see Chapter 2, Section 16, §5)
-pub struct Dormant;
+pub struct Dormant {
+    freq_hz: HertzU32,
+}
 
 impl State for Disabled {}
 impl Sealed for Disabled {}
@@ -184,6 +186,15 @@ impl CrystalOscillator<Stable> {
             w
         });
 
-        self.transition(Dormant)
+        let freq_hz = self.state.freq_hz;
+        self.transition(Dormant { freq_hz })
+    }
+}
+
+impl CrystalOscillator<Dormant> {
+    /// After waking up from the DORMANT state, XOSC is initialized but needs to re-stabilise.
+    pub fn get_initialized(self) -> CrystalOscillator<Initialized> {
+        let freq_hz = self.state.freq_hz;
+        self.transition(Initialized { freq_hz })
     }
 }

@@ -17,7 +17,9 @@ pub struct Enabled {
 }
 
 /// ROSC is in dormant mode (see Chapter 2, Section 17, §7)
-pub struct Dormant;
+pub struct Dormant {
+    freq_hz: HertzU32,
+}
 
 impl State for Disabled {}
 impl Sealed for Disabled {}
@@ -110,7 +112,17 @@ impl RingOscillator<Enabled> {
 
         self.device.dormant.write(|w| w.bits(ROSC_DORMANT_VALUE));
 
-        self.transition(Dormant)
+        let freq_hz = self.state.freq_hz;
+        self.transition(Dormant { freq_hz })
+    }
+}
+
+impl RingOscillator<Dormant> {
+    /// After waking up from the DORMANT state, ROSC restarts in approximately 1µs.
+    /// See Chapter 2, Section 16, §5) for details.
+    pub fn get_enabled(self) -> RingOscillator<Enabled> {
+        let freq_hz = self.state.freq_hz;
+        self.transition(Enabled { freq_hz })
     }
 }
 
