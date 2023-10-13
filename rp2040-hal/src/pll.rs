@@ -278,6 +278,25 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Locked, D> {
     pub fn operating_frequency(&self) -> HertzU32 {
         self.state.frequency
     }
+
+    /// Shut down the PLL. The returned PLL is configured the same as it was originally.
+    pub fn disable(self) -> PhaseLockedLoop<Disabled, D> {
+        let fbdiv = self.device.fbdiv_int.read().fbdiv_int().bits();
+        let refdiv = self.device.cs.read().refdiv().bits();
+        let prim = self.device.prim.read();
+        let frequency = self.state.frequency;
+
+        self.device.pwr.reset();
+        self.device.fbdiv_int.reset();
+
+        self.transition(Disabled {
+            refdiv,
+            fbdiv,
+            post_div1: prim.postdiv1().bits(),
+            post_div2: prim.postdiv2().bits(),
+            frequency,
+        })
+    }
 }
 
 /// Blocking helper method to setup the PLL without going through all the steps.
@@ -293,8 +312,15 @@ pub fn setup_pll_blocking<D: PhaseLockedLoopDevice>(
 
     nb::block!(clocks.reference_clock.reset_source_await()).unwrap();
 
-    let initialized_pll =
-        PhaseLockedLoop::new(dev, xosc_frequency.convert(), config)?.initialize(resets);
+    start_pll_blocking(PhaseLockedLoop::new(dev, xosc_frequency.convert(), config)?, resets)
+}
+
+/// Blocking helper method to (re)start a PLL.
+pub fn start_pll_blocking<D: PhaseLockedLoopDevice>(
+    disabled_pll: PhaseLockedLoop<Disabled, D>,
+    resets: &mut RESETS,
+) -> Result<PhaseLockedLoop<Locked, D>, Error> {
+    let initialized_pll = disabled_pll.initialize(resets);
 
     let locked_pll_token = nb::block!(initialized_pll.await_lock()).unwrap();
 
