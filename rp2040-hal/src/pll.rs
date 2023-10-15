@@ -312,7 +312,10 @@ pub fn setup_pll_blocking<D: PhaseLockedLoopDevice>(
 
     nb::block!(clocks.reference_clock.reset_source_await()).unwrap();
 
-    start_pll_blocking(PhaseLockedLoop::new(dev, xosc_frequency.convert(), config)?, resets)
+    start_pll_blocking(
+        PhaseLockedLoop::new(dev, xosc_frequency.convert(), config)?,
+        resets,
+    )
 }
 
 /// Blocking helper method to (re)start a PLL.

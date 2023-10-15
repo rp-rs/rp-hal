@@ -33,11 +33,14 @@ use hal::{
     gpio::{Interrupt::EdgeLow, Pins},
     pac,
     pac::{interrupt, CLOCKS, PLL_SYS, PLL_USB, RESETS, ROSC, XOSC},
-    pll::{Disabled, Locked, PhaseLockedLoop, common_configs::{PLL_SYS_125MHZ, PLL_USB_48MHZ}, setup_pll_blocking, start_pll_blocking},
+    pll::{
+        common_configs::{PLL_SYS_125MHZ, PLL_USB_48MHZ},
+        setup_pll_blocking, start_pll_blocking, Disabled, Locked, PhaseLockedLoop,
+    },
+    rosc::RingOscillator,
     sio::Sio,
     watchdog::Watchdog,
-    xosc::{CrystalOscillator, Dormant, setup_xosc_blocking, Stable},
-    rosc::RingOscillator,
+    xosc::{setup_xosc_blocking, CrystalOscillator, Dormant, Stable},
     Clock,
 };
 
@@ -78,8 +81,8 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-        .ok()
-        .unwrap();
+    .ok()
+    .unwrap();
 
     // Set the pins to their default state
     let pins = Pins::new(
@@ -110,17 +113,24 @@ fn main() -> ! {
         if use_dormant {
             pulse(&mut led_pin, 1);
 
-            let (disabled_pll_sys, disabled_pll_usb) = prepare_clocks_and_plls_for_dormancy(&mut xosc, &mut clocks, pll_sys, pll_usb);
+            let (disabled_pll_sys, disabled_pll_usb) =
+                prepare_clocks_and_plls_for_dormancy(&mut xosc, &mut clocks, pll_sys, pll_usb);
 
             // Stop the crystal oscillator and enter the RP2040's dormant state
             let dormant_xosc = unsafe { xosc.dormant() };
 
-            match restart_clocks_and_plls(&mut clocks, dormant_xosc, disabled_pll_sys, disabled_pll_usb, &mut pac.RESETS) {
+            match restart_clocks_and_plls(
+                &mut clocks,
+                dormant_xosc,
+                disabled_pll_sys,
+                disabled_pll_usb,
+                &mut pac.RESETS,
+            ) {
                 Ok((stable_xosc, stable_pll_sys, stable_pll_usb)) => {
                     xosc = stable_xosc;
                     pll_sys = stable_pll_sys;
                     pll_usb = stable_pll_usb;
-                },
+                }
                 Err(_) => {
                     panic!();
                 }
@@ -150,9 +160,10 @@ fn main() -> ! {
 fn pulse<P: ToggleableOutputPin>(pin: &mut P, count: u32) {
     const LED_PULSE_CYCLES: u32 = 2_000_000;
 
-    for i in 0..count*2 {
+    for i in 0..count * 2 {
         let _ = pin.toggle();
-        cortex_m::asm::delay(LED_PULSE_CYCLES + (i % 2) * 9 * LED_PULSE_CYCLES); // 1:10 duty cycle
+        // 1:10 duty cycle
+        cortex_m::asm::delay(LED_PULSE_CYCLES + (i % 2) * 9 * LED_PULSE_CYCLES);
     }
 }
 
@@ -167,7 +178,15 @@ fn init_clocks_and_plls(
     pll_usb_dev: PLL_USB,
     resets: &mut RESETS,
     watchdog: &mut Watchdog,
-) -> Result<(ClocksManager, CrystalOscillator<Stable>, PhaseLockedLoop<Locked, PLL_SYS>, PhaseLockedLoop<Locked, PLL_USB>), InitError> {
+) -> Result<
+    (
+        ClocksManager,
+        CrystalOscillator<Stable>,
+        PhaseLockedLoop<Locked, PLL_SYS>,
+        PhaseLockedLoop<Locked, PLL_USB>,
+    ),
+    InitError,
+> {
     let xosc = setup_xosc_blocking(xosc_dev, xosc_crystal_freq.Hz()).unwrap();
 
     // Configure watchdog tick generation to tick over every microsecond
@@ -182,7 +201,7 @@ fn init_clocks_and_plls(
         &mut clocks,
         resets,
     )
-        .map_err(InitError::PllError)?;
+    .map_err(InitError::PllError)?;
     let pll_usb = setup_pll_blocking(
         pll_usb_dev,
         xosc.operating_frequency(),
@@ -190,7 +209,7 @@ fn init_clocks_and_plls(
         &mut clocks,
         resets,
     )
-        .map_err(InitError::PllError)?;
+    .map_err(InitError::PllError)?;
 
     clocks
         .init_default(&xosc, &pll_sys, &pll_usb)
@@ -209,15 +228,24 @@ fn prepare_clocks_and_plls_for_dormancy(
     clocks: &mut ClocksManager,
     pll_sys: PhaseLockedLoop<Locked, PLL_SYS>,
     pll_usb: PhaseLockedLoop<Locked, PLL_USB>,
-) -> (PhaseLockedLoop<Disabled, PLL_SYS>, PhaseLockedLoop<Disabled, PLL_USB>) {
+) -> (
+    PhaseLockedLoop<Disabled, PLL_SYS>,
+    PhaseLockedLoop<Disabled, PLL_USB>,
+) {
     // switch system clock from pll_sys to xosc so that we can stop the system PLL
     nb::block!(clocks.system_clock.reset_source_await()).unwrap();
 
     clocks.usb_clock.disable();
     clocks.adc_clock.disable();
 
-    clocks.rtc_clock.configure_clock(xosc, 46875u32.Hz()).unwrap();
-    clocks.peripheral_clock.configure_clock(&clocks.system_clock, clocks.system_clock.freq()).unwrap();
+    clocks
+        .rtc_clock
+        .configure_clock(xosc, 46875u32.Hz())
+        .unwrap();
+    clocks
+        .peripheral_clock
+        .configure_clock(&clocks.system_clock, clocks.system_clock.freq())
+        .unwrap();
 
     (pll_sys.disable(), pll_usb.disable())
 }
@@ -229,7 +257,14 @@ fn restart_clocks_and_plls(
     disabled_pll_sys: PhaseLockedLoop<Disabled, PLL_SYS>,
     disabled_pll_usb: PhaseLockedLoop<Disabled, PLL_USB>,
     resets: &mut RESETS,
-) -> Result<(CrystalOscillator<Stable>, PhaseLockedLoop<Locked, PLL_SYS>, PhaseLockedLoop<Locked, PLL_USB>), ClockError> {
+) -> Result<
+    (
+        CrystalOscillator<Stable>,
+        PhaseLockedLoop<Locked, PLL_SYS>,
+        PhaseLockedLoop<Locked, PLL_USB>,
+    ),
+    ClockError,
+> {
     // Wait for the restarted XOSC to stabilise
     let initialized_xosc = dormant_xosc.get_initialized();
     let stable_xosc_token = block!(initialized_xosc.await_stabilization()).unwrap();
@@ -238,7 +273,9 @@ fn restart_clocks_and_plls(
     let pll_sys = start_pll_blocking(disabled_pll_sys, resets).unwrap();
     let pll_usb = start_pll_blocking(disabled_pll_usb, resets).unwrap();
 
-    clocks.init_default(&xosc, &pll_sys, &pll_usb).map(|_| (xosc, pll_sys, pll_usb))
+    clocks
+        .init_default(&xosc, &pll_sys, &pll_usb)
+        .map(|_| (xosc, pll_sys, pll_usb))
 }
 
 #[interrupt]
