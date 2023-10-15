@@ -120,6 +120,11 @@ name = "dht11"
 required-features = ["critical-section-impl"]
 
 [[example]]
+# dormant_sleep example uses cortex-m-rt::interrupt, need rt feature for that
+name = "dormant_sleep"
+required-features = ["rt", "critical-section-impl"]
+
+[[example]]
 name = "gpio_in_out"
 required-features = ["critical-section-impl"]
 
