@@ -200,6 +200,40 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
         super::reader::read_full_blocking(&self.device, buffer)
     }
 
+    /// Initiates a break
+    ///
+    /// If transmitting, this takes effect immediately after the current byte has completed.  
+    /// For proper execution of the break command, this must be held for at least 2 complete frames
+    /// worth of time.
+    ///
+    /// <div class="warning">The device won’t be able to send anything while breaking.</div>
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use rp2040_hal::uart::{Pins, ValidUartPinout, Enabled, UartPeripheral};
+    /// # use rp2040_hal::pac::UART0;
+    /// # use rp2040_hal::typelevel::OptionTNone;
+    /// # use embedded_hal_0_2::blocking::delay::DelayUs;
+    /// # type PINS = Pins<OptionTNone, OptionTNone, OptionTNone, OptionTNone>;
+    /// # let mut serial: UartPeripheral<Enabled, UART0, PINS> = unsafe { core::mem::zeroed() };
+    /// # let mut timer: rp2040_hal::Timer = unsafe { core::mem::zeroed() };
+    /// serial.lowlevel_break_start();
+    /// // at 115_200Bps on 8N1 configuration, 20bits takes (20*10⁶)/115200 = 173.611…μs.
+    /// timer.delay_us(175);
+    /// serial.lowlevel_break_stop();
+    /// ```
+    pub fn lowlevel_break_start(&mut self) {
+        self.device.uartlcr_h().modify(|_, w| w.brk().set_bit());
+    }
+
+    /// Terminates a break condition.
+    ///
+    /// See `lowlevel_break_start` for more details.
+    pub fn lowlevel_break_stop(&mut self) {
+        self.device.uartlcr_h().modify(|_, w| w.brk().clear_bit());
+    }
+
     /// Join the reader and writer halves together back into the original Uart peripheral.
     ///
     /// A reader/writer pair can be obtained by calling [`split`].
