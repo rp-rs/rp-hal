@@ -154,7 +154,10 @@ impl DataSize for u16 {}
 impl Sealed for u8 {}
 impl Sealed for u16 {}
 
-/// Configured Spi device.
+/// Configured Spi bus.
+///
+/// This struct implements the `embedded-hal` Spi-related traits. It represents unique ownership
+/// of the entire Spi bus of a single configured RP2040 Spi peripheral.
 ///
 /// `Spi` has four generic parameters:
 /// - `S`: a typestate for whether the bus is [`Enabled`] or [`Disabled`]. Upon initial creation,
