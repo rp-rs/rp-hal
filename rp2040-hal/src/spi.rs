@@ -1,5 +1,8 @@
 //! Serial Peripheral Interface (SPI)
 //!
+//! [`Spi`] is the main struct exported by this module, representing a configured Spi bus. See its
+//! docs for more information on its type parameters.
+//!
 //! See [Chapter 4 Section 4](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 //!
 //! ## Usage
@@ -16,7 +19,11 @@
 //! let sclk = pins.gpio2.into_function::<FunctionSpi>();
 //! let mosi = pins.gpio3.into_function::<FunctionSpi>();
 //!
-//! let spi = Spi::<_, _, _, 8>::new(peripherals.SPI0, (mosi, sclk)).init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), MODE_0);
+//! let spi_pin_layout = (mosi, sclk);
+//! let spi_device = peripherals.SPI0;
+//!
+//! let spi = Spi::new(spi_pin_layout, spi_device)
+//!     .init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), MODE_0);
 //! ```
 
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
@@ -147,8 +154,28 @@ impl DataSize for u16 {}
 impl Sealed for u8 {}
 impl Sealed for u16 {}
 
-/// Spi
-pub struct Spi<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> {
+/// Configured Spi device.
+///
+/// `Spi` has four generic parameters:
+/// - `S`: a typestate for whether the bus is [`Enabled`] or [`Disabled`]. Upon initial creation,
+/// the bus is [`Disabled`]. You will then need to initialize it as either a main (master) or sub
+/// (slave) device, providing the necessary configuration, at which point it will become [`Enabled`].
+/// - `D`: Which of the concrete Spi peripherals is being used, [`pac::SPI0`] or [`pac::SPI1`]
+/// - `P`: Which pins are being used to configure the Spi peripheral `D`. A table of valid
+/// pinouts for each Spi peripheral can be found in section 1.4.3 of the RP2040 datasheet.
+/// The [`ValidSpiPinout`] trait is implemented for tuples of pin types that follow the layout:
+///     - `(Tx, Sck)` (i.e. first the "Tx"/"MOSI" pin, then the "Sck"/"Clock" pin)
+///     - `(Tx, Rx, Sck)` (i.e. first "Tx"/"MOSI", then "Rx"/"MISO", then "Sck"/"Clock" pin)
+/// If you select an invalid layout, you will get a compile error that `P` does not implement
+/// [`ValidSpiPinout`] for your specified [`SpiDevice`] peripheral `D`
+/// - `DS`: The "data size", i.e. the number of bits transferred per data frame. Defaults to 8.
+///
+/// In most cases you won't have to specify these types manually and can let the compiler infer
+/// them for you based on the values you pass in to `new`. If you want to select a different
+/// data frame size, you'll need to do that by specifying the `DS` parameter manually.
+///
+/// See [the module level docs][self] for an example.
+pub struct Spi<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8 = 8u8> {
     device: D,
     pins: P,
     state: PhantomData<S>,
@@ -168,9 +195,13 @@ impl<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<S, D, P, DS
         self.device
     }
 
-    /// Set baudrate based on peripheral clock
+    /// Set device pre-scale and post-div properties to match the given baudrate as
+    /// closely as possible based on the given peripheral clock frequency.
     ///
-    /// Typically the peripheral clock is set to 125_000_000
+    /// Typically the peripheral clock is set to 125_000_000 Hz.
+    ///
+    /// Returns the frequency that we were able to achieve, which may not be exactly
+    /// the requested baudrate.
     pub fn set_baudrate<F: Into<HertzU32>, B: Into<HertzU32>>(
         &mut self,
         peri_frequency: F,
@@ -218,7 +249,8 @@ impl<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<S, D, P, DS
 }
 
 impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
-    /// Create new spi device
+    /// Create new not initialized Spi bus. Initialize it with [`.init`][Self::init]
+    /// or [`.init_slave`][Self::init_slave].
     pub fn new(device: D, pins: P) -> Spi<Disabled, D, P, DS> {
         Spi {
             device,
@@ -327,7 +359,8 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Enabled, D, P, DS> {
         self.device.sspsr.read().bsy().bit_is_set()
     }
 
-    /// Disable the spi to reset its configuration
+    /// Disable the spi to reset its configuration. You'll then need to initialize it again to use
+    /// it.
     pub fn disable(self) -> Spi<Disabled, D, P, DS> {
         self.device.sspcr1.modify(|_, w| w.sse().clear_bit());
 
