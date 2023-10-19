@@ -7,7 +7,7 @@ Adding a test:
 - Add a new [[test]] to the Cargo.toml
 
 Running all tests:  
-Linux (and any other Unix-likes where probe-run are supported):
+Linux (and any other Unix-likes where probe-rs are supported):
 ```system
 ./run_tests.sh
 ```
@@ -19,7 +19,7 @@ run_tests.bat
 To run a specific test (to make developing tests faster)
 
 ```system
-CARGO_TARGET_THUMBV6M_NONE_EABI_RUNNER=probe-run cargo test --test my_new_test -- --chip rp2040
+CARGO_TARGET_THUMBV6M_NONE_EABI_RUNNER="probe-rs run" cargo test --test my_new_test -- --chip rp2040
 ```
 
 ## Prerequisites

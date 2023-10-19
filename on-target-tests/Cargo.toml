@@ -35,7 +35,7 @@ embedded-hal = { version = "0.2.5", features = ["unproven"] }
 
 defmt = "0.3"
 defmt-rtt = "0.4"
-defmt-test = "0.3"
+defmt-test = "0.3.1"
 panic-probe = { version = "0.3", features = ["print-defmt"] }
 
 rp2040-hal = { path = "../rp2040-hal", features = [
