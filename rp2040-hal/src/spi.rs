@@ -19,10 +19,10 @@
 //! let sclk = pins.gpio2.into_function::<FunctionSpi>();
 //! let mosi = pins.gpio3.into_function::<FunctionSpi>();
 //!
-//! let spi_pin_layout = (mosi, sclk);
 //! let spi_device = peripherals.SPI0;
+//! let spi_pin_layout = (mosi, sclk);
 //!
-//! let spi = Spi::new(spi_pin_layout, spi_device)
+//! let spi = Spi::new(spi_device, spi_pin_layout)
 //!     .init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), MODE_0);
 //! ```
 
