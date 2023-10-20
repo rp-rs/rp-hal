@@ -40,7 +40,7 @@ use hal::{
     rosc::RingOscillator,
     sio::Sio,
     watchdog::Watchdog,
-    xosc::{setup_xosc_blocking, CrystalOscillator, Dormant, Stable},
+    xosc::{setup_xosc_blocking, CrystalOscillator, Unstable, Stable},
     Clock,
 };
 
@@ -117,11 +117,11 @@ fn main() -> ! {
                 prepare_clocks_and_plls_for_dormancy(&mut xosc, &mut clocks, pll_sys, pll_usb);
 
             // Stop the crystal oscillator and enter the RP2040's dormant state
-            let dormant_xosc = unsafe { xosc.dormant() };
+            let unstable_xosc = unsafe { xosc.dormant() };
 
             match restart_clocks_and_plls(
                 &mut clocks,
-                dormant_xosc,
+                unstable_xosc,
                 disabled_pll_sys,
                 disabled_pll_usb,
                 &mut pac.RESETS,
@@ -253,7 +253,7 @@ fn prepare_clocks_and_plls_for_dormancy(
 /// Restart the PLLs and start/reconfigure the clocks back to how they were before going dormant.
 fn restart_clocks_and_plls(
     clocks: &mut ClocksManager,
-    dormant_xosc: CrystalOscillator<Dormant>,
+    unstable_xosc: CrystalOscillator<Unstable>,
     disabled_pll_sys: PhaseLockedLoop<Disabled, PLL_SYS>,
     disabled_pll_usb: PhaseLockedLoop<Disabled, PLL_USB>,
     resets: &mut RESETS,
@@ -266,9 +266,8 @@ fn restart_clocks_and_plls(
     ClockError,
 > {
     // Wait for the restarted XOSC to stabilise
-    let initialized_xosc = dormant_xosc.get_initialized();
-    let stable_xosc_token = block!(initialized_xosc.await_stabilization()).unwrap();
-    let xosc = initialized_xosc.get_stable(stable_xosc_token);
+    let stable_xosc_token = block!(unstable_xosc.await_stabilization()).unwrap();
+    let xosc = unstable_xosc.get_stable(stable_xosc_token);
 
     let pll_sys = start_pll_blocking(disabled_pll_sys, resets).unwrap();
     let pll_usb = start_pll_blocking(disabled_pll_usb, resets).unwrap();

@@ -16,17 +16,10 @@ pub struct Enabled {
     freq_hz: HertzU32,
 }
 
-/// ROSC is in dormant mode (see Chapter 2, Section 17, §7)
-pub struct Dormant {
-    freq_hz: HertzU32,
-}
-
 impl State for Disabled {}
 impl Sealed for Disabled {}
 impl State for Enabled {}
 impl Sealed for Enabled {}
-impl State for Dormant {}
-impl Sealed for Dormant {}
 
 /// A Ring Oscillator.
 pub struct RingOscillator<S: State> {
@@ -99,30 +92,20 @@ impl RingOscillator<Enabled> {
         self.device.randombit.read().randombit().bit()
     }
 
-    /// Put the ROSC in DORMANT state.
+    /// Put the ROSC in DORMANT state. The method returns after the processor awakens.
+    ///
+    /// After waking up from the DORMANT state, ROSC restarts in approximately 1µs.
     ///
     /// # Safety
     /// This method is marked unsafe because prior to switch the ROSC into DORMANT state,
     /// PLLs must be stopped and IRQs have to be properly configured.
     /// This method does not do any of that, it merely switches the ROSC to DORMANT state.
     /// See Chapter 2, Section 16, §5) for details.
-    pub unsafe fn dormant(self) -> RingOscillator<Dormant> {
+    pub unsafe fn dormant(self) {
         //taken from the C SDK
         const ROSC_DORMANT_VALUE: u32 = 0x636f6d61;
 
         self.device.dormant.write(|w| w.bits(ROSC_DORMANT_VALUE));
-
-        let freq_hz = self.state.freq_hz;
-        self.transition(Dormant { freq_hz })
-    }
-}
-
-impl RingOscillator<Dormant> {
-    /// After waking up from the DORMANT state, ROSC restarts in approximately 1µs.
-    /// See Chapter 2, Section 16, §5) for details.
-    pub fn get_enabled(self) -> RingOscillator<Enabled> {
-        let freq_hz = self.state.freq_hz;
-        self.transition(Enabled { freq_hz })
     }
 }
 
