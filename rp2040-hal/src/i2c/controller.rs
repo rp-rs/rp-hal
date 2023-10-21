@@ -1,5 +1,5 @@
 use core::{marker::PhantomData, ops::Deref};
-use embedded_hal::blocking::i2c::{Read, Write, WriteRead};
+use embedded_hal::blocking::i2c::{Read, Write, WriteIter, WriteIterRead, WriteRead};
 use fugit::HertzU32;
 
 #[cfg(feature = "eh1_0_alpha")]
@@ -335,6 +335,7 @@ impl<T: Deref<Target = Block>, PINS> WriteRead for I2C<T, PINS, Controller> {
         self.read_internal(rx, true, true)
     }
 }
+
 impl<T: Deref<Target = Block>, PINS> Write for I2C<T, PINS, Controller> {
     type Error = Error;
 
@@ -344,6 +345,33 @@ impl<T: Deref<Target = Block>, PINS> Write for I2C<T, PINS, Controller> {
         self.setup(addr);
 
         self.write_internal(tx, true)
+    }
+}
+
+impl<T: Deref<Target = Block>, PINS> WriteIter for I2C<T, PINS, Controller> {
+    type Error = Error;
+
+    fn write<B>(&mut self, address: u8, bytes: B) -> Result<(), Self::Error>
+    where
+        B: IntoIterator<Item = u8>,
+    {
+        self.write_iter(address, bytes)
+    }
+}
+
+impl<T: Deref<Target = Block>, PINS> WriteIterRead for I2C<T, PINS, Controller> {
+    type Error = Error;
+
+    fn write_iter_read<B>(
+        &mut self,
+        address: u8,
+        bytes: B,
+        buffer: &mut [u8],
+    ) -> Result<(), Self::Error>
+    where
+        B: IntoIterator<Item = u8>,
+    {
+        self.write_iter_read(address, bytes, buffer)
     }
 }
 
