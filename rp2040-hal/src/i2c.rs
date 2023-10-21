@@ -72,6 +72,8 @@ impl I2cDevice for pac::I2C1 {
 
 /// I2C error
 #[non_exhaustive]
+// when eh1_0_alpha is set, Debug & defmt::Format are manually implemented
+// to rely on eh1.0's ErrorKind.
 #[cfg_attr(not(feature = "eh1_0_alpha"), derive(Debug))]
 #[cfg_attr(
     all(feature = "defmt", not(feature = "eh1_0_alpha")),
