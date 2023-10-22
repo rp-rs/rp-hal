@@ -22,7 +22,7 @@
 //! let spi_device = peripherals.SPI0;
 //! let spi_pin_layout = (mosi, sclk);
 //!
-//! let spi = Spi::new(spi_device, spi_pin_layout)
+//! let spi = Spi::<_, _, _, 8>::new(spi_device, spi_pin_layout)
 //!     .init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), MODE_0);
 //! ```
 
