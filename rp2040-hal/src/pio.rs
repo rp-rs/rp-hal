@@ -628,6 +628,22 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
         unsafe { self.sm.sm().sm_execctrl.read().exec_stalled().bit() }
     }
 
+    /// Clear both TX and RX FIFOs
+    pub fn clear_fifos(&mut self) {
+        // Safety: all accesses to these registers are controlled by this instance
+        unsafe {
+            let sm = &self.sm.sm();
+            let sm_shiftctrl = &sm.sm_shiftctrl;
+            let mut current = false;
+            // Toggling the FIFO join state clears the fifo
+            sm_shiftctrl.modify(|r, w| {
+                current = r.fjoin_rx().bit();
+                w.fjoin_rx().bit(!current)
+            });
+            sm_shiftctrl.modify(|_, w| w.fjoin_rx().bit(current));
+        }
+    }
+
     /// Drain Tx fifo.
     pub fn drain_tx_fifo(&mut self) {
         // According to the datasheet 3.5.4.2 Page 358:
