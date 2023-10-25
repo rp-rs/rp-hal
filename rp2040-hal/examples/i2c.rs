@@ -23,7 +23,7 @@ use hal::fugit::RateExtU32;
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access and a gpio related types.
 use hal::{
-    gpio::{FunctionI2C, Pin, PullUp},
+    gpio::{FunctionI2C, Pin},
     pac,
 };
 
@@ -78,8 +78,8 @@ fn main() -> ! {
     );
 
     // Configure two pins as being I²C, not GPIO
-    let sda_pin: Pin<_, FunctionI2C, PullUp> = pins.gpio18.reconfigure();
-    let scl_pin: Pin<_, FunctionI2C, PullUp> = pins.gpio19.reconfigure();
+    let sda_pin: Pin<_, FunctionI2C, _> = pins.gpio18.reconfigure();
+    let scl_pin: Pin<_, FunctionI2C, _> = pins.gpio19.reconfigure();
     // let not_an_scl_pin: Pin<_, FunctionI2C, PullUp> = pins.gpio20.reconfigure();
 
     // Create the I²C drive, using the two pre-configured pins. This will fail

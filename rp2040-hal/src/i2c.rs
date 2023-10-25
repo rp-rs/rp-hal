@@ -47,7 +47,7 @@ use core::{marker::PhantomData, ops::Deref};
 use fugit::HertzU32;
 
 use crate::{
-    gpio::{bank0::*, pin::pin_sealed::TypeLevelPinId, AnyPin, FunctionI2c},
+    gpio::{bank0::*, pin::pin_sealed::TypeLevelPinId, AnyPin, FunctionI2c, PullUp},
     pac::{self, i2c0::RegisterBlock as I2CBlock, I2C0, I2C1, RESETS},
     resets::SubsystemReset,
     typelevel::Sealed,
@@ -331,11 +331,31 @@ macro_rules! hal {
                     system_clock: SystemF) -> Self
                 where
                     F: Into<HertzU32>,
-                    Sda: ValidPinSda<$I2CX>,
-                    Scl: ValidPinScl<$I2CX>,
+                    Sda: ValidPinSda<$I2CX> + AnyPin<Pull = PullUp>,
+                    Scl: ValidPinScl<$I2CX> + AnyPin<Pull = PullUp>,
                     SystemF: Into<HertzU32>,
                 {
                     Self::new_controller(i2c, sda_pin, scl_pin, freq.into(), resets, system_clock.into())
+                }
+
+                $crate::paste::paste! {
+                    /// Configures the I2C peripheral to work in master mode
+                    /// This function can be called without the pull-ups on the I2C pins.
+                    pub fn [<$i2cX _unchecked>]<F, SystemF>(
+                        i2c: $I2CX,
+                        sda_pin: Sda,
+                        scl_pin: Scl,
+                        freq: F,
+                        resets: &mut RESETS,
+                        system_clock: SystemF) -> Self
+                    where
+                        F: Into<HertzU32>,
+                        Sda: ValidPinSda<$I2CX>,
+                        Scl: ValidPinScl<$I2CX>,
+                        SystemF: Into<HertzU32>,
+                    {
+                        Self::new_controller(i2c, sda_pin, scl_pin, freq.into(), resets, system_clock.into())
+                    }
                 }
             }
         )+
