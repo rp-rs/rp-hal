@@ -269,21 +269,22 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>> Spi<Disabled, D, P, 8> {
             state: PhantomData,
         }
     }
+}
 
-    /// Create new (not initialized) Spi bus with a non-default data size.
+impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
+    /// Create new (not initialized) Spi bus with a non-default data size, provided
+    /// as a const generic parameter.
     ///
     /// Initialize it with [`.init`][Self::init]
     /// or [`.init_slave`][Self::init_slave].
-    pub fn new_with_data_size<const DS: u8>(device: D, pins: P) -> Spi<Disabled, D, P, DS> {
+    pub fn new_with_data_size<const DATA_SIZE: u8>(device: D, pins: P) -> Spi<Disabled, D, P, DATA_SIZE> {
         Spi {
             device,
             pins,
             state: PhantomData,
         }
     }
-}
 
-impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
     /// Set format and datasize
     fn set_format(&mut self, data_bits: u8, frame_format: FrameFormat) {
         self.device.sspcr0.modify(|_, w| unsafe {
