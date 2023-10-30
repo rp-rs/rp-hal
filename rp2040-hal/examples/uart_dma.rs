@@ -24,7 +24,7 @@ use rp2040_hal as hal;
 use hal::{dma::DMAExt, pac};
 
 // Some traits we need
-use fugit::RateExtU32;
+use hal::fugit::RateExtU32;
 use rp2040_hal::clocks::Clock;
 
 // UART related types

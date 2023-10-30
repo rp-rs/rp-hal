@@ -38,6 +38,7 @@
 #![warn(missing_docs)]
 #![no_std]
 
+#[doc(hidden)]
 pub use paste;
 
 /// Re-export of the PAC
@@ -93,6 +94,8 @@ pub use sio::Sio;
 pub use spi::Spi;
 pub use timer::Timer;
 pub use watchdog::Watchdog;
+// Re-export crates used in rp2040-hal's public API
+pub extern crate fugit;
 
 /// Trigger full reset of the RP2040.
 ///
