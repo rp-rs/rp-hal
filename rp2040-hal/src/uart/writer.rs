@@ -41,6 +41,12 @@ pub(crate) fn uart_is_writable(rb: &RegisterBlock) -> bool {
     rb.uartfr.read().txff().bit_is_clear()
 }
 
+/// Returns `true` if the UART is busy transmitting data, `false` after all
+/// bits (including stop bits) have been transmitted.
+pub(crate) fn uart_is_busy(rb: &RegisterBlock) -> bool {
+    rb.uartfr.read().busy().bit_is_set()
+}
+
 /// Writes bytes to the UART.
 ///
 /// This function writes as long as it can. As soon that the FIFO is full,

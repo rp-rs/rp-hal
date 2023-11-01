@@ -161,6 +161,11 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
         super::writer::uart_is_writable(&self.device)
     }
 
+    /// Is the UART still busy transmitting data?
+    pub fn uart_is_busy(&self) -> bool {
+        super::writer::uart_is_busy(&self.device)
+    }
+
     /// Is there data in the UART RX FIFO ready to be read?
     pub fn uart_is_readable(&self) -> bool {
         super::reader::is_readable(&self.device)
