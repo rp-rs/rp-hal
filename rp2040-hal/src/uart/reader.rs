@@ -146,7 +146,7 @@ pub(crate) fn read_raw<'b, D: UartDevice>(
             }
 
             // A break condition is also a framing error.
-            // As it is the more specifc code, return
+            // As it is the more specific code, return
             // the break error.
             if read.be().bit_is_set() {
                 error = Some(ReadErrorType::Break);
