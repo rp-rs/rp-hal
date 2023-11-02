@@ -137,16 +137,19 @@ pub(crate) fn read_raw<'b, D: UartDevice>(
                 error = Some(ReadErrorType::Overrun);
             }
 
-            if read.be().bit_is_set() {
-                error = Some(ReadErrorType::Break);
-            }
-
             if read.pe().bit_is_set() {
                 error = Some(ReadErrorType::Parity);
             }
 
             if read.fe().bit_is_set() {
                 error = Some(ReadErrorType::Framing);
+            }
+
+            // A break condition is also a framing error.
+            // As it is the more specifc code, return
+            // the break error.
+            if read.be().bit_is_set() {
+                error = Some(ReadErrorType::Break);
             }
 
             if let Some(err_type) = error {
