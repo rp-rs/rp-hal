@@ -138,7 +138,23 @@ code (e.g. as produced by GCC), Rust uses the *Arm Embedded-Application Binary
 Interface* standard or EABI. Therefore, any Rust code for the RP2040 should be
 compiled with the target *`thumbv6m-none-eabi`*.
 
-More details can be found in the [Project Template](https://github.com/rp-rs/rp2040-project-template).
+More details can be found in the [Project Template].
+
+### Linker flags
+
+Besides the correct target, which mainly defines the instruction set,
+it's also necessary to use a certain memory layout compatible with
+the rp2040. To achieve that, rustc must be called with appropriate
+linker flags. In the [Project Template], those flags are defined in
+[`.cargo/config.toml`](https://github.com/rp-rs/rp2040-project-template/blob/main/.cargo/config.toml).
+Another necessary file is
+[`memory.x`](https://github.com/rp-rs/rp2040-project-template/blob/main/memory.x).
+
+More detailed information on how the linker flags work can be found in
+[the cortex_m_rt docs](https://docs.rs/cortex-m-rt/latest/cortex_m_rt/).
+
+In most cases, it should be sufficient to use the example files from the
+[Project Template].
 
 ### Loading a UF2 over USB
 
@@ -226,6 +242,8 @@ Also of note is that the special
 [pico-sdk](https://github.com/raspberrypi/pico-sdk) macros which hide
 information in the ELF file in a way that `picotool info` can read it out, are
 not supported in Rust. An alternative is TBC.
+
+[Project Template]: https://github.com/rp-rs/rp2040-project-template
 
 <!-- ROADMAP -->
 ## Roadmap
