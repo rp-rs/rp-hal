@@ -26,13 +26,14 @@ pub fn set_tx_watermark(rb: &RegisterBlock, watermark: FifoWatermark) {
     rb.uartifls.modify(|_r, w| unsafe { w.txiflsel().bits(wm) });
 }
 
-/// Returns `Err(WouldBlock)` if the UART TX FIFO still has data in it or
-/// `Ok(())` if the FIFO is empty.
+/// Returns `Err(WouldBlock)` if the UART is still busy transmitting data.
+/// It returns Ok(()) when the TX fifo and the transmit shift register are empty
+/// and the last stop bit is sent.
 pub(crate) fn transmit_flushed(rb: &RegisterBlock) -> nb::Result<(), Infallible> {
-    if rb.uartfr.read().txfe().bit_is_set() {
-        Ok(())
-    } else {
+    if rb.uartfr.read().busy().bit_is_set() {
         Err(WouldBlock)
+    } else {
+        Ok(())
     }
 }
 
