@@ -1933,6 +1933,10 @@ pub enum InstallError {
 impl<P: PIOExt> PIOBuilder<P> {
     /// Set config settings based on information from the given [`pio::Program`].
     /// Additional configuration may be needed in addition to this.
+    ///
+    /// Note: The shift direction for both input and output shift registers
+    /// defaults to `ShiftDirection::Left`, which is different from the
+    /// rp2040 reset value.
     pub fn from_program(p: InstalledProgram<P>) -> Self {
         PIOBuilder {
             clock_divisor: (1, 0),
