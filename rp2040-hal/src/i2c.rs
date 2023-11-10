@@ -53,11 +53,7 @@ use crate::{
     typelevel::Sealed,
 };
 
-/// Controller implementaion
-///
-/// This is only pub for historical reasons, to stay semver compatible with v0.9.0.
-/// It should be made private before releasing v0.10.0.
-pub mod controller;
+mod controller;
 pub mod peripheral;
 
 /// Pac I2C device
