@@ -32,7 +32,7 @@ use hal::{
     gpio,
     gpio::{Interrupt::EdgeLow, Pins},
     pac,
-    pac::{interrupt, CLOCKS, PLL_SYS, PLL_USB, RESETS, ROSC, XOSC},
+    pac::{interrupt, CLOCKS, PLL_SYS, PLL_USB, RESETS, XOSC},
     pll::{
         common_configs::{PLL_SYS_125MHZ, PLL_USB_48MHZ},
         setup_pll_blocking, start_pll_blocking, Disabled, Locked, PhaseLockedLoop,
@@ -45,6 +45,19 @@ use hal::{
 };
 
 use nb::block;
+
+type ClocksAndPlls = (
+    ClocksManager,
+    CrystalOscillator<Stable>,
+    PhaseLockedLoop<Locked, PLL_SYS>,
+    PhaseLockedLoop<Locked, PLL_USB>,
+);
+
+type RestartedClockAndPlls = (
+    CrystalOscillator<Stable>,
+    PhaseLockedLoop<Locked, PLL_SYS>,
+    PhaseLockedLoop<Locked, PLL_USB>,
+);
 
 /// The button input.
 type ButtonPin = gpio::Pin<gpio::bank0::Gpio14, gpio::FunctionSioInput, gpio::PullNone>;
@@ -74,7 +87,6 @@ fn main() -> ! {
     let (mut clocks, mut xosc, mut pll_sys, mut pll_usb) = init_clocks_and_plls(
         XTAL_FREQ_HZ,
         pac.XOSC,
-        pac.ROSC,
         pac.CLOCKS,
         pac.PLL_SYS,
         pac.PLL_USB,
@@ -83,6 +95,10 @@ fn main() -> ! {
     )
     .ok()
     .unwrap();
+
+    // Disable ring oscillator to maximise power savings - optional
+    let rosc = RingOscillator::new(pac.ROSC).initialize();
+    rosc.disable();
 
     // Set the pins to their default state
     let pins = Pins::new(
@@ -139,11 +155,11 @@ fn main() -> ! {
             // Clear dormant wake interrupt status to enable wake next time
             critical_section::with(|cs| {
                 let mut global_devices = GLOBAL_DEVICES.borrow(cs).borrow_mut();
-                let Some(ref mut trigger_pin) = global_devices.deref_mut() else {
-                    panic!()
+                if let Some(ref mut trigger_pin) = global_devices.deref_mut() {
+                    trigger_pin.clear_interrupt(EdgeLow);
+                } else {
+                    panic!();
                 };
-
-                trigger_pin.clear_interrupt(EdgeLow);
             });
         } else {
             pulse(&mut led_pin, 2);
@@ -172,21 +188,12 @@ fn pulse<P: ToggleableOutputPin>(pin: &mut P, count: u32) {
 fn init_clocks_and_plls(
     xosc_crystal_freq: u32,
     xosc_dev: XOSC,
-    rosc_dev: ROSC,
     clocks_dev: CLOCKS,
     pll_sys_dev: PLL_SYS,
     pll_usb_dev: PLL_USB,
     resets: &mut RESETS,
     watchdog: &mut Watchdog,
-) -> Result<
-    (
-        ClocksManager,
-        CrystalOscillator<Stable>,
-        PhaseLockedLoop<Locked, PLL_SYS>,
-        PhaseLockedLoop<Locked, PLL_USB>,
-    ),
-    InitError,
-> {
+) -> Result<ClocksAndPlls, InitError> {
     let xosc = setup_xosc_blocking(xosc_dev, xosc_crystal_freq.Hz()).unwrap();
 
     // Configure watchdog tick generation to tick over every microsecond
@@ -214,9 +221,6 @@ fn init_clocks_and_plls(
     clocks
         .init_default(&xosc, &pll_sys, &pll_usb)
         .map_err(InitError::ClockError)?;
-
-    let rosc = RingOscillator::new(rosc_dev).initialize();
-    rosc.disable(); // disable ring oscillator to maximise power savings
 
     Ok((clocks, xosc, pll_sys, pll_usb))
 }
@@ -257,14 +261,7 @@ fn restart_clocks_and_plls(
     disabled_pll_sys: PhaseLockedLoop<Disabled, PLL_SYS>,
     disabled_pll_usb: PhaseLockedLoop<Disabled, PLL_USB>,
     resets: &mut RESETS,
-) -> Result<
-    (
-        CrystalOscillator<Stable>,
-        PhaseLockedLoop<Locked, PLL_SYS>,
-        PhaseLockedLoop<Locked, PLL_USB>,
-    ),
-    ClockError,
-> {
+) -> Result<RestartedClockAndPlls, ClockError> {
     // Wait for the restarted XOSC to stabilise
     let stable_xosc_token = block!(unstable_xosc.await_stabilization()).unwrap();
     let xosc = unstable_xosc.get_stable(stable_xosc_token);
@@ -281,17 +278,17 @@ fn restart_clocks_and_plls(
 fn IO_IRQ_BANK0() {
     critical_section::with(|cs| {
         let mut global_devices = GLOBAL_DEVICES.borrow(cs).borrow_mut();
-        let Some(ref mut button_pin) = global_devices.deref_mut() else {
-            panic!()
+        if let Some(ref mut button_pin) = global_devices.deref_mut() {
+            // Check if the interrupt source is from the push button going from high-to-low.
+            // Note: this will always be true in this example, as that is the only enabled GPIO interrupt source
+            if button_pin.interrupt_status(EdgeLow) {
+                // Our interrupt doesn't clear itself.
+                // Do that now so we don't immediately jump back to this interrupt handler.
+                button_pin.clear_interrupt(EdgeLow);
+            }
+        } else {
+            panic!();
         };
-
-        // Check if the interrupt source is from the push button going from high-to-low.
-        // Note: this will always be true in this example, as that is the only enabled GPIO interrupt source
-        if button_pin.interrupt_status(EdgeLow) {
-            // Our interrupt doesn't clear itself.
-            // Do that now so we don't immediately jump back to this interrupt handler.
-            button_pin.clear_interrupt(EdgeLow);
-        }
     });
 }
 
