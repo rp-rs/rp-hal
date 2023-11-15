@@ -40,7 +40,7 @@ use hal::{
     rosc::RingOscillator,
     sio::Sio,
     watchdog::Watchdog,
-    xosc::{setup_xosc_blocking, CrystalOscillator, Unstable, Stable},
+    xosc::{setup_xosc_blocking, CrystalOscillator, Stable, Unstable},
     Clock,
 };
 
