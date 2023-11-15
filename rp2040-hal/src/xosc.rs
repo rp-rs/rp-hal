@@ -171,6 +171,7 @@ impl CrystalOscillator<Stable> {
     /// This method is marked unsafe because prior to switch the XOSC into DORMANT state,
     /// PLLs must be stopped and IRQs have to be properly configured.
     /// This method does not do any of that, it merely switches the XOSC to DORMANT state.
+    /// It should only be called if this oscillator is the clock source for the system clock.
     /// See Chapter 2, Section 16, §5) for details.
     pub unsafe fn dormant(self) -> CrystalOscillator<Unstable> {
         //taken from the C SDK
