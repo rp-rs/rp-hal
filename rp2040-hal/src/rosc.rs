@@ -102,7 +102,7 @@ impl RingOscillator<Enabled> {
     /// This method does not do any of that, it merely switches the ROSC to DORMANT state.
     /// It should only be called if this oscillator is the clock source for the system clock.
     /// See Chapter 2, Section 16, §5) for details.
-    pub unsafe fn dormant(self) {
+    pub unsafe fn dormant(&self) {
         //taken from the C SDK
         const ROSC_DORMANT_VALUE: u32 = 0x636f6d61;
 
