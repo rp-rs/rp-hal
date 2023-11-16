@@ -7,6 +7,9 @@
 //! RP2040 from DORMANT mode and a regular WFI sleep. A LED attached to GPIO 25 (the onboard LED
 //! on the Raspberry Pi Pico) pulses once before entering DORMANT mode and twice before entering WFI sleep.
 //!
+//! Note: DORMANT mode breaks the debug connection. You may need to power cycle while pressing the
+//! BOOTSEL button to regain debug access to the pico.
+//!
 //! It may need to be adapted to your particular board layout and/or pin assignment.
 //!
 //! See the `Cargo.toml` file for Copyright and license details.
@@ -60,7 +63,7 @@ type RestartedClockAndPlls = (
 );
 
 /// The button input.
-type ButtonPin = gpio::Pin<gpio::bank0::Gpio14, gpio::FunctionSioInput, gpio::PullNone>;
+type ButtonPin = gpio::Pin<gpio::bank0::Gpio14, gpio::FunctionSioInput, gpio::PullUp>;
 
 /// Devices shared between the foreground code and interrupt handlers.
 static GLOBAL_DEVICES: Mutex<RefCell<Option<ButtonPin>>> = Mutex::new(RefCell::new(None));
