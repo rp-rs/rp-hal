@@ -12,8 +12,8 @@
 //!
 //! let mut i2c = I2C::i2c1(
 //!     peripherals.I2C1,
-//!     pins.gpio18.into_function(), // sda
-//!     pins.gpio19.into_function(), // scl
+//!     pins.gpio18.into_pull_up_input().into_function(), // sda
+//!     pins.gpio19.into_pull_up_input().into_function(), // scl
 //!     400.kHz(),
 //!     &mut peripherals.RESETS,
 //!     125_000_000.Hz(),
