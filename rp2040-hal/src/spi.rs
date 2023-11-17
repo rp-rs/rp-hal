@@ -193,9 +193,9 @@ impl<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<S, D, P, DS
         }
     }
 
-    /// Releases the underlying device.
-    pub fn free(self) -> D {
-        self.device
+    /// Releases the underlying device and pins.
+    pub fn free(self) -> (D, P) {
+        (self.device, self.pins)
     }
 
     /// Set device pre-scale and post-div properties to match the given baudrate as
