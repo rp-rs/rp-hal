@@ -167,6 +167,20 @@ impl HostBus for UsbHostBus {
         });
     }
 
+    fn stop_transaction(&mut self) {
+        critical_section::with(|cs| {
+            let inner = self.inner.borrow(cs).borrow_mut();
+            inner.ctrl_reg.sie_ctrl.modify(|_, w| w.stop_trans().set_bit());
+        });
+    }
+
+    fn ls_preamble(&mut self, enable: bool) {
+        critical_section::with(|cs| {
+            let inner = self.inner.borrow(cs).borrow_mut();
+            inner.ctrl_reg.sie_ctrl.modify(|_, w| w.preamble_en().bit(enable));
+        });
+    }
+
     fn write_setup(&mut self, setup: usbh::types::SetupPacket) {
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
@@ -179,6 +193,7 @@ impl HostBus for UsbHostBus {
                 w.windex().bits(setup.index);
                 w.wlength().bits(setup.length)
             });
+            defmt::info!("writing setup to {}... preamble currently {}", inner.ctrl_reg.addr_endp.read().address().bits(), inner.ctrl_reg.sie_ctrl.read().preamble_en().bit());
             inner.ctrl_reg.sie_ctrl.modify(|_, w| {
                 w.send_data()
                     .clear_bit()
@@ -346,7 +361,7 @@ impl HostBus for UsbHostBus {
         });
     }
 
-    fn pipe_continue(&self, pipe_ref: u8) {
+    fn pipe_continue(&mut self, pipe_ref: u8) {
         assert!(pipe_ref <= 15);
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
