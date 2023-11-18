@@ -193,7 +193,6 @@ impl HostBus for UsbHostBus {
                 w.windex().bits(setup.index);
                 w.wlength().bits(setup.length)
             });
-            defmt::info!("writing setup to {}... preamble currently {}", inner.ctrl_reg.addr_endp.read().address().bits(), inner.ctrl_reg.sie_ctrl.read().preamble_en().bit());
             inner.ctrl_reg.sie_ctrl.modify(|_, w| {
                 w.send_data()
                     .clear_bit()
