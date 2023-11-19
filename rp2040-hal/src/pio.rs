@@ -123,20 +123,29 @@ impl<P: PIOExt> PIO<P> {
         self.pio
     }
 
-    /// This PIO's IRQ0 interrupt.
-    pub fn irq0(&self) -> Interrupt<'_, P, 0> {
+    /// This PIO's interrupt by index.
+    pub fn irq<const IRQ: usize>(&self) -> Interrupt<'_, P, IRQ> {
+        struct IRQSanity<const X: usize>;
+        impl<const IRQ: usize> IRQSanity<IRQ> {
+            const CHECK: () = assert!(IRQ <= 1, "IRQ index must be either 0 or 1");
+        }
+
+        #[allow(clippy::let_unit_value)]
+        let _ = IRQSanity::<IRQ>::CHECK;
         Interrupt {
             block: self.pio.deref(),
             _phantom: core::marker::PhantomData,
         }
     }
 
+    /// This PIO's IRQ0 interrupt.
+    pub fn irq0(&self) -> Interrupt<'_, P, 0> {
+        self.irq()
+    }
+
     /// This PIO's IRQ1 interrupt.
     pub fn irq1(&self) -> Interrupt<'_, P, 1> {
-        Interrupt {
-            block: self.pio.deref(),
-            _phantom: core::marker::PhantomData,
-        }
+        self.irq()
     }
 
     /// Get raw irq flags.
