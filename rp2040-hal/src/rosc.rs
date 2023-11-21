@@ -12,7 +12,7 @@
 //! let mut rnd = RingOscillator::new(pac.ROSC).initialize();
 //! let random_value: u32 = rnd.gen();
 //! ```
-
+//! [`rand`]: https://docs.rs/rand
 use fugit::HertzU32;
 
 use crate::{pac::ROSC, typelevel::Sealed};
