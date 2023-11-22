@@ -42,6 +42,8 @@ rtic-monotonic = { version = "1.0.0", optional = true }
 
 frunk = { version = "0.4.1", default-features = false }
 
+bitfield = { version = "0.14.0" }
+
 [dev-dependencies]
 cortex-m-rt = "0.7"
 cortex-m-rtic = "1.1.4"
@@ -82,6 +84,16 @@ eh1_0_alpha = [ "dep:eh1_0_alpha", "dep:eh_nb_1_0_alpha" ]
 [[example]]
 # irq example uses cortex-m-rt::interrupt, need rt feature for that
 name = "gpio_irq_example"
+required-features = ["rt", "critical-section-impl"]
+
+[[example]]
+# irq example uses cortex-m-rt::interrupt, need rt feature for that
+name = "rtc_irq_example"
+required-features = ["rt", "critical-section-impl"]
+
+[[example]]
+# irq example uses cortex-m-rt::interrupt, need rt feature for that
+name = "rtc_sleep_example"
 required-features = ["rt", "critical-section-impl"]
 
 [[example]]
