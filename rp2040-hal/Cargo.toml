@@ -195,3 +195,7 @@ required-features = ["critical-section-impl"]
 [[example]]
 name = "watchdog"
 required-features = ["critical-section-impl"]
+
+[[example]]
+name = "usb_host"
+required-features = ["rt", "critical-section-impl"]
