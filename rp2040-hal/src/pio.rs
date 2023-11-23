@@ -281,7 +281,7 @@ impl<P: PIOExt> PIO<P> {
 /// ).program;
 /// let installed = pio.install(&program).unwrap();
 /// // Configure a state machine to use the program.
-/// let (sm, rx, tx) = PIOBuilder::from_program(installed).build(sm0);
+/// let (sm, rx, tx) = PIOBuilder::from_installed_program(installed).build(sm0);
 /// // Uninitialize the state machine again, freeing the program.
 /// let (sm, installed) = sm.uninit(rx, tx);
 /// // Uninstall the program to free instruction memory.
@@ -1931,12 +1931,44 @@ pub enum InstallError {
 }
 
 impl<P: PIOExt> PIOBuilder<P> {
-    /// Set config settings based on information from the given [`pio::Program`].
+    /// Set config settings based on information from the given [`InstalledProgram`].
+    /// Additional configuration may be needed in addition to this.
+    ///
+    /// Note: This was formerly called `from_program`. The new function has
+    /// a different default shift direction, `ShiftDirection::Right`, matching
+    /// the hardware reset value.
+    pub fn from_installed_program(p: InstalledProgram<P>) -> Self {
+        PIOBuilder {
+            clock_divisor: (1, 0),
+            program: p,
+            jmp_pin: 0,
+            out_sticky: false,
+            inline_out: None,
+            mov_status: MovStatusConfig::Tx(0),
+            fifo_join: Buffers::RxTx,
+            pull_threshold: 0,
+            push_threshold: 0,
+            out_shiftdir: ShiftDirection::Right,
+            in_shiftdir: ShiftDirection::Right,
+            autopull: false,
+            autopush: false,
+            set_count: 5,
+            out_count: 0,
+            in_base: 0,
+            side_set_base: 0,
+            set_base: 0,
+            out_base: 0,
+        }
+    }
+
+    /// Set config settings based on information from the given [`InstalledProgram`].
     /// Additional configuration may be needed in addition to this.
     ///
     /// Note: The shift direction for both input and output shift registers
     /// defaults to `ShiftDirection::Left`, which is different from the
-    /// rp2040 reset value.
+    /// rp2040 reset value. The alternative [`Self::from_installed_program`],
+    /// fixes this.
+    #[deprecated(note = "please use `from_installed_program` instead")]
     pub fn from_program(p: InstalledProgram<P>) -> Self {
         PIOBuilder {
             clock_divisor: (1, 0),
