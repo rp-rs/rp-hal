@@ -123,6 +123,8 @@ use crate::{
 #[cfg(feature = "rp2040-e5")]
 mod errata5;
 
+pub mod host;
+
 #[allow(clippy::bool_to_int_with_if)]
 fn ep_addr_to_ep_buf_ctrl_idx(ep_addr: EndpointAddress) -> usize {
     ep_addr.index() * 2 + (if ep_addr.is_in() { 0 } else { 1 })
