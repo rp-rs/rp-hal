@@ -31,6 +31,7 @@ use crate::{
 
 /// I2C bus events
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum I2CEvent {
     /// Start condition has been detected.
     Start,
