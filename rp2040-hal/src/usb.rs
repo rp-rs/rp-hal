@@ -172,11 +172,12 @@ struct Inner {
     out_endpoints: [Option<Endpoint>; 16],
     next_offset: u16,
     read_setup: bool,
+    pll: UsbClock,
     #[cfg(feature = "rp2040-e5")]
     errata5_state: Option<errata5::Errata5State>,
 }
 impl Inner {
-    fn new(ctrl_reg: USBCTRL_REGS, ctrl_dpram: USBCTRL_DPRAM) -> Self {
+    fn new(ctrl_reg: USBCTRL_REGS, ctrl_dpram: USBCTRL_DPRAM, pll: UsbClock) -> Self {
         Self {
             ctrl_reg,
             ctrl_dpram,
@@ -184,6 +185,7 @@ impl Inner {
             out_endpoints: Default::default(),
             next_offset: 0,
             read_setup: false,
+            pll,
             #[cfg(feature = "rp2040-e5")]
             errata5_state: None,
         }
@@ -438,7 +440,7 @@ impl UsbBus {
     pub fn new(
         ctrl_reg: USBCTRL_REGS,
         ctrl_dpram: USBCTRL_DPRAM,
-        _pll: UsbClock,
+        pll: UsbClock,
         force_vbus_detect_bit: bool,
         resets: &mut RESETS,
     ) -> Self {
@@ -476,7 +478,7 @@ impl UsbBus {
         });
 
         Self {
-            inner: Mutex::new(RefCell::new(Inner::new(ctrl_reg, ctrl_dpram))),
+            inner: Mutex::new(RefCell::new(Inner::new(ctrl_reg, ctrl_dpram, pll))),
         }
     }
 
@@ -486,6 +488,17 @@ impl UsbBus {
             let inner = self.inner.borrow(cs).borrow_mut();
             inner.ctrl_reg.sie_ctrl.modify(|_, w| w.resume().set_bit());
         });
+    }
+
+    /// Stop and free the Usb resources
+    pub fn free(self, resets: &mut RESETS) -> (USBCTRL_REGS, USBCTRL_DPRAM, UsbClock) {
+        critical_section::with(|_cs| {
+            let inner = self.inner.into_inner().into_inner();
+
+            inner.ctrl_reg.reset_bring_down(resets);
+
+            (inner.ctrl_reg, inner.ctrl_dpram, inner.pll)
+        })
     }
 }
 
