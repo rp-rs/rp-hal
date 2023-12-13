@@ -4,7 +4,7 @@
 //! UartPeripheral object that can both read and write.
 
 use core::{convert::Infallible, fmt};
-use embedded_hal::serial::{Read, Write};
+use embedded_hal::serial as eh0;
 use fugit::HertzU32;
 use nb::Error::{Other, WouldBlock};
 
@@ -344,7 +344,7 @@ fn set_format<'w>(
     w
 }
 
-impl<D: UartDevice, P: ValidUartPinout<D>> Read<u8> for UartPeripheral<Enabled, D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> eh0::Read<u8> for UartPeripheral<Enabled, D, P> {
     type Error = ReadErrorType;
 
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
@@ -380,7 +380,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Read<u8> for UartPeripheral<En
     }
 }
 
-impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for UartPeripheral<Enabled, D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> eh0::Write<u8> for UartPeripheral<Enabled, D, P> {
     type Error = Infallible;
 
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
@@ -416,8 +416,39 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Write<u8> for UartPeripheral<E
 
 impl<D: UartDevice, P: ValidUartPinout<D>> fmt::Write for UartPeripheral<Enabled, D, P> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
+        use eh0::Write;
         s.bytes()
             .try_for_each(|c| nb::block!(self.write(c)))
             .map_err(|_| fmt::Error)
+    }
+}
+
+#[cfg(feature = "embedded-io")]
+impl embedded_io::Error for ReadErrorType {
+    fn kind(&self) -> embedded_io::ErrorKind {
+        embedded_io::ErrorKind::Other
+    }
+}
+#[cfg(feature = "embedded-io")]
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::ErrorType
+    for UartPeripheral<Enabled, D, P>
+{
+    type Error = ReadErrorType;
+}
+#[cfg(feature = "embedded-io")]
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Read for UartPeripheral<Enabled, D, P> {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
+        nb::block!(self.read_raw(buf)).map_err(|e| e.err_type)
+    }
+}
+#[cfg(feature = "embedded-io")]
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Write for UartPeripheral<Enabled, D, P> {
+    fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
+        self.write_full_blocking(buf);
+        Ok(buf.len())
+    }
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        nb::block!(super::writer::transmit_flushed(&self.device)).unwrap(); // Infallible
+        Ok(())
     }
 }

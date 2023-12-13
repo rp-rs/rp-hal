@@ -21,6 +21,7 @@ embedded-hal = { version = "0.2.5", features = ["unproven"] }
 eh1_0_alpha = { package = "embedded-hal", version = "=1.0.0-rc.1",  optional = true }
 eh_nb_1_0_alpha = { package = "embedded-hal-nb", version = "=1.0.0-rc.1",  optional = true }
 embedded-dma = "0.2.0"
+embedded-io = { version = "0.6.1", optional = true }
 fugit = "0.3.6"
 itertools = { version = "0.10.1", default-features = false }
 nb = "1.0"
