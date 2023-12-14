@@ -423,25 +423,21 @@ impl<D: UartDevice, P: ValidUartPinout<D>> fmt::Write for UartPeripheral<Enabled
     }
 }
 
-#[cfg(feature = "embedded-io")]
 impl embedded_io::Error for ReadErrorType {
     fn kind(&self) -> embedded_io::ErrorKind {
         embedded_io::ErrorKind::Other
     }
 }
-#[cfg(feature = "embedded-io")]
 impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::ErrorType
     for UartPeripheral<Enabled, D, P>
 {
     type Error = ReadErrorType;
 }
-#[cfg(feature = "embedded-io")]
 impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Read for UartPeripheral<Enabled, D, P> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
         nb::block!(self.read_raw(buf)).map_err(|e| e.err_type)
     }
 }
-#[cfg(feature = "embedded-io")]
 impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Write for UartPeripheral<Enabled, D, P> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
         self.write_full_blocking(buf);
