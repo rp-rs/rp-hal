@@ -36,6 +36,7 @@ pub use self::datetime::{DateTime, DayOfWeek, Error as DateTimeError};
 /// A reference to the real time clock of the system
 pub struct RealTimeClock {
     rtc: RTC,
+    clock: RtcClock,
 }
 
 impl RealTimeClock {
@@ -68,7 +69,7 @@ impl RealTimeClock {
         let freq = clock.freq().to_Hz() - 1;
         rtc.clkdiv_m1.write(|w| unsafe { w.bits(freq) });
 
-        let mut result = Self { rtc };
+        let mut result = Self { rtc, clock };
         result.set_leap_year_check(true); // should be on by default, make sure this is the case.
         result.set_datetime(initial_date)?;
         Ok(result)
@@ -195,6 +196,12 @@ impl RealTimeClock {
     pub fn clear_interrupt(&mut self) {
         self.set_match_ena(false);
         self.set_match_ena(true);
+    }
+
+    /// Free the RTC peripheral and RTC clock
+    pub fn free(self, resets: &mut RESETS) -> (RTC, RtcClock) {
+        resets.reset.modify(|_, w| w.rtc().set_bit());
+        (self.rtc, self.clock)
     }
 }
 
