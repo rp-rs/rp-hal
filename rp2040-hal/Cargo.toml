@@ -16,6 +16,7 @@ targets = ["thumbv6m-none-eabi"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+compiler_builtins = { version = "0.1.104", features = ["weak-intrinsics"] }
 cortex-m = "0.7.2"
 embedded-hal = { version = "0.2.5", features = ["unproven"] }
 eh1_0_alpha = { package = "embedded-hal", version = "=1.0.0-rc.1",  optional = true }

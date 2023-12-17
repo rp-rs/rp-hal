@@ -94,6 +94,7 @@ pub use sio::Sio;
 pub use spi::Spi;
 pub use timer::Timer;
 pub use watchdog::Watchdog;
+extern crate compiler_builtins;
 // Re-export crates used in rp2040-hal's public API
 pub extern crate fugit;
 
