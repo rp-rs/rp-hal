@@ -1,46 +1,46 @@
 /// Generate a series of aliases for an intrinsic function.
 macro_rules! intrinsics_aliases {
     (
-        extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) -> $ret:ty,
+        extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) $(-> $ret:ty)?,
     ) => {};
     (
-        unsafe extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) -> $ret:ty,
+        unsafe extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) $(-> $ret:ty)?,
     ) => {};
 
     (
-        extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) -> $ret:ty,
+        extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) $(-> $ret:ty)?,
         $alias:ident
         $($rest:ident)*
     ) => {
         #[cfg(all(target_arch = "arm", not(feature = "disable-intrinsics")))]
         mod $alias {
             #[no_mangle]
-            pub extern $abi fn $alias( $($argname: $ty),* ) -> $ret {
+            pub extern $abi fn $alias( $($argname: $ty),* ) $(-> $ret)? {
                 super::$name($($argname),*)
             }
         }
 
         intrinsics_aliases! {
-            extern $abi fn $name( $($argname: $ty),* ) -> $ret,
+            extern $abi fn $name( $($argname: $ty),* ) $(-> $ret)?,
             $($rest)*
         }
     };
 
     (
-        unsafe extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) -> $ret:ty,
+        unsafe extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) $(-> $ret:ty)?,
         $alias:ident
         $($rest:ident)*
     ) => {
         #[cfg(all(target_arch = "arm", not(feature = "disable-intrinsics")))]
         mod $alias {
             #[no_mangle]
-            unsafe extern $abi fn $alias( $($argname: $ty),* ) -> $ret {
+            unsafe extern $abi fn $alias( $($argname: $ty),* ) $(-> $ret)? {
                 super::$name($($argname),*)
             }
         }
 
         intrinsics_aliases! {
-            unsafe extern $abi fn $name( $($argname: $ty),* ) -> $ret,
+            unsafe extern $abi fn $name( $($argname: $ty),* ) $(-> $ret)?,
             $($rest)*
         }
     };
@@ -88,7 +88,7 @@ macro_rules! intrinsics {
     (
         #[slower_than_default]
         $(#[$($attr:tt)*])*
-        extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) -> $ret:ty {
+        extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) $(-> $ret:ty)? {
             $($body:tt)*
         }
 
@@ -97,7 +97,7 @@ macro_rules! intrinsics {
         // Not exported, but defined so the actual implementation is
         // considered used
         #[allow(dead_code)]
-        fn $name( $($argname: $ty),* ) -> $ret {
+        fn $name( $($argname: $ty),* ) $(-> $ret)? {
             $($body)*
         }
 
@@ -107,7 +107,7 @@ macro_rules! intrinsics {
     (
         #[bootrom_v2]
         $(#[$($attr:tt)*])*
-        extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) -> $ret:ty {
+        extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) $(-> $ret:ty)? {
             $($body:tt)*
         }
 
@@ -117,14 +117,14 @@ macro_rules! intrinsics {
         // considered used
         #[cfg(not(feature = "rom-v2-intrinsics"))]
         #[allow(dead_code)]
-        fn $name( $($argname: $ty),* ) -> $ret {
+        fn $name( $($argname: $ty),* ) $(-> $ret)? {
             $($body)*
         }
 
         #[cfg(feature = "rom-v2-intrinsics")]
         intrinsics! {
             $(#[$($attr)*])*
-            extern $abi fn $name( $($argname: $ty),* ) -> $ret {
+            extern $abi fn $name( $($argname: $ty),* ) $(-> $ret)? {
                 $($body)*
             }
         }
@@ -135,7 +135,7 @@ macro_rules! intrinsics {
     (
         #[alias = $($alias:ident),*]
         $(#[$($attr:tt)*])*
-        extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) -> $ret:ty {
+        extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) $(-> $ret:ty)? {
             $($body:tt)*
         }
 
@@ -143,13 +143,13 @@ macro_rules! intrinsics {
     ) => {
         intrinsics! {
             $(#[$($attr)*])*
-            extern $abi fn $name( $($argname: $ty),* ) -> $ret {
+            extern $abi fn $name( $($argname: $ty),* ) $(-> $ret)? {
                 $($body)*
             }
         }
 
         intrinsics_aliases! {
-            extern $abi fn $name( $($argname: $ty),* ) -> $ret,
+            extern $abi fn $name( $($argname: $ty),* ) $(-> $ret)?,
             $($alias) *
         }
 
@@ -159,7 +159,7 @@ macro_rules! intrinsics {
     (
         #[alias = $($alias:ident),*]
         $(#[$($attr:tt)*])*
-        unsafe extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) -> $ret:ty {
+        unsafe extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) $(-> $ret:ty)? {
             $($body:tt)*
         }
 
@@ -167,13 +167,13 @@ macro_rules! intrinsics {
     ) => {
         intrinsics! {
             $(#[$($attr)*])*
-            unsafe extern $abi fn $name( $($argname: $ty),* ) -> $ret {
+            unsafe extern $abi fn $name( $($argname: $ty),* ) $(-> $ret)? {
                 $($body)*
             }
         }
 
         intrinsics_aliases! {
-            unsafe extern $abi fn $name( $($argname: $ty),* ) -> $ret,
+            unsafe extern $abi fn $name( $($argname: $ty),* ) $(-> $ret)?,
             $($alias) *
         }
 
@@ -183,7 +183,7 @@ macro_rules! intrinsics {
     (
         #[aeabi = $($alias:ident),*]
         $(#[$($attr:tt)*])*
-        extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) -> $ret:ty {
+        extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) $(-> $ret:ty)? {
             $($body:tt)*
         }
 
@@ -191,13 +191,13 @@ macro_rules! intrinsics {
     ) => {
         intrinsics! {
             $(#[$($attr)*])*
-            extern $abi fn $name( $($argname: $ty),* ) -> $ret {
+            extern $abi fn $name( $($argname: $ty),* ) $(-> $ret)? {
                 $($body)*
             }
         }
 
         intrinsics_aliases! {
-            extern "aapcs" fn $name( $($argname: $ty),* ) -> $ret,
+            extern "aapcs" fn $name( $($argname: $ty),* ) $(-> $ret)?,
             $($alias) *
         }
 
@@ -206,7 +206,7 @@ macro_rules! intrinsics {
 
     (
         $(#[$($attr:tt)*])*
-        extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) -> $ret:ty {
+        extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) $(-> $ret:ty)? {
             $($body:tt)*
         }
 
@@ -214,7 +214,7 @@ macro_rules! intrinsics {
     ) => {
         #[cfg(all(target_arch = "arm", not(feature = "disable-intrinsics")))]
         $(#[$($attr)*])*
-        extern $abi fn $name( $($argname: $ty),* ) -> $ret {
+        extern $abi fn $name( $($argname: $ty),* ) $(-> $ret)? {
             $($body)*
         }
 
@@ -222,7 +222,7 @@ macro_rules! intrinsics {
         mod $name {
             #[no_mangle]
             $(#[$($attr)*])*
-            pub extern $abi fn $name( $($argname: $ty),* ) -> $ret {
+            pub extern $abi fn $name( $($argname: $ty),* ) $(-> $ret)? {
                 super::$name($($argname),*)
             }
         }
@@ -231,7 +231,7 @@ macro_rules! intrinsics {
         // considered used
         #[cfg(not(all(target_arch = "arm", not(feature = "disable-intrinsics"))))]
         #[allow(dead_code)]
-        fn $name( $($argname: $ty),* ) -> $ret {
+        fn $name( $($argname: $ty),* ) $(-> $ret)? {
             $($body)*
         }
 
@@ -240,7 +240,7 @@ macro_rules! intrinsics {
 
     (
         $(#[$($attr:tt)*])*
-        unsafe extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) -> $ret:ty {
+        unsafe extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) $(-> $ret:ty)? {
             $($body:tt)*
         }
 
@@ -248,7 +248,7 @@ macro_rules! intrinsics {
     ) => {
         #[cfg(all(target_arch = "arm", not(feature = "disable-intrinsics")))]
         $(#[$($attr)*])*
-        unsafe extern $abi fn $name( $($argname: $ty),* ) -> $ret {
+        unsafe extern $abi fn $name( $($argname: $ty),* ) $(-> $ret)? {
             $($body)*
         }
 
@@ -256,7 +256,7 @@ macro_rules! intrinsics {
         mod $name {
             #[no_mangle]
             $(#[$($attr)*])*
-            pub unsafe extern $abi fn $name( $($argname: $ty),* ) -> $ret {
+            pub unsafe extern $abi fn $name( $($argname: $ty),* ) $(-> $ret)? {
                 super::$name($($argname),*)
             }
         }
@@ -265,7 +265,7 @@ macro_rules! intrinsics {
         // considered used
         #[cfg(not(all(target_arch = "arm", not(feature = "disable-intrinsics"))))]
         #[allow(dead_code)]
-        unsafe fn $name( $($argname: $ty),* ) -> $ret {
+        unsafe fn $name( $($argname: $ty),* ) $(-> $ret)? {
             $($body)*
         }
 
