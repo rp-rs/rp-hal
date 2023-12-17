@@ -37,6 +37,7 @@
 
 #![warn(missing_docs)]
 #![no_std]
+#![feature(naked_functions)]
 
 #[doc(hidden)]
 pub use paste;

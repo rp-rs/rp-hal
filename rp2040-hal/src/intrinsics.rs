@@ -238,6 +238,29 @@ macro_rules! intrinsics {
         intrinsics!($($rest)*);
     };
 
+    // Naked functions are special: we can't generate wrappers for them since
+    // they use a custom calling convention.
+    (
+        #[naked]
+        $(#[$($attr:tt)*])*
+        unsafe extern $abi:tt fn $name:ident( $($argname:ident:  $ty:ty),* ) $(-> $ret:ty)? {
+            $($body:tt)*
+        }
+
+        $($rest:tt)*
+    ) => (
+        mod $name {
+            #[naked]
+            $(#[$($attr)*])*
+            #[no_mangle]
+            pub unsafe extern $abi fn $name( $($argname: $ty),* ) $(-> $ret)? {
+                $($body)*
+            }
+        }
+
+        intrinsics!($($rest)*);
+    );
+
     (
         $(#[$($attr:tt)*])*
         unsafe extern $abi:tt fn $name:ident( $($argname:ident: $ty:ty),* ) $(-> $ret:ty)? {
