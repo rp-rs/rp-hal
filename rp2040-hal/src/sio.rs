@@ -278,29 +278,32 @@ core::arch::global_asm!(
 
 macro_rules! division_function {
     (
-        $name:ident $($intrinsic:ident)* ( $argty:ty ) {
+        $name:ident $intrinsic:ident $intrinsic_alias:ident ( $argty:ty ) {
             $($begin:literal),+
         }
     ) => {
         #[cfg(all(target_arch = "arm", not(feature = "disable-intrinsics")))]
-        core::arch::global_asm!(
-            // Mangle the name slightly, since this is a global symbol.
-            concat!(".global _rphal_", stringify!($name)),
-            concat!(".type _rphal_", stringify!($name), ", %function"),
-            ".align 2",
-            concat!("_rphal_", stringify!($name), ":"),
-            $(
-                concat!(".global ", stringify!($intrinsic)),
-                concat!(".type ", stringify!($intrinsic), ", %function"),
-                concat!(stringify!($intrinsic), ":"),
-            )*
+        intrinsics! {
+            #[naked]
+            unsafe extern "C" fn $intrinsic() {
+                core::arch::asm!(
+                    "hwdivider_head",
+                    $($begin),+ ,
+                    "hwdivider_tail",
+                    options(noreturn)
+                    );
+            }
+            #[naked]
+            unsafe extern "C" fn $intrinsic_alias() {
+                core::arch::asm!(
+                    "hwdivider_head",
+                    $($begin),+ ,
+                    "hwdivider_tail",
+                    options(noreturn)
+                    );
+            }
+        }
 
-            "hwdivider_head",
-            $($begin),+ ,
-            "hwdivider_tail",
-        );
-
-        #[cfg(all(target_arch = "arm", feature = "disable-intrinsics"))]
         core::arch::global_asm!(
             // Mangle the name slightly, since this is a global symbol.
             concat!(".global _rphal_", stringify!($name)),
