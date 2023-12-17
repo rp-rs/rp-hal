@@ -425,6 +425,8 @@ impl Sealed for SM3 {}
 pub trait ValidStateMachine: Sealed {
     /// The PIO block to which this state machine belongs.
     type PIO: PIOExt;
+    /// The index type of this state machine
+    type SM: StateMachineIndex;
 
     /// The index of this state machine (between 0 and 3).
     fn id() -> usize;
@@ -453,6 +455,7 @@ pub type PIO1SM3 = (PIO1, SM3);
 
 impl<P: PIOExt, SM: StateMachineIndex> ValidStateMachine for (P, SM) {
     type PIO = P;
+    type SM = SM;
     fn id() -> usize {
         SM::id()
     }
