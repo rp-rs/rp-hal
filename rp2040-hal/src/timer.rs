@@ -181,6 +181,12 @@ impl eh1_0_alpha::delay::DelayNs for Timer {
     fn delay_us(&mut self, us: u32) {
         self.delay_us_internal(us)
     }
+
+    fn delay_ms(&mut self, ms: u32) {
+        for _ in 0..ms {
+            self.delay_us_internal(1000);
+        }
+    }
 }
 
 /// Implementation of the embedded_hal::Timer traits using rp2040_hal::timer counter
