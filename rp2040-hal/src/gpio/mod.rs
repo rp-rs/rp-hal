@@ -1434,11 +1434,11 @@ mod eh1 {
         I: PinId,
         P: PullType,
     {
-        fn is_set_high(&self) -> Result<bool, Self::Error> {
+        fn is_set_high(&mut self) -> Result<bool, Self::Error> {
             Ok(self._is_set_high())
         }
 
-        fn is_set_low(&self) -> Result<bool, Self::Error> {
+        fn is_set_low(&mut self) -> Result<bool, Self::Error> {
             Ok(self._is_set_low())
         }
     }
@@ -1459,11 +1459,11 @@ mod eh1 {
         I: PinId,
         P: PullType,
     {
-        fn is_high(&self) -> Result<bool, Self::Error> {
+        fn is_high(&mut self) -> Result<bool, Self::Error> {
             Ok(self._is_high())
         }
 
-        fn is_low(&self) -> Result<bool, Self::Error> {
+        fn is_low(&mut self) -> Result<bool, Self::Error> {
             Ok(self._is_low())
         }
     }
@@ -1480,11 +1480,11 @@ mod eh1 {
     impl<'a, I: PinId, F: super::func::Function, P: PullType> InputPin
         for super::AsInputPin<'a, I, F, P>
     {
-        fn is_high(&self) -> Result<bool, Self::Error> {
+        fn is_high(&mut self) -> Result<bool, Self::Error> {
             Ok(self.0._is_high())
         }
 
-        fn is_low(&self) -> Result<bool, Self::Error> {
+        fn is_low(&mut self) -> Result<bool, Self::Error> {
             Ok(self.0._is_low())
         }
     }

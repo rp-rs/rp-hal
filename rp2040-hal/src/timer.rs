@@ -167,7 +167,15 @@ macro_rules! impl_delay_traits {
 impl_delay_traits!(u8, u16, u32, i32);
 
 #[cfg(feature = "eh1_0_alpha")]
-impl eh1_0_alpha::delay::DelayUs for Timer {
+impl eh1_0_alpha::delay::DelayNs for Timer {
+    fn delay_ns(&mut self, ns: u32) {
+        // For now, just use microsecond delay, internally. Of course, this
+        // might cause a much longer delay than necessary. So a more advanced
+        // implementation would be desirable for sub-microsecond delays.
+        let us = ns.div_ceil(1000);
+        self.delay_us_internal(us)
+    }
+
     fn delay_us(&mut self, us: u32) {
         self.delay_us_internal(us)
     }
