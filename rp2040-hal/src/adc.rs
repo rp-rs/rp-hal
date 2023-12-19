@@ -539,7 +539,7 @@ impl<'a, Word> AdcFreeRunning<'a, Word> {
     /// their defaults.
     ///
     /// Returns the underlying [`Adc`], to be reused.
-    pub fn stop(mut self) -> &'a mut Adc {
+    pub fn stop(self) -> &'a mut Adc {
         // stop capture and clear channel selection
         self.adc
             .device
