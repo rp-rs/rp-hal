@@ -299,6 +299,21 @@ impl Adc {
         }
     }
 
+    /// Start configuring free-running mode
+    ///
+    /// The [`AdcFreeRunningBuilder`] returned by this method can be used
+    /// to configure capture options, like sample rate, channels to
+    /// capture from etc.
+    ///
+    /// Capturing is started by calling [`AdcFreeRunningBuilder::start`], which
+    /// returns an [`AdcFreeRunning`] to read from.
+    pub fn configure_free_running(&mut self) -> AdcFreeRunningBuilder<'_, u16> {
+        AdcFreeRunningBuilder {
+            adc: self,
+            marker: PhantomData,
+        }
+    }
+
     fn inner_read(&mut self, chan: u8) -> u16 {
         while !self.device.cs.read().ready().bit_is_set() {
             cortex_m::asm::nop();
@@ -352,6 +367,190 @@ where
         };
 
         Ok(self.inner_read(chan).into())
+    }
+}
+
+/// Used to configure & build an [`AdcFreeRunning`]
+///
+/// See [`Adc::configure_free_running`] for details.
+pub struct AdcFreeRunningBuilder<'a, Word> {
+    adc: &'a mut Adc,
+    marker: PhantomData<Word>,
+}
+
+impl<'a, Word> AdcFreeRunningBuilder<'a, Word> {
+    /// Manually set clock divider to control sample rate
+    ///
+    /// The ADC is tied to the USB clock, normally running at 48MHz.
+    /// ADC conversion happens at 96 cycles per sample, so with the dividers
+    /// both set to 0 (the default) the sample rate will be `48MHz / 96 = 500ksps`.
+    ///
+    /// Setting the `int` and / or `frac` dividers will hold off between
+    /// samples, leading to an effective rate of:
+    ///
+    /// ```text
+    ///  rate = 48MHz / (1 + int + (frac / 256))
+    /// ```
+    ///
+    /// To determine the required `int` and `frac` values for a given target rate,
+    /// use these equations:
+    ///
+    /// ```text
+    ///  int = floor((48MHz / rate) - 1)
+    ///  frac = round(256 * ((48MHz / rate) - 1 - int))
+    /// ```
+    ///
+    /// Some examples:
+    ///
+    /// | Target rate | `int`   | `frac` |
+    /// |-------------|---------|--------|
+    /// | 1000sps     | `47999` |    `0` |
+    /// | 1024sps     | `46874` |    `0` |
+    /// | 1337sps     | `35900` |   `70` |
+    /// | 4096sps     | `11717` |  `192` |
+    /// | 96ksps      |   `499` |    `0` |
+    ///
+    /// Since each conversion takes 96 cycles, setting `int` to anything below 96 does
+    /// not make a difference, and leads to the same result as setting it to 0.
+    ///
+    /// The lowest possible rate is 732.41Hz, attainable by setting `int = 0xFFFF, frac = 0xFF`.
+    ///
+    /// For more details, please refer to section 4.9.2.2 in the RP2040 datasheet.
+    pub fn clock_divider(self, int: u16, frac: u8) -> Self {
+        self.adc
+            .device
+            .div
+            .modify(|_, w| unsafe { w.int().bits(int).frac().bits(frac) });
+        self
+    }
+
+    /// Select ADC input channel to sample from
+    ///
+    /// If round-robin mode is used, this will only affect the first sample.
+    ///
+    /// The given `pin` can either be one of the ADC inputs (GPIO26-28) or the
+    /// internal temperature sensor (retrieved via [`Adc::take_temp_sensor`]).
+    pub fn set_channel<PIN: Channel<Adc, ID = u8>>(self, _pin: &mut PIN) -> Self {
+        self.adc
+            .device
+            .cs
+            .modify(|_, w| unsafe { w.ainsel().bits(PIN::channel()) });
+        self
+    }
+
+    /// Set channels to use for round-robin mode
+    ///
+    /// Takes a tuple of channels, like `(&mut adc_pin, &mut temp_sense)`.
+    ///
+    /// **NOTE:** *The order in which the channels are specified has no effect!
+    /// Channels are always sampled in increasing order, by their channel number (Channel 0, Channel 1, ...).*
+    pub fn round_robin<T: Into<RoundRobin>>(self, selected_channels: T) -> Self {
+        let RoundRobin(bits) = selected_channels.into();
+        self.adc
+            .device
+            .cs
+            .modify(|_, w| unsafe { w.rrobin().bits(bits) });
+        self
+    }
+
+    /// Start free-running conversion
+    ///
+    /// Use the returned [`AdcFreeRunning`] instance to access the captured data.
+    ///
+    /// To stop capturing, call [`AdcFreeRunning::stop`].
+    pub fn start(self) -> AdcFreeRunning<'a, Word> {
+        self.adc.device.cs.modify(|_, w| w.start_many().set_bit());
+        AdcFreeRunning {
+            adc: self.adc,
+            marker: PhantomData,
+        }
+    }
+}
+
+/// Represents the ADC free running mode
+///
+/// Constructed by [`AdcFreeRunning::start`], which is accessible through [`Adc::configure_free_running`].
+///
+pub struct AdcFreeRunning<'a, Word> {
+    adc: &'a mut Adc,
+    marker: PhantomData<Word>,
+}
+
+impl<'a, Word> AdcFreeRunning<'a, Word> {
+    /// Read the most recently sampled ADC value
+    ///
+    /// Returns the most recently sampled value.
+    ///
+    /// This can be used if you want to read samples occasionally, but don't
+    /// want to incur the 96 cycle delay of a one-off read.
+    ///
+    /// Example:
+    /// ```ignore
+    /// // start continuously sampling values:
+    /// let mut adc_f = adc.configure_free_running().set_channel(&mut adc_pin).start();
+    ///
+    /// loop {
+    ///   do_something_timing_critical();
+    ///
+    ///   // read the most recent value:
+    ///   if adc_f.read_most_recent() > THRESHOLD {
+    ///     led.set_high().unwrap();
+    ///   } else {
+    ///     led.set_low().unwrap();
+    ///   }
+    /// }
+    ///
+    /// // stop sampling, when it's no longer needed
+    /// adc_f.stop();
+    /// ```
+    ///
+    /// Note that when round-robin sampling is used, there is no way
+    /// to tell from which channel this sample came.
+    pub fn read_most_recent(&mut self) -> u16 {
+        self.adc.read_single()
+    }
+
+    /// Returns `true` if conversion is currently paused.
+    ///
+    /// A conversion may still be in progress though.
+    pub fn is_paused(&mut self) -> bool {
+        self.adc.device.cs.read().start_many().bit_is_clear()
+    }
+
+    /// Temporarily pause conversion
+    ///
+    /// This method stops ADC conversion, but leaves everything else configured.
+    ///
+    /// No new samples are captured until [`AdcFreeRunning::resume`] is called.
+    pub fn pause(&mut self) {
+        self.adc.device.cs.modify(|_, w| w.start_many().clear_bit());
+    }
+
+    /// Resume conversion after it was paused
+    ///
+    /// Calling this method when conversion is already running has no effect.
+    pub fn resume(&mut self) {
+        self.adc.device.cs.modify(|_, w| w.start_many().set_bit());
+    }
+
+    /// Stop capturing in free running mode.
+    ///
+    /// Resets all capture options that can be set via [`AdcFreeRunningBuilder`] to
+    /// their defaults.
+    ///
+    /// Returns the underlying [`Adc`], to be reused.
+    pub fn stop(mut self) -> &'a mut Adc {
+        // stop capture and clear channel selection
+        self.adc
+            .device
+            .cs
+            .modify(|_, w| unsafe { w.start_many().clear_bit().rrobin().bits(0).ainsel().bits(0) });
+        // reset clock divider
+        self.adc
+            .device
+            .div
+            .modify(|_, w| unsafe { w.int().bits(0).frac().bits(0) });
+        self.adc
     }
 }
 
