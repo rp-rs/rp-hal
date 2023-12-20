@@ -76,7 +76,9 @@
 //! min_config() leaves those registers in the state they were before it was called (Careful, this can lead to unexpected behavior)
 //! It's recommended to only call min_config() after calling default_config() on a pin that shares a PWM block.
 
-use core::{convert::Infallible, marker::PhantomData};
+#[cfg(feature = "eh1_0_alpha")]
+use core::convert::Infallible;
+use core::marker::PhantomData;
 
 #[cfg(feature = "eh1_0_alpha")]
 use eh1_0_alpha::pwm::{ErrorType, SetDutyCycle};
