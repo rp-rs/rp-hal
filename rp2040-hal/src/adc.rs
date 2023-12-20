@@ -53,7 +53,7 @@
 //! let mut temperature_sensor = adc.take_temp_sensor().unwrap();
 //!
 //! // Configure & start capturing to the fifo:
-//! let mut fifo = adc.build_fifo()
+//! let mut fifo = adc.free_running()
 //!   .clock_divider(0, 0) // sample as fast as possible (500ksps. This is the default)
 //!   .set_channel(&mut temperature_sensor)
 //!   .start();
@@ -91,7 +91,7 @@
 //! let mut temperature_sensor = adc.take_temp_sensor().unwrap();
 //!
 //! // Configure & start capturing to the fifo:
-//! let mut fifo = adc.build_fifo()
+//! let mut fifo = adc.free_running()
 //!   .clock_divider(0, 0) // sample as fast as possible (500ksps. This is the default)
 //!   .set_channel(&mut temperature_sensor)
 //!   .enable_dma()
@@ -292,7 +292,7 @@ impl Adc {
     ///
     /// Capturing is started by calling [`AdcFifoBuilder::start`], which
     /// returns an [`AdcFifo`] to read from.
-    pub fn build_fifo(&mut self) -> AdcFifoBuilder<'_, u16> {
+    pub fn free_running(&mut self) -> AdcFifoBuilder<'_, u16> {
         AdcFifoBuilder {
             adc: self,
             marker: PhantomData,
@@ -357,7 +357,7 @@ where
 
 /// Used to configure & build an [`AdcFifo`]
 ///
-/// See [`Adc::build_fifo`] for details, as well as the `adc_fifo_*` [examples](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples).
+/// See [`Adc::free_running`] for details, as well as the `adc_fifo_*` [examples](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples).
 pub struct AdcFifoBuilder<'a, Word> {
     adc: &'a mut Adc,
     marker: PhantomData<Word>,
@@ -511,7 +511,7 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
 
 /// Represents the ADC fifo, when used in free running mode
 ///
-/// Constructed by [`AdcFifoBuilder::start`], which is accessible through [`Adc::build_fifo`].
+/// Constructed by [`AdcFifoBuilder::start`], which is accessible through [`Adc::free_running`].
 ///
 pub struct AdcFifo<'a, Word> {
     adc: &'a mut Adc,
@@ -567,13 +567,13 @@ impl<'a, Word> AdcFifo<'a, Word> {
     /// Example:
     /// ```ignore
     /// // start continuously sampling values:
-    /// let mut fifo = adc.build_fifo().set_channel(&mut adc_pin).start();
+    /// let mut adc_free_running = adc.free_running().set_channel(&mut adc_pin).start();
     ///
     /// loop {
     ///   do_something_timing_critical();
     ///
     ///   // read the most recent value:
-    ///   if fifo.read_single() > THRESHOLD {
+    ///   if adc_free_running.read_most_recent() > THRESHOLD {
     ///     led.set_high().unwrap();
     ///   } else {
     ///     led.set_low().unwrap();
@@ -581,12 +581,12 @@ impl<'a, Word> AdcFifo<'a, Word> {
     /// }
     ///
     /// // stop sampling, when it's no longer needed
-    /// fifo.stop();
+    /// adc_free_running.stop();
     /// ```
     ///
     /// Note that when round-robin sampling is used, there is no way
     /// to tell from which channel this sample came.
-    pub fn read_single(&mut self) -> u16 {
+    pub fn read_most_recent(&mut self) -> u16 {
         self.adc.read_single()
     }
 

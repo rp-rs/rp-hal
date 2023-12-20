@@ -113,7 +113,7 @@ fn main() -> ! {
 
     // Configure free-running mode:
     let mut adc_fifo = adc
-        .build_fifo()
+        .free_running()
         // Set clock divider to target a sample rate of 1000 samples per second (1ksps).
         // The value was calculated by `(48MHz / 1ksps) - 1 = 47999.0`.
         // Please check the `clock_divider` method documentation for details.
