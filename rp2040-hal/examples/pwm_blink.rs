@@ -104,13 +104,13 @@ fn main() -> ! {
     // Infinite loop, fading LED up and down
     loop {
         // Ramp brightness up
-        for i in (LOW..=HIGH).skip(100) {
+        for i in LOW..=HIGH {
             delay.delay_us(8);
             channel.set_duty(i);
         }
 
         // Ramp brightness down
-        for i in (LOW..=HIGH).rev().skip(100) {
+        for i in (LOW..=HIGH).rev() {
             delay.delay_us(8);
             channel.set_duty(i);
         }
