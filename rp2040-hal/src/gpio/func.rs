@@ -173,6 +173,7 @@ impl DynFunction {
         }
     }
 }
+impl<P: super::pin::PinId> ValidFunction<DynFunction> for P {}
 macro_rules! pin_valid_func {
     ($bank:ident as $prefix:ident, [$head:ident $(, $func:ident)*], [$($name:tt),+]) => {
         pin_valid_func!($bank as $prefix, [$($func),*], [$($name),+]);
