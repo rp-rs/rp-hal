@@ -110,7 +110,7 @@ fn main() -> ! {
     let mut temperature_sensor = adc.take_temp_sensor().unwrap();
 
     // Configure GPIO26 as an ADC input
-    let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26);
+    let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26).unwrap();
     loop {
         // Read the raw ADC counts from the temperature sensor channel.
         let temp_sens_adc_counts: u16 = adc.read(&mut temperature_sensor).unwrap();

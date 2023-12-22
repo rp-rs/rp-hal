@@ -108,7 +108,7 @@ fn main() -> ! {
     let mut temperature_sensor = adc.take_temp_sensor().unwrap();
 
     // Configure GPIO26 as an ADC input
-    let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26.into_floating_input());
+    let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26.into_floating_input()).unwrap();
 
     // Configure free-running mode:
     let mut adc_fifo = adc

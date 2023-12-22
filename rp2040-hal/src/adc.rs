@@ -16,7 +16,7 @@
 //! // Enable adc
 //! let mut adc = Adc::new(peripherals.ADC, &mut peripherals.RESETS);
 //! // Configure one of the pins as an ADC input
-//! let mut adc_pin_0 = AdcPin::new(pins.gpio26.into_floating_input());
+//! let mut adc_pin_0 = AdcPin::new(pins.gpio26.into_floating_input()).unwrap();
 //! // Read the ADC counts from the ADC channel
 //! let pin_adc_counts: u16 = adc.read(&mut adc_pin_0).unwrap();
 //! ```
@@ -41,7 +41,7 @@
 //! See [examples/adc.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/adc.rs) and
 //! [pimoroni_pico_explorer_showcase.rs](https://github.com/rp-rs/rp-hal-boards/tree/main/boards/pimoroni-pico-explorer/examples/pimoroni_pico_explorer_showcase.rs) for more complete examples
 //!
-//! ### Free running mode
+//! ### Free running mode with FIFO
 //!
 //! In free-running mode the ADC automatically captures samples in regular intervals.
 //! The samples are written to a FIFO, from which they can be retrieved.
@@ -119,6 +119,38 @@
 //! ```
 //! //! See [examples/adc_fifo_dma.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/adc_fifo_dma.rs) for a more complete example.
 //!
+//! ### Free running mode without FIFO
+//!
+//! While free-running mode is usually used in combination with a FIFO, there are
+//! use cases where it can be used without. For example, if you want to be able to
+//! get the latest available sample at any point in time, and without waiting 96 ADC clock
+//! cycles (2µs).
+//!
+//! In this case, you can just enable free-running mode on it's own. The ADC will
+//! continuously do ADC conversions. The ones not read will just be discarded, but it's
+//! always possible to read the latest value, without additional delay:
+//!
+//! ```no_run
+//! use rp2040_hal::{adc::Adc, adc::AdcPin, gpio::Pins, pac, Sio};
+//! // Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
+//! use embedded_hal_0_2::adc::OneShot;
+//! let mut peripherals = pac::Peripherals::take().unwrap();
+//! let sio = Sio::new(peripherals.SIO);
+//! let pins = Pins::new(peripherals.IO_BANK0, peripherals.PADS_BANK0, sio.gpio_bank0, &mut peripherals.RESETS);
+//! // Enable adc
+//! let mut adc = Adc::new(peripherals.ADC, &mut peripherals.RESETS);
+//! // Configure one of the pins as an ADC input
+//! let mut adc_pin_0 = AdcPin::new(pins.gpio26.into_floating_input()).unwrap();
+//! // Read at least once to configure ADC channel and trigger first conversion
+//! let _: u16 = adc.read(&mut adc_pin_0).unwrap();
+//! // Enable free-running mode
+//! adc.free_running(true);
+//! // Read the ADC counts from the ADC channel whenever necessary
+//! loop {
+//!    let pin_adc_counts: u16 = adc.read_single();
+//!    // Do time critical stuff
+//! }
+//! ```
 
 use core::convert::Infallible;
 use core::marker::PhantomData;
@@ -129,7 +161,7 @@ use crate::{
     dma,
     gpio::{
         bank0::{Gpio26, Gpio27, Gpio28, Gpio29},
-        AnyPin, DynPinId, Function, OutputEnableOverride, Pin, PullType, ValidFunction,
+        AnyPin, DynPinId, Function, OutputEnableOverride, Pin, PullType, ValidFunction, DynBankId,
     },
     pac::{dma::ch::ch_ctrl_trig::TREQ_SEL_A, ADC, RESETS},
     resets::SubsystemReset,
@@ -157,15 +189,22 @@ where
     P: AnyPin,
 {
     /// Captures the pin to be used with an ADC and disables its digital circuitery.
-    pub fn new(pin: P) -> Self {
-        let mut p = pin.into();
-        let (od, ie) = (p.get_output_disable(), p.get_input_enable());
-        p.set_output_enable_override(OutputEnableOverride::Disable);
-        p.set_input_enable(false);
-        Self {
-            pin: P::from(p),
-            saved_output_disable: od,
-            saved_input_enable: ie,
+    pub fn new(pin: P) -> Result<Self, InvalidPinError> {
+        let pin_id = pin.borrow().id();
+        if (26..=29).contains(&pin_id.num) && pin_id.bank == DynBankId::Bank0 {
+            let mut p = pin.into();
+            let (od, ie) = (p.get_output_disable(), p.get_input_enable());
+            p.set_output_enable_override(OutputEnableOverride::Disable);
+            p.set_input_enable(false);
+            Ok(
+            Self {
+                pin: P::from(p),
+                saved_output_disable: od,
+                saved_input_enable: ie,
+            }
+            )
+        } else {
+            Err(InvalidPinError)
         }
     }
 
@@ -175,6 +214,13 @@ where
         p.set_output_disable(self.saved_output_disable);
         p.set_input_enable(self.saved_input_enable);
         P::from(p)
+    }
+
+    /// Returns the ADC channel of this AdcPin.
+    pub fn channel(&self) -> u8 {
+        let pin_id = self.pin.borrow().id();
+        // Self::new() makes sure that this is a valid channel number
+        pin_id.num - 26
     }
 }
 
@@ -253,7 +299,13 @@ impl Adc {
         self.device
     }
 
-    /// Read single
+    /// Read the most recently sampled ADC value
+    ///
+    /// This function does not wait for the current conversion to finish.
+    /// If a conversion is still in progress, it returns the result of the
+    /// previous one.
+    ///
+    /// It also doesn't trigger a new conversion.
     pub fn read_single(&self) -> u16 {
         self.device.result().read().result().bits()
     }
@@ -304,20 +356,49 @@ impl Adc {
         }
     }
 
+    /// Enable free-running mode by setting the start_many flag.
+    pub fn free_running<T: AnyPin>(&mut self, pin: &mut AdcPin<T>)
+    {
+        self.device
+            .cs()
+            .modify(|_, w| w.ainsel().variant(pin.channel()).start_many().set_bit() );
+    }
+
+    /// Disable free-running mode by unsetting the start_many flag.
+    pub fn stop(&mut self)
+    {
+        self.device
+            .cs()
+            .modify(|_, w| w.start_many().clear_bit() );
+    }
+
     fn inner_read(&mut self, chan: u8) -> u16 {
-        while !self.device.cs().read().ready().bit_is_set() {
-            cortex_m::asm::nop();
-        }
+        self.wait_ready();
 
         self.device
             .cs()
             .modify(|_, w| unsafe { w.ainsel().bits(chan).start_once().set_bit() });
 
-        while !self.device.cs().read().ready().bit_is_set() {
+        self.wait_ready();
+
+        self.read_single()
+    }
+
+    /// Wait for the ADC to become ready.
+    ///
+    /// Also returns immediately if start_many is set, to avoid indefinite blocking.
+    pub fn wait_ready(&self) {
+        let cs = self.device.cs().read();
+        while !cs.ready().bit_is_set() && !cs.start_many().bit_is_set() {
             cortex_m::asm::nop();
         }
+    }
 
-        self.device.result().read().result().bits()
+    /// Returns true if the ADC is ready for the next conversion.
+    ///
+    /// This implies that any previous converison has finished.
+    pub fn is_ready(&self) -> bool {
+        self.device.cs().read().ready().bit_is_set()
     }
 }
 
@@ -345,18 +426,10 @@ where
     DynPinId: ValidFunction<F>,
     AdcPin<Pin<DynPinId, F, M>>: Channel<Adc, ID = ()>,
 {
-    type Error = InvalidPinError;
+    type Error = Infallible;
 
-    fn read(&mut self, _pin: &mut AdcPin<Pin<DynPinId, F, M>>) -> nb::Result<WORD, Self::Error> {
-        use crate::gpio::DynBankId;
-        let pin_id = _pin.pin.id();
-        let chan = if (26..=29).contains(&pin_id.num) && pin_id.bank == DynBankId::Bank0 {
-            pin_id.num - 26
-        } else {
-            return Err(nb::Error::Other(InvalidPinError));
-        };
-
-        Ok(self.inner_read(chan).into())
+    fn read(&mut self, pin: &mut AdcPin<Pin<DynPinId, F, M>>) -> nb::Result<WORD, Self::Error> {
+        Ok(self.inner_read(pin.channel()).into())
     }
 }
 
@@ -505,16 +578,26 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     /// Same as [`AdcFifoBuilder::start`], except the FIFO is initially paused.
     ///
     /// Use [`AdcFifo::resume`] to start conversion.
-    pub fn prepare(self) -> AdcFifo<'a, Word> {
+    pub fn start_paused(self) -> AdcFifo<'a, Word> {
         self.adc.device.fcs().modify(|_, w| w.en().set_bit());
+        self.adc
+            .device
+            .cs()
+            .modify(|_, w| w.start_many().clear_bit());
         AdcFifo {
             adc: self.adc,
             marker: PhantomData,
         }
     }
+
+    /// Alias for [`start_paused`].
+    #[deprecated(note = "Use `start_paused()` instead.", since = "0.10.0")]
+    pub fn prepare(self) -> AdcFifo<'a, Word> {
+        self.start_paused()
+    }
 }
 
-/// Represents the ADC fifo, when used in free running mode
+/// Represents the ADC fifo
 ///
 /// Constructed by [`AdcFifoBuilder::start`], which is accessible through [`Adc::build_fifo`].
 ///
@@ -662,9 +745,7 @@ impl<'a, Word> AdcFifo<'a, Word> {
         // The only way to clear `INTS.FIFO` is for `FCS.LEVEL` to go
         // below `FCS.THRESH`, which requires `FCS.THRESH` not to be 0.
         while self.adc.device.cs().read().ready().bit_is_clear() {}
-        while self.len() > 0 {
-            self.read_from_fifo();
-        }
+        self.clear();
         // disable fifo, reset threshold to 0 and disable DMA
         self.adc
             .device
@@ -695,6 +776,20 @@ impl<'a, Word> AdcFifo<'a, Word> {
     /// reading from the ADC.
     pub fn dma_read_target(&self) -> DmaReadTarget<Word> {
         DmaReadTarget(self.adc.device.fifo() as *const _ as u32, PhantomData)
+    }
+
+    /// Trigger a single conversion
+    ///
+    /// Ignored unless in [`AdcFifoBuilder::manual_trigger`] mode.
+    pub fn trigger(&mut self) {
+        self.adc.device.cs().modify(|_, w| w.start_once().set_bit());
+    }
+
+    /// Check if ADC is ready for the next conversion trigger
+    ///
+    /// Only useful in [`AdcFifoBuilder::manual_trigger`] mode.
+    pub fn is_ready(&self) -> bool {
+        self.adc.device.cs().read().ready().bit_is_set()
     }
 }
 
