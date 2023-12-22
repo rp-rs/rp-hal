@@ -76,8 +76,12 @@
 //! min_config() leaves those registers in the state they were before it was called (Careful, this can lead to unexpected behavior)
 //! It's recommended to only call min_config() after calling default_config() on a pin that shares a PWM block.
 
+#[cfg(feature = "eh1_0_alpha")]
+use core::convert::Infallible;
 use core::marker::PhantomData;
 
+#[cfg(feature = "eh1_0_alpha")]
+use eh1_0_alpha::pwm::{ErrorType, SetDutyCycle};
 use embedded_dma::Word;
 use embedded_hal::PwmPin;
 
@@ -649,6 +653,23 @@ impl<S: AnySlice> PwmPin for Channel<S, A> {
         if self.enabled {
             self.regs.write_cc_a(duty)
         }
+    }
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl<S: AnySlice> ErrorType for Channel<S, B> {
+    type Error = Infallible;
+}
+
+#[cfg(feature = "eh1_0_alpha")]
+impl<S: AnySlice> SetDutyCycle for Channel<S, B> {
+    fn max_duty_cycle(&self) -> u16 {
+        self.get_max_duty()
+    }
+
+    fn set_duty_cycle(&mut self, duty: u16) -> Result<(), Self::Error> {
+        self.set_duty(duty);
+        Ok(())
     }
 }
 
