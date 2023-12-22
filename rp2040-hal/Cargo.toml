@@ -18,8 +18,8 @@ targets = ["thumbv6m-none-eabi"]
 [dependencies]
 cortex-m = "0.7.2"
 embedded-hal = { version = "0.2.5", features = ["unproven"] }
-eh1_0_alpha = { package = "embedded-hal", version = "=1.0.0-rc.1", optional = true }
-eh_nb_1_0_alpha = { package = "embedded-hal-nb", version = "=1.0.0-rc.1", optional = true }
+eh1_0_alpha = { package = "embedded-hal", version = "=1.0.0-rc.3",  optional = true }
+eh_nb_1_0_alpha = { package = "embedded-hal-nb", version = "=1.0.0-rc.3",  optional = true }
 embedded-dma = "0.2.0"
 embedded-io = "0.6.1"
 fugit = "0.3.6"
@@ -180,6 +180,10 @@ required-features = ["critical-section-impl"]
 [[example]]
 name = "pwm_blink"
 required-features = ["critical-section-impl"]
+
+[[example]]
+name = "pwm_blink_embedded_hal_1"
+required-features = ["critical-section-impl", "eh1_0_alpha"]
 
 [[example]]
 name = "rom_funcs"

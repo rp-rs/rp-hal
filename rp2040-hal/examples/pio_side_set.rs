@@ -55,7 +55,7 @@ fn main() -> ! {
     let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
     let installed = pio.install(&program.program).unwrap();
     let (int, frac) = (0, 0); // as slow as possible (0 is interpreted as 65536)
-    let (mut sm, _, _) = rp2040_hal::pio::PIOBuilder::from_program(installed)
+    let (mut sm, _, _) = rp2040_hal::pio::PIOBuilder::from_installed_program(installed)
         .side_set_pin_base(led_pin_id)
         .clock_divisor_fixed_point(int, frac)
         .build(sm0);

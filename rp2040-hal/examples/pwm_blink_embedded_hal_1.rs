@@ -18,7 +18,7 @@ use panic_halt as _;
 use rp2040_hal as hal;
 
 // Some traits we need
-use embedded_hal::PwmPin;
+use eh1_0_alpha::pwm::SetDutyCycle;
 use rp2040_hal::clocks::Clock;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
@@ -106,13 +106,13 @@ fn main() -> ! {
         // Ramp brightness up
         for i in LOW..=HIGH {
             delay.delay_us(8);
-            channel.set_duty(i);
+            channel.set_duty_cycle(i).unwrap();
         }
 
         // Ramp brightness down
         for i in (LOW..=HIGH).rev() {
             delay.delay_us(8);
-            channel.set_duty(i);
+            channel.set_duty_cycle(i).unwrap();
         }
 
         delay.delay_ms(500);
