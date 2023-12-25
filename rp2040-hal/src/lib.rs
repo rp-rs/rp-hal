@@ -8,8 +8,7 @@
 //! # Crate features
 //!
 //! * **chrono** -
-//!   Modifies some RTC access functions to use chrono types instead of a rp2040-hal specific
-//!   DateTime type
+//!   Add conversion functions between chrono types and the rp2040-hal specific DateTime type
 //! * **critical-section-impl** -
 //!   critical section that is safe for multicore use
 //! * **defmt** -
