@@ -343,7 +343,7 @@ where
         self.regs.write_div_frac(0); // No divisor
         self.regs.write_inv_a(false); //Don't invert the channel
         self.regs.write_inv_b(false); //Don't invert the channel
-        self.regs.write_top(0xffff); // Wrap at max
+        self.regs.write_top(0xfffe); // Wrap at 0xfffe, so cc = 0xffff can indicate 100% duty cycle
         self.regs.write_ctr(0x0000); //Reset the counter
         self.regs.write_cc_a(0); //Default duty cycle of 0%
         self.regs.write_cc_b(0); //Default duty cycle of 0%
@@ -420,6 +420,18 @@ where
     }
 
     /// Sets the top register value
+    ///
+    /// Don't set this to 0xffff if you need true 100% duty cycle:
+    ///
+    /// The CC register, which is used to configure the duty cycle,
+    /// must be set to TOP + 1 for 100% duty cycle, but also is a
+    /// 16 bit register.
+    ///
+    /// In case you do set TOP to 0xffff, [`SetDutyCycle::set_duty_cycle`]
+    /// will slightly violate the trait's documentation, as
+    /// `SetDutyCycle::set_duty_cycle_fully_on` and other calls that
+    /// should lead to 100% duty cycle will only reach a duty cycle of
+    /// about 99.998%.
     #[inline]
     pub fn set_top(&mut self, value: u16) {
         self.regs.write_top(value)
@@ -702,7 +714,7 @@ impl<S: AnySlice> PwmPin for Channel<S, B> {
     }
 
     fn get_max_duty(&self) -> Self::Duty {
-        self.regs.read_top()
+        self.regs.read_top().saturating_add(1)
     }
 
     fn set_duty(&mut self, duty: Self::Duty) {
@@ -845,7 +857,7 @@ pub struct SliceDmaWriteCc<S: SliceId, M: ValidSliceMode<S>> {
 /// pwm.channel_b.set_duty(0x1000);
 ///
 /// let buf = singleton!(: [TopFormat; 4] = [TopFormat::new(0x7fff); 4]).unwrap();
-/// let buf2 = singleton!(: [TopFormat; 4] = [TopFormat::new(0xffff); 4]).unwrap();
+/// let buf2 = singleton!(: [TopFormat; 4] = [TopFormat::new(0xfffe); 4]).unwrap();
 ///
 /// let dma = pac.DMA.split(&mut pac.RESETS);
 ///
