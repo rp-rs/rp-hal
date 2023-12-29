@@ -224,6 +224,25 @@ where
     }
 }
 
+/// Trait for GPIO pins (concrete or dynamic) that can be
+/// used as ADC channels. Also implemented for [`TempSense`].
+pub trait AdcChannel {
+    /// Get the channel id used to configure the ADC peripheral.
+    fn channel(&self) -> u8;
+}
+
+impl<P: AnyPin> AdcChannel for AdcPin<P> {
+    fn channel(&self) -> u8 {
+        self.channel()
+    }
+}
+
+impl AdcChannel for TempSense {
+    fn channel(&self) -> u8 {
+        TEMPERATURE_SENSOR_CHANNEL
+    }
+}
+
 macro_rules! channel {
     ($pin:ident, $channel:expr) => {
         impl<F: Function, M: PullType> Channel<Adc> for AdcPin<Pin<$pin, F, M>>
@@ -493,11 +512,11 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     ///
     /// The given `pin` can either be one of the ADC inputs (GPIO26-28) or the
     /// internal temperature sensor (retrieved via [`Adc::take_temp_sensor`]).
-    pub fn set_channel<PIN: Channel<Adc, ID = u8>>(self, _pin: &mut PIN) -> Self {
+    pub fn set_channel<P: AdcChannel>(self, pin: &mut P) -> Self {
         self.adc
             .device
             .cs()
-            .modify(|_, w| unsafe { w.ainsel().bits(PIN::channel()) });
+            .modify(|_, w| unsafe { w.ainsel().bits(pin.channel()) });
         self
     }
 
@@ -841,11 +860,17 @@ impl<Word> dma::EndlessReadTarget for DmaReadTarget<Word> {}
 /// See [`AdcFifoBuilder::round_robin`], for usage example.
 pub struct RoundRobin(u8);
 
-impl<PIN: Channel<Adc, ID = u8>> From<PIN> for RoundRobin {
-    fn from(_: PIN) -> Self {
-        Self(1 << PIN::channel())
+impl<PIN: AdcChannel> From<PIN> for RoundRobin {
+    fn from(pin: PIN) -> Self {
+        Self(1 << pin.channel())
     }
 }
+
+// impl<PIN: Channel<Adc, ID = u8>> From<PIN> for RoundRobin {
+//     fn from(_: PIN) -> Self {
+//         Self(1 << PIN::channel())
+//     }
+// }
 
 impl<A, B> From<(&mut A, &mut B)> for RoundRobin
 where
