@@ -53,7 +53,7 @@ pub fn setup_xosc_blocking(
     xosc_dev: XOSC,
     frequency: HertzU32,
 ) -> Result<CrystalOscillator<Stable>, Error> {
-    let initialized_xosc = CrystalOscillator::new(xosc_dev).initialize(frequency)?;
+    let initialized_xosc = CrystalOscillator::new(xosc_dev).initialize(frequency, 1)?;
 
     let stable_xosc_token = nb::block!(initialized_xosc.await_stabilization()).unwrap();
 
@@ -91,7 +91,12 @@ impl CrystalOscillator<Disabled> {
     }
 
     /// Initializes the XOSC : frequency range is set, startup delay is calculated and set.
-    pub fn initialize(self, frequency: HertzU32) -> Result<CrystalOscillator<Initialized>, Error> {
+    /// Set startup_delay_multiplier to a value > 1 when using a slow-starting oscillator.
+    pub fn initialize(
+        self,
+        frequency: HertzU32,
+        startup_delay_multiplier: u32,
+    ) -> Result<CrystalOscillator<Initialized>, Error> {
         const ALLOWED_FREQUENCY_RANGE: RangeInclusive<HertzU32> =
             HertzU32::MHz(1)..=HertzU32::MHz(15);
         //1 ms = 10e-3 sec and Freq = 1/T where T is in seconds so 1ms converts to 1000Hz
@@ -100,6 +105,10 @@ impl CrystalOscillator<Disabled> {
 
         if !ALLOWED_FREQUENCY_RANGE.contains(&frequency) {
             return Err(Error::FrequencyOutOfRange);
+        }
+
+        if startup_delay_multiplier == 0 {
+            return Err(Error::BadArgument);
         }
 
         self.device.ctrl.write(|w| {
@@ -112,6 +121,7 @@ impl CrystalOscillator<Disabled> {
         //See Chapter 2, Section 16, §3)
         //We do the calculation first.
         let startup_delay = frequency.to_Hz() / (STABLE_DELAY_AS_HZ.to_Hz() * DIVIDER);
+        let startup_delay = startup_delay.saturating_mul(startup_delay_multiplier);
 
         //Then we check if it fits into an u16.
         let startup_delay: u16 = startup_delay.try_into().map_err(|_| Error::BadArgument)?;
