@@ -61,7 +61,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2023-06-27
+          toolchain: nightly-2024-01-30
           target: thumbv6m-none-eabi
       - name: Install cargo-hack
         uses: baptiste0928/cargo-install@v2
@@ -82,7 +82,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.65
+          toolchain: 1.75
           target: thumbv6m-none-eabi
       - name: Install cargo-hack
         uses: baptiste0928/cargo-install@v2
