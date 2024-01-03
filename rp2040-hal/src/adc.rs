@@ -141,10 +141,8 @@
 //! let mut adc = Adc::new(peripherals.ADC, &mut peripherals.RESETS);
 //! // Configure one of the pins as an ADC input
 //! let mut adc_pin_0 = AdcPin::new(pins.gpio26.into_floating_input()).unwrap();
-//! // Read at least once to configure ADC channel and trigger first conversion
-//! let _: u16 = adc.read(&mut adc_pin_0).unwrap();
 //! // Enable free-running mode
-//! adc.free_running(true);
+//! adc.free_running(&adc_pin_0);
 //! // Read the ADC counts from the ADC channel whenever necessary
 //! loop {
 //!    let pin_adc_counts: u16 = adc.read_single();
@@ -379,7 +377,7 @@ impl Adc {
     }
 
     /// Enable free-running mode by setting the start_many flag.
-    pub fn free_running<T: AnyPin>(&mut self, pin: &mut AdcPin<T>) {
+    pub fn free_running<T: AnyPin>(&mut self, pin: &AdcPin<T>) {
         self.device
             .cs()
             .modify(|_, w| w.ainsel().variant(pin.channel()).start_many().set_bit());
