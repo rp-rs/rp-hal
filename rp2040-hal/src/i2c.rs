@@ -340,8 +340,10 @@ macro_rules! hal {
 
                 $crate::paste::paste! {
                     /// Configures the I2C peripheral to work in master mode
-                    /// This function can be called without the pull-ups on the I2C pins.
-                    pub fn [<$i2cX _unchecked>]<F, SystemF>(
+                    ///
+                    /// This function can be called without activating internal pull-ups on the I2C pins.
+                    /// It should only be used if external pull-ups are provided.
+                    pub fn [<$i2cX _with_external_pull_up>]<F, SystemF>(
                         i2c: $I2CX,
                         sda_pin: Sda,
                         scl_pin: Scl,
