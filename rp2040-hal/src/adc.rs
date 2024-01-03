@@ -860,66 +860,60 @@ impl<Word> dma::EndlessReadTarget for DmaReadTarget<Word> {}
 /// See [`AdcFifoBuilder::round_robin`], for usage example.
 pub struct RoundRobin(u8);
 
-impl<PIN: AdcChannel> From<PIN> for RoundRobin {
-    fn from(pin: PIN) -> Self {
+impl<PIN: AdcChannel> From<&PIN> for RoundRobin {
+    fn from(pin: &PIN) -> Self {
         Self(1 << pin.channel())
     }
 }
 
-// impl<PIN: Channel<Adc, ID = u8>> From<PIN> for RoundRobin {
-//     fn from(_: PIN) -> Self {
-//         Self(1 << PIN::channel())
-//     }
-// }
-
-impl<A, B> From<(&mut A, &mut B)> for RoundRobin
+impl<A, B> From<(&A, &B)> for RoundRobin
 where
-    A: Channel<Adc, ID = u8>,
-    B: Channel<Adc, ID = u8>,
+    A: AdcChannel,
+    B: AdcChannel,
 {
-    fn from(_: (&mut A, &mut B)) -> Self {
-        Self(1 << A::channel() | 1 << B::channel())
+    fn from(pins: (&A, &B)) -> Self {
+        Self(1 << pins.0.channel() | 1 << pins.1.channel())
     }
 }
 
-impl<A, B, C> From<(&mut A, &mut B, &mut C)> for RoundRobin
+impl<A, B, C> From<(&A, &B, &C)> for RoundRobin
 where
-    A: Channel<Adc, ID = u8>,
-    B: Channel<Adc, ID = u8>,
-    C: Channel<Adc, ID = u8>,
+    A: AdcChannel,
+    B: AdcChannel,
+    C: AdcChannel,
 {
-    fn from(_: (&mut A, &mut B, &mut C)) -> Self {
-        Self(1 << A::channel() | 1 << B::channel() | 1 << C::channel())
+    fn from(pins: (&A, &B, &C)) -> Self {
+        Self(1 << pins.0.channel() | 1 << pins.1.channel() | 1 << pins.2.channel())
     }
 }
 
-impl<A, B, C, D> From<(&mut A, &mut B, &mut C, &mut D)> for RoundRobin
+impl<A, B, C, D> From<(&A, &B, &C, &D)> for RoundRobin
 where
-    A: Channel<Adc, ID = u8>,
-    B: Channel<Adc, ID = u8>,
-    C: Channel<Adc, ID = u8>,
-    D: Channel<Adc, ID = u8>,
+    A: AdcChannel,
+    B: AdcChannel,
+    C: AdcChannel,
+    D: AdcChannel,
 {
-    fn from(_: (&mut A, &mut B, &mut C, &mut D)) -> Self {
-        Self(1 << A::channel() | 1 << B::channel() | 1 << C::channel() | 1 << D::channel())
+    fn from(pins: (&A, &B, &C, &D)) -> Self {
+        Self(1 << pins.0.channel() | 1 << pins.1.channel() | 1 << pins.2.channel() | 1 << pins.3.channel())
     }
 }
 
-impl<A, B, C, D, E> From<(&mut A, &mut B, &mut C, &mut D, &mut E)> for RoundRobin
+impl<A, B, C, D, E> From<(&A, &B, &C, &D, &E)> for RoundRobin
 where
-    A: Channel<Adc, ID = u8>,
-    B: Channel<Adc, ID = u8>,
-    C: Channel<Adc, ID = u8>,
-    D: Channel<Adc, ID = u8>,
-    E: Channel<Adc, ID = u8>,
+    A: AdcChannel,
+    B: AdcChannel,
+    C: AdcChannel,
+    D: AdcChannel,
+    E: AdcChannel,
 {
-    fn from(_: (&mut A, &mut B, &mut C, &mut D, &mut E)) -> Self {
+    fn from(pins: (&A, &B, &C, &D, &E)) -> Self {
         Self(
-            1 << A::channel()
-                | 1 << B::channel()
-                | 1 << C::channel()
-                | 1 << D::channel()
-                | 1 << E::channel(),
+            1 << pins.0.channel()
+                | 1 << pins.1.channel()
+                | 1 << pins.2.channel()
+                | 1 << pins.3.channel()
+                | 1 << pins.4.channel(),
         )
     }
 }
