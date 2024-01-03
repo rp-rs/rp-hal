@@ -27,6 +27,10 @@ use rp2040_hal::Clock;
 // UART related types
 use hal::uart::{DataBits, StopBits, UartConfig};
 
+// ADC related types
+use hal::adc::AdcPin;
+use hal::Adc;
+
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
 use hal::pac;
@@ -107,13 +111,13 @@ fn main() -> ! {
     let dma = pac.DMA.split(&mut pac.RESETS);
 
     // Enable ADC
-    let mut adc = hal::Adc::new(pac.ADC, &mut pac.RESETS);
+    let mut adc = Adc::new(pac.ADC, &mut pac.RESETS);
 
     // Enable the temperature sense channel
     let mut temperature_sensor = adc.take_temp_sensor().unwrap();
 
     // Configure GPIO26 as an ADC input
-    let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26.into_floating_input()).unwrap();
+    let adc_pin_0 = AdcPin::new(pins.gpio26.into_floating_input()).unwrap();
 
     // we'll capture 1000 samples in total (500 per channel)
     // NOTE: when calling `shift_8bit` below, the type here must be changed from `u16` to `u8`
@@ -129,7 +133,7 @@ fn main() -> ! {
         // sample the temperature sensor first
         .set_channel(&mut temperature_sensor)
         // then alternate between GPIO26 and the temperature sensor
-        .round_robin((&mut adc_pin_0, &mut temperature_sensor))
+        .round_robin((&adc_pin_0, &temperature_sensor))
         // Uncomment this line to produce 8-bit samples, instead of 12 bit (lower bits are discarded)
         //.shift_8bit()
         // Enable DMA transfers for the FIFO
