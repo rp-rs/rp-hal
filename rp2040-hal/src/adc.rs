@@ -161,10 +161,11 @@ use crate::{
     dma,
     gpio::{
         bank0::{Gpio26, Gpio27, Gpio28, Gpio29},
-        AnyPin, DynPinId, Function, OutputEnableOverride, Pin, PullType, ValidFunction, DynBankId,
+        AnyPin, DynBankId, DynPinId, Function, OutputEnableOverride, Pin, PullType, ValidFunction,
     },
     pac::{dma::ch::ch_ctrl_trig::TREQ_SEL_A, ADC, RESETS},
     resets::SubsystemReset,
+    typelevel::Sealed,
 };
 
 const TEMPERATURE_SENSOR_CHANNEL: u8 = 4;
@@ -196,13 +197,11 @@ where
             let (od, ie) = (p.get_output_disable(), p.get_input_enable());
             p.set_output_enable_override(OutputEnableOverride::Disable);
             p.set_input_enable(false);
-            Ok(
-            Self {
+            Ok(Self {
                 pin: P::from(p),
                 saved_output_disable: od,
                 saved_input_enable: ie,
-            }
-            )
+            })
         } else {
             Err(InvalidPinError)
         }
@@ -224,19 +223,23 @@ where
     }
 }
 
-/// Trait for GPIO pins (concrete or dynamic) that can be
-/// used as ADC channels. Also implemented for [`TempSense`].
-pub trait AdcChannel {
+/// Trait for entities that can be used as ADC channels.
+///
+/// This is implemented by [`AdcPin`] and by [`TempSense`].
+/// The trait is sealed and can't be implemented in other crates.
+pub trait AdcChannel: Sealed {
     /// Get the channel id used to configure the ADC peripheral.
     fn channel(&self) -> u8;
 }
 
+impl<P: AnyPin> Sealed for AdcPin<P> {}
 impl<P: AnyPin> AdcChannel for AdcPin<P> {
     fn channel(&self) -> u8 {
         self.channel()
     }
 }
 
+impl Sealed for TempSense {}
 impl AdcChannel for TempSense {
     fn channel(&self) -> u8 {
         TEMPERATURE_SENSOR_CHANNEL
@@ -376,19 +379,15 @@ impl Adc {
     }
 
     /// Enable free-running mode by setting the start_many flag.
-    pub fn free_running<T: AnyPin>(&mut self, pin: &mut AdcPin<T>)
-    {
+    pub fn free_running<T: AnyPin>(&mut self, pin: &mut AdcPin<T>) {
         self.device
             .cs()
-            .modify(|_, w| w.ainsel().variant(pin.channel()).start_many().set_bit() );
+            .modify(|_, w| w.ainsel().variant(pin.channel()).start_many().set_bit());
     }
 
     /// Disable free-running mode by unsetting the start_many flag.
-    pub fn stop(&mut self)
-    {
-        self.device
-            .cs()
-            .modify(|_, w| w.start_many().clear_bit() );
+    pub fn stop(&mut self) {
+        self.device.cs().modify(|_, w| w.start_many().clear_bit());
     }
 
     fn inner_read(&mut self, chan: u8) -> u16 {
@@ -895,7 +894,12 @@ where
     D: AdcChannel,
 {
     fn from(pins: (&A, &B, &C, &D)) -> Self {
-        Self(1 << pins.0.channel() | 1 << pins.1.channel() | 1 << pins.2.channel() | 1 << pins.3.channel())
+        Self(
+            1 << pins.0.channel()
+                | 1 << pins.1.channel()
+                | 1 << pins.2.channel()
+                | 1 << pins.3.channel(),
+        )
     }
 }
 
