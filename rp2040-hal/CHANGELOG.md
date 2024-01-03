@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - bump MSRV to 1.65
+- Set startup\_delay\_multiplier of XOSC to 64, and make it configurable.
+  This should increase compatibility with boards where the oscillator starts up
+  more slowly than on the Raspberry Pico.
 
 ## [0.9.1]
 
