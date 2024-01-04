@@ -256,6 +256,7 @@ impl ShareableClocks {
 /// Something when wrong setting up the clock
 #[non_exhaustive]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ClockError {
     /// The frequency desired is higher than the source frequency
     CantIncreaseFreq,
@@ -488,6 +489,8 @@ impl ClocksManager {
 }
 
 /// Possible init errors
+#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum InitError {
     /// Something went wrong setting up the Xosc
     XoscErr(XoscError),

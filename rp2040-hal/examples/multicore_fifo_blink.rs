@@ -105,7 +105,6 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-    .ok()
     .unwrap();
 
     let sys_freq = clocks.system_clock.freq().to_Hz();

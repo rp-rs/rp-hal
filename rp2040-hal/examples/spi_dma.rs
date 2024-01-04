@@ -45,7 +45,6 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-    .ok()
     .unwrap();
 
     // Setup the pins.

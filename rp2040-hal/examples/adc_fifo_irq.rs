@@ -80,7 +80,6 @@ mod app {
             &mut resets,
             &mut watchdog,
         )
-        .ok()
         .unwrap();
         let sio = hal::Sio::new(c.device.SIO);
         let pins = hal::gpio::Pins::new(

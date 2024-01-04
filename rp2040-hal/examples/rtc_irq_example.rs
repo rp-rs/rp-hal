@@ -83,7 +83,6 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-    .ok()
     .unwrap();
 
     // The single-cycle I/O block controls our GPIO pins

@@ -68,7 +68,6 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-    .ok()
     .unwrap();
 
     // The delay object lets us wait for specified amounts of time (in
