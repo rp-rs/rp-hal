@@ -68,7 +68,6 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-    .ok()
     .unwrap();
 
     // We will use the RP2040 timer peripheral as our delay source
