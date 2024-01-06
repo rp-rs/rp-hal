@@ -133,19 +133,17 @@ pub(crate) fn read_raw<'b, D: UartDevice>(
 
             let read = device.uartdr.read();
 
+            // If multiple status bits are set, report
+            // the most serious or most specific condition,
+            // in the following order of precedence:
+            // overrun > break > parity > framing
             if read.oe().bit_is_set() {
                 error = Some(ReadErrorType::Overrun);
-            }
-
-            if read.be().bit_is_set() {
+            } else if read.be().bit_is_set() {
                 error = Some(ReadErrorType::Break);
-            }
-
-            if read.pe().bit_is_set() {
+            } else if read.pe().bit_is_set() {
                 error = Some(ReadErrorType::Parity);
-            }
-
-            if read.fe().bit_is_set() {
+            } else if read.fe().bit_is_set() {
                 error = Some(ReadErrorType::Framing);
             }
 
