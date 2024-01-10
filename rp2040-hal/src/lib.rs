@@ -15,7 +15,7 @@
 //!   Implement `defmt::Format` for several types.
 //! * **disable-intrinsics** -
 //!   Disable automatic mapping of language features (like floating point math) to ROM functions
-//! * **eh1_0_alpha** -
+//! * **embedded_hal_1** -
 //!   Support alpha release of embedded-hal
 //! * **rom-func-cache** -
 //!   Memoize(cache) ROM function pointers on first use to improve performance

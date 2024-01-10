@@ -8,8 +8,7 @@ use crate::pac::uart0::RegisterBlock;
 use embedded_hal::serial::Read;
 use nb::Error::*;
 
-#[cfg(feature = "eh1_0_alpha")]
-use eh_nb_1_0_alpha::serial as eh1nb;
+use embedded_hal_nb::serial as eh1nb;
 
 /// When there's a read error.
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -39,7 +38,6 @@ pub enum ReadErrorType {
     Framing,
 }
 
-#[cfg(feature = "eh1_0_alpha")]
 impl eh1nb::Error for ReadErrorType {
     fn kind(&self) -> eh1nb::ErrorKind {
         match self {
@@ -255,12 +253,10 @@ unsafe impl<D: UartDevice, P: ValidUartPinout<D>> ReadTarget for Reader<D, P> {
 
 impl<D: UartDevice, P: ValidUartPinout<D>> EndlessReadTarget for Reader<D, P> {}
 
-#[cfg(feature = "eh1_0_alpha")]
 impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::ErrorType for Reader<D, P> {
     type Error = ReadErrorType;
 }
 
-#[cfg(feature = "eh1_0_alpha")]
 impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Read<u8> for Reader<D, P> {
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
         let byte: &mut [u8] = &mut [0; 1];

@@ -166,8 +166,7 @@ macro_rules! impl_delay_traits {
 // The implementation for i32 is a workaround to allow `delay_ms(42)` construction without specifying a type.
 impl_delay_traits!(u8, u16, u32, i32);
 
-#[cfg(feature = "eh1_0_alpha")]
-impl eh1_0_alpha::delay::DelayNs for Timer {
+impl embedded_hal_1::delay::DelayNs for Timer {
     fn delay_ns(&mut self, ns: u32) {
         // For now, just use microsecond delay, internally. Of course, this
         // might cause a much longer delay than necessary. So a more advanced

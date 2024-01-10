@@ -2,8 +2,7 @@ use core::{marker::PhantomData, ops::Deref};
 use embedded_hal::blocking::i2c::{Read, Write, WriteIter, WriteIterRead, WriteRead};
 use fugit::HertzU32;
 
-#[cfg(feature = "eh1_0_alpha")]
-use eh1_0_alpha::i2c as eh1;
+use embedded_hal_1::i2c as eh1;
 
 use super::{i2c_reserved_addr, Controller, Error, ValidPinScl, ValidPinSda, I2C};
 use crate::{
@@ -291,7 +290,6 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
     /// - `SAD+R/W` = slave address followed by bit 1 to indicate reading or 0 to indicate writing
     /// - `SR` = repeated start condition
     /// - `SP` = stop condition
-    #[cfg(feature = "eh1_0_alpha")]
     pub fn transaction_iter<'a, O>(&mut self, address: u8, operations: O) -> Result<(), Error>
     where
         O: IntoIterator<Item = eh1::Operation<'a>>,
@@ -375,12 +373,10 @@ impl<T: Deref<Target = Block>, PINS> WriteIterRead for I2C<T, PINS, Controller> 
     }
 }
 
-#[cfg(feature = "eh1_0_alpha")]
 impl<T: Deref<Target = Block>, PINS> eh1::ErrorType for I2C<T, PINS, Controller> {
     type Error = Error;
 }
 
-#[cfg(feature = "eh1_0_alpha")]
 impl<T: Deref<Target = Block>, PINS> eh1::I2c for I2C<T, PINS, Controller> {
     fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Self::Error> {
         Write::write(self, addr, bytes)

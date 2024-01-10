@@ -14,8 +14,7 @@ use crate::{
     uart::*,
 };
 
-#[cfg(feature = "eh1_0_alpha")]
-use eh_nb_1_0_alpha::serial as eh1nb;
+use embedded_hal_nb::serial as eh1nb;
 
 /// An UART Peripheral based on an underlying UART device.
 pub struct UartPeripheral<S: State, D: UartDevice, P: ValidUartPinout<D>> {
@@ -360,12 +359,10 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh0::Read<u8> for UartPeripheral<Enab
     }
 }
 
-#[cfg(feature = "eh1_0_alpha")]
 impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::ErrorType for UartPeripheral<Enabled, D, P> {
     type Error = ReadErrorType;
 }
 
-#[cfg(feature = "eh1_0_alpha")]
 impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Read<u8> for UartPeripheral<Enabled, D, P> {
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
         let byte: &mut [u8] = &mut [0; 1];
@@ -396,7 +393,6 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh0::Write<u8> for UartPeripheral<Ena
     }
 }
 
-#[cfg(feature = "eh1_0_alpha")]
 impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Write<u8> for UartPeripheral<Enabled, D, P> {
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
         if self.write_raw(&[word]).is_err() {

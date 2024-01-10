@@ -1396,10 +1396,9 @@ impl<T: AnyPin> embedded_hal::digital::v2::OutputPin for InOutPin<T> {
     }
 }
 
-#[cfg(feature = "eh1_0_alpha")]
 mod eh1 {
-    use eh1_0_alpha::digital::{
-        ErrorType, InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin,
+    use embedded_hal_1::digital::{
+        ErrorType, InputPin, OutputPin, StatefulOutputPin,
     };
 
     use super::{Error, FunctionSio, Pin, PinId, PullType, SioConfig, SioInput, SioOutput};
@@ -1441,13 +1440,7 @@ mod eh1 {
         fn is_set_low(&mut self) -> Result<bool, Self::Error> {
             Ok(self._is_set_low())
         }
-    }
 
-    impl<I, P> ToggleableOutputPin for Pin<I, FunctionSio<SioOutput>, P>
-    where
-        I: PinId,
-        P: PullType,
-    {
         fn toggle(&mut self) -> Result<(), Self::Error> {
             self._toggle();
             Ok(())
