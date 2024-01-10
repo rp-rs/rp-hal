@@ -7,8 +7,8 @@ use crate::dma::{EndlessWriteTarget, WriteTarget};
 use crate::pac::uart0::RegisterBlock;
 use core::fmt;
 use core::{convert::Infallible, marker::PhantomData};
-use embedded_hal_0_2::serial::Write;
-use embedded_hal_nb::serial as eh1nb;
+use embedded_hal_0_2::serial::Write as Write02;
+use embedded_hal_nb::serial::{ErrorType, Write};
 use nb::Error::*;
 
 /// Set tx FIFO watermark
@@ -172,7 +172,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Writer<D, P> {
     }
 }
 
-impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for Writer<D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> Write02<u8> for Writer<D, P> {
     type Error = Infallible;
 
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
@@ -208,11 +208,11 @@ unsafe impl<D: UartDevice, P: ValidUartPinout<D>> WriteTarget for Writer<D, P> {
 
 impl<D: UartDevice, P: ValidUartPinout<D>> EndlessWriteTarget for Writer<D, P> {}
 
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::ErrorType for Writer<D, P> {
-    type Error = core::convert::Infallible;
+impl<D: UartDevice, P: ValidUartPinout<D>> ErrorType for Writer<D, P> {
+    type Error = Infallible;
 }
 
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Write<u8> for Writer<D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for Writer<D, P> {
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
         if self.write_raw(&[word]).is_err() {
             Err(WouldBlock)
@@ -232,7 +232,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Write<u8> for Writer<D, P> {
 impl<D: UartDevice, P: ValidUartPinout<D>> fmt::Write for Writer<D, P> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         s.bytes()
-            .try_for_each(|c| nb::block!(self.write(c)))
+            .try_for_each(|c| nb::block!(Write::write(self, c)))
             .map_err(|_| fmt::Error)
     }
 }
