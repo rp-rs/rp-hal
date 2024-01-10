@@ -2,7 +2,7 @@ use core::{marker::PhantomData, ops::Deref};
 use embedded_hal_0_2::blocking::i2c::{Read, Write, WriteIter, WriteIterRead, WriteRead};
 use fugit::HertzU32;
 
-use embedded_hal_1::i2c as eh1;
+use embedded_hal::i2c as eh1;
 
 use super::{i2c_reserved_addr, Controller, Error, ValidPinScl, ValidPinSda, I2C};
 use crate::{

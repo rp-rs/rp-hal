@@ -1397,7 +1397,7 @@ impl<T: AnyPin> embedded_hal_0_2::digital::v2::OutputPin for InOutPin<T> {
 }
 
 mod eh1 {
-    use embedded_hal_1::digital::{ErrorType, InputPin, OutputPin, StatefulOutputPin};
+    use embedded_hal::digital::{ErrorType, InputPin, OutputPin, StatefulOutputPin};
 
     use super::{Error, FunctionSio, Pin, PinId, PullType, SioConfig, SioInput, SioOutput};
 

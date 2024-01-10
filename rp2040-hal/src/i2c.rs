@@ -95,7 +95,7 @@ pub enum Error {
 
 impl core::fmt::Debug for Error {
     fn fmt(&self, fmt: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        use embedded_hal_1::i2c::Error as _;
+        use embedded_hal::i2c::Error as _;
         match self {
             Error::InvalidReadBufferLength => write!(fmt, "InvalidReadBufferLength"),
             Error::InvalidWriteBufferLength => write!(fmt, "InvalidWriteBufferLength"),
@@ -111,7 +111,7 @@ impl core::fmt::Debug for Error {
 #[cfg(feature = "defmt")]
 impl defmt::Format for Error {
     fn format(&self, fmt: defmt::Formatter) {
-        use embedded_hal_1::i2c::Error as _;
+        use embedded_hal::i2c::Error as _;
         match self {
             Error::InvalidReadBufferLength => defmt::write!(fmt, "InvalidReadBufferLength"),
             Error::InvalidWriteBufferLength => defmt::write!(fmt, "InvalidWriteBufferLength"),
@@ -124,26 +124,26 @@ impl defmt::Format for Error {
     }
 }
 
-impl embedded_hal_1::i2c::Error for Error {
-    fn kind(&self) -> embedded_hal_1::i2c::ErrorKind {
+impl embedded_hal::i2c::Error for Error {
+    fn kind(&self) -> embedded_hal::i2c::ErrorKind {
         match &self {
             Error::Abort(v) if v & 1<<12 != 0 // ARB_LOST
-                => embedded_hal_1::i2c::ErrorKind::ArbitrationLoss,
+                => embedded_hal::i2c::ErrorKind::ArbitrationLoss,
             Error::Abort(v) if v & 1<<7 != 0 // ABRT_SBYTE_ACKDET
-                => embedded_hal_1::i2c::ErrorKind::Bus,
+                => embedded_hal::i2c::ErrorKind::Bus,
             Error::Abort(v) if v & 1<<6 != 0 // ABRT_HS_ACKDET
-                => embedded_hal_1::i2c::ErrorKind::Bus,
+                => embedded_hal::i2c::ErrorKind::Bus,
             Error::Abort(v) if v & 1<<4 != 0 // ABRT_GCALL_NOACK
-                => embedded_hal_1::i2c::ErrorKind::NoAcknowledge(embedded_hal_1::i2c::NoAcknowledgeSource::Address),
+                => embedded_hal::i2c::ErrorKind::NoAcknowledge(embedded_hal::i2c::NoAcknowledgeSource::Address),
             Error::Abort(v) if v & 1<<3 != 0 // ABRT_TXDATA_NOACK
-                => embedded_hal_1::i2c::ErrorKind::NoAcknowledge(embedded_hal_1::i2c::NoAcknowledgeSource::Data),
+                => embedded_hal::i2c::ErrorKind::NoAcknowledge(embedded_hal::i2c::NoAcknowledgeSource::Data),
             Error::Abort(v) if v & 1<<2 != 0 // ABRT_10ADDR2_NOACK
-                => embedded_hal_1::i2c::ErrorKind::NoAcknowledge(embedded_hal_1::i2c::NoAcknowledgeSource::Address),
+                => embedded_hal::i2c::ErrorKind::NoAcknowledge(embedded_hal::i2c::NoAcknowledgeSource::Address),
             Error::Abort(v) if v & 1<<1 != 0 // ABRT_10ADDR1_NOACK
-                => embedded_hal_1::i2c::ErrorKind::NoAcknowledge(embedded_hal_1::i2c::NoAcknowledgeSource::Address),
+                => embedded_hal::i2c::ErrorKind::NoAcknowledge(embedded_hal::i2c::NoAcknowledgeSource::Address),
             Error::Abort(v) if v & 1<<0 != 0 // ABRT_7B_ADDR_NOACK
-                => embedded_hal_1::i2c::ErrorKind::NoAcknowledge(embedded_hal_1::i2c::NoAcknowledgeSource::Address),
-            _ => embedded_hal_1::i2c::ErrorKind::Other,
+                => embedded_hal::i2c::ErrorKind::NoAcknowledge(embedded_hal::i2c::NoAcknowledgeSource::Address),
+            _ => embedded_hal::i2c::ErrorKind::Other,
         }
     }
 }

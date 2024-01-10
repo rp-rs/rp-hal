@@ -81,7 +81,7 @@ use core::marker::PhantomData;
 
 use embedded_dma::Word;
 use embedded_hal_0_2::PwmPin;
-use embedded_hal_1::pwm::{ErrorType, SetDutyCycle};
+use embedded_hal::pwm::{ErrorType, SetDutyCycle};
 
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},

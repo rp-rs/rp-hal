@@ -32,7 +32,7 @@ use embedded_hal_0_2::{
     blocking::spi,
     spi::{FullDuplex, Phase, Polarity},
 };
-use embedded_hal_1::spi as eh1;
+use embedded_hal::spi as eh1;
 use embedded_hal_nb::spi as eh1nb;
 use fugit::{HertzU32, RateExtU32};
 
@@ -69,25 +69,25 @@ pub enum FrameFormat {
     NationalSemiconductorMicrowire,
 }
 
-impl From<embedded_hal_1::spi::Mode> for FrameFormat {
-    fn from(f: embedded_hal_1::spi::Mode) -> Self {
-        let embedded_hal_1::spi::Mode { polarity, phase } = f;
+impl From<embedded_hal::spi::Mode> for FrameFormat {
+    fn from(f: embedded_hal::spi::Mode) -> Self {
+        let embedded_hal::spi::Mode { polarity, phase } = f;
         match (polarity, phase) {
             (
-                embedded_hal_1::spi::Polarity::IdleLow,
-                embedded_hal_1::spi::Phase::CaptureOnFirstTransition,
+                embedded_hal::spi::Polarity::IdleLow,
+                embedded_hal::spi::Phase::CaptureOnFirstTransition,
             ) => FrameFormat::MotorolaSpi(embedded_hal_0_2::spi::MODE_0),
             (
-                embedded_hal_1::spi::Polarity::IdleLow,
-                embedded_hal_1::spi::Phase::CaptureOnSecondTransition,
+                embedded_hal::spi::Polarity::IdleLow,
+                embedded_hal::spi::Phase::CaptureOnSecondTransition,
             ) => FrameFormat::MotorolaSpi(embedded_hal_0_2::spi::MODE_1),
             (
-                embedded_hal_1::spi::Polarity::IdleHigh,
-                embedded_hal_1::spi::Phase::CaptureOnFirstTransition,
+                embedded_hal::spi::Polarity::IdleHigh,
+                embedded_hal::spi::Phase::CaptureOnFirstTransition,
             ) => FrameFormat::MotorolaSpi(embedded_hal_0_2::spi::MODE_2),
             (
-                embedded_hal_1::spi::Polarity::IdleHigh,
-                embedded_hal_1::spi::Phase::CaptureOnSecondTransition,
+                embedded_hal::spi::Polarity::IdleHigh,
+                embedded_hal::spi::Phase::CaptureOnSecondTransition,
             ) => FrameFormat::MotorolaSpi(embedded_hal_0_2::spi::MODE_3),
         }
     }
