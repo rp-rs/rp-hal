@@ -30,7 +30,7 @@ use core::{convert::Infallible, marker::PhantomData, ops::Deref};
 
 use embedded_hal::spi::{self, Phase, Polarity};
 use embedded_hal_0_2::{blocking::spi as blocking_spi02, spi as spi02};
-use embedded_hal_nb::spi as eh1nb;
+use embedded_hal_nb::spi::FullDuplex;
 use fugit::{HertzU32, RateExtU32};
 
 use crate::{
@@ -483,7 +483,7 @@ macro_rules! impl_write {
             }
         }
 
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1nb::FullDuplex<$type> for Spi<Enabled, D, P, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> FullDuplex<$type> for Spi<Enabled, D, P, $nr> {
             fn read(&mut self) -> Result<$type, nb::Error<Infallible>> {
                 if !self.is_readable() {
                     return Err(nb::Error::WouldBlock);
