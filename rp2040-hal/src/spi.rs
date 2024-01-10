@@ -28,7 +28,7 @@
 
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
 
-use embedded_hal::spi;
+use embedded_hal::spi::{self, Phase, Polarity};
 use embedded_hal_0_2::{blocking::spi as blocking_spi02, spi as spi02};
 use embedded_hal_nb::spi as eh1nb;
 use fugit::{HertzU32, RateExtU32};
@@ -43,14 +43,14 @@ use crate::{
 mod pins;
 pub use pins::*;
 
-impl From<embedded_hal_0_2::spi::Mode> for FrameFormat {
-    fn from(f: embedded_hal_0_2::spi::Mode) -> Self {
+impl From<spi::Mode> for FrameFormat {
+    fn from(f: spi::Mode) -> Self {
         Self::MotorolaSpi(f)
     }
 }
 
-impl From<&embedded_hal_0_2::spi::Mode> for FrameFormat {
-    fn from(f: &embedded_hal_0_2::spi::Mode) -> Self {
+impl From<&spi::Mode> for FrameFormat {
+    fn from(f: &spi::Mode) -> Self {
         Self::MotorolaSpi(*f)
     }
 }
@@ -59,30 +59,36 @@ impl From<&embedded_hal_0_2::spi::Mode> for FrameFormat {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FrameFormat {
     /// Motorola SPI format. See section 4.4.3.9 of RP2040 datasheet.
-    MotorolaSpi(embedded_hal_0_2::spi::Mode),
+    MotorolaSpi(spi::Mode),
     /// Texas Instruments synchronous serial frame format. See section 4.4.3.8 of RP2040 datasheet.
     TexasInstrumentsSynchronousSerial,
     /// National Semiconductor Microwire frame format. See section 4.4.3.14 of RP2040 datasheet.
     NationalSemiconductorMicrowire,
 }
 
-impl From<spi::Mode> for FrameFormat {
-    fn from(f: spi::Mode) -> Self {
-        let spi::Mode { polarity, phase } = f;
+impl From<&embedded_hal_0_2::spi::Mode> for FrameFormat {
+    fn from(f: &embedded_hal_0_2::spi::Mode) -> Self {
+        let embedded_hal_0_2::spi::Mode { polarity, phase } = f;
         match (polarity, phase) {
-            (spi::Polarity::IdleLow, spi::Phase::CaptureOnFirstTransition) => {
-                FrameFormat::MotorolaSpi(embedded_hal_0_2::spi::MODE_0)
+            (spi02::Polarity::IdleLow, spi02::Phase::CaptureOnFirstTransition) => {
+                FrameFormat::MotorolaSpi(spi::MODE_0)
             }
-            (spi::Polarity::IdleLow, spi::Phase::CaptureOnSecondTransition) => {
-                FrameFormat::MotorolaSpi(embedded_hal_0_2::spi::MODE_1)
+            (spi02::Polarity::IdleLow, spi02::Phase::CaptureOnSecondTransition) => {
+                FrameFormat::MotorolaSpi(spi::MODE_1)
             }
-            (spi::Polarity::IdleHigh, spi::Phase::CaptureOnFirstTransition) => {
-                FrameFormat::MotorolaSpi(embedded_hal_0_2::spi::MODE_2)
+            (spi02::Polarity::IdleHigh, spi02::Phase::CaptureOnFirstTransition) => {
+                FrameFormat::MotorolaSpi(spi::MODE_2)
             }
-            (spi::Polarity::IdleHigh, spi::Phase::CaptureOnSecondTransition) => {
-                FrameFormat::MotorolaSpi(embedded_hal_0_2::spi::MODE_3)
+            (spi02::Polarity::IdleHigh, spi02::Phase::CaptureOnSecondTransition) => {
+                FrameFormat::MotorolaSpi(spi::MODE_3)
             }
         }
+    }
+}
+
+impl From<embedded_hal_0_2::spi::Mode> for FrameFormat {
+    fn from(f: embedded_hal_0_2::spi::Mode) -> Self {
+        From::from(&f)
     }
 }
 
@@ -272,9 +278,9 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
              */
             if let FrameFormat::MotorolaSpi(ref mode) = frame_format {
                 w.spo()
-                    .bit(mode.polarity == spi02::Polarity::IdleHigh)
+                    .bit(mode.polarity == Polarity::IdleHigh)
                     .sph()
-                    .bit(mode.phase == spi02::Phase::CaptureOnSecondTransition);
+                    .bit(mode.phase == Phase::CaptureOnSecondTransition);
             }
             w
         });
