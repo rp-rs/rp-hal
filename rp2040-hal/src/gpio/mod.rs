@@ -2,7 +2,7 @@
 //!
 //! ## Basic usage
 //! ```no_run
-//! use embedded_hal::digital::v2::{InputPin, OutputPin};
+//! use embedded_hal_0_2::digital::v2::{InputPin, OutputPin};
 //! use rp2040_hal::{clocks::init_clocks_and_plls, gpio::Pins, watchdog::Watchdog, pac, Sio};
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let mut watchdog = Watchdog::new(peripherals.WATCHDOG);
@@ -39,7 +39,7 @@
 //   advanced usage of the pin (relative to reading/writing a gpio) and it is the responsibility of
 //   the user to make sure these are in a correct state when converting and passing the pin around.
 
-pub use embedded_hal::digital::v2::PinState;
+pub use embedded_hal_0_2::digital::v2::PinState;
 
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
@@ -863,7 +863,7 @@ pub struct AsInputPin<'a, I: PinId, F: func::Function, P: PullType>(&'a Pin<I, F
 /// GPIO error type.
 pub type Error = core::convert::Infallible;
 
-impl<I, P> embedded_hal::digital::v2::OutputPin for Pin<I, FunctionSio<SioOutput>, P>
+impl<I, P> embedded_hal_0_2::digital::v2::OutputPin for Pin<I, FunctionSio<SioOutput>, P>
 where
     I: PinId,
     P: PullType,
@@ -883,7 +883,7 @@ where
 
 /// Deprecated: Instead of implicitly implementing InputPin for function SioOutput,
 /// use `pin.as_input()` to get access to input values indepentent of the selected function.
-impl<I, P> embedded_hal::digital::v2::InputPin for Pin<I, FunctionSio<SioOutput>, P>
+impl<I, P> embedded_hal_0_2::digital::v2::InputPin for Pin<I, FunctionSio<SioOutput>, P>
 where
     I: PinId,
     P: PullType,
@@ -899,7 +899,7 @@ where
     }
 }
 
-impl<'a, I: PinId, F: func::Function, P: PullType> embedded_hal::digital::v2::InputPin
+impl<'a, I: PinId, F: func::Function, P: PullType> embedded_hal_0_2::digital::v2::InputPin
     for AsInputPin<'a, I, F, P>
 {
     type Error = core::convert::Infallible;
@@ -913,7 +913,7 @@ impl<'a, I: PinId, F: func::Function, P: PullType> embedded_hal::digital::v2::In
     }
 }
 
-impl<I, P> embedded_hal::digital::v2::StatefulOutputPin for Pin<I, FunctionSio<SioOutput>, P>
+impl<I, P> embedded_hal_0_2::digital::v2::StatefulOutputPin for Pin<I, FunctionSio<SioOutput>, P>
 where
     I: PinId,
     P: PullType,
@@ -927,7 +927,7 @@ where
     }
 }
 
-impl<I, P> embedded_hal::digital::v2::ToggleableOutputPin for Pin<I, FunctionSio<SioOutput>, P>
+impl<I, P> embedded_hal_0_2::digital::v2::ToggleableOutputPin for Pin<I, FunctionSio<SioOutput>, P>
 where
     I: PinId,
     P: PullType,
@@ -939,7 +939,7 @@ where
         Ok(())
     }
 }
-impl<I, P> embedded_hal::digital::v2::InputPin for Pin<I, FunctionSio<SioInput>, P>
+impl<I, P> embedded_hal_0_2::digital::v2::InputPin for Pin<I, FunctionSio<SioInput>, P>
 where
     I: PinId,
     P: PullType,
@@ -1367,7 +1367,7 @@ where
     }
 }
 
-impl<T: AnyPin> embedded_hal::digital::v2::InputPin for InOutPin<T> {
+impl<T: AnyPin> embedded_hal_0_2::digital::v2::InputPin for InOutPin<T> {
     type Error = Error;
     fn is_high(&self) -> Result<bool, Error> {
         self.inner.is_high()
@@ -1378,7 +1378,7 @@ impl<T: AnyPin> embedded_hal::digital::v2::InputPin for InOutPin<T> {
     }
 }
 
-impl<T: AnyPin> embedded_hal::digital::v2::OutputPin for InOutPin<T> {
+impl<T: AnyPin> embedded_hal_0_2::digital::v2::OutputPin for InOutPin<T> {
     type Error = Error;
     fn set_low(&mut self) -> Result<(), Error> {
         // The pin is already set to output low but this is inhibited by the override.

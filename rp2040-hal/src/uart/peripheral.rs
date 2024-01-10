@@ -4,7 +4,7 @@
 //! UartPeripheral object that can both read and write.
 
 use core::{convert::Infallible, fmt};
-use embedded_hal::serial as eh0;
+use embedded_hal_0_2::serial as eh0;
 use fugit::HertzU32;
 use nb::Error::{Other, WouldBlock};
 

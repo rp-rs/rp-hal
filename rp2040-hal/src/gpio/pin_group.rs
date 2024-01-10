@@ -1,4 +1,4 @@
-use embedded_hal::digital::v2::PinState;
+use embedded_hal_0_2::digital::v2::PinState;
 use frunk::{hlist::Plucker, HCons, HNil};
 
 use crate::typelevel::Sealed;

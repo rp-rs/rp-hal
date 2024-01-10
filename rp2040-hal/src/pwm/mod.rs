@@ -37,7 +37,7 @@
 //! #     &mut pac.RESETS,
 //! # );
 //! #
-//! use embedded_hal::PwmPin;
+//! use embedded_hal_0_2::PwmPin;
 //!
 //! // Use B channel (which inputs from GPIO 25)
 //! let mut channel_b = pwm.channel_b;
@@ -80,7 +80,7 @@ use core::convert::Infallible;
 use core::marker::PhantomData;
 
 use embedded_dma::Word;
-use embedded_hal::PwmPin;
+use embedded_hal_0_2::PwmPin;
 use embedded_hal_1::pwm::{ErrorType, SetDutyCycle};
 
 use crate::{

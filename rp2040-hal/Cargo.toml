@@ -17,7 +17,7 @@ targets = ["thumbv6m-none-eabi"]
 
 [dependencies]
 cortex-m = "0.7.2"
-embedded-hal = { version = "0.2.5", features = ["unproven"] }
+embedded_hal_0_2 = { package = "embedded-hal", version = "0.2.5", features = ["unproven"] }
 embedded-hal-1 = { package = "embedded-hal", version = "1.0.0" }
 embedded-hal-nb = "1.0.0"
 embedded-dma = "0.2.0"

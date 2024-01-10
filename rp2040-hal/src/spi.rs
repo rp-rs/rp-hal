@@ -8,7 +8,7 @@
 //! ## Usage
 //!
 //! ```no_run
-//! use embedded_hal::spi::MODE_0;
+//! use embedded_hal_0_2::spi::MODE_0;
 //! use fugit::RateExtU32;
 //! use rp2040_hal::{spi::Spi, gpio::{Pins, FunctionSpi}, pac, Sio};
 //!
@@ -28,7 +28,7 @@
 
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
 
-use embedded_hal::{
+use embedded_hal_0_2::{
     blocking::spi,
     spi::{FullDuplex, Phase, Polarity},
 };
@@ -46,14 +46,14 @@ use crate::{
 mod pins;
 pub use pins::*;
 
-impl From<embedded_hal::spi::Mode> for FrameFormat {
-    fn from(f: embedded_hal::spi::Mode) -> Self {
+impl From<embedded_hal_0_2::spi::Mode> for FrameFormat {
+    fn from(f: embedded_hal_0_2::spi::Mode) -> Self {
         Self::MotorolaSpi(f)
     }
 }
 
-impl From<&embedded_hal::spi::Mode> for FrameFormat {
-    fn from(f: &embedded_hal::spi::Mode) -> Self {
+impl From<&embedded_hal_0_2::spi::Mode> for FrameFormat {
+    fn from(f: &embedded_hal_0_2::spi::Mode) -> Self {
         Self::MotorolaSpi(*f)
     }
 }
@@ -62,7 +62,7 @@ impl From<&embedded_hal::spi::Mode> for FrameFormat {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FrameFormat {
     /// Motorola SPI format. See section 4.4.3.9 of RP2040 datasheet.
-    MotorolaSpi(embedded_hal::spi::Mode),
+    MotorolaSpi(embedded_hal_0_2::spi::Mode),
     /// Texas Instruments synchronous serial frame format. See section 4.4.3.8 of RP2040 datasheet.
     TexasInstrumentsSynchronousSerial,
     /// National Semiconductor Microwire frame format. See section 4.4.3.14 of RP2040 datasheet.
@@ -76,19 +76,19 @@ impl From<embedded_hal_1::spi::Mode> for FrameFormat {
             (
                 embedded_hal_1::spi::Polarity::IdleLow,
                 embedded_hal_1::spi::Phase::CaptureOnFirstTransition,
-            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_0),
+            ) => FrameFormat::MotorolaSpi(embedded_hal_0_2::spi::MODE_0),
             (
                 embedded_hal_1::spi::Polarity::IdleLow,
                 embedded_hal_1::spi::Phase::CaptureOnSecondTransition,
-            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_1),
+            ) => FrameFormat::MotorolaSpi(embedded_hal_0_2::spi::MODE_1),
             (
                 embedded_hal_1::spi::Polarity::IdleHigh,
                 embedded_hal_1::spi::Phase::CaptureOnFirstTransition,
-            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_2),
+            ) => FrameFormat::MotorolaSpi(embedded_hal_0_2::spi::MODE_2),
             (
                 embedded_hal_1::spi::Polarity::IdleHigh,
                 embedded_hal_1::spi::Phase::CaptureOnSecondTransition,
-            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_3),
+            ) => FrameFormat::MotorolaSpi(embedded_hal_0_2::spi::MODE_3),
         }
     }
 }

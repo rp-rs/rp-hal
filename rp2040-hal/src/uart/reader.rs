@@ -5,7 +5,7 @@
 use super::{FifoWatermark, UartDevice, ValidUartPinout};
 use crate::dma::{EndlessReadTarget, ReadTarget};
 use crate::pac::uart0::RegisterBlock;
-use embedded_hal::serial::Read;
+use embedded_hal_0_2::serial::Read;
 use nb::Error::*;
 
 use embedded_hal_nb::serial as eh1nb;

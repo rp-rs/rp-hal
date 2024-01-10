@@ -20,7 +20,7 @@
 //! );
 //!
 //! // Scan for devices on the bus by attempting to read from them
-//! use embedded_hal::prelude::_embedded_hal_blocking_i2c_Read;
+//! use embedded_hal_0_2::prelude::_embedded_hal_blocking_i2c_Read;
 //! for i in 0..=127 {
 //!     let mut readbuf: [u8; 1] = [0; 1];
 //!     let result = i2c.read(i, &mut readbuf);
@@ -31,11 +31,11 @@
 //! }
 //!
 //! // Write some data to a device at 0x2c
-//! use embedded_hal::prelude::_embedded_hal_blocking_i2c_Write;
+//! use embedded_hal_0_2::prelude::_embedded_hal_blocking_i2c_Write;
 //! i2c.write(0x2c, &[1, 2, 3]).unwrap();
 //!
 //! // Write and then read from a device at 0x3a
-//! use embedded_hal::prelude::_embedded_hal_blocking_i2c_WriteRead;
+//! use embedded_hal_0_2::prelude::_embedded_hal_blocking_i2c_WriteRead;
 //! let mut readbuf: [u8; 1] = [0; 1];
 //! i2c.write_read(0x2c, &[1, 2, 3], &mut readbuf).unwrap();
 //! ```

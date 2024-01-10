@@ -11,7 +11,7 @@
 
 use cortex_m::singleton;
 use cortex_m_rt::entry;
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal_0_2::digital::v2::OutputPin;
 use hal::dma::{bidirectional, DMAExt};
 use hal::fugit::RateExtU32;
 use hal::pac;
@@ -67,7 +67,7 @@ fn main() -> ! {
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
         16_000_000u32.Hz(),
-        embedded_hal::spi::MODE_0,
+        embedded_hal_0_2::spi::MODE_0,
     );
 
     // Initialize DMA.

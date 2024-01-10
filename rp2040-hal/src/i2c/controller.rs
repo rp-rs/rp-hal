@@ -1,5 +1,5 @@
 use core::{marker::PhantomData, ops::Deref};
-use embedded_hal::blocking::i2c::{Read, Write, WriteIter, WriteIterRead, WriteRead};
+use embedded_hal_0_2::blocking::i2c::{Read, Write, WriteIter, WriteIterRead, WriteRead};
 use fugit::HertzU32;
 
 use embedded_hal_1::i2c as eh1;

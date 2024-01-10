@@ -18,7 +18,7 @@ use panic_halt as _;
 use rp2040_hal as hal;
 
 // Some traits we need
-use embedded_hal::PwmPin;
+use embedded_hal_0_2::PwmPin;
 use rp2040_hal::clocks::Clock;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level

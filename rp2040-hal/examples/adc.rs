@@ -19,7 +19,7 @@ use rp2040_hal as hal;
 
 // Some traits we need
 use core::fmt::Write;
-use embedded_hal::adc::OneShot;
+use embedded_hal_0_2::adc::OneShot;
 use hal::fugit::RateExtU32;
 use rp2040_hal::Clock;
 
