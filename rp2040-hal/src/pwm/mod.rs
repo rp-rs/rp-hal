@@ -79,9 +79,9 @@
 use core::convert::Infallible;
 use core::marker::PhantomData;
 
-use embedded_hal_1::pwm::{ErrorType, SetDutyCycle};
 use embedded_dma::Word;
 use embedded_hal::PwmPin;
+use embedded_hal_1::pwm::{ErrorType, SetDutyCycle};
 
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},

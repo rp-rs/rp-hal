@@ -28,12 +28,12 @@
 
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
 
-use embedded_hal_1::spi as eh1;
-use embedded_hal_nb::spi as eh1nb;
 use embedded_hal::{
     blocking::spi,
     spi::{FullDuplex, Phase, Polarity},
 };
+use embedded_hal_1::spi as eh1;
+use embedded_hal_nb::spi as eh1nb;
 use fugit::{HertzU32, RateExtU32};
 
 use crate::{

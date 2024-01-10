@@ -7,8 +7,8 @@ use crate::dma::{EndlessWriteTarget, WriteTarget};
 use crate::pac::uart0::RegisterBlock;
 use core::fmt;
 use core::{convert::Infallible, marker::PhantomData};
-use embedded_hal_nb::serial as eh1nb;
 use embedded_hal::serial::Write;
+use embedded_hal_nb::serial as eh1nb;
 use nb::Error::*;
 
 /// Set tx FIFO watermark
