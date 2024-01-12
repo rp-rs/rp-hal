@@ -1,4 +1,8 @@
-use embedded_hal_0_2::digital::v2::PinState;
+//! Pin Groups
+//!
+//! Lets you set multiple GPIOs simultaneously.
+
+use embedded_hal::digital::PinState;
 use frunk::{hlist::Plucker, HCons, HNil};
 
 use crate::typelevel::Sealed;

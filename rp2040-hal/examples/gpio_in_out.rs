@@ -21,8 +21,8 @@ use rp2040_hal as hal;
 use hal::pac;
 
 // Some traits we need
-use embedded_hal_0_2::digital::v2::InputPin;
-use embedded_hal_0_2::digital::v2::OutputPin;
+use embedded_hal::digital::InputPin;
+use embedded_hal::digital::OutputPin;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -78,7 +78,7 @@ fn main() -> ! {
     let mut out_pin = pins.gpio25.into_push_pull_output();
 
     // Configure GPIO 23 as an input
-    let in_pin = pins.gpio23.into_pull_down_input();
+    let mut in_pin = pins.gpio23.into_pull_down_input();
 
     // Output is the opposite of the input
     loop {

@@ -21,7 +21,7 @@ use hal::pac;
 // Some traits we need
 use core::cell::RefCell;
 use critical_section::Mutex;
-use embedded_hal_0_2::digital::v2::ToggleableOutputPin;
+use embedded_hal::digital::StatefulOutputPin;
 use hal::fugit::MicrosDurationU32;
 use pac::interrupt;
 use rp2040_hal::clocks::Clock;

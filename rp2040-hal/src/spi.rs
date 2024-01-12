@@ -8,7 +8,7 @@
 //! ## Usage
 //!
 //! ```no_run
-//! use embedded_hal_0_2::spi::MODE_0;
+//! use embedded_hal::spi::MODE_0;
 //! use fugit::RateExtU32;
 //! use rp2040_hal::{spi::Spi, gpio::{Pins, FunctionSpi}, pac, Sio};
 //!
@@ -29,6 +29,7 @@
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
 
 use embedded_hal::spi::{self, Phase, Polarity};
+// Support Embedded HAL 0.2 for backwards-compatibility
 use embedded_hal_0_2::{blocking::spi as blocking_spi02, spi as spi02};
 use embedded_hal_nb::spi::FullDuplex;
 use fugit::{HertzU32, RateExtU32};

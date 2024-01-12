@@ -34,6 +34,7 @@
 //! ```
 //! See [examples/watchdog.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/watchdog.rs) for a more complete example
 
+// Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
 use embedded_hal_0_2::watchdog;
 use fugit::MicrosDurationU32;
 

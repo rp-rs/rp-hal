@@ -21,7 +21,7 @@ use rp2040_hal as hal;
 use hal::{gpio, pac, rtc};
 
 // Some traits we need
-use embedded_hal_0_2::digital::v2::ToggleableOutputPin;
+use embedded_hal::digital::StatefulOutputPin;
 
 // Our interrupt macro
 use hal::pac::interrupt;

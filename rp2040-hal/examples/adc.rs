@@ -19,6 +19,7 @@ use rp2040_hal as hal;
 
 // Some traits we need
 use core::fmt::Write;
+// Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
 use embedded_hal_0_2::adc::OneShot;
 use hal::fugit::RateExtU32;
 use rp2040_hal::Clock;

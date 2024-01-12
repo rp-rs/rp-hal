@@ -37,7 +37,7 @@
 //! #     &mut pac.RESETS,
 //! # );
 //! #
-//! use embedded_hal_0_2::PwmPin;
+//! use embedded_hal::pwm::SetDutyCycle;
 //!
 //! // Use B channel (which inputs from GPIO 25)
 //! let mut channel_b = pwm.channel_b;
@@ -48,8 +48,8 @@
 //! let channel_pin_a = channel_a.output_to(pins.gpio24);
 //!
 //! // Set duty cycle
-//! channel_a.set_duty(0x00ff);
-//! channel_a.get_duty();
+//! channel_a.set_duty_cycle(0x00ff);
+//! let max_duty_cycle = channel_a.max_duty_cycle();
 //! channel_a.set_inverted(); // Invert the output
 //! channel_a.clr_inverted(); // Don't invert the output
 //! ```
@@ -81,7 +81,6 @@ use core::marker::PhantomData;
 
 use embedded_dma::Word;
 use embedded_hal::pwm::{ErrorType, SetDutyCycle};
-use embedded_hal_0_2::PwmPin;
 
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
@@ -626,24 +625,15 @@ impl<S: AnySlice, C: ChannelId> Channel<S, C> {
 
 impl<S: AnySlice, C: ChannelId> Sealed for Channel<S, C> {}
 
-impl<S: AnySlice> PwmPin for Channel<S, A> {
+impl<S: AnySlice> embedded_hal_0_2::PwmPin for Channel<S, A> {
     type Duty = u16;
 
-    /// We cant disable the channel without disturbing the other channel.
-    /// So this just sets the duty cycle to zero
     fn disable(&mut self) {
-        if self.enabled {
-            self.duty_cycle = self.regs.read_cc_a();
-        }
-        self.enabled = false;
-        self.regs.write_cc_a(0)
+        self.set_enabled(false);
     }
 
     fn enable(&mut self) {
-        if !self.enabled {
-            self.enabled = true;
-            self.regs.write_cc_a(self.duty_cycle)
-        }
+        self.set_enabled(true);
     }
 
     fn get_duty(&self) -> Self::Duty {
@@ -655,50 +645,23 @@ impl<S: AnySlice> PwmPin for Channel<S, A> {
     }
 
     fn get_max_duty(&self) -> Self::Duty {
-        self.regs.read_top()
+        SetDutyCycle::max_duty_cycle(self)
     }
 
     fn set_duty(&mut self, duty: Self::Duty) {
-        self.duty_cycle = duty;
-        if self.enabled {
-            self.regs.write_cc_a(duty)
-        }
+        let _ = SetDutyCycle::set_duty_cycle(self, duty);
     }
 }
 
-impl<S: AnySlice> ErrorType for Channel<S, B> {
-    type Error = Infallible;
-}
-
-impl<S: AnySlice> SetDutyCycle for Channel<S, B> {
-    fn max_duty_cycle(&self) -> u16 {
-        self.get_max_duty()
-    }
-
-    fn set_duty_cycle(&mut self, duty: u16) -> Result<(), Self::Error> {
-        self.set_duty(duty);
-        Ok(())
-    }
-}
-
-impl<S: AnySlice> PwmPin for Channel<S, B> {
+impl<S: AnySlice> embedded_hal_0_2::PwmPin for Channel<S, B> {
     type Duty = u16;
 
-    /// We cant disable the channel without disturbing the other channel.
-    /// So this just sets the duty cycle to zero
     fn disable(&mut self) {
-        if self.enabled {
-            self.duty_cycle = self.regs.read_cc_b();
-        }
-        self.enabled = false;
-        self.regs.write_cc_b(0)
+        self.set_enabled(false);
     }
 
     fn enable(&mut self) {
-        if !self.enabled {
-            self.enabled = true;
-            self.regs.write_cc_b(self.duty_cycle)
-        }
+        self.set_enabled(true);
     }
 
     fn get_duty(&self) -> Self::Duty {
@@ -710,18 +673,66 @@ impl<S: AnySlice> PwmPin for Channel<S, B> {
     }
 
     fn get_max_duty(&self) -> Self::Duty {
-        self.regs.read_top().saturating_add(1)
+        SetDutyCycle::max_duty_cycle(self)
     }
 
     fn set_duty(&mut self, duty: Self::Duty) {
+        let _ = SetDutyCycle::set_duty_cycle(self, duty);
+    }
+}
+
+impl<S: AnySlice> ErrorType for Channel<S, A> {
+    type Error = Infallible;
+}
+
+impl<S: AnySlice> SetDutyCycle for Channel<S, A> {
+    fn max_duty_cycle(&self) -> u16 {
+        self.regs.read_top().saturating_add(1)
+    }
+
+    fn set_duty_cycle(&mut self, duty: u16) -> Result<(), Self::Error> {
+        self.duty_cycle = duty;
+        if self.enabled {
+            self.regs.write_cc_a(duty)
+        }
+        Ok(())
+    }
+}
+
+impl<S: AnySlice> ErrorType for Channel<S, B> {
+    type Error = Infallible;
+}
+
+impl<S: AnySlice> SetDutyCycle for Channel<S, B> {
+    fn max_duty_cycle(&self) -> u16 {
+        self.regs.read_top().saturating_add(1)
+    }
+
+    fn set_duty_cycle(&mut self, duty: u16) -> Result<(), Self::Error> {
         self.duty_cycle = duty;
         if self.enabled {
             self.regs.write_cc_b(duty)
         }
+        Ok(())
     }
 }
 
 impl<S: AnySlice> Channel<S, A> {
+    /// Enable or disable the PWM channel
+    pub fn set_enabled(&mut self, enable: bool) {
+        if enable && !self.enabled {
+            // Restore the duty cycle.
+            self.regs.write_cc_a(self.duty_cycle);
+            self.enabled = true;
+        } else if !enable && self.enabled {
+            // We can't disable it without disturbing the other channel so this
+            // just sets the duty cycle to zero.
+            self.duty_cycle = self.regs.read_cc_a();
+            self.regs.write_cc_a(0);
+            self.enabled = false;
+        }
+    }
+
     /// Capture a gpio pin and use it as pwm output for channel A
     pub fn output_to<P: AnyPin>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm, P::Pull>
     where
@@ -744,6 +755,21 @@ impl<S: AnySlice> Channel<S, A> {
 }
 
 impl<S: AnySlice> Channel<S, B> {
+    /// Enable or disable the PWM channel
+    pub fn set_enabled(&mut self, enable: bool) {
+        if enable && !self.enabled {
+            // Restore the duty cycle.
+            self.regs.write_cc_b(self.duty_cycle);
+            self.enabled = true;
+        } else if !enable && self.enabled {
+            // We can't disable it without disturbing the other channel so this
+            // just sets the duty cycle to zero.
+            self.duty_cycle = self.regs.read_cc_b();
+            self.regs.write_cc_b(0);
+            self.enabled = false;
+        }
+    }
+
     /// Capture a gpio pin and use it as pwm output for channel B
     pub fn output_to<P: AnyPin>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm, P::Pull>
     where

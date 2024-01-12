@@ -2,7 +2,7 @@
 //!
 //! ## Basic usage
 //! ```no_run
-//! use embedded_hal_0_2::digital::v2::{InputPin, OutputPin};
+//! use embedded_hal::digital::{InputPin, OutputPin};
 //! use rp2040_hal::{clocks::init_clocks_and_plls, gpio::Pins, watchdog::Watchdog, pac, Sio};
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let mut watchdog = Watchdog::new(peripherals.WATCHDOG);
@@ -19,7 +19,7 @@
 //! // Drive output to 0V
 //! output_pin.set_low().unwrap();
 //! // Set a pin to input
-//! let input_pin = pins.gpio24.into_floating_input();
+//! let mut input_pin = pins.gpio24.into_floating_input();
 //! // pinstate will be true if the pin is above 2V
 //! let pinstate = input_pin.is_high().unwrap();
 //! // pinstate_low will be true if the pin is below 1.15V
@@ -39,7 +39,7 @@
 //   advanced usage of the pin (relative to reading/writing a gpio) and it is the responsibility of
 //   the user to make sure these are in a correct state when converting and passing the pin around.
 
-pub use embedded_hal_0_2::digital::v2::PinState;
+pub use embedded_hal::digital::PinState;
 
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
