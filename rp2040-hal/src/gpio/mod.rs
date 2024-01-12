@@ -1399,7 +1399,10 @@ impl<T: AnyPin> embedded_hal_0_2::digital::v2::OutputPin for InOutPin<T> {
 mod eh1 {
     use embedded_hal::digital::{ErrorType, InputPin, OutputPin, StatefulOutputPin};
 
-    use super::{Error, FunctionSio, Pin, PinId, PullType, SioConfig, SioInput, SioOutput};
+    use super::{
+        func, AnyPin, AsInputPin, Error, FunctionSio, InOutPin, Pin, PinId, PullType, SioConfig,
+        SioInput, SioOutput,
+    };
 
     impl<I, P, S> ErrorType for Pin<I, FunctionSio<S>, P>
     where
@@ -1459,24 +1462,57 @@ mod eh1 {
         }
     }
 
-    impl<'a, I, F, P> ErrorType for super::AsInputPin<'a, I, F, P>
+    impl<'a, I, F, P> ErrorType for AsInputPin<'a, I, F, P>
     where
         I: PinId,
-        F: super::func::Function,
+        F: func::Function,
         P: PullType,
     {
         type Error = Error;
     }
 
-    impl<'a, I: PinId, F: super::func::Function, P: PullType> InputPin
-        for super::AsInputPin<'a, I, F, P>
-    {
+    impl<'a, I: PinId, F: func::Function, P: PullType> InputPin for AsInputPin<'a, I, F, P> {
         fn is_high(&mut self) -> Result<bool, Self::Error> {
             Ok(self.0._is_high())
         }
 
         fn is_low(&mut self) -> Result<bool, Self::Error> {
             Ok(self.0._is_low())
+        }
+    }
+
+    impl<I> ErrorType for InOutPin<I>
+    where
+        I: AnyPin,
+    {
+        type Error = Error;
+    }
+
+    impl<I> OutputPin for InOutPin<I>
+    where
+        I: AnyPin,
+    {
+        fn set_low(&mut self) -> Result<(), Self::Error> {
+            self.inner._set_low();
+            Ok(())
+        }
+
+        fn set_high(&mut self) -> Result<(), Self::Error> {
+            self.inner._set_high();
+            Ok(())
+        }
+    }
+
+    impl<I> InputPin for InOutPin<I>
+    where
+        I: AnyPin,
+    {
+        fn is_high(&mut self) -> Result<bool, Self::Error> {
+            Ok(self.inner._is_high())
+        }
+
+        fn is_low(&mut self) -> Result<bool, Self::Error> {
+            Ok(self.inner._is_low())
         }
     }
 }
