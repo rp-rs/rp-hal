@@ -28,14 +28,10 @@
 
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
 
-#[cfg(feature = "eh1_0_alpha")]
-use eh1_0_alpha::spi as eh1;
-#[cfg(feature = "eh1_0_alpha")]
-use eh_nb_1_0_alpha::spi as eh1nb;
-use embedded_hal::{
-    blocking::spi,
-    spi::{FullDuplex, Phase, Polarity},
-};
+use embedded_hal::spi::{self, Phase, Polarity};
+// Support Embedded HAL 0.2 for backwards-compatibility
+use embedded_hal_0_2::{blocking::spi as blocking_spi02, spi as spi02};
+use embedded_hal_nb::spi::FullDuplex;
 use fugit::{HertzU32, RateExtU32};
 
 use crate::{
@@ -48,14 +44,14 @@ use crate::{
 mod pins;
 pub use pins::*;
 
-impl From<embedded_hal::spi::Mode> for FrameFormat {
-    fn from(f: embedded_hal::spi::Mode) -> Self {
+impl From<spi::Mode> for FrameFormat {
+    fn from(f: spi::Mode) -> Self {
         Self::MotorolaSpi(f)
     }
 }
 
-impl From<&embedded_hal::spi::Mode> for FrameFormat {
-    fn from(f: &embedded_hal::spi::Mode) -> Self {
+impl From<&spi::Mode> for FrameFormat {
+    fn from(f: &spi::Mode) -> Self {
         Self::MotorolaSpi(*f)
     }
 }
@@ -64,35 +60,36 @@ impl From<&embedded_hal::spi::Mode> for FrameFormat {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FrameFormat {
     /// Motorola SPI format. See section 4.4.3.9 of RP2040 datasheet.
-    MotorolaSpi(embedded_hal::spi::Mode),
+    MotorolaSpi(spi::Mode),
     /// Texas Instruments synchronous serial frame format. See section 4.4.3.8 of RP2040 datasheet.
     TexasInstrumentsSynchronousSerial,
     /// National Semiconductor Microwire frame format. See section 4.4.3.14 of RP2040 datasheet.
     NationalSemiconductorMicrowire,
 }
 
-#[cfg(feature = "eh1_0_alpha")]
-impl From<eh1_0_alpha::spi::Mode> for FrameFormat {
-    fn from(f: eh1_0_alpha::spi::Mode) -> Self {
-        let eh1_0_alpha::spi::Mode { polarity, phase } = f;
+impl From<&embedded_hal_0_2::spi::Mode> for FrameFormat {
+    fn from(f: &embedded_hal_0_2::spi::Mode) -> Self {
+        let embedded_hal_0_2::spi::Mode { polarity, phase } = f;
         match (polarity, phase) {
-            (
-                eh1_0_alpha::spi::Polarity::IdleLow,
-                eh1_0_alpha::spi::Phase::CaptureOnFirstTransition,
-            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_0),
-            (
-                eh1_0_alpha::spi::Polarity::IdleLow,
-                eh1_0_alpha::spi::Phase::CaptureOnSecondTransition,
-            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_1),
-            (
-                eh1_0_alpha::spi::Polarity::IdleHigh,
-                eh1_0_alpha::spi::Phase::CaptureOnFirstTransition,
-            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_2),
-            (
-                eh1_0_alpha::spi::Polarity::IdleHigh,
-                eh1_0_alpha::spi::Phase::CaptureOnSecondTransition,
-            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_3),
+            (spi02::Polarity::IdleLow, spi02::Phase::CaptureOnFirstTransition) => {
+                FrameFormat::MotorolaSpi(spi::MODE_0)
+            }
+            (spi02::Polarity::IdleLow, spi02::Phase::CaptureOnSecondTransition) => {
+                FrameFormat::MotorolaSpi(spi::MODE_1)
+            }
+            (spi02::Polarity::IdleHigh, spi02::Phase::CaptureOnFirstTransition) => {
+                FrameFormat::MotorolaSpi(spi::MODE_2)
+            }
+            (spi02::Polarity::IdleHigh, spi02::Phase::CaptureOnSecondTransition) => {
+                FrameFormat::MotorolaSpi(spi::MODE_3)
+            }
         }
+    }
+}
+
+impl From<embedded_hal_0_2::spi::Mode> for FrameFormat {
+    fn from(f: embedded_hal_0_2::spi::Mode) -> Self {
+        From::from(&f)
     }
 }
 
@@ -380,7 +377,7 @@ macro_rules! impl_write {
     ($type:ident, [$($nr:expr),+]) => {
 
         $(
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> FullDuplex<$type> for Spi<Enabled, D, P, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi02::FullDuplex<$type> for Spi<Enabled, D, P, $nr> {
             type Error = Infallible;
 
             fn read(&mut self) -> Result<$type, nb::Error<Infallible>> {
@@ -405,17 +402,15 @@ macro_rules! impl_write {
             }
         }
 
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi::write::Default<$type> for Spi<Enabled, D, P, $nr> {}
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi::transfer::Default<$type> for Spi<Enabled, D, P, $nr> {}
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi::write_iter::Default<$type> for Spi<Enabled, D, P, $nr> {}
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> blocking_spi02::write::Default<$type> for Spi<Enabled, D, P, $nr> {}
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> blocking_spi02::transfer::Default<$type> for Spi<Enabled, D, P, $nr> {}
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> blocking_spi02::write_iter::Default<$type> for Spi<Enabled, D, P, $nr> {}
 
-        #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1::ErrorType for Spi<Enabled, D, P, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi::ErrorType for Spi<Enabled, D, P, $nr> {
             type Error = Infallible;
         }
 
-        #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1::SpiBus<$type> for Spi<Enabled, D, P, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi::SpiBus<$type> for Spi<Enabled, D, P, $nr> {
             fn read(&mut self, words: &mut [$type]) -> Result<(), Self::Error> {
                 for word in words.iter_mut() {
                     // write empty word
@@ -489,8 +484,7 @@ macro_rules! impl_write {
             }
         }
 
-        #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1nb::FullDuplex<$type> for Spi<Enabled, D, P, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> FullDuplex<$type> for Spi<Enabled, D, P, $nr> {
             fn read(&mut self) -> Result<$type, nb::Error<Infallible>> {
                 if !self.is_readable() {
                     return Err(nb::Error::WouldBlock);

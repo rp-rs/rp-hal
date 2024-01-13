@@ -34,7 +34,8 @@
 //! ```
 //! See [examples/watchdog.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/watchdog.rs) for a more complete example
 
-use embedded_hal::watchdog;
+// Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
+use embedded_hal_0_2::watchdog;
 use fugit::MicrosDurationU32;
 
 use crate::pac::{self, WATCHDOG};
@@ -149,18 +150,17 @@ impl Watchdog {
             w
         });
     }
-}
 
-impl watchdog::Watchdog for Watchdog {
-    fn feed(&mut self) {
+    /// Set the watchdog counter back to its load value, making sure
+    /// that the watchdog reboot will not be triggered for the configured
+    /// period.
+    pub fn feed(&self) {
         self.load_counter(self.load_value)
     }
-}
 
-impl watchdog::WatchdogEnable for Watchdog {
-    type Time = MicrosDurationU32;
-
-    fn start<T: Into<Self::Time>>(&mut self, period: T) {
+    /// Start the watchdog. This enables a timer which will reboot the
+    /// rp2040 if [`feed()`] doesnot get called for the configured period.
+    pub fn start<T: Into<MicrosDurationU32>>(&mut self, period: T) {
         const MAX_PERIOD: u32 = 0xFFFFFF;
 
         let delay_us = period.into().to_micros();
@@ -182,10 +182,29 @@ impl watchdog::WatchdogEnable for Watchdog {
         self.load_counter(self.load_value);
         self.enable(true);
     }
+
+    /// Disable the watchdog timer.
+    pub fn disable(&self) {
+        self.enable(false)
+    }
+}
+
+impl watchdog::Watchdog for Watchdog {
+    fn feed(&mut self) {
+        (*self).feed()
+    }
+}
+
+impl watchdog::WatchdogEnable for Watchdog {
+    type Time = MicrosDurationU32;
+
+    fn start<T: Into<Self::Time>>(&mut self, period: T) {
+        self.start(period)
+    }
 }
 
 impl watchdog::WatchdogDisable for Watchdog {
     fn disable(&mut self) {
-        self.enable(false)
+        (*self).disable()
     }
 }

@@ -4,7 +4,7 @@
 //! UartPeripheral object that can both read and write.
 
 use core::{convert::Infallible, fmt};
-use embedded_hal::serial as eh0;
+use embedded_hal_0_2::serial as eh0;
 use fugit::HertzU32;
 use nb::Error::{Other, WouldBlock};
 
@@ -14,8 +14,7 @@ use crate::{
     uart::*,
 };
 
-#[cfg(feature = "eh1_0_alpha")]
-use eh_nb_1_0_alpha::serial as eh1nb;
+use embedded_hal_nb::serial::{ErrorType, Read, Write};
 
 /// An UART Peripheral based on an underlying UART device.
 pub struct UartPeripheral<S: State, D: UartDevice, P: ValidUartPinout<D>> {
@@ -360,13 +359,11 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh0::Read<u8> for UartPeripheral<Enab
     }
 }
 
-#[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::ErrorType for UartPeripheral<Enabled, D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> ErrorType for UartPeripheral<Enabled, D, P> {
     type Error = ReadErrorType;
 }
 
-#[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Read<u8> for UartPeripheral<Enabled, D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> Read<u8> for UartPeripheral<Enabled, D, P> {
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
         let byte: &mut [u8] = &mut [0; 1];
 
@@ -396,8 +393,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh0::Write<u8> for UartPeripheral<Ena
     }
 }
 
-#[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Write<u8> for UartPeripheral<Enabled, D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for UartPeripheral<Enabled, D, P> {
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
         if self.write_raw(&[word]).is_err() {
             Err(WouldBlock)
@@ -416,7 +412,6 @@ impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Write<u8> for UartPeripheral<E
 
 impl<D: UartDevice, P: ValidUartPinout<D>> fmt::Write for UartPeripheral<Enabled, D, P> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        use eh0::Write;
         s.bytes()
             .try_for_each(|c| nb::block!(self.write(c)))
             .map_err(|_| fmt::Error)

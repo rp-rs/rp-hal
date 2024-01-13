@@ -5,11 +5,10 @@
 use super::{FifoWatermark, UartDevice, ValidUartPinout};
 use crate::dma::{EndlessReadTarget, ReadTarget};
 use crate::pac::uart0::RegisterBlock;
-use embedded_hal::serial::Read;
+use embedded_hal_0_2::serial::Read as Read02;
 use nb::Error::*;
 
-#[cfg(feature = "eh1_0_alpha")]
-use eh_nb_1_0_alpha::serial as eh1nb;
+use embedded_hal_nb::serial::{Error, ErrorKind, ErrorType, Read};
 
 /// When there's a read error.
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -39,14 +38,13 @@ pub enum ReadErrorType {
     Framing,
 }
 
-#[cfg(feature = "eh1_0_alpha")]
-impl eh1nb::Error for ReadErrorType {
-    fn kind(&self) -> eh1nb::ErrorKind {
+impl Error for ReadErrorType {
+    fn kind(&self) -> ErrorKind {
         match self {
-            ReadErrorType::Overrun => eh1nb::ErrorKind::Overrun,
-            ReadErrorType::Break => eh1nb::ErrorKind::Other,
-            ReadErrorType::Parity => eh1nb::ErrorKind::Parity,
-            ReadErrorType::Framing => eh1nb::ErrorKind::FrameFormat,
+            ReadErrorType::Overrun => ErrorKind::Overrun,
+            ReadErrorType::Break => ErrorKind::Other,
+            ReadErrorType::Parity => ErrorKind::Parity,
+            ReadErrorType::Framing => ErrorKind::FrameFormat,
         }
     }
 }
@@ -219,7 +217,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Reader<D, P> {
     }
 }
 
-impl<D: UartDevice, P: ValidUartPinout<D>> Read<u8> for Reader<D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> Read02<u8> for Reader<D, P> {
     type Error = ReadErrorType;
 
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
@@ -255,13 +253,11 @@ unsafe impl<D: UartDevice, P: ValidUartPinout<D>> ReadTarget for Reader<D, P> {
 
 impl<D: UartDevice, P: ValidUartPinout<D>> EndlessReadTarget for Reader<D, P> {}
 
-#[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::ErrorType for Reader<D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> ErrorType for Reader<D, P> {
     type Error = ReadErrorType;
 }
 
-#[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Read<u8> for Reader<D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> Read<u8> for Reader<D, P> {
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
         let byte: &mut [u8] = &mut [0; 1];
 

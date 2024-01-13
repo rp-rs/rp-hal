@@ -11,7 +11,7 @@
 
 use cortex_m::singleton;
 use cortex_m_rt::entry;
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::digital::OutputPin;
 use hal::dma::{bidirectional, DMAExt};
 use hal::fugit::RateExtU32;
 use hal::pac;

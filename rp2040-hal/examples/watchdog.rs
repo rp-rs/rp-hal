@@ -21,8 +21,7 @@ use rp2040_hal as hal;
 use hal::pac;
 
 // Some traits we need
-use embedded_hal::digital::v2::OutputPin;
-use embedded_hal::watchdog::{Watchdog, WatchdogEnable};
+use embedded_hal::digital::OutputPin;
 use hal::fugit::ExtU32;
 use rp2040_hal::clocks::Clock;
 

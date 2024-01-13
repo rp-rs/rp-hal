@@ -21,7 +21,7 @@ use rp2040_hal as hal;
 // register access
 use hal::pac;
 
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::digital::OutputPin;
 use fugit::{HertzU32, RateExtU32};
 use hal::clocks::{Clock, ClockSource, ClocksManager, StoppableClock};
 use hal::pac::rosc::ctrl::FREQ_RANGE_A;

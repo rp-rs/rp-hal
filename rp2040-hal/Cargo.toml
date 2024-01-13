@@ -17,9 +17,9 @@ targets = ["thumbv6m-none-eabi"]
 
 [dependencies]
 cortex-m = "0.7.2"
-embedded-hal = { version = "0.2.5", features = ["unproven"] }
-eh1_0_alpha = { package = "embedded-hal", version = "=1.0.0-rc.3",  optional = true }
-eh_nb_1_0_alpha = { package = "embedded-hal-nb", version = "=1.0.0-rc.3",  optional = true }
+embedded_hal_0_2 = { package = "embedded-hal", version = "0.2.5", features = ["unproven"] }
+embedded-hal = "1.0.0"
+embedded-hal-nb = "1.0.0"
 embedded-dma = "0.2.0"
 embedded-io = "0.6.1"
 fugit = "0.3.6"
@@ -78,9 +78,6 @@ rp2040-e5 = []
 
 # critical section that is safe for multicore use
 critical-section-impl = ["critical-section/restore-state-u8"]
-
-# Support alpha release of embedded-hal
-eh1_0_alpha = ["dep:eh1_0_alpha", "dep:eh_nb_1_0_alpha"]
 
 # Add conversion functions between chrono types and the rp2040-hal specific DateTime type
 chrono = ["dep:chrono"]
@@ -192,7 +189,7 @@ required-features = ["critical-section-impl"]
 
 [[example]]
 name = "pwm_blink_embedded_hal_1"
-required-features = ["critical-section-impl", "eh1_0_alpha"]
+required-features = ["critical-section-impl"]
 
 [[example]]
 name = "rom_funcs"

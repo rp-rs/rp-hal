@@ -4,9 +4,11 @@
 //!
 //! ## Usage
 //!
-//! Capture ADC reading from a pin
+//! Capture ADC reading from a pin:
+
 //! ```no_run
-//! use embedded_hal::adc::OneShot;
+//! // Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
+//! use embedded_hal_0_2::adc::OneShot;
 //! use rp2040_hal::{adc::Adc, adc::AdcPin, gpio::Pins, pac, Sio};
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
@@ -20,8 +22,10 @@
 //! ```
 //!
 //! Capture ADC reading from temperature sensor. Note that this needs conversion to be a real-world temperature.
+//!
 //! ```no_run
-//! use embedded_hal::adc::OneShot;
+//! // Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
+//! use embedded_hal_0_2::adc::OneShot;
 //! use rp2040_hal::{adc::Adc, gpio::Pins, pac, Sio};
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
@@ -118,7 +122,8 @@
 
 use core::convert::Infallible;
 use core::marker::PhantomData;
-use embedded_hal::adc::{Channel, OneShot};
+// Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
+use embedded_hal_0_2::adc::{Channel, OneShot};
 
 use crate::{
     dma,
@@ -223,7 +228,7 @@ impl Channel<Adc> for TempSense {
 /// by calling [`Adc::take_temp_sensor()`]. Either way, the resulting objects can be
 /// passed to the [`OneShot::read()`][a] trait method to actually do the read.
 ///
-/// [a]: embedded_hal::adc::OneShot::read
+/// [a]: embedded_hal_0_2::adc::OneShot::read
 pub struct Adc {
     device: ADC,
 }

@@ -143,14 +143,14 @@ impl Timer {
 macro_rules! impl_delay_traits {
     ($($t:ty),+) => {
         $(
-        impl embedded_hal::blocking::delay::DelayUs<$t> for Timer {
+        impl embedded_hal_0_2::blocking::delay::DelayUs<$t> for Timer {
             fn delay_us(&mut self, us: $t) {
                 #![allow(unused_comparisons)]
                 assert!(us >= 0); // Only meaningful for i32
                 self.delay_us_internal(us as u32)
             }
         }
-        impl embedded_hal::blocking::delay::DelayMs<$t> for Timer {
+        impl embedded_hal_0_2::blocking::delay::DelayMs<$t> for Timer {
             fn delay_ms(&mut self, ms: $t) {
                 #![allow(unused_comparisons)]
                 assert!(ms >= 0); // Only meaningful for i32
@@ -166,8 +166,7 @@ macro_rules! impl_delay_traits {
 // The implementation for i32 is a workaround to allow `delay_ms(42)` construction without specifying a type.
 impl_delay_traits!(u8, u16, u32, i32);
 
-#[cfg(feature = "eh1_0_alpha")]
-impl eh1_0_alpha::delay::DelayNs for Timer {
+impl embedded_hal::delay::DelayNs for Timer {
     fn delay_ns(&mut self, ns: u32) {
         // For now, just use microsecond delay, internally. Of course, this
         // might cause a much longer delay than necessary. So a more advanced
@@ -189,11 +188,15 @@ impl eh1_0_alpha::delay::DelayNs for Timer {
     }
 }
 
-/// Implementation of the embedded_hal::Timer traits using rp2040_hal::timer counter
+/// Implementation of the [`embedded_hal_0_2::timer`] traits using [`rp2040_hal::timer`] counter.
+///
+/// There is no Embedded HAL 1.0 equivalent at this time.
+///
+/// If all you need is a delay, [`Timer`] does implement [`embedded_hal::delay::DelayNs`].
 ///
 /// ## Usage
 /// ```no_run
-/// use embedded_hal::timer::{CountDown, Cancel};
+/// use embedded_hal_0_2::timer::{CountDown, Cancel};
 /// use fugit::ExtU32;
 /// use rp2040_hal;
 /// let mut pac = rp2040_hal::pac::Peripherals::take().unwrap();
@@ -218,7 +221,7 @@ pub struct CountDown<'timer> {
     next_end: Option<u64>,
 }
 
-impl embedded_hal::timer::CountDown for CountDown<'_> {
+impl embedded_hal_0_2::timer::CountDown for CountDown<'_> {
     type Time = MicrosDurationU64;
 
     fn start<T>(&mut self, count: T)
@@ -249,9 +252,9 @@ impl embedded_hal::timer::CountDown for CountDown<'_> {
     }
 }
 
-impl embedded_hal::timer::Periodic for CountDown<'_> {}
+impl embedded_hal_0_2::timer::Periodic for CountDown<'_> {}
 
-impl embedded_hal::timer::Cancel for CountDown<'_> {
+impl embedded_hal_0_2::timer::Cancel for CountDown<'_> {
     type Error = &'static str;
 
     fn cancel(&mut self) -> Result<(), Self::Error> {
