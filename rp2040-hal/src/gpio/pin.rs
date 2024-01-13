@@ -154,9 +154,9 @@ pub(crate) fn set_function<P: PinId>(pin: &P, function: DynFunction) {
         DynFunction::Null => FUNCSEL_A::NULL,
     };
     if funcsel != FUNCSEL_A::NULL {
-        pin.pad_ctrl().modify(|_, w| w.ie().set_bit() );
+        pin.pad_ctrl().modify(|_, w| w.ie().set_bit());
     } else {
-        pin.pad_ctrl().modify(|_, w| w.ie().clear_bit() );
+        pin.pad_ctrl().modify(|_, w| w.ie().clear_bit());
     }
 
     pin.io_ctrl().modify(|_, w| w.funcsel().variant(funcsel));

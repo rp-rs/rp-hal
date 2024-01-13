@@ -1015,6 +1015,19 @@ pub trait DefaultTypeState: crate::typelevel::Sealed {
     type PullType: PullType;
 }
 
+// Clear input enable for pins 26-29 of bank0, as these pins are ADC pins.
+// If the pins are connected to an analog input, the signal level may not
+// be valid for a digital input.
+macro_rules! reset_ie {
+    ( Bank0, $pads:ident ) => {
+        $pads.gpio[26].modify(|_, w| w.ie().clear_bit());
+        $pads.gpio[27].modify(|_, w| w.ie().clear_bit());
+        $pads.gpio[28].modify(|_, w| w.ie().clear_bit());
+        $pads.gpio[29].modify(|_, w| w.ie().clear_bit());
+    };
+    ( Qspi, $pads:ident ) => {};
+}
+
 macro_rules! gpio {
     ( $bank:ident:$prefix:ident, [ $(($id:expr, $pull_type:ident, $func:ident)),* ] ) => {
         paste::paste!{
@@ -1036,7 +1049,7 @@ macro_rules! gpio {
                 impl Pins {
                     /// Take ownership of the PAC peripherals and SIO slice and split it into discrete [`Pin`]s
                     pub fn new(io : [<IO_ $bank:upper>], pads: [<PADS_ $bank:upper>], sio: [<SioGpio $bank>], reset : &mut $crate::pac::RESETS) -> Self {
-                        use crate::resets::SubsystemReset;
+                        use $crate::resets::SubsystemReset;
                         pads.reset_bring_down(reset);
                         io.reset_bring_down(reset);
 
@@ -1055,6 +1068,7 @@ macro_rules! gpio {
 
                         io.reset_bring_up(reset);
                         pads.reset_bring_up(reset);
+                        reset_ie!($bank, pads);
                         gpio!(members: io, pads, sio, $(([<$prefix $id>], $func, $pull_type)),+)
                     }
                 }
