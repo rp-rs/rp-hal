@@ -22,8 +22,6 @@ use hal::pac;
 
 // Some traits we need
 use embedded_hal::digital::OutputPin;
-// Embedded HAL 1.0.0 doesn't have an Watchdog trait, so use the one from 0.2
-use embedded_hal_0_2::watchdog::{Watchdog, WatchdogEnable};
 use hal::fugit::ExtU32;
 use rp2040_hal::clocks::Clock;
 
