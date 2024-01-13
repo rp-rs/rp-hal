@@ -67,7 +67,7 @@ fn main() -> ! {
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
         16_000_000u32.Hz(),
-        embedded_hal_0_2::spi::MODE_0,
+        embedded_hal::spi::MODE_0,
     );
 
     // Initialize DMA.

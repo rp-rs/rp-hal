@@ -89,7 +89,7 @@ fn main() -> ! {
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
         16.MHz(),
-        embedded_hal_0_2::spi::MODE_0,
+        embedded_hal::spi::MODE_0,
     );
 
     // Write out 0, ignore return value
