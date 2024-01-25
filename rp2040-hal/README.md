@@ -70,7 +70,7 @@ https://github.com/rp-rs/rp-hal-boards/ for more details.
 To include this crate in your project, amend your `Cargo.toml` file to include
 
 ```toml
-rp2040-hal = "0.9.1"
+rp2040-hal = "0.9.2"
 ```
 
 To obtain a copy of the source code (e.g. if you want to propose a bug-fix or
@@ -94,16 +94,14 @@ proposed features (and known issues).
 
 ### Support for embedded-hal 1.0
 
-We plan to support embedded-hal 1.0 soon after it is released.
-
-For now, there is preliminary support for alpha/rc versions of embedded-hal, which can
-be enabled with the feature `eh1_0_alpha`. Please note that this support does not
+This crate now supports embedded-hal 1.0, albeit still optional and
+hidden behind the `eh1_0_alpha` feature flag. Please note that this support does not
 provide any semver compatibility guarantees: With that feature activated, there
 will be breaking changes even in minor versions of rp2040-hal.
 
-Support for embedded-hal 1.0(-alpha/rc) exists in parallel to support for
-embedded-hal 0.2: Traits of both versions are implemented and can be used
-at the same time.
+Support for embedded-hal 1.0 exists in parallel to support for
+embedded-hal 0.2: Traits of both versions are implemented and can be
+used at the same time.
 
 <!-- CONTRIBUTING -->
 ## Contributing
