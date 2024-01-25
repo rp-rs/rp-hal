@@ -1398,9 +1398,7 @@ impl<T: AnyPin> embedded_hal::digital::v2::OutputPin for InOutPin<T> {
 
 #[cfg(feature = "eh1_0_alpha")]
 mod eh1 {
-    use eh1_0_alpha::digital::{
-        ErrorType, InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin,
-    };
+    use eh1_0_alpha::digital::{ErrorType, InputPin, OutputPin, StatefulOutputPin};
 
     use super::{Error, FunctionSio, Pin, PinId, PullType, SioConfig, SioInput, SioOutput};
 
@@ -1434,23 +1432,12 @@ mod eh1 {
         I: PinId,
         P: PullType,
     {
-        fn is_set_high(&self) -> Result<bool, Self::Error> {
+        fn is_set_high(&mut self) -> Result<bool, Self::Error> {
             Ok(self._is_set_high())
         }
 
-        fn is_set_low(&self) -> Result<bool, Self::Error> {
+        fn is_set_low(&mut self) -> Result<bool, Self::Error> {
             Ok(self._is_set_low())
-        }
-    }
-
-    impl<I, P> ToggleableOutputPin for Pin<I, FunctionSio<SioOutput>, P>
-    where
-        I: PinId,
-        P: PullType,
-    {
-        fn toggle(&mut self) -> Result<(), Self::Error> {
-            self._toggle();
-            Ok(())
         }
     }
 
@@ -1459,11 +1446,11 @@ mod eh1 {
         I: PinId,
         P: PullType,
     {
-        fn is_high(&self) -> Result<bool, Self::Error> {
+        fn is_high(&mut self) -> Result<bool, Self::Error> {
             Ok(self._is_high())
         }
 
-        fn is_low(&self) -> Result<bool, Self::Error> {
+        fn is_low(&mut self) -> Result<bool, Self::Error> {
             Ok(self._is_low())
         }
     }
@@ -1480,11 +1467,11 @@ mod eh1 {
     impl<'a, I: PinId, F: super::func::Function, P: PullType> InputPin
         for super::AsInputPin<'a, I, F, P>
     {
-        fn is_high(&self) -> Result<bool, Self::Error> {
+        fn is_high(&mut self) -> Result<bool, Self::Error> {
             Ok(self.0._is_high())
         }
 
-        fn is_low(&self) -> Result<bool, Self::Error> {
+        fn is_low(&mut self) -> Result<bool, Self::Error> {
             Ok(self.0._is_low())
         }
     }
