@@ -39,12 +39,13 @@
 //! Depending on the firmware's and bus' speed, this driver may only report:
 //! - `Start, Write, Restart, Read, Stop`
 
-use core::ops::Deref;
+use core::{ops::Deref, task::Poll};
 
 use embedded_hal::i2c::AddressMode;
 
 use super::{Peripheral, ValidAddress, ValidPinScl, ValidPinSda, I2C};
 use crate::{
+    async_utils::{sealed::Wakeable, AsyncPeripheral, CancellablePollFn},
     pac::{i2c0::RegisterBlock, RESETS},
     resets::SubsystemReset,
 };
@@ -153,9 +154,19 @@ fn unmask_intr(i2c: &RegisterBlock) {
     }
 }
 
+/// SAFETY: Takes a non-mutable reference to RegisterBlock but mutates its `ic_intr_mask` register.
+unsafe fn mask_intr(i2c: &RegisterBlock) {
+    // 0 is a valid value and means all flag masked.
+    unsafe { i2c.ic_intr_mask.write_with_zero(|w| w) }
+}
+
 impl<T: Deref<Target = RegisterBlock>, PINS> I2C<T, PINS, Peripheral> {
     fn unmask_intr(&mut self) {
         unmask_intr(&self.i2c)
+    }
+    fn mask_intr(&mut self) {
+        // SAFETY: We are the only owner of this register block.
+        unsafe { mask_intr(&self.i2c) }
     }
 
     /// Push up to `usize::min(TX_FIFO_SIZE, buf.len())` bytes to the TX FIFO.
@@ -245,6 +256,65 @@ impl<T: Deref<Target = RegisterBlock>, PINS> I2C<T, PINS, Peripheral> {
             }
 
             _ => None,
+        }
+    }
+}
+
+macro_rules! impl_wakeable {
+    ($i2c:ty) => {
+        impl<PINS> AsyncPeripheral for I2C<$i2c, PINS, Peripheral>
+        where
+            I2C<$i2c, PINS, Peripheral>: $crate::async_utils::sealed::Wakeable,
+        {
+            /// Wakes an async task (if any) & masks irqs
+            fn on_interrupt() {
+                unsafe {
+                    // This is equivalent to stealing from pac::Peripherals
+                    let i2c = &*<$i2c>::ptr();
+
+                    mask_intr(i2c);
+                }
+
+                // interrupts are now masked, we can wake the task and return from this handler.
+                Self::waker().wake();
+            }
+        }
+    };
+}
+impl_wakeable!(rp2040_pac::I2C0);
+impl_wakeable!(rp2040_pac::I2C1);
+
+impl<T, PINS> I2C<T, PINS, Peripheral>
+where
+    I2C<T, PINS, Peripheral>: AsyncPeripheral,
+    T: Deref<Target = RegisterBlock>,
+{
+    /// Asynchronously waits for an Event.
+    pub async fn wait_next(&mut self) -> Event {
+        loop {
+            if let Some(evt) = self.next_event() {
+                return evt;
+            }
+
+            CancellablePollFn::new(
+                self,
+                |me| {
+                    let stat = me.i2c.ic_raw_intr_stat.read();
+                    if stat.start_det().bit_is_set()
+                        || stat.restart_det().bit_is_set()
+                        || stat.stop_det().bit_is_set()
+                        || stat.rd_req().bit_is_set()
+                        || stat.rx_full().bit_is_set()
+                    {
+                        Poll::Ready(())
+                    } else {
+                        Poll::Pending
+                    }
+                },
+                Self::unmask_intr,
+                Self::mask_intr,
+            )
+            .await;
         }
     }
 }

@@ -10,6 +10,8 @@ use crate::{
     resets::SubsystemReset,
 };
 
+pub(crate) mod non_blocking;
+
 impl<T, Sda, Scl> I2C<T, (Sda, Scl), Controller>
 where
     T: SubsystemReset + Deref<Target = Block>,
@@ -379,29 +381,6 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
                 eh1::Operation::Write(buf) => {
                     self.write_internal(first, buf.iter().cloned(), last)?
                 }
-            }
-            first = false;
-        }
-        Ok(())
-    }
-
-    #[cfg(feature = "i2c-write-iter")]
-    fn transaction_iter<'op, A, O, B>(&mut self, address: A, operations: O) -> Result<(), Error>
-    where
-        A: ValidAddress,
-        O: IntoIterator<Item = i2c_write_iter::Operation<'op, B>>,
-        B: IntoIterator<Item = u8>,
-    {
-        use i2c_write_iter::Operation;
-        self.setup(address)?;
-
-        let mut first = true;
-        let mut operations = operations.into_iter().peekable();
-        while let Some(operation) = operations.next() {
-            let last = operations.peek().is_none();
-            match operation {
-                Operation::Read(buf) => self.read_internal(first, buf, last)?,
-                Operation::WriteIter(buf) => self.write_internal(first, buf, last)?,
             }
             first = false;
         }

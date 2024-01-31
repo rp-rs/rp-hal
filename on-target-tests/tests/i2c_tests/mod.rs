@@ -11,6 +11,7 @@ use rp2040_hal::{
 };
 
 pub mod blocking;
+pub mod non_blocking;
 
 pub const ADDR_7BIT: u8 = 0x2c;
 pub const ADDR_10BIT: u16 = 0x12c;

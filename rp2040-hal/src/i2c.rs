@@ -42,6 +42,12 @@
 //!
 //! See [examples/i2c.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/i2c.rs)
 //! for a complete example
+//!
+//! ## Async Usage
+//!
+//! See [examples/i2c_async.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/i2c_async.rs)
+//! and [examples/i2c_async_irq.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/i2c_async_irq.rs)
+//! for complete examples.
 
 use core::{marker::PhantomData, ops::Deref};
 use fugit::HertzU32;
@@ -287,7 +293,6 @@ pub struct I2C<I2C, Pins, Mode = Controller> {
     mode: Mode,
 }
 
-impl<I, P, M> Sealed for I2C<I, P, M> {}
 impl<Block, Sda, Scl, Mode> I2C<Block, (Sda, Scl), Mode>
 where
     Block: SubsystemReset + Deref<Target = RegisterBlock>,
@@ -386,6 +391,14 @@ macro_rules! hal {
                     {
                         Self::new_controller(i2c, sda_pin, scl_pin, freq.into(), resets, system_clock.into())
                     }
+                }
+            }
+
+            impl<P, M> $crate::async_utils::sealed::Wakeable for I2C<$I2CX, P, M> {
+                fn waker() -> &'static $crate::async_utils::sealed::IrqWaker {
+                    static WAKER: $crate::async_utils::sealed::IrqWaker =
+                        $crate::async_utils::sealed::IrqWaker::new();
+                    &WAKER
                 }
             }
         )+
