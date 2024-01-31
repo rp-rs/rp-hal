@@ -51,9 +51,10 @@ defmt-test = "0.3.1"
 panic-probe = { version = "0.3", features = ["print-defmt"] }
 
 rp2040-hal = { path = "../rp2040-hal", features = [
-    "defmt",
-    "critical-section-impl",
-    "rt",
+  "critical-section-impl",
+  "defmt",
+  "rt",
+  "i2c-write-iter",
 ] }
 # Needed to set spi frequencies
 fugit = "0.3.6"
@@ -70,4 +71,5 @@ nostd_async = { version = "0.6.1", features = ["wfe"] }
 futures = { version = "0.3.30", default-features = false, features = [
   "async-await",
 ] }
+i2c-write-iter = "1.0.0"
 itertools = { version = "0.12.0", default-features = false }

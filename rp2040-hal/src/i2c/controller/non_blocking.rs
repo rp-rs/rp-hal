@@ -259,6 +259,38 @@ where
         self.non_blocking_write_internal(true, bytes, false).await?;
         self.non_blocking_read_internal(false, read, true).await
     }
+
+    /// Writes to the i2c bus taking operations from and iterator, writing from iterator of bytes,
+    /// reading to slices of bytes.
+    #[cfg(feature = "i2c-write-iter")]
+    pub async fn transaction_iter_async<'b, A, O, B>(
+        &mut self,
+        address: A,
+        operations: O,
+    ) -> Result<(), super::Error>
+    where
+        A: ValidAddress,
+        O: IntoIterator<Item = i2c_write_iter::Operation<'b, B>>,
+        B: IntoIterator<Item = u8>,
+    {
+        self.setup(address)?;
+
+        let mut first = true;
+        let mut operations = operations.into_iter().peekable();
+        while let Some(operation) = operations.next() {
+            let last = operations.peek().is_none();
+            match operation {
+                i2c_write_iter::Operation::Read(buf) => {
+                    self.non_blocking_read_internal(first, buf, last).await?
+                }
+                i2c_write_iter::Operation::WriteIter(buf) => {
+                    self.non_blocking_write_internal(first, buf, last).await?
+                }
+            }
+            first = false;
+        }
+        Ok(())
+    }
 }
 
 impl<T, PINS, A> embedded_hal_async::i2c::I2c<A> for I2C<T, PINS, Controller>
@@ -290,5 +322,25 @@ where
             first = false;
         }
         Ok(())
+    }
+}
+
+#[cfg(feature = "i2c-write-iter")]
+impl<T, PINS, A> i2c_write_iter::non_blocking::I2cIter<A> for I2C<T, PINS, Controller>
+where
+    Self: AsyncPeripheral,
+    A: 'static + ValidAddress + AddressMode,
+    T: Deref<Target = RegisterBlock>,
+{
+    async fn transaction_iter<'a, O, B>(
+        &mut self,
+        address: A,
+        operations: O,
+    ) -> Result<(), Self::Error>
+    where
+        O: IntoIterator<Item = i2c_write_iter::Operation<'a, B>>,
+        B: IntoIterator<Item = u8>,
+    {
+        self.transaction_iter_async(address, operations).await
     }
 }
