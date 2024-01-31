@@ -94,7 +94,7 @@ fn main() -> ! {
     );
 
     // Write three bytes to the I²C device with 7-bit address 0x2C
-    i2c.write(0x2c, &[1, 2, 3]).unwrap();
+    i2c.write(0x2Cu8, &[1, 2, 3]).unwrap();
 
     // Demo finish - just loop until reset
 

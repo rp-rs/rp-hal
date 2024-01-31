@@ -28,10 +28,17 @@ harness = false
 name = "dma_dyn"
 harness = false
 
+[[test]]
+name = "i2c_loopback"
+harness = false
+
 [dependencies]
 cortex-m = "0.7"
 cortex-m-rt = "0.7"
-embedded-hal = { version = "0.2.5", features = ["unproven"] }
+embedded_hal_0_2 = { package = "embedded-hal", version = "0.2.5", features = [
+  "unproven",
+] }
+embedded-hal = "1.0.0"
 
 defmt = "0.3"
 defmt-rtt = "0.4"
@@ -41,9 +48,15 @@ panic-probe = { version = "0.3", features = ["print-defmt"] }
 rp2040-hal = { path = "../rp2040-hal", features = [
     "defmt",
     "critical-section-impl",
+    "rt",
 ] }
 # Needed to set spi frequencies
 fugit = "0.3.6"
 
 rp2040-boot2 = "0.3.0"
 critical-section = "1.0.0"
+heapless = { version = "0.8.0", features = [
+  "portable-atomic-critical-section",
+  "defmt-03",
+] }
+itertools = { version = "0.12.0", default-features = false }

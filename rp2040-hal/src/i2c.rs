@@ -21,7 +21,7 @@
 //!
 //! // Scan for devices on the bus by attempting to read from them
 //! use embedded_hal_0_2::prelude::_embedded_hal_blocking_i2c_Read;
-//! for i in 0..=127 {
+//! for i in 0..=127u8 {
 //!     let mut readbuf: [u8; 1] = [0; 1];
 //!     let result = i2c.read(i, &mut readbuf);
 //!     if let Ok(d) = result {
@@ -32,12 +32,12 @@
 //!
 //! // Write some data to a device at 0x2c
 //! use embedded_hal_0_2::prelude::_embedded_hal_blocking_i2c_Write;
-//! i2c.write(0x2c, &[1, 2, 3]).unwrap();
+//! i2c.write(0x2Cu8, &[1, 2, 3]).unwrap();
 //!
 //! // Write and then read from a device at 0x3a
 //! use embedded_hal_0_2::prelude::_embedded_hal_blocking_i2c_WriteRead;
 //! let mut readbuf: [u8; 1] = [0; 1];
-//! i2c.write_read(0x2c, &[1, 2, 3], &mut readbuf).unwrap();
+//! i2c.write_read(0x2Cu8, &[1, 2, 3], &mut readbuf).unwrap();
 //! ```
 //!
 //! See [examples/i2c.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/i2c.rs)
@@ -45,10 +45,14 @@
 
 use core::{marker::PhantomData, ops::Deref};
 use fugit::HertzU32;
+use rp2040_pac::i2c0::ic_con::IC_10BITADDR_SLAVE_A;
 
 use crate::{
     gpio::{bank0::*, pin::pin_sealed::TypeLevelPinId, AnyPin, FunctionI2c, PullUp},
-    pac::{self, i2c0::RegisterBlock as I2CBlock, I2C0, I2C1, RESETS},
+    pac::{
+        i2c0::{ic_con::IC_10BITADDR_MASTER_A, RegisterBlock},
+        I2C0, I2C1, RESETS,
+    },
     resets::SubsystemReset,
     typelevel::Sealed,
 };
@@ -57,17 +61,50 @@ mod controller;
 pub mod peripheral;
 
 /// Pac I2C device
-pub trait I2cDevice: Deref<Target = pac::i2c0::RegisterBlock> + SubsystemReset + Sealed {
+pub trait I2cDevice: Deref<Target = RegisterBlock> + SubsystemReset + Sealed {
     /// Index of the peripheral.
     const ID: usize;
 }
-impl Sealed for pac::I2C0 {}
-impl I2cDevice for pac::I2C0 {
+impl Sealed for I2C0 {}
+impl I2cDevice for I2C0 {
     const ID: usize = 0;
 }
-impl Sealed for pac::I2C1 {}
-impl I2cDevice for pac::I2C1 {
+impl Sealed for I2C1 {}
+impl I2cDevice for I2C1 {
     const ID: usize = 1;
+}
+
+/// Marks valid/supported address types
+pub trait ValidAddress:
+    Into<u16> + embedded_hal::i2c::AddressMode + embedded_hal_0_2::blocking::i2c::AddressMode + Copy
+{
+    /// Variant for the IC_CON.10bitaddr_master field
+    const BIT_ADDR_M: IC_10BITADDR_MASTER_A;
+    /// Variant for the IC_CON.10bitaddr_slave field
+    const BIT_ADDR_S: IC_10BITADDR_SLAVE_A;
+
+    /// Validates the address against address ranges supported by the hardware.
+    fn is_valid(self) -> Result<(), Error>;
+}
+impl ValidAddress for u8 {
+    const BIT_ADDR_M: IC_10BITADDR_MASTER_A = IC_10BITADDR_MASTER_A::ADDR_7BITS;
+    const BIT_ADDR_S: IC_10BITADDR_SLAVE_A = IC_10BITADDR_SLAVE_A::ADDR_7BITS;
+
+    fn is_valid(self) -> Result<(), Error> {
+        if self >= 0x80 {
+            Err(Error::AddressOutOfRange(self.into()))
+        } else {
+            Ok(())
+        }
+    }
+}
+impl ValidAddress for u16 {
+    const BIT_ADDR_M: IC_10BITADDR_MASTER_A = IC_10BITADDR_MASTER_A::ADDR_10BITS;
+    const BIT_ADDR_S: IC_10BITADDR_SLAVE_A = IC_10BITADDR_SLAVE_A::ADDR_10BITS;
+
+    fn is_valid(self) -> Result<(), Error> {
+        Ok(())
+    }
 }
 
 /// I2C error
@@ -226,14 +263,18 @@ pub trait I2CMode: Sealed {
     /// Indicates whether this mode is Controller or Peripheral.
     const IS_CONTROLLER: bool;
 }
+
 /// Marker for an I2C peripheral operating as a controller.
-pub enum Controller {}
+pub struct Controller {}
 impl Sealed for Controller {}
 impl I2CMode for Controller {
     const IS_CONTROLLER: bool = true;
 }
-/// Marker for an I2C peripheral operating as a peripehral.
-pub enum Peripheral {}
+
+/// Marker for an I2C block operating as a peripehral.
+pub struct Peripheral {
+    state: peripheral::State,
+}
 impl Sealed for Peripheral {}
 impl I2CMode for Peripheral {
     const IS_CONTROLLER: bool = false;
@@ -243,19 +284,13 @@ impl I2CMode for Peripheral {
 pub struct I2C<I2C, Pins, Mode = Controller> {
     i2c: I2C,
     pins: Pins,
-    mode: PhantomData<Mode>,
+    mode: Mode,
 }
 
-const TX_FIFO_SIZE: u8 = 16;
-const RX_FIFO_SIZE: u8 = 16;
-
-fn i2c_reserved_addr(addr: u16) -> bool {
-    (addr & 0x78) == 0 || (addr & 0x78) == 0x78
-}
-
+impl<I, P, M> Sealed for I2C<I, P, M> {}
 impl<Block, Sda, Scl, Mode> I2C<Block, (Sda, Scl), Mode>
 where
-    Block: SubsystemReset + Deref<Target = I2CBlock>,
+    Block: SubsystemReset + Deref<Target = RegisterBlock>,
 {
     /// Releases the I2C peripheral and associated pins
     #[allow(clippy::type_complexity)]
@@ -266,7 +301,13 @@ where
     }
 }
 
-impl<Block: Deref<Target = I2CBlock>, PINS, Mode> I2C<Block, PINS, Mode> {
+impl<Block: Deref<Target = RegisterBlock>, PINS, Mode> I2C<Block, PINS, Mode> {
+    /// Depth of the TX FIFO.
+    pub const TX_FIFO_DEPTH: u8 = 16;
+
+    /// Depth of the RX FIFO.
+    pub const RX_FIFO_DEPTH: u8 = 16;
+
     /// Number of bytes currently in the RX FIFO
     #[inline]
     pub fn rx_fifo_used(&self) -> u8 {
@@ -275,14 +316,14 @@ impl<Block: Deref<Target = I2CBlock>, PINS, Mode> I2C<Block, PINS, Mode> {
 
     /// Remaining capacity in the RX FIFO
     #[inline]
-    pub fn rx_fifo_free(&self) -> u8 {
-        RX_FIFO_SIZE - self.rx_fifo_used()
+    pub fn rx_fifo_available(&self) -> u8 {
+        Self::RX_FIFO_DEPTH - self.rx_fifo_used()
     }
 
     /// RX FIFO is empty
     #[inline]
     pub fn rx_fifo_empty(&self) -> bool {
-        self.rx_fifo_used() == 0
+        self.i2c.ic_status.read().rfne().bit_is_clear()
     }
 
     /// Number of bytes currently in the TX FIFO
@@ -293,14 +334,14 @@ impl<Block: Deref<Target = I2CBlock>, PINS, Mode> I2C<Block, PINS, Mode> {
 
     /// Remaining capacity in the TX FIFO
     #[inline]
-    pub fn tx_fifo_free(&self) -> u8 {
-        TX_FIFO_SIZE - self.tx_fifo_used()
+    pub fn tx_fifo_available(&self) -> u8 {
+        Self::TX_FIFO_DEPTH - self.tx_fifo_used()
     }
 
     /// TX FIFO is at capacity
     #[inline]
     pub fn tx_fifo_full(&self) -> bool {
-        self.tx_fifo_free() == 0
+        self.i2c.ic_status.read().tfnf().bit_is_clear()
     }
 }
 
