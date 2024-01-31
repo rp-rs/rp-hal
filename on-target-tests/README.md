@@ -19,7 +19,7 @@ run_tests.bat
 To run a specific test (to make developing tests faster)
 
 ```system
-CARGO_TARGET_THUMBV6M_NONE_EABI_RUNNER="probe-rs run" cargo test --test my_new_test -- --chip rp2040
+CARGO_TARGET_THUMBV6M_NONE_EABI_RUNNER="probe-rs run" cargo test -p on-target-tests --test my_new_test -- --chip rp2040
 ```
 
 ## Prerequisites
