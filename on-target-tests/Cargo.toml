@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name = "rp2040-hal-on-target-tests"
+name = "on-target-tests"
 version = "0.1.0"
 publish = false
 
@@ -47,23 +47,3 @@ fugit = "0.3.6"
 
 rp2040-boot2 = "0.3.0"
 critical-section = "1.0.0"
-
-[features]
-default = ['defmt-trace']
-defmt-trace = []
-defmt-debug = []
-defmt-info = []
-defmt-warn = []
-defmt-error = []
-
-[profile.dev]
-codegen-units = 1
-incremental = false
-lto = 'fat'
-opt-level = 's'
-
-[profile.test]
-codegen-units = 1
-incremental = false
-lto = 'fat'
-opt-level = 's'

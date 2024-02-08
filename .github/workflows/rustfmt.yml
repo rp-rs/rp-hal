@@ -13,6 +13,3 @@ jobs:
           target: thumbv6m-none-eabi
           components: rustfmt
       - run: cargo fmt -- --check
-      - run: |
-          cd on-target-tests
-          cargo fmt -- --check

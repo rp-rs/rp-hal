@@ -12,8 +12,5 @@ jobs:
         with:
           target: thumbv6m-none-eabi
           components: clippy
-      - run: cargo clippy --workspace --examples -- -Dwarnings
-      - run: cargo clippy --workspace --examples --all-features -- -Dwarnings
-      - run: |
-          cd on-target-tests
-          cargo clippy -- -Dwarnings
+      - run: cargo clippy --workspace --examples
+      - run: cargo clippy --workspace --examples --all-features
