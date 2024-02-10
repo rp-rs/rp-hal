@@ -17,13 +17,13 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use alloc_cortex_m::CortexMHeap;
+use embedded_alloc::Heap;
 
 // The macro for our start-up function
 use cortex_m_rt::entry;
 
 #[global_allocator]
-static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
+static ALLOCATOR: Heap = Heap::empty();
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
