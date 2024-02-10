@@ -42,12 +42,13 @@ where
     T: Deref<Target = RegisterBlock>,
     Self: AsyncPeripheral,
 {
+    /// `tx_empty`: true to unmask tx_empty
     #[inline]
-    fn unmask_intr(&mut self) {
+    fn unmask_intr(&mut self, tx_empty: bool) {
         unsafe {
             self.i2c.ic_intr_mask.write_with_zero(|w| {
                 w.m_tx_empty()
-                    .disabled()
+                    .bit(tx_empty)
                     .m_rx_full()
                     .disabled()
                     .m_tx_abrt()
@@ -73,18 +74,18 @@ where
     #[inline]
     fn unmask_tx_empty(&mut self) {
         self.configure_tx_empty(TxEmptyConfig::Empty);
-        self.unmask_intr()
+        self.unmask_intr(true)
     }
 
     #[inline]
     fn unmask_tx_not_full(&mut self) {
         self.configure_tx_empty(TxEmptyConfig::NotFull);
-        self.unmask_intr()
+        self.unmask_intr(true)
     }
 
     #[inline]
     fn unmask_stop_det(&mut self) {
-        self.unmask_intr();
+        self.unmask_intr(false);
     }
 
     #[inline]
