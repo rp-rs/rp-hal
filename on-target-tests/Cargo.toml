@@ -71,5 +71,5 @@ nostd_async = { version = "0.6.1", features = ["wfe"] }
 futures = { version = "0.3.30", default-features = false, features = [
   "async-await",
 ] }
-i2c-write-iter = "1.0.0"
+i2c-write-iter = { version = "1.0.0", features = ["async"] }
 itertools = { version = "0.12.0", default-features = false }

@@ -359,3 +359,34 @@ pub async fn transaction<A: ValidAddress>(
     .collect();
     assert_eq!(g, h);
 }
+
+pub async fn transaction_iter<A: ValidAddress>(state: &mut State, addr: A) {
+    use i2c_write_iter::non_blocking::I2cIter;
+    reset(state, addr);
+
+    let samples: FIFOBuffer = Generator::seq().take(25).collect();
+    let controller = state.controller.as_mut().expect("controller's missing.");
+    let case = async {
+        controller
+            .transaction_iter(
+                addr,
+                [i2c_write_iter::Operation::WriteIter(
+                    samples.clone().into_iter(),
+                )]
+                .into_iter(),
+            )
+            .await
+            .expect("Successful write_iter");
+        wait_with(&state.payload, |p| p.stop_cnt != 1).await;
+    };
+
+    futures::select_biased! {
+        _ = case.fuse() => {}
+        _ = target_handler(
+            &state.payload,
+            state.target.as_mut().take().expect("target’s missing"),
+        ).fuse() => {}
+    }
+
+    assert_eq!(samples, state.payload.borrow().vec);
+}
