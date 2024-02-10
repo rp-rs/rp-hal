@@ -13,7 +13,7 @@ jobs:
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-hack
-          version: "=0.5.28"
+          version: "=0.6.17"
       - name: Build rp2040-hal's workspace (without the examples)
         run: cargo hack build --optional-deps --each-feature
       - run: cargo clean
@@ -31,7 +31,7 @@ jobs:
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-hack
-          version: "=0.5.28"
+          version: "=0.6.17"
       - name: Test
         run: cargo hack test -p rp2040-hal --target x86_64-unknown-linux-gnu --optional-deps --each-feature --tests --features critical-section-impl
       - name: Test docs
@@ -55,12 +55,12 @@ jobs:
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-hack
-          version: "=0.5.28"
+          version: "=0.6.17"
       - name: Install cargo-udeps
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-udeps
-          version: "=0.1.40"
+          version: "=0.1.45"
       - name: Check unused deps
         run: cargo hack udeps --optional-deps --each-feature
   msrv:
@@ -76,7 +76,7 @@ jobs:
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-hack
-          version: "=0.5.28"
+          version: "=0.6.17"
       - name: Use older version of regex
         run: cargo update -p regex --precise 1.9.3
       - name: Verifiy MSRV
