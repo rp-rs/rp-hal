@@ -157,7 +157,13 @@ impl SioFifo {
     pub fn read(&mut self) -> Option<u32> {
         if self.is_read_ready() {
             let sio = unsafe { &(*pac::SIO::ptr()) };
-            Some(sio.fifo_rd.read().bits())
+
+            let value = sio.fifo_rd.read().bits();
+
+            // Wake up the other core that might be waiting on a read
+            cortex_m::asm::sev();
+
+            Some(value)
         } else {
             None
         }
@@ -172,17 +178,14 @@ impl SioFifo {
 
     /// Push to the FIFO, spinning if there's no space.
     pub fn write_blocking(&mut self, value: u32) {
-        // We busy-wait for the FIFO to have some space
+        // We wait for the FIFO to have some space
         while !self.is_write_ready() {
-            cortex_m::asm::nop();
+            cortex_m::asm::wfe();
         }
 
         // Write the value to the FIFO - the other core will now be able to
         // pop it off its end of the FIFO.
         self.write(value);
-
-        // Fire off an event to the other core
-        cortex_m::asm::sev();
     }
 
     /// Pop from the FIFO, spinning if there's currently no data.
