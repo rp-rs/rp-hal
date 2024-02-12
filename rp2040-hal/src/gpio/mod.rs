@@ -522,6 +522,18 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     // =======================
     // IO related methods
 
+    /// Get the input override.
+    #[inline]
+    pub fn get_input_override(&self) -> InputOverride {
+        use pac::io_bank0::gpio::gpio_ctrl::INOVER_A;
+        match self.id.io_ctrl().read().inover().variant() {
+            INOVER_A::NORMAL => InputOverride::Normal,
+            INOVER_A::INVERT => InputOverride::Invert,
+            INOVER_A::LOW => InputOverride::AlwaysLow,
+            INOVER_A::HIGH => InputOverride::AlwaysHigh,
+        }
+    }
+
     /// Set the input override.
     #[inline]
     pub fn set_input_override(&mut self, override_value: InputOverride) {
@@ -533,6 +545,18 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
             InputOverride::AlwaysHigh => INOVER_A::HIGH,
         };
         self.id.io_ctrl().modify(|_, w| w.inover().variant(variant));
+    }
+
+    /// Get the output enable override.
+    #[inline]
+    pub fn get_output_enable_override(&self) -> OutputEnableOverride {
+        use pac::io_bank0::gpio::gpio_ctrl::OEOVER_A;
+        match self.id.io_ctrl().read().oeover().variant() {
+            OEOVER_A::NORMAL => OutputEnableOverride::Normal,
+            OEOVER_A::INVERT => OutputEnableOverride::Invert,
+            OEOVER_A::DISABLE => OutputEnableOverride::Disable,
+            OEOVER_A::ENABLE => OutputEnableOverride::Enable,
+        }
     }
 
     /// Set the output enable override.
@@ -548,6 +572,18 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
         self.id.io_ctrl().modify(|_, w| w.oeover().variant(variant));
     }
 
+    /// Get the output override.
+    #[inline]
+    pub fn get_output_override(&self) -> OutputOverride {
+        use pac::io_bank0::gpio::gpio_ctrl::OUTOVER_A;
+        match self.id.io_ctrl().read().outover().variant() {
+            OUTOVER_A::NORMAL => OutputOverride::DontInvert,
+            OUTOVER_A::INVERT => OutputOverride::Invert,
+            OUTOVER_A::LOW => OutputOverride::AlwaysLow,
+            OUTOVER_A::HIGH => OutputOverride::AlwaysHigh,
+        }
+    }
+
     /// Set the output override.
     #[inline]
     pub fn set_output_override(&mut self, override_value: OutputOverride) {
@@ -561,6 +597,18 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
         self.id
             .io_ctrl()
             .modify(|_, w| w.outover().variant(variant));
+    }
+
+    /// Get the interrupt override.
+    #[inline]
+    pub fn get_interrupt_override(&self) -> InterruptOverride {
+        use pac::io_bank0::gpio::gpio_ctrl::IRQOVER_A;
+        match self.id.io_ctrl().read().irqover().variant() {
+            IRQOVER_A::NORMAL => InterruptOverride::Normal,
+            IRQOVER_A::INVERT => InterruptOverride::Invert,
+            IRQOVER_A::LOW => InterruptOverride::AlwaysLow,
+            IRQOVER_A::HIGH => InterruptOverride::AlwaysHigh,
+        }
     }
 
     /// Set the interrupt override.
