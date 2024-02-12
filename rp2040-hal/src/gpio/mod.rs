@@ -547,7 +547,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
         self.id.io_ctrl().modify(|_, w| w.inover().variant(variant));
     }
 
-    /// Set the output enable override.
+    /// Get the output enable override.
     #[inline]
     pub fn get_output_enable_override(&self) -> OutputEnableOverride {
         use pac::io_bank0::gpio::gpio_ctrl::OEOVER_A;
