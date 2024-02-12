@@ -4,10 +4,12 @@ version = "0.9.1"
 authors = ["The rp-rs Developers"]
 edition = "2021"
 homepage = "https://github.com/rp-rs/rp-hal"
-description = "A Rust Embeded-HAL impl for the rp2040 microcontroller"
+description = "A Rust Embedded-HAL impl for the rp2040 microcontroller"
 license = "MIT OR Apache-2.0"
 rust-version = "1.75"
 repository = "https://github.com/rp-rs/rp-hal"
+categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
+keywords = ["embedded", "hal", "raspberry-pi", "rp2040", "embedded-hal"]
 
 [package.metadata.docs.rs]
 features = ["rt", "rom-v2-intrinsics", "defmt", "rtic-monotonic"]
