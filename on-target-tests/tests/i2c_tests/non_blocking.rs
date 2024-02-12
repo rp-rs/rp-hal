@@ -371,9 +371,8 @@ pub async fn transaction_iter<A: ValidAddress>(state: &mut State, addr: A) {
             .transaction_iter(
                 addr,
                 [i2c_write_iter::Operation::WriteIter(
-                    samples.clone().into_iter(),
-                )]
-                .into_iter(),
+                    samples.iter().cloned(),
+                )],
             )
             .await
             .expect("Successful write_iter");
