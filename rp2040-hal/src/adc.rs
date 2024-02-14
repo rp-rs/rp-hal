@@ -240,10 +240,10 @@ impl Adc {
         device.reset_bring_up(resets);
 
         // Enable adc
-        device.cs.write(|w| w.en().set_bit());
+        device.cs().write(|w| w.en().set_bit());
 
         // Wait for adc ready
-        while !device.cs.read().ready().bit_is_set() {}
+        while !device.cs().read().ready().bit_is_set() {}
 
         Self { device }
     }
@@ -255,7 +255,7 @@ impl Adc {
 
     /// Read single
     pub fn read_single(&self) -> u16 {
-        self.device.result.read().result().bits()
+        self.device.result().read().result().bits()
     }
 
     /// Enable temperature sensor, returns a channel to use.
@@ -276,7 +276,7 @@ impl Adc {
     /// If the sensor has already been enabled, this method returns `None`.
     pub fn take_temp_sensor(&mut self) -> Option<TempSense> {
         let mut disabled = false;
-        self.device.cs.modify(|r, w| {
+        self.device.cs().modify(|r, w| {
             disabled = r.ts_en().bit_is_clear();
             // if bit was already set, this is a nop
             w.ts_en().set_bit()
@@ -286,7 +286,7 @@ impl Adc {
 
     /// Disable temperature sensor, consumes channel
     pub fn disable_temp_sensor(&mut self, _: TempSense) {
-        self.device.cs.modify(|_, w| w.ts_en().clear_bit());
+        self.device.cs().modify(|_, w| w.ts_en().clear_bit());
     }
 
     /// Start configuring free-running mode, and set up the FIFO
@@ -305,19 +305,19 @@ impl Adc {
     }
 
     fn inner_read(&mut self, chan: u8) -> u16 {
-        while !self.device.cs.read().ready().bit_is_set() {
+        while !self.device.cs().read().ready().bit_is_set() {
             cortex_m::asm::nop();
         }
 
         self.device
-            .cs
+            .cs()
             .modify(|_, w| unsafe { w.ainsel().bits(chan).start_once().set_bit() });
 
-        while !self.device.cs.read().ready().bit_is_set() {
+        while !self.device.cs().read().ready().bit_is_set() {
             cortex_m::asm::nop();
         }
 
-        self.device.result.read().result().bits()
+        self.device.result().read().result().bits()
     }
 }
 
@@ -409,7 +409,7 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     pub fn clock_divider(self, int: u16, frac: u8) -> Self {
         self.adc
             .device
-            .div
+            .div()
             .modify(|_, w| unsafe { w.int().bits(int).frac().bits(frac) });
         self
     }
@@ -423,7 +423,7 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     pub fn set_channel<PIN: Channel<Adc, ID = u8>>(self, _pin: &mut PIN) -> Self {
         self.adc
             .device
-            .cs
+            .cs()
             .modify(|_, w| unsafe { w.ainsel().bits(PIN::channel()) });
         self
     }
@@ -438,7 +438,7 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
         let RoundRobin(bits) = selected_channels.into();
         self.adc
             .device
-            .cs
+            .cs()
             .modify(|_, w| unsafe { w.rrobin().bits(bits) });
         self
     }
@@ -450,7 +450,7 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
         self.adc.device.inte.modify(|_, w| w.fifo().set_bit());
         self.adc
             .device
-            .fcs
+            .fcs()
             .modify(|_, w| unsafe { w.thresh().bits(threshold) });
         self
     }
