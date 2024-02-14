@@ -483,7 +483,7 @@ where
     pub fn force_interrupt(&mut self) {
         unsafe {
             let pwm = &(*pac::PWM::ptr());
-            let reg = pwm.intf.as_ptr();
+            let reg = pwm.intf().as_ptr();
             write_bitmask_set(reg, self.bitmask());
         }
     }
@@ -494,7 +494,7 @@ where
     pub fn clear_force_interrupt(&mut self) {
         unsafe {
             let pwm = &(*pac::PWM::ptr());
-            let reg = pwm.intf.as_ptr();
+            let reg = pwm.intf().as_ptr();
             write_bitmask_clear(reg, self.bitmask());
         }
     }
@@ -573,7 +573,7 @@ impl Slices {
     pub fn enable_simultaneous(&mut self, bits: u8) {
         // Enable multiple slices at the same time
         unsafe {
-            let reg = self._pwm.en.as_ptr();
+            let reg = self._pwm.en().as_ptr();
             write_bitmask_set(reg, bits as u32);
         }
     }
@@ -1005,7 +1005,7 @@ unsafe impl<S: SliceId, M: ValidSliceMode<S>> WriteTarget for SliceDmaWriteCc<S,
         let regs = Registers {
             id: PhantomData::<S> {},
         };
-        (regs.ch().cc.as_ptr() as u32, u32::MAX)
+        (regs.ch().cc().as_ptr() as u32, u32::MAX)
     }
 
     fn tx_increment(&self) -> bool {
@@ -1026,7 +1026,7 @@ unsafe impl<S: SliceId, M: ValidSliceMode<S>> WriteTarget for SliceDmaWriteTop<S
         let regs = Registers {
             id: PhantomData::<S> {},
         };
-        (regs.ch().top.as_ptr() as u32, u32::MAX)
+        (regs.ch().top().as_ptr() as u32, u32::MAX)
     }
 
     fn tx_increment(&self) -> bool {

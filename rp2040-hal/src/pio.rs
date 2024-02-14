@@ -526,7 +526,7 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
     fn set_ctrl_bits(&mut self, bits: u32) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            write_bitmask_set((*self.block).ctrl.as_ptr(), bits);
+            write_bitmask_set((*self.block).ctrl().as_ptr(), bits);
         }
     }
 
@@ -534,7 +534,7 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
     fn clear_ctrl_bits(&mut self, bits: u32) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            write_bitmask_clear((*self.block).ctrl.as_ptr(), bits);
+            write_bitmask_clear((*self.block).ctrl().as_ptr(), bits);
         }
     }
 
@@ -543,7 +543,7 @@ impl<SM: ValidStateMachine> UninitStateMachine<SM> {
         // Safety: This is the only write to this register
         unsafe {
             self.sm()
-                .sm_clkdiv
+                .sm_clkdiv()
                 .write(|w| w.int().bits(int).frac().bits(frac));
         }
     }
@@ -604,7 +604,7 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     /// The address of the instruction currently being executed.
     pub fn instruction_address(&self) -> u32 {
         // Safety: Read only access without side effect
-        unsafe { self.sm.sm().sm_addr.read().bits() }
+        unsafe { self.sm.sm().sm_addr().read().bits() }
     }
 
     #[deprecated(note = "Renamed to exec_instruction")]
@@ -627,7 +627,7 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
         unsafe {
             self.sm
                 .sm()
-                .sm_instr
+                .sm_instr()
                 .write(|w| w.sm0_instr().bits(instruction))
         }
     }
@@ -635,7 +635,7 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     /// Check if the current instruction is stalled.
     pub fn stalled(&self) -> bool {
         // Safety: read only access without side effect
-        unsafe { self.sm.sm().sm_execctrl.read().exec_stalled().bit() }
+        unsafe { self.sm.sm().sm_execctrl().read().exec_stalled().bit() }
     }
 
     /// Clear both TX and RX FIFOs
@@ -643,7 +643,7 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
         // Safety: all accesses to these registers are controlled by this instance
         unsafe {
             let sm = &self.sm.sm();
-            let sm_shiftctrl = &sm.sm_shiftctrl;
+            let sm_shiftctrl = &sm.sm_shiftctrl();
             let mut current = false;
             // Toggling the FIFO join state clears the fifo
             sm_shiftctrl.modify(|r, w| {
@@ -677,11 +677,11 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
         // Safety: all accesses to these registers are controlled by this instance
         unsafe {
             let sm = &self.sm.sm();
-            let sm_pinctrl = &sm.sm_pinctrl;
-            let sm_instr = &sm.sm_instr;
-            let fstat = &self.sm.pio().fstat;
+            let sm_pinctrl = &sm.sm_pinctrl();
+            let sm_instr = &sm.sm_instr();
+            let fstat = &self.sm.pio().fstat();
 
-            let operands = if sm.sm_shiftctrl.read().autopull().bit_is_set() {
+            let operands = if sm.sm_shiftctrl().read().autopull().bit_is_set() {
                 OUT
             } else {
                 PULL
@@ -770,9 +770,9 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
         // Safety: all accesses to these registers are controlled by this instance
         unsafe {
             let sm = self.sm.sm();
-            let sm_pinctrl = &sm.sm_pinctrl;
-            let sm_execctrl = &sm.sm_execctrl;
-            let sm_instr = &sm.sm_instr;
+            let sm_pinctrl = &sm.sm_pinctrl();
+            let sm_execctrl = &sm.sm_execctrl();
+            let sm_instr = &sm.sm_instr();
 
             // sideset_count is implicitly set to 0 when the set_base/set_count are written (rather
             // than modified)
@@ -822,9 +822,9 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
         // Safety: all accesses to these registers are controlled by this instance
         unsafe {
             let sm = self.sm.sm();
-            let sm_pinctrl = &sm.sm_pinctrl;
-            let sm_execctrl = &sm.sm_execctrl;
-            let sm_instr = &sm.sm_instr;
+            let sm_pinctrl = &sm.sm_pinctrl();
+            let sm_execctrl = &sm.sm_execctrl();
+            let sm_instr = &sm.sm_instr();
 
             // sideset_count is implicitly set to 0 when the set_base/set_count are written (rather
             // than modified)
@@ -1271,8 +1271,8 @@ impl<SM: ValidStateMachine> StateMachine<SM, Running> {
         // Safety: all accesses to these registers are controlled by this instance
         unsafe {
             let sm = self.sm.sm();
-            let sm_pinctrl = &sm.sm_pinctrl;
-            let sm_instr = &sm.sm_instr;
+            let sm_pinctrl = &sm.sm_pinctrl();
+            let sm_instr = &sm.sm_instr();
 
             // save exec_ctrl & make side_set optional
             let mut saved_sideset_count = 0;
@@ -1328,7 +1328,7 @@ impl<SM: ValidStateMachine> Rx<SM> {
     pub fn fifo_address(&self) -> *const u32 {
         // Safety: returning the address is safe as such. The user is responsible for any
         // dereference ops at that address.
-        unsafe { self.block().rxf[SM::id()].as_ptr() }
+        unsafe { self.block().rxf(SM::id()).as_ptr() }
     }
 
     /// Gets the FIFO's `DREQ` value.
@@ -1361,8 +1361,9 @@ impl<SM: ValidStateMachine> Rx<SM> {
         // Safety: only instance reading/writing to autopush bit and no other write to this
         // register
         unsafe {
-            self.block().sm[SM::id()]
-                .sm_shiftctrl
+            self.block()
+                .sm(SM::id())
+                .sm_shiftctrl()
                 .modify(|_, w| w.autopush().bit(enable))
         }
     }
@@ -1370,13 +1371,13 @@ impl<SM: ValidStateMachine> Rx<SM> {
     /// Indicate if the rx FIFO is empty
     pub fn is_empty(&self) -> bool {
         // Safety: Read only access without side effect
-        unsafe { self.block().fstat.read().rxempty().bits() & (1 << SM::id()) != 0 }
+        unsafe { self.block().fstat().read().rxempty().bits() & (1 << SM::id()) != 0 }
     }
 
     /// Indicate if the rx FIFO is full
     pub fn is_full(&self) -> bool {
         // Safety: Read only access without side effect
-        unsafe { self.block().fstat.read().rxfull().bits() & (1 << SM::id()) != 0 }
+        unsafe { self.block().fstat().read().rxfull().bits() & (1 << SM::id()) != 0 }
     }
 
     /// Enable RX FIFO not empty interrupt.
@@ -1386,7 +1387,7 @@ impl<SM: ValidStateMachine> Rx<SM> {
         // Safety: Atomic write to a single bit owned by this instance
         unsafe {
             write_bitmask_set(
-                self.block().sm_irq[id.to_index()].irq_inte.as_ptr(),
+                self.block().sm_irq(id.to_index()).irq_inte().as_ptr(),
                 1 << SM::id(),
             );
         }
@@ -1397,7 +1398,7 @@ impl<SM: ValidStateMachine> Rx<SM> {
         // Safety: Atomic write to a single bit owned by this instance
         unsafe {
             write_bitmask_clear(
-                self.block().sm_irq[id.to_index()].irq_inte.as_ptr(),
+                self.block().sm_irq(id.to_index()).irq_inte().as_ptr(),
                 1 << SM::id(),
             );
         }
@@ -1413,7 +1414,7 @@ impl<SM: ValidStateMachine> Rx<SM> {
         // Safety: Atomic write to a single bit owned by this instance
         unsafe {
             action(
-                self.block().sm_irq[id.to_index()].irq_intf.as_ptr(),
+                self.block().sm_irq(id.to_index()).irq_intf().as_ptr(),
                 1 << SM::id(),
             );
         }
@@ -1431,7 +1432,7 @@ unsafe impl<SM: ValidStateMachine> ReadTarget for Rx<SM> {
 
     fn rx_address_count(&self) -> (u32, u32) {
         (
-            &unsafe { &*self.block }.rxf[SM::id()] as *const _ as u32,
+            &unsafe { &*self.block }.rxf(SM::id()) as *const _ as u32,
             u32::MAX,
         )
     }
@@ -1480,7 +1481,7 @@ impl<SM: ValidStateMachine> Tx<SM> {
     /// overflowing the buffer.
     pub fn fifo_address(&self) -> *const u32 {
         // Safety: The only access to this register
-        unsafe { self.block().txf[SM::id()].as_ptr() }
+        unsafe { self.block().txf(SM::id()).as_ptr() }
     }
 
     /// Gets the FIFO's `DREQ` value.
@@ -1553,7 +1554,7 @@ impl<SM: ValidStateMachine> Tx<SM> {
     pub fn has_stalled(&self) -> bool {
         let mask = 1 << SM::id();
         // Safety: read-only access without side-effect
-        unsafe { self.block().fdebug.read().txstall().bits() & mask == mask }
+        unsafe { self.block().fdebug().read().txstall().bits() & mask == mask }
     }
 
     /// Clears the `tx_stalled` flag.
@@ -1562,20 +1563,20 @@ impl<SM: ValidStateMachine> Tx<SM> {
 
         // Safety: These bits are WC, only the one corresponding to this SM is set.
         unsafe {
-            self.block().fdebug.write(|w| w.txstall().bits(mask));
+            self.block().fdebug().write(|w| w.txstall().bits(mask));
         }
     }
 
     /// Indicate if the tx FIFO is empty
     pub fn is_empty(&self) -> bool {
         // Safety: read-only access without side-effect
-        unsafe { self.block().fstat.read().txempty().bits() & (1 << SM::id()) != 0 }
+        unsafe { self.block().fstat().read().txempty().bits() & (1 << SM::id()) != 0 }
     }
 
     /// Indicate if the tx FIFO is full
     pub fn is_full(&self) -> bool {
         // Safety: read-only access without side-effect
-        unsafe { self.block().fstat.read().txfull().bits() & (1 << SM::id()) != 0 }
+        unsafe { self.block().fstat().read().txfull().bits() & (1 << SM::id()) != 0 }
     }
 
     /// Enable TX FIFO not full interrupt.
@@ -1585,7 +1586,7 @@ impl<SM: ValidStateMachine> Tx<SM> {
         // Safety: Atomic access to the register. Bit only modified by this Tx<SM>
         unsafe {
             write_bitmask_set(
-                self.block().sm_irq[id.to_index()].irq_inte.as_ptr(),
+                self.block().sm_irq(id.to_index()).irq_inte().as_ptr(),
                 1 << (SM::id() + 4),
             );
         }
@@ -1596,7 +1597,7 @@ impl<SM: ValidStateMachine> Tx<SM> {
         // Safety: Atomic access to the register. Bit only modified by this Tx<SM>
         unsafe {
             write_bitmask_clear(
-                self.block().sm_irq[id.to_index()].irq_inte.as_ptr(),
+                self.block().sm_irq(id.to_index()).irq_inte().as_ptr(),
                 1 << (SM::id() + 4),
             );
         }
@@ -1607,7 +1608,7 @@ impl<SM: ValidStateMachine> Tx<SM> {
         // Safety: Atomic access to the register. Bit only modified by this Tx<SM>
         unsafe {
             write_bitmask_set(
-                self.block().sm_irq[id.to_index()].irq_intf.as_ptr(),
+                self.block().sm_irq(id.to_index()).irq_intf().as_ptr(),
                 1 << (SM::id() + 4),
             );
         }
@@ -1625,7 +1626,7 @@ unsafe impl<SM: ValidStateMachine> WriteTarget for Tx<SM> {
 
     fn tx_address_count(&mut self) -> (u32, u32) {
         (
-            &unsafe { &*self.block }.txf[SM::id()] as *const _ as u32,
+            &unsafe { &*self.block }.txf(SM::id()) as *const _ as u32,
             u32::MAX,
         )
     }
@@ -1660,7 +1661,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         assert!(id < 4, "invalid state machine interrupt number");
         // Safety: Atomic write to a single bit owned by this instance
         unsafe {
-            write_bitmask_set(self.irq().irq_inte.as_ptr(), 1 << (id + 8));
+            write_bitmask_set(self.irq().irq_inte().as_ptr(), 1 << (id + 8));
         }
     }
 
@@ -1671,7 +1672,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         assert!(id < 4, "invalid state machine interrupt number");
         // Safety: Atomic write to a single bit owned by this instance
         unsafe {
-            write_bitmask_clear(self.irq().irq_inte.as_ptr(), 1 << (id + 8));
+            write_bitmask_clear(self.irq().irq_inte().as_ptr(), 1 << (id + 8));
         }
     }
 
@@ -1687,9 +1688,9 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         // Safety: Atomic write to a single bit owned by this instance
         unsafe {
             if set {
-                write_bitmask_set(self.irq().irq_intf.as_ptr(), 1 << (id + 8));
+                write_bitmask_set(self.irq().irq_intf().as_ptr(), 1 << (id + 8));
             } else {
-                write_bitmask_clear(self.irq().irq_intf.as_ptr(), 1 << (id + 8));
+                write_bitmask_clear(self.irq().irq_intf().as_ptr(), 1 << (id + 8));
             }
         }
     }
@@ -1706,7 +1707,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         assert!(id < 4, "invalid state machine interrupt number");
         // Safety: Atomic write to a single bit owned by this instance
         unsafe {
-            write_bitmask_set(self.irq().irq_inte.as_ptr(), 1 << (id + 4));
+            write_bitmask_set(self.irq().irq_inte().as_ptr(), 1 << (id + 4));
         }
     }
 
@@ -1721,7 +1722,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         assert!(id < 4, "invalid state machine interrupt number");
         // Safety: Atomic write to a single bit owned by this instance
         unsafe {
-            write_bitmask_clear(self.irq().irq_inte.as_ptr(), 1 << (id + 4));
+            write_bitmask_clear(self.irq().irq_inte().as_ptr(), 1 << (id + 4));
         }
     }
 
@@ -1736,7 +1737,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         assert!(id < 4, "invalid state machine interrupt number");
         // Safety: Atomic write to a single bit owned by this instance
         unsafe {
-            write_bitmask_set(self.irq().irq_intf.as_ptr(), 1 << (id + 4));
+            write_bitmask_set(self.irq().irq_intf().as_ptr(), 1 << (id + 4));
         }
     }
 
@@ -1752,7 +1753,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         assert!(id < 4, "invalid state machine interrupt number");
         // Safety: Atomic write to a single bit owned by this instance
         unsafe {
-            write_bitmask_set(self.irq().irq_inte.as_ptr(), 1 << id);
+            write_bitmask_set(self.irq().irq_inte().as_ptr(), 1 << id);
         }
     }
 
@@ -1767,7 +1768,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         assert!(id < 4, "invalid state machine interrupt number");
         // Safety: Atomic write to a single bit owned by this instance
         unsafe {
-            write_bitmask_clear(self.irq().irq_inte.as_ptr(), 1 << id);
+            write_bitmask_clear(self.irq().irq_inte().as_ptr(), 1 << id);
         }
     }
 
@@ -1782,7 +1783,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
         assert!(id < 4, "invalid state machine interrupt number");
         // Safety: Atomic write to a single bit owned by this instance
         unsafe {
-            write_bitmask_set(self.irq().irq_intf.as_ptr(), 1 << id);
+            write_bitmask_set(self.irq().irq_intf().as_ptr(), 1 << id);
         }
     }
 
@@ -1802,7 +1803,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
     pub fn state(&self) -> InterruptState {
         InterruptState(
             // Safety: Read only access without side effect
-            unsafe { self.irq().irq_ints.read().bits() },
+            unsafe { self.irq().irq_ints().read().bits() },
         )
     }
 
@@ -1811,7 +1812,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
     }
 
     unsafe fn irq(&self) -> &crate::pac::pio0::SM_IRQ {
-        &self.block().sm_irq[IRQ]
+        &self.block().sm_irq(IRQ)
     }
 }
 
@@ -2175,7 +2176,7 @@ impl<P: PIOExt> PIOBuilder<P> {
 
         // Safety: Only instance owning the SM
         unsafe {
-            sm.sm().sm_execctrl.write(|w| {
+            sm.sm().sm_execctrl().write(|w| {
                 w.side_en().bit(self.program.side_set.optional());
                 w.side_pindir().bit(self.program.side_set.pindirs());
 
@@ -2206,7 +2207,7 @@ impl<P: PIOExt> PIOBuilder<P> {
                 w.status_n().bits(n)
             });
 
-            sm.sm().sm_shiftctrl.write(|w| {
+            sm.sm().sm_shiftctrl().write(|w| {
                 let (fjoin_rx, fjoin_tx) = match self.fifo_join {
                     Buffers::RxTx => (false, false),
                     Buffers::OnlyTx => (false, true),
@@ -2226,7 +2227,7 @@ impl<P: PIOExt> PIOBuilder<P> {
                 w.autopush().bit(self.autopush)
             });
 
-            sm.sm().sm_pinctrl.write(|w| {
+            sm.sm().sm_pinctrl().write(|w| {
                 w.sideset_count().bits(self.program.side_set.bits());
                 w.set_count().bits(self.set_count);
                 w.out_count().bits(self.out_count);
@@ -2251,7 +2252,7 @@ impl<P: PIOExt> PIOBuilder<P> {
         .encode();
         // Safety: Only instance owning the SM
         unsafe {
-            sm.sm().sm_instr.write(|w| w.sm0_instr().bits(instr));
+            sm.sm().sm_instr().write(|w| w.sm0_instr().bits(instr));
         }
 
         let rx = Rx {

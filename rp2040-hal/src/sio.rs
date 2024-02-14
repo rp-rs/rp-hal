@@ -741,43 +741,43 @@ macro_rules! interpolators {
                         impl Lane for [<$interp $lane>]{
                             fn pop(&mut self) ->u32{
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _pop_ $lane:lower>].read().bits()
+                                sio.[<$interp:lower _pop_ $lane:lower>]().read().bits()
                             }
                             fn peek(&self) ->u32{
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _peek_ $lane:lower>].read().bits()
+                                sio.[<$interp:lower _peek_ $lane:lower>]().read().bits()
                             }
                             fn set_accum(&mut self,v:u32){
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _accum $lane_id>].write(|w| unsafe { w.bits(v) });
+                                sio.[<$interp:lower _accum $lane_id>]().write(|w| unsafe { w.bits(v) });
                             }
                             fn get_accum(&self)->u32{
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _accum $lane_id>].read().bits()
+                                sio.[<$interp:lower _accum $lane_id>]().read().bits()
                             }
                             fn set_base(&mut self, v:u32){
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _base $lane_id>].write(|w| unsafe { w.bits(v) });
+                                sio.[<$interp:lower _base $lane_id>]().write(|w| unsafe { w.bits(v) });
                             }
                             fn get_base(&self)->u32{
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _base $lane_id>].read().bits()
+                                sio.[<$interp:lower _base $lane_id>]().read().bits()
                             }
                             fn set_ctrl(&mut self, v:u32){
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _ctrl_lane $lane_id>].write(|w| unsafe { w.bits(v) });
+                                sio.[<$interp:lower _ctrl_lane $lane_id>]().write(|w| unsafe { w.bits(v) });
                             }
                             fn get_ctrl(&self)->u32{
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _ctrl_lane $lane_id>].read().bits()
+                                sio.[<$interp:lower _ctrl_lane $lane_id>]().read().bits()
                             }
                             fn add_accum(&mut self, v:u32){
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _accum $lane_id _add>].write(|w| unsafe { w.bits(v) });
+                                sio.[<$interp:lower _accum $lane_id _add>]().write(|w| unsafe { w.bits(v) });
                             }
                             fn read_raw(&self)->u32{
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _accum $lane_id _add>].read().bits()
+                                sio.[<$interp:lower _accum $lane_id _add>]().read().bits()
                             }
                         }
                         impl Sealed for [<$interp $lane>] {}
@@ -799,23 +799,23 @@ macro_rules! interpolators {
                     impl Interp for $interp{
                         fn pop(&mut self) ->u32{
                             let sio = unsafe { &*pac::SIO::ptr() };
-                            sio.[<$interp:lower _pop_full>].read().bits()
+                            sio.[<$interp:lower _pop_full>]().read().bits()
                         }
                         fn peek(&self) ->u32{
                             let sio = unsafe { &*pac::SIO::ptr() };
-                            sio.[<$interp:lower _peek_full>].read().bits()
+                            sio.[<$interp:lower _peek_full>]().read().bits()
                         }
                         fn set_base(&mut self, v:u32){
                             let sio = unsafe { &*pac::SIO::ptr() };
-                            sio.[<$interp:lower _base2>].write(|w| unsafe { w.bits(v)});
+                            sio.[<$interp:lower _base2>]().write(|w| unsafe { w.bits(v)});
                         }
                         fn get_base(&self)->u32{
                             let sio = unsafe { &*pac::SIO::ptr() };
-                            sio.[<$interp:lower _base2>].read().bits()
+                            sio.[<$interp:lower _base2>]().read().bits()
                         }
                         fn set_base_1and0(&mut self, v:u32){
                             let sio = unsafe { &*pac::SIO::ptr() };
-                            sio.[<$interp:lower _base_1and0>].write(|w| unsafe { w.bits(v)});
+                            sio.[<$interp:lower _base_1and0>]().write(|w| unsafe { w.bits(v)});
                         }
                     }
                     impl Sealed for $interp {}

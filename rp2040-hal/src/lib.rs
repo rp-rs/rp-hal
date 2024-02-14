@@ -104,8 +104,10 @@ pub extern crate fugit;
 pub fn reset() -> ! {
     unsafe {
         cortex_m::interrupt::disable();
-        (*pac::PSM::PTR).wdsel.write(|w| w.bits(0x0001ffff));
-        (*pac::WATCHDOG::PTR).ctrl.write(|w| w.trigger().set_bit());
+        (*pac::PSM::PTR).wdsel().write(|w| w.bits(0x0001ffff));
+        (*pac::WATCHDOG::PTR)
+            .ctrl()
+            .write(|w| w.trigger().set_bit());
         #[allow(clippy::empty_loop)]
         loop {}
     }
@@ -122,8 +124,8 @@ pub fn halt() -> ! {
         cortex_m::interrupt::disable();
         // Stop other core
         match crate::Sio::core() {
-            CoreId::Core0 => (*pac::PSM::PTR).frce_off.write(|w| w.proc1().set_bit()),
-            CoreId::Core1 => (*pac::PSM::PTR).frce_off.write(|w| w.proc0().set_bit()),
+            CoreId::Core0 => (*pac::PSM::PTR).frce_off().write(|w| w.proc1().set_bit()),
+            CoreId::Core1 => (*pac::PSM::PTR).frce_off().write(|w| w.proc0().set_bit()),
         }
         // Keep current core running, so debugging stays possible
         loop {

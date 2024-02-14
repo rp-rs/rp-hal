@@ -469,16 +469,16 @@ impl ClocksManager {
     /// Read the clock gate configuration while the device is in its (deep) sleep state.
     pub fn sleep_enable(&self) -> ClockGate {
         ClockGate(
-            (u64::from(self.clocks.sleep_en1.read().bits()) << 32)
-                | u64::from(self.clocks.sleep_en0.read().bits()),
+            (u64::from(self.clocks.sleep_en1().read().bits()) << 32)
+                | u64::from(self.clocks.sleep_en0().read().bits()),
         )
     }
 
     /// Read the clock gate configuration while the device is in its wake state.
     pub fn wake_enable(&self) -> ClockGate {
         ClockGate(
-            (u64::from(self.clocks.wake_en1.read().bits()) << 32)
-                | u64::from(self.clocks.wake_en0.read().bits()),
+            (u64::from(self.clocks.wake_en1().read().bits()) << 32)
+                | u64::from(self.clocks.wake_en0().read().bits()),
         )
     }
 
