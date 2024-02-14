@@ -203,21 +203,21 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
         self.device.reset_bring_up(resets);
 
         // Turn off PLL in case it is already running
-        self.device.pwr.reset();
-        self.device.fbdiv_int.reset();
+        self.device.pwr().reset();
+        self.device.fbdiv_int().reset();
 
         self.device.cs().write(|w| unsafe {
             w.refdiv().bits(self.state.refdiv);
             w
         });
 
-        self.device.fbdiv_int.write(|w| unsafe {
+        self.device.fbdiv_int().write(|w| unsafe {
             w.fbdiv_int().bits(self.state.fbdiv);
             w
         });
 
         // Turn on PLL
-        self.device.pwr.modify(|_, w| {
+        self.device.pwr().modify(|_, w| {
             w.pd().clear_bit();
             w.vcopd().clear_bit();
             w
@@ -255,14 +255,14 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Locking, D> {
     /// Exchanges a token for a Locked PLL.
     pub fn get_locked(self, _token: LockedPLLToken<D>) -> PhaseLockedLoop<Locked, D> {
         // Set up post dividers
-        self.device.prim.write(|w| unsafe {
+        self.device.prim().write(|w| unsafe {
             w.postdiv1().bits(self.state.post_div1);
             w.postdiv2().bits(self.state.post_div2);
             w
         });
 
         // Turn on post divider
-        self.device.pwr.modify(|_, w| {
+        self.device.pwr().modify(|_, w| {
             w.postdivpd().clear_bit();
             w
         });

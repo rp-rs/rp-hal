@@ -316,7 +316,7 @@ impl<Block: Deref<Target = RegisterBlock>, PINS, Mode> I2C<Block, PINS, Mode> {
     /// Number of bytes currently in the RX FIFO
     #[inline]
     pub fn rx_fifo_used(&self) -> u8 {
-        self.i2c.ic_rxflr.read().rxflr().bits()
+        self.i2c.ic_rxflr().read().rxflr().bits()
     }
 
     /// Remaining capacity in the RX FIFO
@@ -328,13 +328,13 @@ impl<Block: Deref<Target = RegisterBlock>, PINS, Mode> I2C<Block, PINS, Mode> {
     /// RX FIFO is empty
     #[inline]
     pub fn rx_fifo_empty(&self) -> bool {
-        self.i2c.ic_status.read().rfne().bit_is_clear()
+        self.i2c.ic_status().read().rfne().bit_is_clear()
     }
 
     /// Number of bytes currently in the TX FIFO
     #[inline]
     pub fn tx_fifo_used(&self) -> u8 {
-        self.i2c.ic_txflr.read().txflr().bits()
+        self.i2c.ic_txflr().read().txflr().bits()
     }
 
     /// Remaining capacity in the TX FIFO
@@ -346,7 +346,7 @@ impl<Block: Deref<Target = RegisterBlock>, PINS, Mode> I2C<Block, PINS, Mode> {
     /// TX FIFO is at capacity
     #[inline]
     pub fn tx_fifo_full(&self) -> bool {
-        self.i2c.ic_status.read().tfnf().bit_is_clear()
+        self.i2c.ic_status().read().tfnf().bit_is_clear()
     }
 }
 

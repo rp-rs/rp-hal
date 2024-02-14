@@ -60,7 +60,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
         let (mut device, pins) = self.free();
         configure_baudrate(&mut device, config.baudrate, frequency)?;
 
-        device.uartlcr_h.write(|w| {
+        device.uartlcr_h().write(|w| {
             // FIFOs are enabled
             w.fen().set_bit(); // Leaved here for backward compatibility
             set_format(w, &config.data_bits, &config.stop_bits, &config.parity);
@@ -68,7 +68,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
         });
 
         // Enable the UART, and the TX,RC,CTS and RTS based on the pins
-        device.uartcr.write(|w| {
+        device.uartcr().write(|w| {
             w.uarten().set_bit();
             w.txe().bit(P::Tx::IS_SOME);
             w.rxe().bit(P::Rx::IS_SOME);
@@ -78,7 +78,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
             w
         });
 
-        device.uartdmacr.write(|w| {
+        device.uartdmacr().write(|w| {
             w.txdmae().set_bit();
             w.rxdmae().set_bit();
             w
@@ -96,7 +96,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
     /// Disable this UART Peripheral, falling back to the Disabled state.
     pub fn disable(self) -> UartPeripheral<Disabled, D, P> {
         // Disable the UART, both TX and RX
-        self.device.uartcr.write(|w| {
+        self.device.uartcr().write(|w| {
             w.uarten().clear_bit();
             w.txe().clear_bit();
             w.rxe().clear_bit();
@@ -286,20 +286,20 @@ fn configure_baudrate<U: UartDevice>(
     let (baud_div_int, baud_div_frac) = calculate_baudrate_dividers(wanted_baudrate, frequency)?;
 
     // First we load the integer part of the divider.
-    device.uartibrd.write(|w| unsafe {
+    device.uartibrd().write(|w| unsafe {
         w.baud_divint().bits(baud_div_int);
         w
     });
 
     // Then we load the fractional part of the divider.
-    device.uartfbrd.write(|w| unsafe {
+    device.uartfbrd().write(|w| unsafe {
         w.baud_divfrac().bits(baud_div_frac as u8);
         w
     });
 
     // PL011 needs a (dummy) line control register write to latch in the
     // divisors. We don't want to actually change LCR contents here.
-    device.uartlcr_h.modify(|_, w| w);
+    device.uartlcr_h().modify(|_, w| w);
 
     Ok(HertzU32::from_raw(
         (4 * frequency.to_Hz()) / (64 * baud_div_int as u32 + baud_div_frac as u32),

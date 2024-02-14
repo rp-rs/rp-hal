@@ -79,7 +79,7 @@ impl Watchdog {
         const WATCHDOG_TICK_ENABLE_BITS: u32 = 0x200;
 
         self.watchdog
-            .tick
+            .tick()
             .write(|w| unsafe { w.bits(WATCHDOG_TICK_ENABLE_BITS | cycles as u32) })
     }
 
@@ -90,7 +90,7 @@ impl Watchdog {
     ///
     /// * `pause` - If true, watchdog timer will be paused
     pub fn pause_on_debug(&mut self, pause: bool) {
-        self.watchdog.ctrl.write(|w| {
+        self.watchdog.ctrl().write(|w| {
             w.pause_dbg0()
                 .bit(pause)
                 .pause_dbg1()
@@ -101,38 +101,54 @@ impl Watchdog {
     }
 
     fn load_counter(&self, counter: u32) {
-        self.watchdog.load.write(|w| unsafe { w.bits(counter) });
+        self.watchdog.load().write(|w| unsafe { w.bits(counter) });
     }
 
     fn enable(&self, bit: bool) {
-        self.watchdog.ctrl.write(|w| w.enable().bit(bit))
+        self.watchdog.ctrl().write(|w| w.enable().bit(bit))
     }
 
     /// Read a scratch register
     pub fn read_scratch(&self, reg: ScratchRegister) -> u32 {
         match reg {
-            ScratchRegister::Scratch0 => self.watchdog.scratch0.read().bits(),
-            ScratchRegister::Scratch1 => self.watchdog.scratch1.read().bits(),
-            ScratchRegister::Scratch2 => self.watchdog.scratch2.read().bits(),
-            ScratchRegister::Scratch3 => self.watchdog.scratch3.read().bits(),
-            ScratchRegister::Scratch4 => self.watchdog.scratch4.read().bits(),
-            ScratchRegister::Scratch5 => self.watchdog.scratch5.read().bits(),
-            ScratchRegister::Scratch6 => self.watchdog.scratch6.read().bits(),
-            ScratchRegister::Scratch7 => self.watchdog.scratch7.read().bits(),
+            ScratchRegister::Scratch0 => self.watchdog.scratch0().read().bits(),
+            ScratchRegister::Scratch1 => self.watchdog.scratch1().read().bits(),
+            ScratchRegister::Scratch2 => self.watchdog.scratch2().read().bits(),
+            ScratchRegister::Scratch3 => self.watchdog.scratch3().read().bits(),
+            ScratchRegister::Scratch4 => self.watchdog.scratch4().read().bits(),
+            ScratchRegister::Scratch5 => self.watchdog.scratch5().read().bits(),
+            ScratchRegister::Scratch6 => self.watchdog.scratch6().read().bits(),
+            ScratchRegister::Scratch7 => self.watchdog.scratch7().read().bits(),
         }
     }
 
     /// Write a scratch register
     pub fn write_scratch(&mut self, reg: ScratchRegister, value: u32) {
         match reg {
-            ScratchRegister::Scratch0 => self.watchdog.scratch0.write(|w| unsafe { w.bits(value) }),
-            ScratchRegister::Scratch1 => self.watchdog.scratch1.write(|w| unsafe { w.bits(value) }),
-            ScratchRegister::Scratch2 => self.watchdog.scratch2.write(|w| unsafe { w.bits(value) }),
-            ScratchRegister::Scratch3 => self.watchdog.scratch3.write(|w| unsafe { w.bits(value) }),
-            ScratchRegister::Scratch4 => self.watchdog.scratch4.write(|w| unsafe { w.bits(value) }),
-            ScratchRegister::Scratch5 => self.watchdog.scratch5.write(|w| unsafe { w.bits(value) }),
-            ScratchRegister::Scratch6 => self.watchdog.scratch6.write(|w| unsafe { w.bits(value) }),
-            ScratchRegister::Scratch7 => self.watchdog.scratch7.write(|w| unsafe { w.bits(value) }),
+            ScratchRegister::Scratch0 => {
+                self.watchdog.scratch0().write(|w| unsafe { w.bits(value) })
+            }
+            ScratchRegister::Scratch1 => {
+                self.watchdog.scratch1().write(|w| unsafe { w.bits(value) })
+            }
+            ScratchRegister::Scratch2 => {
+                self.watchdog.scratch2().write(|w| unsafe { w.bits(value) })
+            }
+            ScratchRegister::Scratch3 => {
+                self.watchdog.scratch3().write(|w| unsafe { w.bits(value) })
+            }
+            ScratchRegister::Scratch4 => {
+                self.watchdog.scratch4().write(|w| unsafe { w.bits(value) })
+            }
+            ScratchRegister::Scratch5 => {
+                self.watchdog.scratch5().write(|w| unsafe { w.bits(value) })
+            }
+            ScratchRegister::Scratch6 => {
+                self.watchdog.scratch6().write(|w| unsafe { w.bits(value) })
+            }
+            ScratchRegister::Scratch7 => {
+                self.watchdog.scratch7().write(|w| unsafe { w.bits(value) })
+            }
         }
     }
 
@@ -143,7 +159,7 @@ impl Watchdog {
     /// This is easy at the moment, since nothing else uses PSM
     unsafe fn configure_wdog_reset_triggers(&self) {
         let psm = &*pac::PSM::ptr();
-        psm.wdsel.write_with_zero(|w| {
+        psm.wdsel().write_with_zero(|w| {
             w.bits(0x0001ffff);
             w.xosc().clear_bit();
             w.rosc().clear_bit();

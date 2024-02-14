@@ -101,13 +101,13 @@ impl Sio {
 
     /// Reads the whole bank0 at once.
     pub fn read_bank0() -> u32 {
-        unsafe { (*pac::SIO::PTR).gpio_in.read().bits() }
+        unsafe { (*pac::SIO::PTR).gpio_in().read().bits() }
     }
 
     /// Returns whether we are running on Core 0 (`0`) or Core 1 (`1`).
     pub fn core() -> CoreId {
         // Safety: it is always safe to read this read-only register
-        match unsafe { (*pac::SIO::ptr()).cpuid.read().bits() as u8 } {
+        match unsafe { (*pac::SIO::ptr()).cpuid().read().bits() as u8 } {
             0 => CoreId::Core0,
             1 => CoreId::Core1,
             _ => unreachable!("This MCU only has 2 cores."),
@@ -122,7 +122,7 @@ impl SioFifo {
     /// and you must not read from it.
     pub fn is_read_ready(&mut self) -> bool {
         let sio = unsafe { &(*pac::SIO::ptr()) };
-        sio.fifo_st.read().vld().bit_is_set()
+        sio.fifo_st().read().vld().bit_is_set()
     }
 
     /// Check if the inter-core FIFO is ready to receive data.
@@ -131,13 +131,13 @@ impl SioFifo {
     /// must not write to it.
     pub fn is_write_ready(&mut self) -> bool {
         let sio = unsafe { &(*pac::SIO::ptr()) };
-        sio.fifo_st.read().rdy().bit_is_set()
+        sio.fifo_st().read().rdy().bit_is_set()
     }
 
     /// Return the FIFO status, as an integer.
     pub fn status(&self) -> u32 {
         let sio = unsafe { &(*pac::SIO::ptr()) };
-        sio.fifo_st.read().bits()
+        sio.fifo_st().read().bits()
     }
 
     /// Write to the inter-core FIFO.
@@ -145,7 +145,7 @@ impl SioFifo {
     /// You must ensure the FIFO has space by calling `is_write_ready`
     pub fn write(&mut self, value: u32) {
         let sio = unsafe { &(*pac::SIO::ptr()) };
-        sio.fifo_wr.write(|w| unsafe { w.bits(value) });
+        sio.fifo_wr().write(|w| unsafe { w.bits(value) });
         // Fire off an event to the other core.
         // This is required as the other core may be `wfe` (waiting for event)
         cortex_m::asm::sev();
@@ -157,7 +157,7 @@ impl SioFifo {
     pub fn read(&mut self) -> Option<u32> {
         if self.is_read_ready() {
             let sio = unsafe { &(*pac::SIO::ptr()) };
-            Some(sio.fifo_rd.read().bits())
+            Some(sio.fifo_rd().read().bits())
         } else {
             None
         }
@@ -476,7 +476,7 @@ where
     pub fn try_claim() -> Option<Self> {
         // Safety: We're only reading from this register
         let sio = unsafe { &*pac::SIO::ptr() };
-        let lock = sio.spinlock[N].read().bits();
+        let lock = sio.spinlock(N).read().bits();
         if lock > 0 {
             Some(Self(core::marker::PhantomData))
         } else {
@@ -508,7 +508,7 @@ where
     pub unsafe fn release() {
         let sio = &*pac::SIO::ptr();
         // Write (any value): release the lock
-        sio.spinlock[N].write_with_zero(|b| b.bits(1));
+        sio.spinlock(N).write_with_zero(|b| b.bits(1));
     }
 }
 
@@ -559,7 +559,7 @@ pub fn spinlock_state() -> [bool; 32] {
     // Safety: we're only reading from a register
     let sio = unsafe { &*pac::SIO::ptr() };
     // A bitmap containing the state of all 32 spinlocks (1=locked).
-    let register = sio.spinlock_st.read().bits();
+    let register = sio.spinlock_st().read().bits();
     let mut result = [false; 32];
     #[allow(clippy::needless_range_loop)]
     for i in 0..32 {

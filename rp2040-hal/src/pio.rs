@@ -39,22 +39,22 @@ pub trait PIOExt: Deref<Target = RegisterBlock> + SubsystemReset + Sized + Send 
 
         let sm0 = UninitStateMachine {
             block: self.deref(),
-            sm: &self.deref().sm[0],
+            sm: &self.deref().sm(0),
             _phantom: core::marker::PhantomData,
         };
         let sm1 = UninitStateMachine {
             block: self.deref(),
-            sm: &self.deref().sm[1],
+            sm: &self.deref().sm(1),
             _phantom: core::marker::PhantomData,
         };
         let sm2 = UninitStateMachine {
             block: self.deref(),
-            sm: &self.deref().sm[2],
+            sm: &self.deref().sm(2),
             _phantom: core::marker::PhantomData,
         };
         let sm3 = UninitStateMachine {
             block: self.deref(),
-            sm: &self.deref().sm[3],
+            sm: &self.deref().sm(3),
             _phantom: core::marker::PhantomData,
         };
         (
@@ -153,7 +153,7 @@ impl<P: PIOExt> PIO<P> {
     /// The PIO has 8 IRQ flags, of which 4 are visible to the host processor. Each bit of `flags` corresponds to one of
     /// the IRQ flags.
     pub fn get_irq_raw(&self) -> u8 {
-        self.pio.irq.read().irq().bits()
+        self.pio.irq().read().irq().bits()
     }
 
     /// Clear PIO's IRQ flags indicated by the bits.
@@ -163,7 +163,7 @@ impl<P: PIOExt> PIO<P> {
     // Safety: PIOExt provides exclusive access to the pio.irq register, this must be preserved to
     // satisfy Send trait.
     pub fn clear_irq(&self, flags: u8) {
-        self.pio.irq.write(|w| unsafe { w.irq().bits(flags) });
+        self.pio.irq().write(|w| unsafe { w.irq().bits(flags) });
     }
 
     /// Force PIO's IRQ flags indicated by the bits.
@@ -174,7 +174,7 @@ impl<P: PIOExt> PIO<P> {
     // satisfy Send trait.
     pub fn force_irq(&self, flags: u8) {
         self.pio
-            .irq_force
+            .irq_force()
             .write(|w| unsafe { w.irq_force().bits(flags) });
     }
 
@@ -243,7 +243,8 @@ impl<P: PIOExt> PIO<P> {
                 })
                 .enumerate()
                 .for_each(|(i, instr)| {
-                    self.pio.instr_mem[i + offset as usize]
+                    self.pio
+                        .instr_mem(i + offset as usize)
                         .write(|w| unsafe { w.instr_mem0().bits(instr) })
                 });
             self.used_instruction_space |= Self::instruction_mask(p.code.len()) << offset;

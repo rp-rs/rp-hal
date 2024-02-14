@@ -69,10 +69,10 @@ impl Timer {
     pub fn get_counter(&self) -> Instant {
         // Safety: Only used for reading current timer value
         let timer = unsafe { &*pac::TIMER::PTR };
-        let mut hi0 = timer.timerawh.read().bits();
+        let mut hi0 = timer.timerawh().read().bits();
         let timestamp = loop {
-            let low = timer.timerawl.read().bits();
-            let hi1 = timer.timerawh.read().bits();
+            let low = timer.timerawl().read().bits();
+            let hi1 = timer.timerawh().read().bits();
             if hi0 == hi1 {
                 break (u64::from(hi0) << 32) | u64::from(low);
             }
@@ -84,7 +84,7 @@ impl Timer {
     /// Get the value of the least significant word of the counter.
     pub fn get_counter_low(&self) -> u32 {
         // Safety: Only used for reading current timer value
-        unsafe { &*pac::TIMER::PTR }.timerawl.read().bits()
+        unsafe { &*pac::TIMER::PTR }.timerawl().read().bits()
     }
 
     /// Initialized a Count Down instance without starting it.
@@ -326,15 +326,15 @@ macro_rules! impl_alarm {
 
                     // If it is not set, it has already triggered.
                     let now = self.0.get_counter();
-                    if now > timestamp && (timer.armed.read().bits() & $armed_bit_mask) != 0 {
+                    if now > timestamp && (timer.armed().read().bits() & $armed_bit_mask) != 0 {
                         // timestamp was set to a value in the past
 
                         // safety: TIMER.armed is a write-clear register, and there can only be
                         // 1 instance of AlarmN so we can safely atomically clear this bit.
                         unsafe {
-                            timer.armed.write_with_zero(|w| w.bits($armed_bit_mask));
+                            timer.armed().write_with_zero(|w| w.bits($armed_bit_mask));
                             crate::atomic_register_access::write_bitmask_set(
-                                timer.intf.as_ptr(),
+                                timer.intf().as_ptr(),
                                 $armed_bit_mask,
                             );
                         }
@@ -358,11 +358,11 @@ macro_rules! impl_alarm {
                 unsafe {
                     let timer = &(*pac::TIMER::ptr());
                     crate::atomic_register_access::write_bitmask_clear(
-                        timer.intf.as_ptr(),
+                        timer.intf().as_ptr(),
                         $armed_bit_mask,
                     );
                     timer
-                        .intr
+                        .intr()
                         .write_with_zero(|w| w.$int_alarm().clear_bit_by_one());
                 }
             }
@@ -380,7 +380,7 @@ macro_rules! impl_alarm {
                 // of the TIMER.inte register
                 unsafe {
                     let timer = &(*pac::TIMER::ptr());
-                    let reg = (&timer.inte).as_ptr();
+                    let reg = (&timer.inte()).as_ptr();
                     write_bitmask_set(reg, $armed_bit_mask);
                 }
             }
@@ -392,7 +392,7 @@ macro_rules! impl_alarm {
                 // of the TIMER.inte register
                 unsafe {
                     let timer = &(*pac::TIMER::ptr());
-                    let reg = (&timer.inte).as_ptr();
+                    let reg = (&timer.inte()).as_ptr();
                     write_bitmask_clear(reg, $armed_bit_mask);
                 }
             }
@@ -431,7 +431,7 @@ macro_rules! impl_alarm {
             /// has not been scheduled yet.
             fn finished(&self) -> bool {
                 // safety: This is a read action and should not have any UB
-                let bits: u32 = unsafe { &*TIMER::ptr() }.armed.read().bits();
+                let bits: u32 = unsafe { &*TIMER::ptr() }.armed().read().bits();
                 (bits & $armed_bit_mask) == 0
             }
 
@@ -441,9 +441,9 @@ macro_rules! impl_alarm {
             fn cancel(&mut self) -> Result<(), ScheduleAlarmError> {
                 unsafe {
                     let timer = &*TIMER::ptr();
-                    timer.armed.write_with_zero(|w| w.bits($armed_bit_mask));
+                    timer.armed().write_with_zero(|w| w.bits($armed_bit_mask));
                     crate::atomic_register_access::write_bitmask_clear(
-                        timer.intf.as_ptr(),
+                        timer.intf().as_ptr(),
                         $armed_bit_mask,
                     );
                 }
