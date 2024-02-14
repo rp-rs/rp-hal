@@ -182,7 +182,7 @@ impl<'p> Core<'p> {
                 // since svd2rust doesn't really support multiple cores properly.
                 let peripherals = unsafe { pac::Peripherals::steal() };
                 let mut sio = Sio::new(peripherals.SIO);
-                sio.fifo.write_blocking(1);
+                sio.fifo().write_blocking(1);
 
                 entry();
                 loop {

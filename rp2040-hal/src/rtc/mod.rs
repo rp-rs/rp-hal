@@ -181,12 +181,12 @@ impl RealTimeClock {
 
     /// Enable the propagation of alarm to the NVIC.
     pub fn enable_interrupt(&mut self) {
-        self.rtc.inte.modify(|_, w| w.rtc().set_bit());
+        self.rtc.inte().modify(|_, w| w.rtc().set_bit());
     }
 
     /// Disable the propagation of the alarm to the NVIC.
     pub fn disable_interrupt(&mut self) {
-        self.rtc.inte.modify(|_, w| w.rtc().clear_bit());
+        self.rtc.inte().modify(|_, w| w.rtc().clear_bit());
     }
 
     /// Clear the interrupt.

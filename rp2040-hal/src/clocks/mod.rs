@@ -459,10 +459,10 @@ impl ClocksManager {
     /// Configure the clocks staying ON during deep-sleep.
     pub fn configure_sleep_enable(&mut self, clock_gate: ClockGate) {
         self.clocks
-            .sleep_en0
+            .sleep_en0()
             .write(|w| unsafe { w.bits(clock_gate.0 as u32) });
         self.clocks
-            .sleep_en1
+            .sleep_en1()
             .write(|w| unsafe { w.bits((clock_gate.0 >> 32) as u32) });
     }
 

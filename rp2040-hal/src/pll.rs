@@ -206,7 +206,7 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
         self.device.pwr.reset();
         self.device.fbdiv_int.reset();
 
-        self.device.cs.write(|w| unsafe {
+        self.device.cs().write(|w| unsafe {
             w.refdiv().bits(self.state.refdiv);
             w
         });
@@ -243,7 +243,7 @@ pub struct LockedPLLToken<D> {
 impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Locking, D> {
     /// Awaits locking of the PLL.
     pub fn await_lock(&self) -> nb::Result<LockedPLLToken<D>, Infallible> {
-        if self.device.cs.read().lock().bit_is_clear() {
+        if self.device.cs().read().lock().bit_is_clear() {
             return Err(WouldBlock);
         }
 

@@ -527,7 +527,7 @@ impl UsbBusTrait for UsbBus {
             // Enable interrupt generation when a buffer is done, when the bus is reset,
             // and when a setup packet is received
             // this should be sufficient for device mode, will need more for host.
-            inner.ctrl_reg.inte.modify(|_, w| {
+            inner.ctrl_reg.inte().modify(|_, w| {
                 w.buff_status()
                     .set_bit()
                     .bus_reset()

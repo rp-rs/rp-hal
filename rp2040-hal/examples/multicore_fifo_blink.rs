@@ -70,11 +70,11 @@ fn core1_task(sys_freq: u32) -> ! {
     let mut led_pin = pins.gpio25.into_push_pull_output();
     let mut delay = cortex_m::delay::Delay::new(core.SYST, sys_freq);
     loop {
-        let input = sio.fifo.read();
+        let input = sio.fifo().read();
         if let Some(word) = input {
             delay.delay_ms(word);
             led_pin.toggle().unwrap();
-            sio.fifo.write_blocking(CORE1_TASK_COMPLETE);
+            sio.fifo().write_blocking(CORE1_TASK_COMPLETE);
         };
     }
 }
@@ -162,10 +162,10 @@ fn main() -> ! {
         }
 
         // Send the new delay time to Core 1. We convert it
-        sio.fifo.write(led_period as u32);
+        sio.fifo().write(led_period as u32);
 
         // Sleep until Core 1 sends a message to tell us it is done
-        let ack = sio.fifo.read_blocking();
+        let ack = sio.fifo().read_blocking();
         if ack != CORE1_TASK_COMPLETE {
             // In a real application you might want to handle the case
             // where the CPU sent the wrong message - we're going to

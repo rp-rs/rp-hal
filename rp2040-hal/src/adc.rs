@@ -447,7 +447,7 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     ///
     /// It will be triggered whenever there are at least `threshold` samples waiting in the FIFO.
     pub fn enable_interrupt(self, threshold: u8) -> Self {
-        self.adc.device.inte.modify(|_, w| w.fifo().set_bit());
+        self.adc.device.inte().modify(|_, w| w.fifo().set_bit());
         self.adc
             .device
             .fcs()
@@ -462,7 +462,7 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     ///
     /// When this method has been called, the resulting fifo's `read` method returns u8.
     pub fn shift_8bit(self) -> AdcFifoBuilder<'a, u8> {
-        self.adc.device.fcs.modify(|_, w| w.shift().set_bit());
+        self.adc.device.fcs().modify(|_, w| w.shift().set_bit());
         AdcFifoBuilder {
             adc: self.adc,
             marker: PhantomData,
@@ -479,7 +479,7 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     pub fn enable_dma(self) -> Self {
         self.adc
             .device
-            .fcs
+            .fcs()
             .modify(|_, w| unsafe { w.dreq_en().set_bit().thresh().bits(1) });
         self
     }
@@ -492,8 +492,8 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     ///
     /// Note: if you plan to use the FIFO for DMA transfers, [`AdcFifoBuilder::prepare`] instead.
     pub fn start(self) -> AdcFifo<'a, Word> {
-        self.adc.device.fcs.modify(|_, w| w.en().set_bit());
-        self.adc.device.cs.modify(|_, w| w.start_many().set_bit());
+        self.adc.device.fcs().modify(|_, w| w.en().set_bit());
+        self.adc.device.cs().modify(|_, w| w.start_many().set_bit());
         AdcFifo {
             adc: self.adc,
             marker: PhantomData,
@@ -506,7 +506,7 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     ///
     /// Use [`AdcFifo::resume`] to start conversion.
     pub fn prepare(self) -> AdcFifo<'a, Word> {
-        self.adc.device.fcs.modify(|_, w| w.en().set_bit());
+        self.adc.device.fcs().modify(|_, w| w.en().set_bit());
         AdcFifo {
             adc: self.adc,
             marker: PhantomData,
@@ -527,7 +527,7 @@ impl<'a, Word> AdcFifo<'a, Word> {
     #[allow(clippy::len_without_is_empty)]
     /// Returns the number of elements currently in the fifo
     pub fn len(&mut self) -> u8 {
-        self.adc.device.fcs.read().level().bits()
+        self.adc.device.fcs().read().level().bits()
     }
 
     /// Check if there was a fifo overrun
@@ -536,11 +536,11 @@ impl<'a, Word> AdcFifo<'a, Word> {
     ///
     /// This function also clears the `over` bit if it was set.
     pub fn is_over(&mut self) -> bool {
-        let over = self.adc.device.fcs.read().over().bit();
+        let over = self.adc.device.fcs().read().over().bit();
         if over {
             self.adc
                 .device
-                .fcs
+                .fcs()
                 .modify(|_, w| w.over().clear_bit_by_one());
         }
         over
@@ -552,11 +552,11 @@ impl<'a, Word> AdcFifo<'a, Word> {
     ///
     /// This function also clears the `under` bit if it was set.
     pub fn is_under(&mut self) -> bool {
-        let under = self.adc.device.fcs.read().under().bit();
+        let under = self.adc.device.fcs().read().under().bit();
         if under {
             self.adc
                 .device
-                .fcs
+                .fcs()
                 .modify(|_, w| w.under().clear_bit_by_one());
         }
         under
@@ -601,7 +601,7 @@ impl<'a, Word> AdcFifo<'a, Word> {
     ///
     /// There may be existing samples in the FIFO though, or a conversion may still be in progress.
     pub fn is_paused(&mut self) -> bool {
-        self.adc.device.cs.read().start_many().bit_is_clear()
+        self.adc.device.cs().read().start_many().bit_is_clear()
     }
 
     /// Temporarily pause conversion
@@ -613,7 +613,10 @@ impl<'a, Word> AdcFifo<'a, Word> {
     /// Note that existing samples can still be read from the FIFO, and can possibly
     /// cause interrupts and DMA transfer progress until the FIFO is emptied.
     pub fn pause(&mut self) {
-        self.adc.device.cs.modify(|_, w| w.start_many().clear_bit());
+        self.adc
+            .device
+            .cs()
+            .modify(|_, w| w.start_many().clear_bit());
     }
 
     /// Resume conversion after it was paused
@@ -624,7 +627,7 @@ impl<'a, Word> AdcFifo<'a, Word> {
     ///
     /// Calling this method when conversion is already running has no effect.
     pub fn resume(&mut self) {
-        self.adc.device.cs.modify(|_, w| w.start_many().set_bit());
+        self.adc.device.cs().modify(|_, w| w.start_many().set_bit());
     }
 
     /// Clears the FIFO, removing all values
@@ -648,29 +651,29 @@ impl<'a, Word> AdcFifo<'a, Word> {
         // stop capture and clear channel selection
         self.adc
             .device
-            .cs
+            .cs()
             .modify(|_, w| unsafe { w.start_many().clear_bit().rrobin().bits(0).ainsel().bits(0) });
         // disable fifo interrupt
-        self.adc.device.inte.modify(|_, w| w.fifo().clear_bit());
+        self.adc.device.inte().modify(|_, w| w.fifo().clear_bit());
         // Wait for one more conversion, then drain remaining values from fifo.
         // This MUST happen *after* the interrupt is disabled, but
         // *before* `thresh` is modified. Otherwise if `INTS.FIFO = 1`,
         // the interrupt will be fired one more time.
         // The only way to clear `INTS.FIFO` is for `FCS.LEVEL` to go
         // below `FCS.THRESH`, which requires `FCS.THRESH` not to be 0.
-        while self.adc.device.cs.read().ready().bit_is_clear() {}
+        while self.adc.device.cs().read().ready().bit_is_clear() {}
         while self.len() > 0 {
             self.read_from_fifo();
         }
         // disable fifo, reset threshold to 0 and disable DMA
         self.adc
             .device
-            .fcs
+            .fcs()
             .modify(|_, w| unsafe { w.en().clear_bit().thresh().bits(0).dreq_en().clear_bit() });
         // reset clock divider
         self.adc
             .device
-            .div
+            .div()
             .modify(|_, w| unsafe { w.int().bits(0).frac().bits(0) });
         self.adc
     }
@@ -679,11 +682,11 @@ impl<'a, Word> AdcFifo<'a, Word> {
     ///
     /// Interrupts must be enabled ([`AdcFifoBuilder::enable_interrupt`]), or else this methods blocks forever.
     pub fn wait_for_interrupt(&mut self) {
-        while self.adc.device.intr.read().fifo().bit_is_clear() {}
+        while self.adc.device.intr().read().fifo().bit_is_clear() {}
     }
 
     fn read_from_fifo(&mut self) -> u16 {
-        self.adc.device.fifo.read().val().bits()
+        self.adc.device.fifo().read().val().bits()
     }
 
     /// Returns a read-target for initiating DMA transfers
@@ -691,7 +694,7 @@ impl<'a, Word> AdcFifo<'a, Word> {
     /// The [`DmaReadTarget`] returned by this function can be used to initiate DMA transfers
     /// reading from the ADC.
     pub fn dma_read_target(&self) -> DmaReadTarget<Word> {
-        DmaReadTarget(&self.adc.device.fifo as *const _ as u32, PhantomData)
+        DmaReadTarget(&self.adc.device.fifo() as *const _ as u32, PhantomData)
     }
 }
 

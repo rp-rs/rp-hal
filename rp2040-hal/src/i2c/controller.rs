@@ -34,10 +34,10 @@ where
         i2c.reset_bring_down(resets);
         i2c.reset_bring_up(resets);
 
-        i2c.ic_enable.write(|w| w.enable().disabled());
+        i2c.ic_enable().write(|w| w.enable().disabled());
 
         // select controller mode & speed
-        i2c.ic_con.modify(|_, w| {
+        i2c.ic_con().modify(|_, w| {
             w.speed().fast();
             w.master_mode().enabled();
             w.ic_slave_disable().slave_disabled();
@@ -46,8 +46,8 @@ where
         });
 
         // Clear FIFO threshold
-        i2c.ic_tx_tl.write(|w| unsafe { w.tx_tl().bits(0) });
-        i2c.ic_rx_tl.write(|w| unsafe { w.rx_tl().bits(0) });
+        i2c.ic_tx_tl().write(|w| unsafe { w.tx_tl().bits(0) });
+        i2c.ic_rx_tl().write(|w| unsafe { w.rx_tl().bits(0) });
 
         let freq_in = system_clock.to_Hz();
 
@@ -84,33 +84,34 @@ where
         assert!(sda_tx_hold_count <= lcnt - 2);
 
         unsafe {
-            i2c.ic_fs_scl_hcnt
+            i2c.ic_fs_scl_hcnt()
                 .write(|w| w.ic_fs_scl_hcnt().bits(hcnt as u16));
-            i2c.ic_fs_scl_lcnt
+            i2c.ic_fs_scl_lcnt()
                 .write(|w| w.ic_fs_scl_lcnt().bits(lcnt as u16));
             // spike filter duration
-            i2c.ic_fs_spklen.write(|w| {
+            i2c.ic_fs_spklen().write(|w| {
                 let ticks = if lcnt < 16 { 1 } else { (lcnt / 16) as u8 };
                 w.ic_fs_spklen().bits(ticks)
             });
             // sda hold time
-            i2c.ic_sda_hold
+            i2c.ic_sda_hold()
                 .modify(|_r, w| w.ic_sda_tx_hold().bits(sda_tx_hold_count as u16));
 
             // make TX_EMPTY raise when the tx fifo is not full
-            i2c.ic_tx_tl.write(|w| w.tx_tl().bits(Self::TX_FIFO_DEPTH));
+            i2c.ic_tx_tl()
+                .write(|w| w.tx_tl().bits(Self::TX_FIFO_DEPTH));
             // make RX_FULL raise when the rx fifo contains at least 1 byte
-            i2c.ic_rx_tl.write(|w| w.rx_tl().bits(0));
+            i2c.ic_rx_tl().write(|w| w.rx_tl().bits(0));
             // Enable clock stretching.
             // Will hold clock when:
             // - receiving and rx fifo is full
             // - writting and tx fifo is empty
-            i2c.ic_con
+            i2c.ic_con()
                 .modify(|_, w| w.rx_fifo_full_hld_ctrl().enabled());
         }
 
         // Enable I2C block
-        i2c.ic_enable.write(|w| w.enable().enabled());
+        i2c.ic_enable().write(|w| w.enable().enabled());
 
         Self {
             i2c,
@@ -143,25 +144,27 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
     fn setup<A: ValidAddress>(&mut self, addr: A) -> Result<(), Error> {
         addr.is_valid()?;
 
-        self.i2c.ic_enable.write(|w| w.enable().disabled());
+        self.i2c.ic_enable().write(|w| w.enable().disabled());
         self.i2c
-            .ic_con
+            .ic_con()
             .modify(|_, w| w.ic_10bitaddr_master().variant(A::BIT_ADDR_M));
 
         let addr = addr.into();
-        self.i2c.ic_tar.write(|w| unsafe { w.ic_tar().bits(addr) });
-        self.i2c.ic_enable.write(|w| w.enable().enabled());
+        self.i2c
+            .ic_tar()
+            .write(|w| unsafe { w.ic_tar().bits(addr) });
+        self.i2c.ic_enable().write(|w| w.enable().enabled());
         Ok(())
     }
 
     #[inline]
     fn read_and_clear_abort_reason(&mut self) -> Result<(), Error> {
-        let abort_reason = self.i2c.ic_tx_abrt_source.read().bits();
+        let abort_reason = self.i2c.ic_tx_abrt_source().read().bits();
         if abort_reason != 0 {
             // Note clearing the abort flag also clears the reason, and
             // this instance of flag is clear-on-read! Note also the
             // IC_CLR_TX_ABRT register always reads as 0.
-            self.i2c.ic_clr_tx_abrt.read();
+            self.i2c.ic_clr_tx_abrt().read();
             Err(Error::Abort(abort_reason))
         } else {
             Ok(())
@@ -180,7 +183,7 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
 
     #[inline]
     fn poll_tx_empty(&mut self) -> Poll<()> {
-        if self.i2c.ic_raw_intr_stat.read().tx_empty().is_inactive() {
+        if self.i2c.ic_raw_intr_stat().read().tx_empty().is_inactive() {
             Poll::Pending
         } else {
             Poll::Ready(())
@@ -189,7 +192,7 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
 
     #[inline]
     fn poll_stop_deteced(&mut self) -> Poll<()> {
-        if self.i2c.ic_raw_intr_stat.read().stop_det().is_inactive() {
+        if self.i2c.ic_raw_intr_stat().read().stop_det().is_inactive() {
             Poll::Pending
         } else {
             Poll::Ready(())
@@ -198,17 +201,17 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
 
     #[inline]
     fn abort(&mut self) {
-        self.i2c.ic_enable.modify(|_, w| w.abort().set_bit());
-        while self.i2c.ic_enable.read().abort().bit_is_set() {
+        self.i2c.ic_enable().modify(|_, w| w.abort().set_bit());
+        while self.i2c.ic_enable().read().abort().bit_is_set() {
             cortex_m::asm::nop()
         }
-        while self.i2c.ic_raw_intr_stat.read().tx_abrt().bit_is_clear() {
+        while self.i2c.ic_raw_intr_stat().read().tx_abrt().bit_is_clear() {
             cortex_m::asm::nop()
         }
         // clear tx_abort interrupt flags (might have already been clear by irq)
-        self.i2c.ic_clr_tx_abrt.read();
+        self.i2c.ic_clr_tx_abrt().read();
         // clear tx_abrt_source by reading it
-        self.i2c.ic_tx_abrt_source.read();
+        self.i2c.ic_tx_abrt_source().read();
     }
 
     fn read_internal(
@@ -229,9 +232,9 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
             let last_byte = i == lastindex;
 
             // wait until there is space in the FIFO to write the next byte
-            while self.i2c.ic_status.read().tfnf().bit_is_clear() {}
+            while self.i2c.ic_status().read().tfnf().bit_is_clear() {}
 
-            self.i2c.ic_data_cmd.write(|w| {
+            self.i2c.ic_data_cmd().write(|w| {
                 if first_byte {
                     if !first_transaction {
                         w.restart().enable();
@@ -243,11 +246,11 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
                 w.cmd().read()
             });
 
-            while self.i2c.ic_rxflr.read().bits() == 0 {
+            while self.i2c.ic_rxflr().read().bits() == 0 {
                 self.read_and_clear_abort_reason()?;
             }
 
-            *byte = self.i2c.ic_data_cmd.read().dat().bits();
+            *byte = self.i2c.ic_data_cmd().read().dat().bits();
         }
 
         Ok(())
@@ -285,7 +288,7 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
 
             // else enqueue
             let last = peekable.peek().is_none();
-            self.i2c.ic_data_cmd.write(|w| {
+            self.i2c.ic_data_cmd().write(|w| {
                 if first_byte {
                     if !first_transaction {
                         w.restart().enable();
@@ -308,7 +311,7 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
             // If the transaction was aborted or if it completed
             // successfully wait until the STOP condition has occured.
             while self.poll_stop_deteced().is_pending() {}
-            self.i2c.ic_clr_stop_det.read().clr_stop_det();
+            self.i2c.ic_clr_stop_det().read().clr_stop_det();
         }
         // Note: the hardware issues a STOP automatically on an abort condition.
         // Note: the hardware also clears RX FIFO as well as TX on abort

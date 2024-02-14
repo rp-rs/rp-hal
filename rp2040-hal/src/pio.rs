@@ -1791,7 +1791,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
     pub fn raw(&self) -> InterruptState {
         InterruptState(
             // Safety: Read only access without side effect
-            unsafe { self.block().intr.read().bits() },
+            unsafe { self.block().intr().read().bits() },
         )
     }
 

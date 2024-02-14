@@ -95,15 +95,15 @@ where
         i2c.reset_bring_down(resets);
         i2c.reset_bring_up(resets);
 
-        i2c.ic_enable.write(|w| w.enable().disabled());
+        i2c.ic_enable().write(|w| w.enable().disabled());
 
         // TODO: Validate address?
         let addr = addr.into();
         // SAFETY: Only address by this function. IC_SAR spec filters out bits 15:10.
         // Any value is valid for the controller. They may not be for the bus itself though.
-        i2c.ic_sar.write(|w| unsafe { w.ic_sar().bits(addr) });
+        i2c.ic_sar().write(|w| unsafe { w.ic_sar().bits(addr) });
         // select peripheral mode & speed
-        i2c.ic_con.modify(|_, w| {
+        i2c.ic_con().modify(|_, w| {
             // run in fast mode
             w.speed().fast();
             // setup slave mode
@@ -118,10 +118,10 @@ where
 
         // Clear FIFO threshold
         // SAFETY: Only address by this function. The field is 8bit long. 0 is a valid value.
-        i2c.ic_tx_tl.write(|w| unsafe { w.tx_tl().bits(0) });
-        i2c.ic_rx_tl.write(|w| unsafe { w.rx_tl().bits(0) });
+        i2c.ic_tx_tl().write(|w| unsafe { w.tx_tl().bits(0) });
+        i2c.ic_rx_tl().write(|w| unsafe { w.rx_tl().bits(0) });
 
-        i2c.ic_clr_intr.read();
+        i2c.ic_clr_intr().read();
 
         let mut me = Self {
             i2c,
@@ -130,7 +130,7 @@ where
         };
         me.unmask_intr();
         // Enable I2C block
-        me.i2c.ic_enable.write(|w| w.enable().enabled());
+        me.i2c.ic_enable().write(|w| w.enable().enabled());
 
         me
     }
@@ -140,7 +140,7 @@ fn unmask_intr(i2c: &RegisterBlock) {
     // SAFETY: 0 is a valid value meaning all irq masked.
     // This operation is atomic, `write_with_zero` only writes to the register.
     unsafe {
-        i2c.ic_intr_mask.write_with_zero(|w| {
+        i2c.ic_intr_mask().write_with_zero(|w| {
             // Only keep these IRQ enabled.
             w.m_start_det()
                 .disabled()
@@ -157,7 +157,7 @@ fn unmask_intr(i2c: &RegisterBlock) {
 /// SAFETY: Takes a non-mutable reference to RegisterBlock but mutates its `ic_intr_mask` register.
 unsafe fn mask_intr(i2c: &RegisterBlock) {
     // 0 is a valid value and means all flag masked.
-    unsafe { i2c.ic_intr_mask.write_with_zero(|w| w) }
+    unsafe { i2c.ic_intr_mask().write_with_zero(|w| w) }
 }
 
 impl<T: Deref<Target = RegisterBlock>, PINS> I2C<T, PINS, Peripheral> {
@@ -174,7 +174,7 @@ impl<T: Deref<Target = RegisterBlock>, PINS> I2C<T, PINS, Peripheral> {
     /// are effectively received by the controller.
     pub fn write(&mut self, buf: &[u8]) -> usize {
         // just in case, clears previous tx abort.
-        self.i2c.ic_clr_tx_abrt.read();
+        self.i2c.ic_clr_tx_abrt().read();
 
         let mut sent = 0;
         for &b in buf.iter() {
@@ -183,11 +183,11 @@ impl<T: Deref<Target = RegisterBlock>, PINS> I2C<T, PINS, Peripheral> {
             }
 
             // SAFETY: dat field is 8bits long. All values are valid.
-            self.i2c.ic_data_cmd.write(|w| unsafe { w.dat().bits(b) });
+            self.i2c.ic_data_cmd().write(|w| unsafe { w.dat().bits(b) });
             sent += 1;
         }
         // serve a pending read request
-        self.i2c.ic_clr_rd_req.read();
+        self.i2c.ic_clr_rd_req().read();
         sent
     }
 
@@ -205,18 +205,18 @@ impl<T: Deref<Target = RegisterBlock>, PINS> Iterator for I2C<T, PINS, Periphera
         if self.rx_fifo_empty() {
             None
         } else {
-            Some(self.i2c.ic_data_cmd.read().dat().bits())
+            Some(self.i2c.ic_data_cmd().read().dat().bits())
         }
     }
 }
 impl<T: Deref<Target = RegisterBlock>, PINS> I2C<T, PINS, Peripheral> {
     /// Returns the next i2c event if any.
     pub fn next_event(&mut self) -> Option<Event> {
-        let stat = self.i2c.ic_raw_intr_stat.read();
+        let stat = self.i2c.ic_raw_intr_stat().read();
 
         match self.mode.state {
             State::Idle if stat.start_det().bit_is_set() => {
-                self.i2c.ic_clr_start_det.read();
+                self.i2c.ic_clr_start_det().read();
                 self.mode.state = State::Active;
                 Some(Event::Start)
             }
@@ -229,7 +229,7 @@ impl<T: Deref<Target = RegisterBlock>, PINS> I2C<T, PINS, Peripheral> {
                 // It cannot be due the end of the current request as SCL is held low while waiting
                 // for user input.
                 if stat.stop_det().bit_is_set() {
-                    self.i2c.ic_clr_stop_det.read();
+                    self.i2c.ic_clr_stop_det().read();
                 }
                 Some(Event::TransferRead)
             }
@@ -242,15 +242,15 @@ impl<T: Deref<Target = RegisterBlock>, PINS> I2C<T, PINS, Peripheral> {
             State::Write if !self.rx_fifo_empty() => Some(Event::TransferWrite),
 
             State::Read | State::Write if stat.restart_det().bit_is_set() => {
-                self.i2c.ic_clr_restart_det.read();
-                self.i2c.ic_clr_start_det.read();
+                self.i2c.ic_clr_restart_det().read();
+                self.i2c.ic_clr_start_det().read();
                 self.mode.state = State::Active;
                 Some(Event::Restart)
             }
 
             _ if stat.stop_det().bit_is_set() => {
-                self.i2c.ic_clr_stop_det.read();
-                self.i2c.ic_clr_tx_abrt.read();
+                self.i2c.ic_clr_stop_det().read();
+                self.i2c.ic_clr_tx_abrt().read();
                 self.mode.state = State::Idle;
                 Some(Event::Stop)
             }
@@ -299,7 +299,7 @@ where
             CancellablePollFn::new(
                 self,
                 |me| {
-                    let stat = me.i2c.ic_raw_intr_stat.read();
+                    let stat = me.i2c.ic_raw_intr_stat().read();
                     if stat.start_det().bit_is_set()
                         || stat.restart_det().bit_is_set()
                         || stat.stop_det().bit_is_set()

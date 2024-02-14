@@ -445,7 +445,7 @@ where
     pub fn enable_interrupt(&mut self) {
         unsafe {
             let pwm = &(*pac::PWM::ptr());
-            let reg = pwm.inte.as_ptr();
+            let reg = pwm.inte().as_ptr();
             write_bitmask_set(reg, self.bitmask());
         }
     }
@@ -455,7 +455,7 @@ where
     pub fn disable_interrupt(&mut self) {
         unsafe {
             let pwm = &(*pac::PWM::ptr());
-            let reg = pwm.inte.as_ptr();
+            let reg = pwm.inte().as_ptr();
             write_bitmask_clear(reg, self.bitmask());
         };
     }
@@ -468,13 +468,13 @@ where
     #[inline]
     pub fn has_overflown(&self) -> bool {
         let mask = self.bitmask();
-        unsafe { (*pac::PWM::ptr()).intr.read().bits() & mask == mask }
+        unsafe { (*pac::PWM::ptr()).intr().read().bits() & mask == mask }
     }
 
     /// Mark the interrupt handled for this slice.
     #[inline]
     pub fn clear_interrupt(&mut self) {
-        unsafe { (*pac::PWM::ptr()).intr.write(|w| w.bits(self.bitmask())) };
+        unsafe { (*pac::PWM::ptr()).intr().write(|w| w.bits(self.bitmask())) };
     }
 
     /// Force the interrupt. This bit is not cleared by hardware and must be manually cleared to
