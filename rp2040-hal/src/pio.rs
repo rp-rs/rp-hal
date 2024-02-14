@@ -39,22 +39,22 @@ pub trait PIOExt: Deref<Target = RegisterBlock> + SubsystemReset + Sized + Send 
 
         let sm0 = UninitStateMachine {
             block: self.deref(),
-            sm: &self.deref().sm(0),
+            sm: self.sm(0),
             _phantom: core::marker::PhantomData,
         };
         let sm1 = UninitStateMachine {
             block: self.deref(),
-            sm: &self.deref().sm(1),
+            sm: self.sm(1),
             _phantom: core::marker::PhantomData,
         };
         let sm2 = UninitStateMachine {
             block: self.deref(),
-            sm: &self.deref().sm(2),
+            sm: self.sm(2),
             _phantom: core::marker::PhantomData,
         };
         let sm3 = UninitStateMachine {
             block: self.deref(),
-            sm: &self.deref().sm(3),
+            sm: self.sm(3),
             _phantom: core::marker::PhantomData,
         };
         (

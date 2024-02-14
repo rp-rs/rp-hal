@@ -319,7 +319,7 @@ macro_rules! impl_alarm {
 
                 // This lock is for time-criticality
                 cortex_m::interrupt::free(|_| {
-                    let alarm = &timer.$timer_alarm;
+                    let alarm = &timer.$timer_alarm();
 
                     // safety: This is the only code in the codebase that accesses memory address $timer_alarm
                     alarm.write(|w| unsafe { w.bits(timestamp_low) });
