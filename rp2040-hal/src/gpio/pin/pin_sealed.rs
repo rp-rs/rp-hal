@@ -136,7 +136,7 @@ where
         match pin.bank {
             DynBankId::Bank0 => {
                 let gpio = unsafe { &*pac::PADS_BANK0::PTR };
-                &gpio.gpio(usize::from(pin.num))
+                gpio.gpio(usize::from(pin.num))
             }
             DynBankId::Qspi => unsafe {
                 let qspi = &*pac::PADS_QSPI::PTR;
@@ -170,7 +170,7 @@ where
         unsafe {
             let syscfg = &*pac::SYSCFG::PTR;
             match pin.bank {
-                DynBankId::Bank0 => &syscfg.proc_in_sync_bypass(),
+                DynBankId::Bank0 => syscfg.proc_in_sync_bypass(),
                 DynBankId::Qspi => core::mem::transmute(&syscfg.proc_in_sync_bypass_hi()),
             }
         }

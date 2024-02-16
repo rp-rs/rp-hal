@@ -1812,7 +1812,7 @@ impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
     }
 
     unsafe fn irq(&self) -> &crate::pac::pio0::SM_IRQ {
-        &self.block().sm_irq(IRQ)
+        self.block().sm_irq(IRQ)
     }
 }
 

@@ -17,7 +17,7 @@ pub(super) unsafe trait RegisterInterface {
     #[inline]
     fn ch(&self) -> &CH {
         let num = self.id().num as usize;
-        unsafe { &(*pac::PWM::ptr()).ch(num) }
+        unsafe { (*pac::PWM::ptr()).ch(num) }
     }
 
     #[inline]
