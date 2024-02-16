@@ -85,7 +85,7 @@ macro_rules! accessor_fns {
                         DynBankId::Bank0 => {
                             let bank = &*$crate::pac::IO_BANK0::PTR;
                             match proc {
-                                CoreId::Core0 => &bank.[<proc0_ $reg:lower>](usize::from(index)),
+                                CoreId::Core0 => bank.[<proc0_ $reg:lower>](usize::from(index)),
                                 CoreId::Core1 => core::mem::transmute(&bank.[<proc1_ $reg:lower>](usize::from(index))),
                             }
                         }
@@ -111,7 +111,7 @@ macro_rules! accessor_fns {
                     let reg = match pin.bank {
                         DynBankId::Bank0 => {
                             let bank = &*$crate::pac::IO_BANK0::PTR;
-                            &bank.[< dormant_wake_ $reg:lower>](usize::from(index))
+                            bank.[< dormant_wake_ $reg:lower>](usize::from(index))
                         }
                         DynBankId::Qspi => {
                             let bank = &*$crate::pac::IO_QSPI::PTR;
@@ -183,7 +183,7 @@ where
             let reg = match pin.bank {
                 DynBankId::Bank0 => {
                     let bank = &*pac::IO_BANK0::PTR;
-                    &bank.intr(usize::from(index))
+                    bank.intr(usize::from(index))
                 }
                 DynBankId::Qspi => {
                     let bank = &*pac::IO_QSPI::PTR;
