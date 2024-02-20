@@ -694,7 +694,7 @@ impl<'a, Word> AdcFifo<'a, Word> {
     /// The [`DmaReadTarget`] returned by this function can be used to initiate DMA transfers
     /// reading from the ADC.
     pub fn dma_read_target(&self) -> DmaReadTarget<Word> {
-        DmaReadTarget(&self.adc.device.fifo() as *const _ as u32, PhantomData)
+        DmaReadTarget(self.adc.device.fifo() as *const _ as u32, PhantomData)
     }
 }
 

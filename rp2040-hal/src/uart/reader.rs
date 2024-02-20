@@ -244,7 +244,7 @@ unsafe impl<D: UartDevice, P: ValidUartPinout<D>> ReadTarget for Reader<D, P> {
     }
 
     fn rx_address_count(&self) -> (u32, u32) {
-        (&self.device.uartdr() as *const _ as u32, u32::MAX)
+        (self.device.uartdr() as *const _ as u32, u32::MAX)
     }
 
     fn rx_increment(&self) -> bool {

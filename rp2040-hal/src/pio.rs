@@ -1432,7 +1432,7 @@ unsafe impl<SM: ValidStateMachine> ReadTarget for Rx<SM> {
 
     fn rx_address_count(&self) -> (u32, u32) {
         (
-            &unsafe { &*self.block }.rxf(SM::id()) as *const _ as u32,
+            unsafe { &*self.block }.rxf(SM::id()) as *const _ as u32,
             u32::MAX,
         )
     }
@@ -1626,7 +1626,7 @@ unsafe impl<SM: ValidStateMachine> WriteTarget for Tx<SM> {
 
     fn tx_address_count(&mut self) -> (u32, u32) {
         (
-            &unsafe { &*self.block }.txf(SM::id()) as *const _ as u32,
+            unsafe { &*self.block }.txf(SM::id()) as *const _ as u32,
             u32::MAX,
         )
     }
