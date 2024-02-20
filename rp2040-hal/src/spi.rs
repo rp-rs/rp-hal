@@ -518,7 +518,7 @@ macro_rules! impl_write {
 
             fn rx_address_count(&self) -> (u32, u32) {
                 (
-                    &self.device.sspdr() as *const _ as u32,
+                    self.device.sspdr() as *const _ as u32,
                     u32::MAX,
                 )
             }
@@ -541,7 +541,7 @@ macro_rules! impl_write {
 
             fn tx_address_count(&mut self) -> (u32, u32) {
                 (
-                    &self.device.sspdr() as *const _ as u32,
+                    self.device.sspdr() as *const _ as u32,
                     u32::MAX,
                 )
             }
