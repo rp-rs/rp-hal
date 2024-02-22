@@ -8,21 +8,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Allow to use ADC free-running mode without FIFO.
+
+- Implement i2c-write-iter traits - #765 @ithinuel
+- Add categories and keywords to Cargo.toml - #769 @rursprung
+- Add getters to the various pad overrides - #768 @ithinuel
+- Add an example for using embedded-alloc - #306 @umgefahren @jannic
+- Introduce async.await i2c implementation - #747 @ithinuel
+- Support embedded\_hal 1.0.0 - #734 #736 #753 @jannic @jonathanpallant
+- Implement defmt formatting and Debug for clocks::InitError - #751 @jannic
+- Implement embedded-io Read + Write for UartPeripheral - #727 @Sympatron
+- Add from\_installed\_program with correct shift direction - #715 @jannic
+- Add derive(defmt::Format) to i2c::peripheral::I2CEvent - #726 @ithinuel
+- Make PIO IRQ IDs into ZSTs - #723 @9ary
+- Add RTC examples & expand RealTimeClock & ClockManager capabilities - #676 @ithinuel
+- Allow to use ADC free-running mode without FIFO - #739 @jannic
+- Add on-chip voltage regulator (VREG) voltage setting function - #757 @AkiyukiOkayasu
+- Support for entering and exiting DORMANT mode - #701 @andrewh42
 
 ### Changed
 
-- bump MSRV to 1.65
+- Update lower VCO frequency limit according to datasheet update - #773 @ithinuel
+- bump MSRV to 1.75
 - Set startup\_delay\_multiplier of XOSC to 64, and make it configurable.
   This should increase compatibility with boards where the oscillator starts up
-  more slowly than on the Raspberry Pico.
+  more slowly than on the Raspberry Pico. - #746 @jannic
+- Replace asm macros by rust macros - #730 @jannic
+- Update usb-device implementation - #584 @ithinuel
+- Update rp2040-pac to v0.6.0 and apply required changes - #770 @AkiyukiOkayasu
 - Some reorganization of ADC code, making sure that AdcPin can only
-  be created for pins that can actually be used as ADC channels.
+  be created for pins that can actually be used as ADC channels - #739 @jannic
 - Breaking change: Clear the input-enable flag of all pins on bank 0 in `Pins::new`.
   They will automatically be enabled when setting a pin function, so most users
   won't be affected by that change. Notable exception: If you rely on the fact that
   PIO can read all pins as input even if the pin is not configured to the PIO function,
   you may need to set the input-enable flag manually. - #755 @jannic
+
+### Fixed
+
+- Properly report UART break conditions - #712 @jannic
+- Ensure that i2c pins have PullUp activated - #708 @jannic
+- PWM: Set TOP to 0xfffe by default and fix get\_max\_duty - #744 @jannic
+- Add missing ValidFunction implementation for DynFunction - #738 @ithinuel
+- Fix RealTimeClock & UsbBus ownership - #725 @jnthbdn
+- Make Spi::free also free up the pins - #719 @SCingolani
+- Add safety comments to unsafe rom function - #721 @jannic
 
 ## [0.9.1]
 
