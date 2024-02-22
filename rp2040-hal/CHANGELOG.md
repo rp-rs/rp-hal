@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2024-??-??
+
 ### Added
 
 - Implement i2c-write-iter traits - #765 @ithinuel
@@ -53,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Make Spi::free also free up the pins - #719 @SCingolani
 - Add safety comments to unsafe rom function - #721 @jannic
 
-## [0.9.1]
+## [0.9.1] - 2023-11-12
 
 ### Added
 
@@ -77,7 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improve documentation - #692 #696 #697 #698 #699 #702 #704 #709 #714 @9names @fu5ha @ithinuel @jannic
 - Migrate to eh1\_0 rc 1 - #681 @ithinuel
 
-## [0.9.0]
+## [0.9.0] - 2023-09-01
 
 ### MSRV
 
@@ -387,7 +389,8 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.54.
 
 - Initial release
 
-[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/rp-rs/rp-hal/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/rp-rs/rp-hal/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/rp-rs/rp-hal/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/rp-rs/rp-hal/compare/v0.8.0...v0.8.1
