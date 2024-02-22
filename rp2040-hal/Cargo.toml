@@ -50,6 +50,8 @@ frunk = { version = "0.4.1", default-features = false }
 
 bitfield = { version = "0.14.0" }
 
+i2c-write-iter = { version = "1.0.0", features = ["async"], optional = true }
+
 [dev-dependencies]
 cortex-m-rt = "0.7"
 cortex-m-rtic = "1.1.4"
@@ -100,6 +102,9 @@ defmt = ["dep:defmt"]
 
 # Implement `rtic_monotonic::Monotonic` based on the RP2040 timer peripheral
 rtic-monotonic = ["dep:rtic-monotonic"]
+
+# Implement `i2c-write-iter` traits
+i2c-write-iter = ["dep:i2c-write-iter"]
 
 [[example]]
 # irq example uses cortex-m-rt::interrupt, need rt feature for that

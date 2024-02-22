@@ -386,6 +386,29 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
         }
         Ok(())
     }
+
+    #[cfg(feature = "i2c-write-iter")]
+    fn transaction_iter<'op, A, O, B>(&mut self, address: A, operations: O) -> Result<(), Error>
+    where
+        A: ValidAddress,
+        O: IntoIterator<Item = i2c_write_iter::Operation<'op, B>>,
+        B: IntoIterator<Item = u8>,
+    {
+        use i2c_write_iter::Operation;
+        self.setup(address)?;
+
+        let mut first = true;
+        let mut operations = operations.into_iter().peekable();
+        while let Some(operation) = operations.next() {
+            let last = operations.peek().is_none();
+            match operation {
+                Operation::Read(buf) => self.read_internal(first, buf, last)?,
+                Operation::WriteIter(buf) => self.write_internal(first, buf, last)?,
+            }
+            first = false;
+        }
+        Ok(())
+    }
 }
 
 impl<A: ValidAddress, T: Deref<Target = Block>, PINS> Read<A> for I2C<T, PINS, Controller> {
@@ -456,5 +479,18 @@ impl<A: ValidAddress, T: Deref<Target = Block>, PINS> eh1::I2c<A> for I2C<T, PIN
         operations: &mut [eh1::Operation<'_>],
     ) -> Result<(), Self::Error> {
         self.transaction(address, operations.iter_mut())
+    }
+}
+
+#[cfg(feature = "i2c-write-iter")]
+impl<A: i2c_write_iter::AddressMode + ValidAddress, T: Deref<Target = Block>, PINS>
+    i2c_write_iter::I2cIter<A> for I2C<T, PINS, Controller>
+{
+    fn transaction_iter<'a, O, B>(&mut self, address: A, operations: O) -> Result<(), Self::Error>
+    where
+        O: IntoIterator<Item = i2c_write_iter::Operation<'a, B>>,
+        B: IntoIterator<Item = u8>,
+    {
+        self.transaction_iter(address, operations)
     }
 }

@@ -64,6 +64,12 @@ mod tests {
         run_test(non_blocking::transaction(state, ADDR_10BIT, 7..=14));
     }
 
+    #[test]
+    fn i2c_write_iter(state: &mut State) {
+        run_test(non_blocking::transaction_iter(state, ADDR_7BIT));
+        run_test(non_blocking::transaction_iter(state, ADDR_10BIT));
+    }
+
     // Sad paths:
     // invalid tx buf on write
     // invalid rx buf on read
