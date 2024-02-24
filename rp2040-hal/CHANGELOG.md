@@ -7,12 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Allow to use ADC free-running mode without FIFO.
+
 ### Changed
 
 - bump MSRV to 1.65
 - Set startup\_delay\_multiplier of XOSC to 64, and make it configurable.
   This should increase compatibility with boards where the oscillator starts up
   more slowly than on the Raspberry Pico.
+- Some reorganization of ADC code, making sure that AdcPin can only
+  be created for pins that can actually be used as ADC channels.
 
 ## [0.9.1]
 

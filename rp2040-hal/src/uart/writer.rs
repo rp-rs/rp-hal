@@ -22,14 +22,15 @@ pub fn set_tx_watermark(rb: &RegisterBlock, watermark: FifoWatermark) {
         FifoWatermark::Bytes24 => 1,
         FifoWatermark::Bytes28 => 0,
     };
-    rb.uartifls.modify(|_r, w| unsafe { w.txiflsel().bits(wm) });
+    rb.uartifls()
+        .modify(|_r, w| unsafe { w.txiflsel().bits(wm) });
 }
 
 /// Returns `Err(WouldBlock)` if the UART is still busy transmitting data.
 /// It returns Ok(()) when the TX fifo and the transmit shift register are empty
 /// and the last stop bit is sent.
 pub(crate) fn transmit_flushed(rb: &RegisterBlock) -> nb::Result<(), Infallible> {
-    if rb.uartfr.read().busy().bit_is_set() {
+    if rb.uartfr().read().busy().bit_is_set() {
         Err(WouldBlock)
     } else {
         Ok(())
@@ -38,13 +39,13 @@ pub(crate) fn transmit_flushed(rb: &RegisterBlock) -> nb::Result<(), Infallible>
 
 /// Returns `true` if the TX FIFO has space, or false if it is full
 pub(crate) fn uart_is_writable(rb: &RegisterBlock) -> bool {
-    rb.uartfr.read().txff().bit_is_clear()
+    rb.uartfr().read().txff().bit_is_clear()
 }
 
 /// Returns `true` if the UART is busy transmitting data, `false` after all
 /// bits (including stop bits) have been transmitted.
 pub(crate) fn uart_is_busy(rb: &RegisterBlock) -> bool {
-    rb.uartfr.read().busy().bit_is_set()
+    rb.uartfr().read().busy().bit_is_set()
 }
 
 /// Writes bytes to the UART.
@@ -70,7 +71,7 @@ pub(crate) fn write_raw<'d>(
             }
         }
 
-        rb.uartdr.write(|w| unsafe {
+        rb.uartdr().write(|w| unsafe {
             w.data().bits(*c);
             w
         });
@@ -103,7 +104,8 @@ pub(crate) fn enable_tx_interrupt(rb: &RegisterBlock) {
     // to be when it's half-empty..
 
     // 2 means '<= 1/2 full'.
-    rb.uartifls.modify(|_r, w| unsafe { w.txiflsel().bits(2) });
+    rb.uartifls()
+        .modify(|_r, w| unsafe { w.txiflsel().bits(2) });
 
     // Access the UART Interrupt Mask Set/Clear register. Setting a bit
     // high enables the interrupt.
@@ -112,7 +114,7 @@ pub(crate) fn enable_tx_interrupt(rb: &RegisterBlock) {
     // the TX FIFO level is triggered. This means we don't have to
     // interrupt on every single byte, but can make use of the hardware
     // FIFO.
-    rb.uartimsc.modify(|_r, w| {
+    rb.uartimsc().modify(|_r, w| {
         w.txim().set_bit();
         w
     });
@@ -123,7 +125,7 @@ pub(crate) fn disable_tx_interrupt(rb: &RegisterBlock) {
     // Access the UART Interrupt Mask Set/Clear register. Setting a bit
     // low disables the interrupt.
 
-    rb.uartimsc.modify(|_r, w| {
+    rb.uartimsc().modify(|_r, w| {
         w.txim().clear_bit();
         w
     });
@@ -198,7 +200,7 @@ unsafe impl<D: UartDevice, P: ValidUartPinout<D>> WriteTarget for Writer<D, P> {
     }
 
     fn tx_address_count(&mut self) -> (u32, u32) {
-        (&self.device.uartdr as *const _ as u32, u32::MAX)
+        (self.device.uartdr().as_ptr() as u32, u32::MAX)
     }
 
     fn tx_increment(&self) -> bool {

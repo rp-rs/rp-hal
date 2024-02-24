@@ -43,7 +43,7 @@ impl VectorTable {
     #[allow(unknown_lints)]
     #[allow(clippy::needless_pass_by_ref_mut)]
     pub fn init(&mut self, ppb: &mut crate::pac::PPB) {
-        let vector_table = ppb.vtor.read().bits();
+        let vector_table = ppb.vtor().read().bits();
         unsafe {
             crate::rom_data::memcpy44(
                 &mut self.table as *mut _ as *mut u32,
@@ -82,7 +82,7 @@ impl VectorTable {
     #[allow(unknown_lints)]
     #[allow(clippy::needless_pass_by_ref_mut)]
     pub unsafe fn activate(&mut self, ppb: &mut crate::pac::PPB) {
-        ppb.vtor
+        ppb.vtor()
             .write(|w| w.bits(&mut self.table as *mut _ as *mut u32 as u32));
     }
 }

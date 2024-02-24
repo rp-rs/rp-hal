@@ -33,6 +33,8 @@
 //! * **rtic-monotonic** -
 //!   Implement
 //!   `rtic_monotonic::Monotonic` based on the RP2040 timer peripheral
+//! * **i2c-write-iter** -
+//!   Implement `i2c_write_iter` traits for `I2C<_, _, Controller>`.
 
 #![warn(missing_docs)]
 #![no_std]
@@ -47,6 +49,8 @@ pub use rp2040_pac as pac;
 mod intrinsics;
 
 pub mod adc;
+#[macro_use]
+pub mod async_utils;
 pub(crate) mod atomic_register_access;
 pub mod clocks;
 #[cfg(feature = "critical-section-impl")]
@@ -103,8 +107,10 @@ pub extern crate fugit;
 pub fn reset() -> ! {
     unsafe {
         cortex_m::interrupt::disable();
-        (*pac::PSM::PTR).wdsel.write(|w| w.bits(0x0001ffff));
-        (*pac::WATCHDOG::PTR).ctrl.write(|w| w.trigger().set_bit());
+        (*pac::PSM::PTR).wdsel().write(|w| w.bits(0x0001ffff));
+        (*pac::WATCHDOG::PTR)
+            .ctrl()
+            .write(|w| w.trigger().set_bit());
         #[allow(clippy::empty_loop)]
         loop {}
     }
@@ -121,8 +127,8 @@ pub fn halt() -> ! {
         cortex_m::interrupt::disable();
         // Stop other core
         match crate::Sio::core() {
-            CoreId::Core0 => (*pac::PSM::PTR).frce_off.write(|w| w.proc1().set_bit()),
-            CoreId::Core1 => (*pac::PSM::PTR).frce_off.write(|w| w.proc0().set_bit()),
+            CoreId::Core0 => (*pac::PSM::PTR).frce_off().write(|w| w.proc1().set_bit()),
+            CoreId::Core1 => (*pac::PSM::PTR).frce_off().write(|w| w.proc0().set_bit()),
         }
         // Keep current core running, so debugging stays possible
         loop {

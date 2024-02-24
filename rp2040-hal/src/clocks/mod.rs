@@ -459,26 +459,26 @@ impl ClocksManager {
     /// Configure the clocks staying ON during deep-sleep.
     pub fn configure_sleep_enable(&mut self, clock_gate: ClockGate) {
         self.clocks
-            .sleep_en0
+            .sleep_en0()
             .write(|w| unsafe { w.bits(clock_gate.0 as u32) });
         self.clocks
-            .sleep_en1
+            .sleep_en1()
             .write(|w| unsafe { w.bits((clock_gate.0 >> 32) as u32) });
     }
 
     /// Read the clock gate configuration while the device is in its (deep) sleep state.
     pub fn sleep_enable(&self) -> ClockGate {
         ClockGate(
-            (u64::from(self.clocks.sleep_en1.read().bits()) << 32)
-                | u64::from(self.clocks.sleep_en0.read().bits()),
+            (u64::from(self.clocks.sleep_en1().read().bits()) << 32)
+                | u64::from(self.clocks.sleep_en0().read().bits()),
         )
     }
 
     /// Read the clock gate configuration while the device is in its wake state.
     pub fn wake_enable(&self) -> ClockGate {
         ClockGate(
-            (u64::from(self.clocks.wake_en1.read().bits()) << 32)
-                | u64::from(self.clocks.wake_en0.read().bits()),
+            (u64::from(self.clocks.wake_en1().read().bits()) << 32)
+                | u64::from(self.clocks.wake_en0().read().bits()),
         )
     }
 

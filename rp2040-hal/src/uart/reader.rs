@@ -50,7 +50,7 @@ impl Error for ReadErrorType {
 }
 
 pub(crate) fn is_readable<D: UartDevice>(device: &D) -> bool {
-    device.uartfr.read().rxfe().bit_is_clear()
+    device.uartfr().read().rxfe().bit_is_clear()
 }
 
 /// Enable/disable the rx/tx FIFO
@@ -60,9 +60,9 @@ pub(crate) fn is_readable<D: UartDevice>(device: &D) -> bool {
 /// Default is false
 pub fn set_fifos(rb: &RegisterBlock, enable: bool) {
     if enable {
-        rb.uartlcr_h.modify(|_r, w| w.fen().set_bit())
+        rb.uartlcr_h().modify(|_r, w| w.fen().set_bit())
     } else {
-        rb.uartlcr_h.modify(|_r, w| w.fen().clear_bit())
+        rb.uartlcr_h().modify(|_r, w| w.fen().clear_bit())
     }
 }
 
@@ -77,7 +77,8 @@ pub fn set_rx_watermark(rb: &RegisterBlock, watermark: FifoWatermark) {
         FifoWatermark::Bytes24 => 3,
         FifoWatermark::Bytes28 => 4,
     };
-    rb.uartifls.modify(|_r, w| unsafe { w.rxiflsel().bits(wm) });
+    rb.uartifls()
+        .modify(|_r, w| unsafe { w.rxiflsel().bits(wm) });
 }
 
 /// Enables the Receive Interrupt.
@@ -92,7 +93,7 @@ pub(crate) fn enable_rx_interrupt(rb: &RegisterBlock) {
     // when the RX FIFO is non-empty, but 32-bit periods have passed with
     // no further data. This means we don't have to interrupt on every
     // single byte, but can make use of the hardware FIFO.
-    rb.uartimsc.modify(|_r, w| {
+    rb.uartimsc().modify(|_r, w| {
         w.rxim().set_bit();
         w.rtim().set_bit();
         w
@@ -104,7 +105,7 @@ pub(crate) fn disable_rx_interrupt(rb: &RegisterBlock) {
     // Access the UART Interrupt Mask Set/Clear register. Setting a bit
     // low disables the interrupt.
 
-    rb.uartimsc.modify(|_r, w| {
+    rb.uartimsc().modify(|_r, w| {
         w.rxim().clear_bit();
         w.rtim().clear_bit();
         w
@@ -129,7 +130,7 @@ pub(crate) fn read_raw<'b, D: UartDevice>(
         if bytes_read < buffer.len() {
             let mut error: Option<ReadErrorType> = None;
 
-            let read = device.uartdr.read();
+            let read = device.uartdr().read();
 
             // If multiple status bits are set, report
             // the most serious or most specific condition,
@@ -243,7 +244,7 @@ unsafe impl<D: UartDevice, P: ValidUartPinout<D>> ReadTarget for Reader<D, P> {
     }
 
     fn rx_address_count(&self) -> (u32, u32) {
-        (&self.device.uartdr as *const _ as u32, u32::MAX)
+        (self.device.uartdr().as_ptr() as u32, u32::MAX)
     }
 
     fn rx_increment(&self) -> bool {

@@ -142,37 +142,39 @@ fn main() -> ! {
 /// Measure the actual speed of the ROSC at the current freq_range and drive strength config
 fn rosc_frequency_count_hz(clocks: &CLOCKS) -> HertzU32 {
     // Wait for the frequency counter to be ready
-    while clocks.fc0_status.read().running().bit_is_set() {
+    while clocks.fc0_status().read().running().bit_is_set() {
         cortex_m::asm::nop();
     }
 
     // Set the speed of the reference clock in kHz.
     clocks
-        .fc0_ref_khz
+        .fc0_ref_khz()
         .write(|w| unsafe { w.fc0_ref_khz().bits(XTAL_FREQ_HZ / 1000) });
 
     // Corresponds to a 1ms test time, which seems to give good enough accuracy
     clocks
-        .fc0_interval
+        .fc0_interval()
         .write(|w| unsafe { w.fc0_interval().bits(10) });
 
     // We don't really care about the min/max, so these are just set to min/max values.
     clocks
-        .fc0_min_khz
+        .fc0_min_khz()
         .write(|w| unsafe { w.fc0_min_khz().bits(0) });
     clocks
-        .fc0_max_khz
+        .fc0_max_khz()
         .write(|w| unsafe { w.fc0_max_khz().bits(0xffffffff) });
 
     // To measure rosc directly we use the value 0x03.
-    clocks.fc0_src.write(|w| unsafe { w.fc0_src().bits(0x03) });
+    clocks
+        .fc0_src()
+        .write(|w| unsafe { w.fc0_src().bits(0x03) });
 
     // Wait until the measurement is ready
-    while clocks.fc0_status.read().done().bit_is_clear() {
+    while clocks.fc0_status().read().done().bit_is_clear() {
         cortex_m::asm::nop();
     }
 
-    let speed_hz = clocks.fc0_result.read().khz().bits() * 1000;
+    let speed_hz = clocks.fc0_result().read().khz().bits() * 1000;
     speed_hz.Hz()
 }
 
@@ -217,26 +219,26 @@ fn find_target_rosc_frequency(
 fn set_rosc_div(rosc: &ROSC, div: u32) {
     assert!(div <= 32);
     let div = if div == 32 { 0 } else { div };
-    rosc.div.write(|w| unsafe { w.bits(0xaa0 + div) });
+    rosc.div().write(|w| unsafe { w.bits(0xaa0 + div) });
 }
 
 fn reset_rosc_operating_frequency(rosc: &ROSC) {
     // Set divider to 1
     set_rosc_div(rosc, 1);
-    rosc.ctrl.write(|w| w.freq_range().low());
+    rosc.ctrl().write(|w| w.freq_range().low());
     write_freq_stages(rosc, &[0, 0, 0, 0, 0, 0, 0, 0]);
 }
 
 fn read_freq_stage(rosc: &ROSC, stage: u8) -> u8 {
     match stage {
-        0 => rosc.freqa.read().ds0().bits(),
-        1 => rosc.freqa.read().ds1().bits(),
-        2 => rosc.freqa.read().ds2().bits(),
-        3 => rosc.freqa.read().ds3().bits(),
-        4 => rosc.freqb.read().ds4().bits(),
-        5 => rosc.freqb.read().ds5().bits(),
-        6 => rosc.freqb.read().ds6().bits(),
-        7 => rosc.freqb.read().ds7().bits(),
+        0 => rosc.freqa().read().ds0().bits(),
+        1 => rosc.freqa().read().ds1().bits(),
+        2 => rosc.freqa().read().ds2().bits(),
+        3 => rosc.freqa().read().ds3().bits(),
+        4 => rosc.freqb().read().ds4().bits(),
+        5 => rosc.freqb().read().ds5().bits(),
+        6 => rosc.freqb().read().ds6().bits(),
+        7 => rosc.freqb().read().ds7().bits(),
         _ => panic!("invalid frequency drive strength stage"),
     }
 }
@@ -249,7 +251,7 @@ fn increase_drive_strength(rosc: &ROSC) -> bool {
     for (stage_index, stage) in stages.iter_mut().enumerate() {
         *stage = read_freq_stage(rosc, stage_index as u8)
     }
-    let num_stages_at_drive_level = match rosc.ctrl.read().freq_range().variant() {
+    let num_stages_at_drive_level = match rosc.ctrl().read().freq_range().variant() {
         Some(FREQ_RANGE_A::LOW) => 8,
         Some(FREQ_RANGE_A::MEDIUM) => 6,
         Some(FREQ_RANGE_A::HIGH) => 4,
@@ -293,31 +295,31 @@ fn write_freq_stages(rosc: &ROSC, stages: &[u8; 8]) {
     for (stage_index, stage) in stages.iter().enumerate().skip(4) {
         freq_b |= ((*stage & 0x07) as u32) << ((stage_index - 4) * 4);
     }
-    rosc.freqa.write(|w| unsafe { w.bits(freq_a) });
-    rosc.freqb.write(|w| unsafe { w.bits(freq_b) });
+    rosc.freqa().write(|w| unsafe { w.bits(freq_a) });
+    rosc.freqb().write(|w| unsafe { w.bits(freq_b) });
 }
 
 /// Increase the rosc frequency range up to the next step.
 /// Returns a boolean to indicate whether the frequency was increased.
 fn increase_freq_range(rosc: &ROSC) -> bool {
-    match rosc.ctrl.read().freq_range().variant() {
+    match rosc.ctrl().read().freq_range().variant() {
         None => {
             // Initial unset frequency range, move to LOW frequency range
-            rosc.ctrl.write(|w| w.freq_range().low());
+            rosc.ctrl().write(|w| w.freq_range().low());
             // Reset all the drive strength bits.
             write_freq_stages(rosc, &[0, 0, 0, 0, 0, 0, 0, 0]);
             true
         }
         Some(FREQ_RANGE_A::LOW) => {
             // Transition from LOW to MEDIUM frequency range
-            rosc.ctrl.write(|w| w.freq_range().medium());
+            rosc.ctrl().write(|w| w.freq_range().medium());
             // Reset all the drive strength bits.
             write_freq_stages(rosc, &[0, 0, 0, 0, 0, 0, 0, 0]);
             true
         }
         Some(FREQ_RANGE_A::MEDIUM) => {
             // Transition from MEDIUM to HIGH frequency range
-            rosc.ctrl.write(|w| w.freq_range().high());
+            rosc.ctrl().write(|w| w.freq_range().high());
             // Reset all the drive strength bits.
             write_freq_stages(rosc, &[0, 0, 0, 0, 0, 0, 0, 0]);
             true

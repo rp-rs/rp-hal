@@ -27,7 +27,7 @@ pub trait SingleChannel: Sealed {
     fn enable_irq0(&mut self) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            write_bitmask_set((*DMA::ptr()).inte0.as_ptr(), 1 << self.id());
+            write_bitmask_set((*DMA::ptr()).inte0().as_ptr(), 1 << self.id());
         }
     }
 
@@ -41,7 +41,7 @@ pub trait SingleChannel: Sealed {
     fn disable_irq0(&mut self) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            write_bitmask_clear((*DMA::ptr()).inte0.as_ptr(), 1 << self.id());
+            write_bitmask_clear((*DMA::ptr()).inte0().as_ptr(), 1 << self.id());
         }
     }
 
@@ -50,10 +50,10 @@ pub trait SingleChannel: Sealed {
         // Safety: The following is race-free as we only ever clear the bit for this channel.
         // Nobody else modifies that bit.
         unsafe {
-            let status = (*DMA::ptr()).ints0.read().bits();
+            let status = (*DMA::ptr()).ints0().read().bits();
             if (status & (1 << self.id())) != 0 {
                 // Clear the interrupt.
-                (*DMA::ptr()).ints0.write(|w| w.bits(1 << self.id()));
+                (*DMA::ptr()).ints0().write(|w| w.bits(1 << self.id()));
                 true
             } else {
                 false
@@ -71,7 +71,7 @@ pub trait SingleChannel: Sealed {
     fn enable_irq1(&mut self) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            write_bitmask_set((*DMA::ptr()).inte1.as_ptr(), 1 << self.id());
+            write_bitmask_set((*DMA::ptr()).inte1().as_ptr(), 1 << self.id());
         }
     }
 
@@ -85,7 +85,7 @@ pub trait SingleChannel: Sealed {
     fn disable_irq1(&mut self) {
         // Safety: We only use the atomic alias of the register.
         unsafe {
-            write_bitmask_clear((*DMA::ptr()).inte1.as_ptr(), 1 << self.id());
+            write_bitmask_clear((*DMA::ptr()).inte1().as_ptr(), 1 << self.id());
         }
     }
 
@@ -94,10 +94,10 @@ pub trait SingleChannel: Sealed {
         // Safety: The following is race-free as we only ever clear the bit for this channel.
         // Nobody else modifies that bit.
         unsafe {
-            let status = (*DMA::ptr()).ints1.read().bits();
+            let status = (*DMA::ptr()).ints1().read().bits();
             if (status & (1 << self.id())) != 0 {
                 // Clear the interrupt.
-                (*DMA::ptr()).ints1.write(|w| w.bits(1 << self.id()));
+                (*DMA::ptr()).ints1().write(|w| w.bits(1 << self.id()));
                 true
             } else {
                 false
@@ -199,7 +199,7 @@ impl<CH: SingleChannel> ChannelConfig for CH {
             Pace::PreferSink => TO::tx_treq().or_else(FROM::rx_treq).unwrap_or(TREQ_UNPACED),
         };
         let len = u32::min(src_count, dest_count);
-        self.ch().ch_al1_ctrl.write(|w| unsafe {
+        self.ch().ch_al1_ctrl().write(|w| unsafe {
             w.data_size().bits(mem::size_of::<WORD>() as u8 >> 1);
             w.incr_read().bit(src_incr);
             w.incr_write().bit(dest_incr);
@@ -209,14 +209,14 @@ impl<CH: SingleChannel> ChannelConfig for CH {
             w.en().bit(true);
             w
         });
-        self.ch().ch_read_addr.write(|w| unsafe { w.bits(src) });
-        self.ch().ch_trans_count.write(|w| unsafe { w.bits(len) });
+        self.ch().ch_read_addr().write(|w| unsafe { w.bits(src) });
+        self.ch().ch_trans_count().write(|w| unsafe { w.bits(len) });
         if start {
             self.ch()
-                .ch_al2_write_addr_trig
+                .ch_al2_write_addr_trig()
                 .write(|w| unsafe { w.bits(dest) });
         } else {
-            self.ch().ch_write_addr.write(|w| unsafe { w.bits(dest) });
+            self.ch().ch_write_addr().write(|w| unsafe { w.bits(dest) });
         }
     }
 
@@ -228,14 +228,14 @@ impl<CH: SingleChannel> ChannelConfig for CH {
         // succession, yet we did not notice, as the situation is not distinguishable from one
         // where the second channel was not started at all.
 
-        self.ch().ch_al1_ctrl.modify(|_, w| unsafe {
+        self.ch().ch_al1_ctrl().modify(|_, w| unsafe {
             w.chain_to().bits(other.id());
             w.en().clear_bit();
             w
         });
-        if self.ch().ch_al1_ctrl.read().busy().bit_is_set() {
+        if self.ch().ch_al1_ctrl().read().busy().bit_is_set() {
             // This channel is still active, so just continue.
-            self.ch().ch_al1_ctrl.modify(|_, w| w.en().set_bit());
+            self.ch().ch_al1_ctrl().modify(|_, w| w.en().set_bit());
         } else {
             // This channel has already finished, so just start the other channel directly.
             other.start();
@@ -246,7 +246,7 @@ impl<CH: SingleChannel> ChannelConfig for CH {
         // Safety: The write does not interfere with any other writes, it only affects this
         // channel.
         unsafe { &*crate::pac::DMA::ptr() }
-            .multi_chan_trigger
+            .multi_chan_trigger()
             .write(|w| unsafe { w.bits(1 << self.id()) });
     }
 
@@ -255,7 +255,7 @@ impl<CH: SingleChannel> ChannelConfig for CH {
         // channel and other (which we have an exclusive borrow of).
         let channel_flags = 1 << self.id() | 1 << other.id();
         unsafe { &*crate::pac::DMA::ptr() }
-            .multi_chan_trigger
+            .multi_chan_trigger()
             .write(|w| unsafe { w.bits(channel_flags) });
     }
 }

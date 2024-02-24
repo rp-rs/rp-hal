@@ -141,8 +141,8 @@ where
 
     /// Check if the transfer is completed
     pub fn is_done(&self) -> bool {
-        let a = self.ch.1.ch().ch_ctrl_trig.read().busy().bit_is_set();
-        let b = self.ch.0.ch().ch_ctrl_trig.read().busy().bit_is_set();
+        let a = self.ch.1.ch().ch_ctrl_trig().read().busy().bit_is_set();
+        let b = self.ch.0.ch().ch_ctrl_trig().read().busy().bit_is_set();
         !(a | b)
     }
 

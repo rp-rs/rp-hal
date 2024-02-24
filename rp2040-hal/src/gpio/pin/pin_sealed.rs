@@ -43,8 +43,8 @@ macro_rules! accessor_fns {
                 unsafe {
                     let sio = &*$crate::pac::SIO::PTR;
                     match pin.bank {
-                        DynBankId::Bank0 => &sio.[<gpio_ $reg:lower>],
-                        DynBankId::Qspi => core::mem::transmute(&sio.[<gpio_hi_ $reg:lower>]),
+                        DynBankId::Bank0 => &sio.[<gpio_ $reg:lower>](),
+                        DynBankId::Qspi => core::mem::transmute(&sio.[<gpio_hi_ $reg:lower>]()),
                     }
                 }
             }
@@ -57,17 +57,17 @@ macro_rules! accessor_fns {
                 match pin.bank {
                     DynBankId::Bank0 => {
                         let gpio = unsafe { &*$crate::pac::IO_BANK0::PTR };
-                        &gpio.gpio[usize::from(pin.num)].[<gpio_ $reg:lower>]
+                        &gpio.gpio(usize::from(pin.num)).[<gpio_ $reg:lower>]()
                     }
                     DynBankId::Qspi => unsafe {
                         let qspi = &*$crate::pac::IO_QSPI::PTR;
                         match pin.num {
-                            0 => core::mem::transmute(&qspi.gpio_qspisclk().[<gpio_ $reg:lower>]),
-                            1 => core::mem::transmute(&qspi.gpio_qspiss().[<gpio_ $reg:lower>]),
-                            2 => core::mem::transmute(&qspi.gpio_qspisd0().[<gpio_ $reg:lower>]),
-                            3 => core::mem::transmute(&qspi.gpio_qspisd1().[<gpio_ $reg:lower>]),
-                            4 => core::mem::transmute(&qspi.gpio_qspisd2().[<gpio_ $reg:lower>]),
-                            5 => core::mem::transmute(&qspi.gpio_qspisd3().[<gpio_ $reg:lower>]),
+                            0 => core::mem::transmute(&qspi.gpio_qspisclk().[<gpio_ $reg:lower>]()),
+                            1 => core::mem::transmute(&qspi.gpio_qspiss().[<gpio_ $reg:lower>]()),
+                            2 => core::mem::transmute(&qspi.gpio_qspisd0().[<gpio_ $reg:lower>]()),
+                            3 => core::mem::transmute(&qspi.gpio_qspisd1().[<gpio_ $reg:lower>]()),
+                            4 => core::mem::transmute(&qspi.gpio_qspisd2().[<gpio_ $reg:lower>]()),
+                            5 => core::mem::transmute(&qspi.gpio_qspisd3().[<gpio_ $reg:lower>]()),
                             _ => unreachable!("Invalid QSPI bank pin number."),
                         }
                     },
@@ -85,15 +85,15 @@ macro_rules! accessor_fns {
                         DynBankId::Bank0 => {
                             let bank = &*$crate::pac::IO_BANK0::PTR;
                             match proc {
-                                CoreId::Core0 => &bank.[<proc0_ $reg:lower>][usize::from(index)],
-                                CoreId::Core1 => core::mem::transmute(&bank.[<proc1_ $reg:lower>][usize::from(index)]),
+                                CoreId::Core0 => bank.[<proc0_ $reg:lower>](usize::from(index)),
+                                CoreId::Core1 => core::mem::transmute(&bank.[<proc1_ $reg:lower>](usize::from(index))),
                             }
                         }
                         DynBankId::Qspi => {
                             let bank = &*$crate::pac::IO_QSPI::PTR;
                             match proc {
-                                CoreId::Core0 => core::mem::transmute(&bank.[<proc0_ $reg:lower>]),
-                                CoreId::Core1 => core::mem::transmute(&bank.[<proc1_ $reg:lower>]),
+                                CoreId::Core0 => core::mem::transmute(&bank.[<proc0_ $reg:lower>]()),
+                                CoreId::Core1 => core::mem::transmute(&bank.[<proc1_ $reg:lower>]()),
                             }
                         }
                     };
@@ -111,11 +111,11 @@ macro_rules! accessor_fns {
                     let reg = match pin.bank {
                         DynBankId::Bank0 => {
                             let bank = &*$crate::pac::IO_BANK0::PTR;
-                            &bank.[< dormant_wake_ $reg:lower>][usize::from(index)]
+                            bank.[< dormant_wake_ $reg:lower>](usize::from(index))
                         }
                         DynBankId::Qspi => {
                             let bank = &*$crate::pac::IO_QSPI::PTR;
-                            core::mem::transmute(&bank.[< dormant_wake_ $reg:lower>])
+                            core::mem::transmute(&bank.[< dormant_wake_ $reg:lower>]())
                         }
                     };
                     (reg, usize::from(offset))
@@ -136,17 +136,17 @@ where
         match pin.bank {
             DynBankId::Bank0 => {
                 let gpio = unsafe { &*pac::PADS_BANK0::PTR };
-                &gpio.gpio[usize::from(pin.num)]
+                gpio.gpio(usize::from(pin.num))
             }
             DynBankId::Qspi => unsafe {
                 let qspi = &*pac::PADS_QSPI::PTR;
                 match pin.num {
-                    0 => core::mem::transmute(&qspi.gpio_qspi_sclk),
-                    1 => core::mem::transmute(&qspi.gpio_qspi_ss),
-                    2 => core::mem::transmute(&qspi.gpio_qspi_sd0),
-                    3 => core::mem::transmute(&qspi.gpio_qspi_sd1),
-                    4 => core::mem::transmute(&qspi.gpio_qspi_sd2),
-                    5 => core::mem::transmute(&qspi.gpio_qspi_sd3),
+                    0 => core::mem::transmute(&qspi.gpio_qspi_sclk()),
+                    1 => core::mem::transmute(&qspi.gpio_qspi_ss()),
+                    2 => core::mem::transmute(&qspi.gpio_qspi_sd0()),
+                    3 => core::mem::transmute(&qspi.gpio_qspi_sd1()),
+                    4 => core::mem::transmute(&qspi.gpio_qspi_sd2()),
+                    5 => core::mem::transmute(&qspi.gpio_qspi_sd3()),
                     _ => unreachable!("Invalid QSPI bank pin number."),
                 }
             },
@@ -170,8 +170,8 @@ where
         unsafe {
             let syscfg = &*pac::SYSCFG::PTR;
             match pin.bank {
-                DynBankId::Bank0 => &syscfg.proc_in_sync_bypass,
-                DynBankId::Qspi => core::mem::transmute(&syscfg.proc_in_sync_bypass_hi),
+                DynBankId::Bank0 => syscfg.proc_in_sync_bypass(),
+                DynBankId::Qspi => core::mem::transmute(&syscfg.proc_in_sync_bypass_hi()),
             }
         }
     }
@@ -183,11 +183,11 @@ where
             let reg = match pin.bank {
                 DynBankId::Bank0 => {
                     let bank = &*pac::IO_BANK0::PTR;
-                    &bank.intr[usize::from(index)]
+                    bank.intr(usize::from(index))
                 }
                 DynBankId::Qspi => {
                     let bank = &*pac::IO_QSPI::PTR;
-                    core::mem::transmute(&bank.intr)
+                    core::mem::transmute(&bank.intr())
                 }
             };
 
