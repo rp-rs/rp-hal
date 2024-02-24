@@ -8,7 +8,6 @@ rp2040-hal = { path = "./rp2040-hal" }
 
 [patch.crates-io]
 rp2040-hal = { path = "./rp2040-hal" }
-rp2040-pac = { git = "https://github.com/rp-rs/rp2040-pac/", rev = "615f600538a13f750438dafe07014ffad0cad51f" }
 
 # Those profiles are only used for `on-target-tests` compilation
 [profile.dev]
