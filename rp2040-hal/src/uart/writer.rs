@@ -200,7 +200,7 @@ unsafe impl<D: UartDevice, P: ValidUartPinout<D>> WriteTarget for Writer<D, P> {
     }
 
     fn tx_address_count(&mut self) -> (u32, u32) {
-        (self.device.uartdr() as *const _ as u32, u32::MAX)
+        (self.device.uartdr().as_ptr() as u32, u32::MAX)
     }
 
     fn tx_increment(&self) -> bool {
