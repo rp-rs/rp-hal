@@ -113,7 +113,7 @@ fn main() -> ! {
     let mut temperature_sensor = adc.take_temp_sensor().unwrap();
 
     // Configure GPIO26 as an ADC input
-    let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26.into_floating_input());
+    let adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26.into_floating_input()).unwrap();
 
     // we'll capture 1000 samples in total (500 per channel)
     // NOTE: when calling `shift_8bit` below, the type here must be changed from `u16` to `u8`
@@ -129,13 +129,13 @@ fn main() -> ! {
         // sample the temperature sensor first
         .set_channel(&mut temperature_sensor)
         // then alternate between GPIO26 and the temperature sensor
-        .round_robin((&mut adc_pin_0, &mut temperature_sensor))
+        .round_robin((&adc_pin_0, &temperature_sensor))
         // Uncomment this line to produce 8-bit samples, instead of 12 bit (lower bits are discarded)
         //.shift_8bit()
         // Enable DMA transfers for the FIFO
         .enable_dma()
         // Create the FIFO, but don't start it just yet
-        .prepare();
+        .start_paused();
 
     // Start a DMA transfer (must happen before resuming the ADC FIFO)
     let dma_transfer =

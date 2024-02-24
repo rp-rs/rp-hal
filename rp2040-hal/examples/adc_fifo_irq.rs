@@ -112,7 +112,7 @@ mod app {
         *c.local.adc = Some(hal::Adc::new(c.device.ADC, &mut resets));
         let adc = c.local.adc.as_mut().unwrap();
 
-        let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26.into_floating_input());
+        let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26.into_floating_input()).unwrap();
 
         uart.write_full_blocking(b"ADC FIFO interrupt example\r\n");
 

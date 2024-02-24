@@ -108,7 +108,7 @@ fn main() -> ! {
     let mut temperature_sensor = adc.take_temp_sensor().unwrap();
 
     // Configure GPIO26 as an ADC input
-    let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26.into_floating_input());
+    let adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26.into_floating_input()).unwrap();
 
     // Configure free-running mode:
     let mut adc_fifo = adc
@@ -120,7 +120,7 @@ fn main() -> ! {
         // sample the temperature sensor first
         .set_channel(&mut temperature_sensor)
         // then alternate between GPIO26 and the temperature sensor
-        .round_robin((&mut adc_pin_0, &mut temperature_sensor))
+        .round_robin((&adc_pin_0, &temperature_sensor))
         // Uncomment this line to produce 8-bit samples, instead of 12 bit (lower bits are discarded)
         //.shift_8bit()
         // start sampling
