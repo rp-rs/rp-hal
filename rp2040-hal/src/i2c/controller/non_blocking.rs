@@ -20,7 +20,7 @@ macro_rules! impl_async_traits {
 
                     // Mask all interrupt flags. This does not clear the flags.
                     // Clearing is done by the driver after it wakes up.
-                    i2c.ic_intr_mask.write_with_zero(|w| w);
+                    i2c.ic_intr_mask().write_with_zero(|w| w);
                 }
                 // interrupts are now masked, we can wake the task and return from this handler.
                 Self::waker().wake();
@@ -46,7 +46,7 @@ where
     #[inline]
     fn unmask_intr(&mut self, tx_empty: bool) {
         unsafe {
-            self.i2c.ic_intr_mask.write_with_zero(|w| {
+            self.i2c.ic_intr_mask().write_with_zero(|w| {
                 w.m_tx_empty()
                     .bit(tx_empty)
                     .m_rx_full()
@@ -61,7 +61,7 @@ where
     #[inline]
     fn configure_tx_empty(&mut self, cfg: TxEmptyConfig) {
         self.i2c
-            .ic_tx_tl
+            .ic_tx_tl()
             // SAFETY: we are within [0; TX_FIFO_DEPTH)
             .write(|w| unsafe {
                 w.tx_tl().bits(match cfg {
@@ -91,7 +91,7 @@ where
     #[inline]
     fn poll_rx_not_empty_or_abrt(&mut self) -> Poll<Result<(), Error>> {
         self.read_and_clear_abort_reason()?;
-        if self.i2c.ic_raw_intr_stat.read().rx_full().bit_is_set() {
+        if self.i2c.ic_raw_intr_stat().read().rx_full().bit_is_set() {
             Poll::Ready(Ok(()))
         } else {
             Poll::Pending
@@ -101,7 +101,7 @@ where
     #[inline]
     fn cancel(&mut self) {
         unsafe {
-            self.i2c.ic_intr_mask.write_with_zero(|w| w);
+            self.i2c.ic_intr_mask().write_with_zero(|w| w);
         }
 
         self.abort();
@@ -134,7 +134,7 @@ where
             )
             .await;
 
-            self.i2c.ic_data_cmd.write(|w| {
+            self.i2c.ic_data_cmd().write(|w| {
                 if first_byte {
                     if !first_transaction {
                         w.restart().enable();
@@ -154,7 +154,7 @@ where
             )
             .await?;
 
-            *byte = self.i2c.ic_data_cmd.read().dat().bits();
+            *byte = self.i2c.ic_data_cmd().read().dat().bits();
         }
 
         Ok(())
@@ -192,7 +192,7 @@ where
 
             // else enqueue
             let last = peekable.peek().is_none();
-            self.i2c.ic_data_cmd.write(|w| {
+            self.i2c.ic_data_cmd().write(|w| {
                 if first_byte {
                     if !first_transaction {
                         w.restart().enable();
@@ -227,7 +227,7 @@ where
                 Self::cancel,
             )
             .await;
-            self.i2c.ic_clr_stop_det.read().clr_stop_det();
+            self.i2c.ic_clr_stop_det().read().clr_stop_det();
         }
         // Note: the hardware issues a STOP automatically on an abort condition.
         // Note: the hardware also clears RX FIFO as well as TX on abort

@@ -99,7 +99,7 @@ where
 
     /// Check if the transfer has completed.
     pub fn is_done(&self) -> bool {
-        !self.ch.ch().ch_ctrl_trig.read().busy().bit_is_set()
+        !self.ch.ch().ch_ctrl_trig().read().busy().bit_is_set()
     }
 
     /// Block until the transfer is complete, returning the channel and targets

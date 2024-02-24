@@ -29,9 +29,9 @@ impl Errata5State {
         let pac = crate::pac::Peripherals::steal();
         match self {
             Self::WaitEndOfReset => {
-                if pac.SYSINFO.chip_id.read().revision().bits() >= 2 {
+                if pac.SYSINFO.chip_id().read().revision().bits() >= 2 {
                     None
-                } else if pac.USBCTRL_REGS.sie_status.read().line_state().is_se0() {
+                } else if pac.USBCTRL_REGS.sie_status().read().line_state().is_se0() {
                     Some(self)
                 } else {
                     Some(Self::ForceLineStateJ(start_force_j(&pac)))
@@ -40,7 +40,7 @@ impl Errata5State {
             Self::ForceLineStateJ(ref state) => {
                 if pac
                     .USBCTRL_REGS
-                    .sie_status
+                    .sie_status()
                     .read()
                     .connected()
                     .bit_is_clear()
@@ -59,7 +59,7 @@ impl Errata5State {
     pub fn check_bank0_reset() {
         // SAFETY: Only used for reading the reset state.
         let pac = unsafe { crate::pac::Peripherals::steal() };
-        let reset_state = pac.RESETS.reset.read();
+        let reset_state = pac.RESETS.reset().read();
         assert!(
             reset_state.io_bank0().bit_is_clear() && reset_state.pads_bank0().bit_is_clear(),
             "IO Bank 0 must be out of reset for this work around to function properly."
@@ -71,37 +71,37 @@ const DP_PULLUP_EN_FLAG: u32 = 0x0000_0002;
 const DP_PULLUP_EN_OVERRIDE_FLAG: u32 = 0x0000_0004;
 
 fn start_force_j(pac: &Peripherals) -> ForceLineStateJ {
-    let pads = &pac.PADS_BANK0.gpio[15];
-    let io = &pac.IO_BANK0.gpio[15];
+    let pads = &pac.PADS_BANK0.gpio(15);
+    let io = &pac.IO_BANK0.gpio(15);
     let usb_ctrl = &pac.USBCTRL_REGS;
 
-    assert!(!usb_ctrl.sie_status.read().line_state().is_se0());
+    assert!(!usb_ctrl.sie_status().read().line_state().is_se0());
     assert!(
-        pac.IO_BANK0.gpio[16].gpio_ctrl.read().funcsel().bits() != 8,
+        pac.IO_BANK0.gpio(16).gpio_ctrl().read().funcsel().bits() != 8,
         "Not expecting DM to be function 8"
     );
 
     // backup io ctrl & pad ctrl
     let prev_pads = pads.read().bits();
-    let prev_io_ctrls = io.gpio_ctrl.read().bits();
+    let prev_io_ctrls = io.gpio_ctrl().read().bits();
 
     // Enable bus keep and force pin to tristate, so USB DP muxing doesn't affect
     // pin state
     pads.modify(|_, w| w.pue().set_bit().pde().set_bit());
-    io.gpio_ctrl.modify(|_, w| w.oeover().disable());
+    io.gpio_ctrl().modify(|_, w| w.oeover().disable());
 
     // Select function 8 (USB debug muxing) without disturbing other controls
-    io.gpio_ctrl.modify(|_, w| unsafe { w.funcsel().bits(8) });
+    io.gpio_ctrl().modify(|_, w| unsafe { w.funcsel().bits(8) });
 
     // J state is a differential 1 for a full speed device so
     // DP = 1 and DM = 0. Don't actually need to set DM low as it
     // is already gated assuming it isn't funcseld.
-    io.gpio_ctrl.modify(|_, w| w.inover().high());
+    io.gpio_ctrl().modify(|_, w| w.inover().high());
 
     // Force PHY pull up to stay before switching away from the phy
     unsafe {
-        let usbphy_direct = usb_ctrl.usbphy_direct.as_ptr();
-        let usbphy_direct_override = usb_ctrl.usbphy_direct_override.as_ptr();
+        let usbphy_direct = usb_ctrl.usbphy_direct().as_ptr();
+        let usbphy_direct_override = usb_ctrl.usbphy_direct_override().as_ptr();
         write_bitmask_set(usbphy_direct, DP_PULLUP_EN_FLAG);
         write_bitmask_set(usbphy_direct_override, DP_PULLUP_EN_OVERRIDE_FLAG);
     }
@@ -109,13 +109,13 @@ fn start_force_j(pac: &Peripherals) -> ForceLineStateJ {
     // Switch to GPIO phy with LS_J forced
     unsafe {
         usb_ctrl
-            .usb_muxing
+            .usb_muxing()
             .write_with_zero(|w| w.to_digital_pad().set_bit().softcon().set_bit());
     }
 
     // LS_J is now forced, wait until the signal propagates through the usb logic.
     loop {
-        let status = usb_ctrl.sie_status.read();
+        let status = usb_ctrl.sie_status().read();
         if status.line_state().is_j() {
             break;
         }
@@ -127,21 +127,21 @@ fn start_force_j(pac: &Peripherals) -> ForceLineStateJ {
     }
 }
 fn finish(pac: &Peripherals, prev_pads: u32, prev_io_ctrls: u32) {
-    let pads = &pac.PADS_BANK0.gpio[15];
-    let io = &pac.IO_BANK0.gpio[15];
+    let pads = &pac.PADS_BANK0.gpio(15);
+    let io = &pac.IO_BANK0.gpio(15);
 
     // Switch back to USB phy
     pac.USBCTRL_REGS
-        .usb_muxing
+        .usb_muxing()
         .write(|w| w.to_phy().set_bit().softcon().set_bit());
 
     // Get rid of DP pullup override
     unsafe {
-        let usbphy_direct_override = pac.USBCTRL_REGS.usbphy_direct_override.as_ptr();
+        let usbphy_direct_override = pac.USBCTRL_REGS.usbphy_direct_override().as_ptr();
         write_bitmask_clear(usbphy_direct_override, DP_PULLUP_EN_OVERRIDE_FLAG);
 
         // Finally, restore the gpio ctrl value back to GPIO15
-        io.gpio_ctrl.write(|w| w.bits(prev_io_ctrls));
+        io.gpio_ctrl().write(|w| w.bits(prev_io_ctrls));
         // Restore the pad ctrl value
         pads.write(|w| w.bits(prev_pads));
     }

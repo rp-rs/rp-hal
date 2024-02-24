@@ -143,7 +143,7 @@ trait ChannelRegs {
 
 impl<CH: ChannelIndex> ChannelRegs for Channel<CH> {
     unsafe fn ptr() -> *const pac::dma::CH {
-        &(*pac::DMA::ptr()).ch[CH::id() as usize] as *const _
+        (*pac::DMA::ptr()).ch(CH::id() as usize)
     }
 
     fn regs(&self) -> &pac::dma::CH {

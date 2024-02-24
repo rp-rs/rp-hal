@@ -1045,11 +1045,11 @@ macro_rules! gpio {
                             // SAFETY: this function owns the whole bank that will be affected.
                             let sio = unsafe { &*$crate::pac::SIO::PTR };
                             if DynBankId::$bank == DynBankId::Bank0 {
-                                sio.gpio_oe.reset();
-                                sio.gpio_out.reset();
+                                sio.gpio_oe().reset();
+                                sio.gpio_out().reset();
                             } else {
-                                sio.gpio_hi_oe.reset();
-                                sio.gpio_hi_out.reset();
+                                sio.gpio_hi_oe().reset();
+                                sio.gpio_hi_out().reset();
                             }
                         }
 

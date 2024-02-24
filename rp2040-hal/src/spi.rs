@@ -237,10 +237,10 @@ impl<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<S, D, P, DS
         }
 
         self.device
-            .sspcpsr
+            .sspcpsr()
             .write(|w| unsafe { w.cpsdvsr().bits(prescale) });
         self.device
-            .sspcr0
+            .sspcr0()
             .modify(|_, w| unsafe { w.scr().bits(postdiv) });
 
         // Return the frequency we were able to achieve
@@ -266,7 +266,7 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
 
     /// Set format and datasize
     fn set_format(&mut self, data_bits: u8, frame_format: FrameFormat) {
-        self.device.sspcr0.modify(|_, w| unsafe {
+        self.device.sspcr0().modify(|_, w| unsafe {
             w.dss().bits(data_bits - 1).frf().bits(match &frame_format {
                 FrameFormat::MotorolaSpi(_) => 0x00,
                 FrameFormat::TexasInstrumentsSynchronousSerial => 0x01,
@@ -290,9 +290,9 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
     /// Set master/slave
     fn set_slave(&mut self, slave: bool) {
         if slave {
-            self.device.sspcr1.modify(|_, w| w.ms().set_bit());
+            self.device.sspcr1().modify(|_, w| w.ms().set_bit());
         } else {
-            self.device.sspcr1.modify(|_, w| w.ms().clear_bit());
+            self.device.sspcr1().modify(|_, w| w.ms().clear_bit());
         }
     }
 
@@ -312,11 +312,11 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
         self.set_slave(slave);
         // Always enable DREQ signals -- harmless if DMA is not listening
         self.device
-            .sspdmacr
+            .sspdmacr()
             .modify(|_, w| w.txdmae().set_bit().rxdmae().set_bit());
 
         // Finally enable the SPI
-        self.device.sspcr1.modify(|_, w| w.sse().set_bit());
+        self.device.sspcr1().modify(|_, w| w.sse().set_bit());
 
         self.transition(Enabled { __private: () })
     }
@@ -353,21 +353,21 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
 
 impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Enabled, D, P, DS> {
     fn is_writable(&self) -> bool {
-        self.device.sspsr.read().tnf().bit_is_set()
+        self.device.sspsr().read().tnf().bit_is_set()
     }
     fn is_readable(&self) -> bool {
-        self.device.sspsr.read().rne().bit_is_set()
+        self.device.sspsr().read().rne().bit_is_set()
     }
 
     /// Check if spi is busy transmitting and/or receiving
     pub fn is_busy(&self) -> bool {
-        self.device.sspsr.read().bsy().bit_is_set()
+        self.device.sspsr().read().bsy().bit_is_set()
     }
 
     /// Disable the spi to reset its configuration. You'll then need to initialize it again to use
     /// it.
     pub fn disable(self) -> Spi<Disabled, D, P, DS> {
-        self.device.sspcr1.modify(|_, w| w.sse().clear_bit());
+        self.device.sspcr1().modify(|_, w| w.sse().clear_bit());
 
         self.transition(Disabled { __private: () })
     }
@@ -385,7 +385,7 @@ macro_rules! impl_write {
                     return Err(nb::Error::WouldBlock);
                 }
 
-                Ok(self.device.sspdr.read().data().bits() as $type)
+                Ok(self.device.sspdr().read().data().bits() as $type)
             }
             fn send(&mut self, word: $type) -> Result<(), nb::Error<Infallible>> {
                 // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
@@ -396,7 +396,7 @@ macro_rules! impl_write {
                 }
 
                 self.device
-                    .sspdr
+                    .sspdr()
                     .write(|w| unsafe { w.data().bits(word as u16) });
                 Ok(())
             }
@@ -416,12 +416,12 @@ macro_rules! impl_write {
                     // write empty word
                     while !self.is_writable() {}
                     self.device
-                        .sspdr
+                        .sspdr()
                         .write(|w| unsafe { w.data().bits(0) });
 
                     // read one word
                     while !self.is_readable() {}
-                    *word = self.device.sspdr.read().data().bits() as $type;
+                    *word = self.device.sspdr().read().data().bits() as $type;
                 }
                 Ok(())
             }
@@ -431,12 +431,12 @@ macro_rules! impl_write {
                     // write one word
                     while !self.is_writable() {}
                     self.device
-                        .sspdr
+                        .sspdr()
                         .write(|w| unsafe { w.data().bits(*word as u16) });
 
                     // drop read wordd
                     while !self.is_readable() {}
-                    let _ = self.device.sspdr.read().data().bits();
+                    let _ = self.device.sspdr().read().data().bits();
                 }
                 Ok(())
             }
@@ -448,12 +448,12 @@ macro_rules! impl_write {
                     let wb = write.get(i).copied().unwrap_or(0);
                     while !self.is_writable() {}
                     self.device
-                        .sspdr
+                        .sspdr()
                         .write(|w| unsafe { w.data().bits(wb as u16) });
 
                     // read one word. Drop extra words if buffer is full.
                     while !self.is_readable() {}
-                    let rb = self.device.sspdr.read().data().bits() as $type;
+                    let rb = self.device.sspdr().read().data().bits() as $type;
                     if let Some(r) = read.get_mut(i) {
                         *r = rb;
                     }
@@ -467,12 +467,12 @@ macro_rules! impl_write {
                     // write one word
                     while !self.is_writable() {}
                     self.device
-                        .sspdr
+                        .sspdr()
                         .write(|w| unsafe { w.data().bits(*word as u16) });
 
                     // read one word
                     while !self.is_readable() {}
-                    *word = self.device.sspdr.read().data().bits() as $type;
+                    *word = self.device.sspdr().read().data().bits() as $type;
                 }
 
                 Ok(())
@@ -490,7 +490,7 @@ macro_rules! impl_write {
                     return Err(nb::Error::WouldBlock);
                 }
 
-                Ok(self.device.sspdr.read().data().bits() as $type)
+                Ok(self.device.sspdr().read().data().bits() as $type)
             }
             fn write(&mut self, word: $type) -> Result<(), nb::Error<Infallible>> {
                 // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
@@ -501,7 +501,7 @@ macro_rules! impl_write {
                 }
 
                 self.device
-                    .sspdr
+                    .sspdr()
                     .write(|w| unsafe { w.data().bits(word as u16) });
                 Ok(())
             }
@@ -518,7 +518,7 @@ macro_rules! impl_write {
 
             fn rx_address_count(&self) -> (u32, u32) {
                 (
-                    &self.device.sspdr as *const _ as u32,
+                    self.device.sspdr() as *const _ as u32,
                     u32::MAX,
                 )
             }
@@ -541,7 +541,7 @@ macro_rules! impl_write {
 
             fn tx_address_count(&mut self) -> (u32, u32) {
                 (
-                    &self.device.sspdr as *const _ as u32,
+                    self.device.sspdr() as *const _ as u32,
                     u32::MAX,
                 )
             }
