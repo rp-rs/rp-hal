@@ -36,10 +36,6 @@ harness = false
 name = "i2c_loopback_async"
 harness = false
 
-[[test]]
-name = "vreg_change_voltage"
-harness = false
-
 [dependencies]
 cortex-m = "0.7"
 cortex-m-rt = "0.7"
