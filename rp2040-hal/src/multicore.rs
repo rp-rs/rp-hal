@@ -208,14 +208,14 @@ impl<'p> Core<'p> {
 
             let mut stack_ptr = stack.as_mut_ptr_range().end;
             // on rp2040, usize are 4 bytes, so align_offset(8) on a *mut usize returns either 0 or 1.
-            let misalignement_offset = stack_ptr.align_offset(8);
+            let misalignment_offset = stack_ptr.align_offset(8);
 
             // We don't want to drop this, since it's getting moved to the other core.
             let mut entry = ManuallyDrop::new(entry);
 
             // Push the arguments to `core1_startup` onto the stack.
             unsafe {
-                stack_ptr = stack_ptr.sub(misalignement_offset);
+                stack_ptr = stack_ptr.sub(misalignment_offset);
 
                 // Push `stack_limit`.
                 stack_ptr = stack_ptr.sub(1);

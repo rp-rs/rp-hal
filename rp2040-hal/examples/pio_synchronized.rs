@@ -1,7 +1,7 @@
 //! This example toggles the GPIO0 and GPIO1 pins, with each controlled from a
 //! separate PIO state machine.
 //!
-//! Despite running in separate state machines, the clocks are sychronized at
+//! Despite running in separate state machines, the clocks are synchronized at
 //! the rise and fall times will be simultaneous.
 #![no_std]
 #![no_main]

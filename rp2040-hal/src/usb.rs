@@ -37,10 +37,10 @@
 //! ## Enumeration issue with small EP0 max packet size
 //!
 //! During enumeration Windows hosts send a `StatusOut` after the `DataIn` packet of the first
-//! `Get Descriptor` resquest even if the `DataIn` isn't completed (typically when the `max_packet_size_ep0`
+//! `Get Descriptor` request even if the `DataIn` isn't completed (typically when the `max_packet_size_ep0`
 //! is less than 18bytes). The next request is a `Set Address` that expect a `StatusIn`.
 //!
-//! The issue is that by the time the previous `DataIn` packet is acknoledged and the `StatusOut`
+//! The issue is that by the time the previous `DataIn` packet is acknowledged and the `StatusOut`
 //! followed by `Setup` are received, the usb stack may have already prepared the next `DataIn` payload
 //! in the EP0 IN mailbox resulting in the payload being transmitted to the host instead of the
 //! `StatusIn` for the `Set Address` request as expected by the host.

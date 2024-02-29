@@ -112,7 +112,7 @@ particular board.
 
 ### [BSPs] - Board support packages
 
-There are BSPs for various boards based on the RP2040 avaialble in
+There are BSPs for various boards based on the RP2040 available in
 a [separate repository][BSPs].
 
 [rp2040-hal]: https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal
@@ -133,7 +133,7 @@ use the UF2 process.
 
 The RP2040 contains two Cortex-M0+ processors, which execute Thumb-2 encoded
 ARMv6-M instructions. There are no operating-specific features in the binaries
-produced - they are for 'bare-metal' systems. For compatibilty with other Arm
+produced - they are for 'bare-metal' systems. For compatibility with other Arm
 code (e.g. as produced by GCC), Rust uses the *Arm Embedded-Application Binary
 Interface* standard or EABI. Therefore, any Rust code for the RP2040 should be
 compiled with the target *`thumbv6m-none-eabi`*.

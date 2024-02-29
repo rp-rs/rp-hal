@@ -105,7 +105,7 @@ where
             // Enable clock stretching.
             // Will hold clock when:
             // - receiving and rx fifo is full
-            // - writting and tx fifo is empty
+            // - writing and tx fifo is empty
             i2c.ic_con()
                 .modify(|_, w| w.rx_fifo_full_hld_ctrl().enabled());
         }
@@ -191,7 +191,7 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
     }
 
     #[inline]
-    fn poll_stop_deteced(&mut self) -> Poll<()> {
+    fn poll_stop_detected(&mut self) -> Poll<()> {
         if self.i2c.ic_raw_intr_stat().read().stop_det().is_inactive() {
             Poll::Pending
         } else {
@@ -309,8 +309,8 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
 
         if abort_reason.is_err() || do_stop {
             // If the transaction was aborted or if it completed
-            // successfully wait until the STOP condition has occured.
-            while self.poll_stop_deteced().is_pending() {}
+            // successfully wait until the STOP condition has occurred.
+            while self.poll_stop_detected().is_pending() {}
             self.i2c.ic_clr_stop_det().read().clr_stop_det();
         }
         // Note: the hardware issues a STOP automatically on an abort condition.

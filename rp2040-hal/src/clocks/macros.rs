@@ -73,7 +73,7 @@ macro_rules! clock {
             ($name, $reg, auxsrc={$($auxsrc: $aux_variant),*})
         }
 
-        divisable_clock!($name, $reg);
+        divisible_clock!($name, $reg);
 
         $crate::paste::paste!{
             $(impl ValidSrc<$name> for $src {
@@ -259,12 +259,12 @@ macro_rules! clock {
             ($name, $reg, auxsrc={$($auxsrc: $variant),*})
         }
 
-        divisable_clock!($name, $reg);
+        divisible_clock!($name, $reg);
         stoppable_clock!($name, $reg);
     };
 }
 
-macro_rules! divisable_clock {
+macro_rules! divisible_clock {
     ($name:ident, $reg:ident) => {
         $crate::paste::paste! {
             impl ClockDivision for $name {

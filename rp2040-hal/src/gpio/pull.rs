@@ -8,7 +8,7 @@ pub(crate) mod pull_sealed {
         fn as_dyn(&self) -> DynPullType;
     }
 }
-/// Type-level `enum` for pull resitor types.
+/// Type-level `enum` for pull resistor types.
 pub trait PullType: pull_sealed::PullType {}
 
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -23,7 +23,7 @@ pub enum DynPullType {
     Down,
     /// This enables bus-keep mode.
     ///
-    /// This is not documented in the datasheet but discribed in the
+    /// This is not documented in the datasheet but described in the
     /// [c-sdk](https://github.com/raspberrypi/pico-sdk/blob/e7267f99febc70486923e17a8210088af058c915/src/rp2_common/hardware_gpio/gpio.c#L53)
     /// as:
     ///

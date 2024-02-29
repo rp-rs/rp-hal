@@ -219,10 +219,10 @@ where
 
         if abort_reason.is_err() || do_stop {
             // If the transaction was aborted or if it completed
-            // successfully wait until the STOP condition has occured.
+            // successfully wait until the STOP condition has occurred.
             CPFn::new(
                 self,
-                Self::poll_stop_deteced,
+                Self::poll_stop_detected,
                 Self::unmask_stop_det,
                 Self::cancel,
             )

@@ -187,7 +187,7 @@ impl<P> AdcPin<P>
 where
     P: AnyPin,
 {
-    /// Captures the pin to be used with an ADC and disables its digital circuitery.
+    /// Captures the pin to be used with an ADC and disables its digital circuitry.
     pub fn new(pin: P) -> Result<Self, InvalidPinError> {
         let pin_id = pin.borrow().id();
         if (26..=29).contains(&pin_id.num) && pin_id.bank == DynBankId::Bank0 {
@@ -205,7 +205,7 @@ where
         }
     }
 
-    /// Release the pin and restore its digital circuitery's state.
+    /// Release the pin and restore its digital circuitry's state.
     pub fn release(self) -> P {
         let mut p = self.pin.into();
         p.set_output_disable(self.saved_output_disable);
@@ -412,7 +412,7 @@ impl Adc {
 
     /// Returns true if the ADC is ready for the next conversion.
     ///
-    /// This implies that any previous converison has finished.
+    /// This implies that any previous conversion has finished.
     pub fn is_ready(&self) -> bool {
         self.device.cs().read().ready().bit_is_set()
     }

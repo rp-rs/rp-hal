@@ -170,7 +170,7 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.62
 ### Added
 
 - Add docs.rs metadata - @icedrocket
-- Implement embedded-hal aplha SPI traits - @ptpaterson
+- Implement embedded-hal alpha SPI traits - @ptpaterson
 - Add derive(Debug) and derive(defmt::Format) to error types - @9names
 - Add ability to modify installed PIO program wrap bounds - @davidcole1340
 - Add rtic-monotonic support for timer & alarms (feature gated) - @ithinuel
@@ -252,7 +252,7 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.61
 ### Changed
 
 - Use thread send safe UART* marker when splitting, improves UART ergonmics - @marius-meissner
-- Improve performance for hardware division instrinsics. Internal intrinsics cleanup - @Sizurka
+- Improve performance for hardware division intrinsics. Internal intrinsics cleanup - @Sizurka
 - Provide a better alarm abstraction - @ithinuel
 - Update Multicore::spawn to be able to take a closure without requiring alloc.
   Improve Multicore ergonomics and add example for how to use new API - @Liamolucko

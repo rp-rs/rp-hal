@@ -664,7 +664,7 @@ impl LaneCtrl {
     }
 }
 
-///Trait representing the functionnality of a single lane of an interpolator.
+///Trait representing the functionality of a single lane of an interpolator.
 pub trait Lane: Sealed {
     ///Read the lane result, and simultaneously write lane results to both accumulators.
     fn pop(&mut self) -> u32;
@@ -688,7 +688,7 @@ pub trait Lane: Sealed {
     fn read_raw(&self) -> u32;
 }
 
-///Trait representing the functionnality of an interpolator.
+///Trait representing the functionality of an interpolator.
 /// ```no_run
 /// use rp2040_hal::sio::{Sio,LaneCtrl,Lane};
 /// use rp2040_hal::pac;

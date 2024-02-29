@@ -19,7 +19,7 @@
 //!   The I2C block holds the SCL line (clock stretching) until there is room for more data in the
 //!   Rx FIFO using [`read`](I2C::read).  
 //!   Data are automatically acknowledged by the I2C block and it is not possible to NACK incoming
-//!   data comming to the rp2040.
+//!   data coming to the rp2040.
 //!
 //! ## Warning
 //!
@@ -30,7 +30,7 @@
 //!
 //! Because a Read operation will always cause a pause waiting for the firmware's input, a `Start`
 //! (or `Restart` if the peripheral is already active) will always be reported. However, this does
-//! not mean no other event occured in the mean time.
+//! not mean no other event occurred in the mean time.
 //!
 //! For example, let's consider the following sequence:
 //!
