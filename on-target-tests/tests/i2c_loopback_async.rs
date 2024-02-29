@@ -59,7 +59,7 @@ mod tests {
     }
 
     #[test]
-    fn transations_iter(state: &mut State) {
+    fn transactions_iter(state: &mut State) {
         run_test(non_blocking::transaction(state, ADDR_7BIT, 7..=9));
         run_test(non_blocking::transaction(state, ADDR_10BIT, 7..=14));
     }

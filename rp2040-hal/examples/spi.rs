@@ -94,7 +94,7 @@ fn main() -> ! {
 
     // Write out 0, ignore return value
     if spi.write(&[0]).is_ok() {
-        // SPI write was succesful
+        // SPI write was successful
     };
 
     // write 50, then check the return

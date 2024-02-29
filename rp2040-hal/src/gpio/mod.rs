@@ -34,7 +34,7 @@
 //
 // - The user must not be able to instantiate by themselves nor obtain an instance of the Type-level
 //   structure.
-// - non-typestated features (overides, irq configuration, pads' output disable, pad's input
+// - non-typestated features (overrides, irq configuration, pads' output disable, pad's input
 //   enable, drive strength, schmitt, slew rate, sio's in sync bypass) are considered somewhat
 //   advanced usage of the pin (relative to reading/writing a gpio) and it is the responsibility of
 //   the user to make sure these are in a correct state when converting and passing the pin around.
@@ -223,7 +223,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
 
     /// # Safety
     /// This method does not check if the pin is actually configured as the target function or pull
-    /// mode. This may lead to inconcistencies between the type-state and the actual state of the
+    /// mode. This may lead to inconsistencies between the type-state and the actual state of the
     /// pin's configuration.
     pub unsafe fn into_unchecked<F2: func::Function, P2: PullType>(self) -> Pin<I, F2, P2> {
         Pin {
@@ -483,7 +483,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
             .modify(|_, w| w.slewfast().bit(OutputSlewRate::Fast == rate));
     }
 
-    /// Get wether the schmitt trigger (hysteresis) is enabled.
+    /// Get whether the schmitt trigger (hysteresis) is enabled.
     #[inline]
     pub fn get_schmitt_enabled(&self) -> bool {
         self.id.pad_ctrl().read().schmitt().bit_is_set()
@@ -495,25 +495,25 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
         self.id.pad_ctrl().modify(|_, w| w.schmitt().bit(enable));
     }
 
-    /// Get the state of the digital output circuitery of the pad.
+    /// Get the state of the digital output circuitry of the pad.
     #[inline]
     pub fn get_output_disable(&mut self) -> bool {
         self.id.pad_ctrl().read().od().bit_is_set()
     }
 
-    /// Set the digital output circuitery of the pad.
+    /// Set the digital output circuitry of the pad.
     #[inline]
     pub fn set_output_disable(&mut self, disable: bool) {
         self.id.pad_ctrl().modify(|_, w| w.od().bit(disable));
     }
 
-    /// Get the state of the digital input circuitery of the pad.
+    /// Get the state of the digital input circuitry of the pad.
     #[inline]
     pub fn get_input_enable(&mut self) -> bool {
         self.id.pad_ctrl().read().ie().bit_is_set()
     }
 
-    /// Set the digital input circuitery of the pad.
+    /// Set the digital input circuitry of the pad.
     #[inline]
     pub fn set_input_enable(&mut self, enable: bool) {
         self.id.pad_ctrl().modify(|_, w| w.ie().bit(enable));
@@ -813,7 +813,7 @@ impl<I: PinId, C: SioConfig, P: PullType> Pin<I, FunctionSio<C>, P> {
 
     /// Bypass the input sync stages.
     ///
-    /// This saves two clock cycles in the input signal's path at the risks of intruducing metastability.
+    /// This saves two clock cycles in the input signal's path at the risks of introducing metastability.
     #[inline]
     pub fn set_sync_bypass(&mut self, bypass: bool) {
         let mask = self.id.mask();
@@ -930,7 +930,7 @@ where
 }
 
 /// Deprecated: Instead of implicitly implementing InputPin for function SioOutput,
-/// use `pin.as_input()` to get access to input values indepentent of the selected function.
+/// use `pin.as_input()` to get access to input values independent of the selected function.
 impl<I, P> embedded_hal_0_2::digital::v2::InputPin for Pin<I, FunctionSio<SioOutput>, P>
 where
     I: PinId,

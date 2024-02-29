@@ -1,6 +1,6 @@
 //! This example shows how to read from and write to PIO using DMA.
 //!
-//! If a LED is connected to that pin, like on a Pico board, it will continously output "HELLO
+//! If a LED is connected to that pin, like on a Pico board, it will continuously output "HELLO
 //! WORLD" in morse code. The example also tries to read the data back. If reading the data fails,
 //! the message will only be shown once, and then the LED remains dark.
 //!

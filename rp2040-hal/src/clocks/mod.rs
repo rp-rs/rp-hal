@@ -328,7 +328,7 @@ pub trait ClockSource: Sealed {
     fn get_freq(&self) -> HertzU32;
 }
 
-/// Trait to contrain which ClockSource is valid for which Clock
+/// Trait to constrain which ClockSource is valid for which Clock
 pub trait ValidSrc<C: Clock>: Sealed + ClockSource {
     /// Is this a ClockSource for src or aux?
     fn is_aux(&self) -> bool;
