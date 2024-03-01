@@ -1015,15 +1015,16 @@ pub trait DefaultTypeState: crate::typelevel::Sealed {
     type PullType: PullType;
 }
 
-// Clear input enable for pins 26-29 of bank0, as these pins are ADC pins.
-// If the pins are connected to an analog input, the signal level may not
-// be valid for a digital input.
+// Clear input enable for pins of bank0.
+// Pins 26-29 are ADC pins. If the pins are connected to an analog input,
+// the signal level may not be valid for a digital input. Therefore, input
+// should be disabled by default.
+// For the other GPIO pins, the same setting is applied for consistency.
 macro_rules! reset_ie {
     ( Bank0, $pads:ident ) => {
-        $pads.gpio[26].modify(|_, w| w.ie().clear_bit());
-        $pads.gpio[27].modify(|_, w| w.ie().clear_bit());
-        $pads.gpio[28].modify(|_, w| w.ie().clear_bit());
-        $pads.gpio[29].modify(|_, w| w.ie().clear_bit());
+        for id in (0..=29) {
+            $pads.gpio(id).modify(|_, w| w.ie().clear_bit());
+        }
     };
     ( Qspi, $pads:ident ) => {};
 }
