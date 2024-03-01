@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   more slowly than on the Raspberry Pico.
 - Some reorganization of ADC code, making sure that AdcPin can only
   be created for pins that can actually be used as ADC channels.
+- Breaking change: Clear the input-enable flag of all pins on bank 0 in `Pins::new`.
+  They will automatically be enabled when setting a pin function, so most users
+  won't be affected by that change. Notable exception: If you rely on the fact that
+  PIO can read all pins as input even if the pin is not configured to the PIO function,
+  you may need to set the input-enable flag manually. - #755 @jannic
 
 ## [0.9.1]
 

@@ -1049,6 +1049,8 @@ macro_rules! gpio {
 
                 impl Pins {
                     /// Take ownership of the PAC peripherals and SIO slice and split it into discrete [`Pin`]s
+                    ///
+                    /// This clears the input-enable flag for all Bank0 pads.
                     pub fn new(io : [<IO_ $bank:upper>], pads: [<PADS_ $bank:upper>], sio: [<SioGpio $bank>], reset : &mut $crate::pac::RESETS) -> Self {
                         use $crate::resets::SubsystemReset;
                         pads.reset_bring_down(reset);
