@@ -106,18 +106,6 @@ pub trait SingleChannel: Sealed {
     }
 }
 
-/// Trait which implements low-level functionality for transfers requiring two DMA channels.
-///
-/// Anything that requires more than a single buffer exactly once requires two channels to be
-/// combined.
-pub trait ChannelPair: SingleChannel + Sealed {
-    /// Returns the registers associated with the second DMA channel associated with this channel
-    /// pair.
-    fn ch2(&self) -> &crate::pac::dma::CH;
-    /// Returns the index of the second DMA channel.
-    fn id2(&self) -> u8;
-}
-
 impl<CH: ChannelIndex> SingleChannel for Channel<CH> {
     fn ch(&self) -> &crate::pac::dma::CH {
         self.regs()
