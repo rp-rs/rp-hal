@@ -26,7 +26,7 @@ use core::{cell::RefCell, ops::DerefMut};
 
 use critical_section::Mutex;
 
-use embedded_hal::digital::v2::ToggleableOutputPin;
+use embedded_hal::digital::StatefulOutputPin;
 
 use fugit::RateExtU32;
 
@@ -176,7 +176,7 @@ fn main() -> ! {
 }
 
 /// Pulse an LED-connected pin the specified number of times.
-fn pulse<P: ToggleableOutputPin>(pin: &mut P, count: u32) {
+fn pulse<P: StatefulOutputPin>(pin: &mut P, count: u32) {
     const LED_PULSE_CYCLES: u32 = 2_000_000;
 
     for i in 0..count * 2 {

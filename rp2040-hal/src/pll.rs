@@ -281,13 +281,13 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Locked, D> {
 
     /// Shut down the PLL. The returned PLL is configured the same as it was originally.
     pub fn disable(self) -> PhaseLockedLoop<Disabled, D> {
-        let fbdiv = self.device.fbdiv_int.read().fbdiv_int().bits();
-        let refdiv = self.device.cs.read().refdiv().bits();
-        let prim = self.device.prim.read();
+        let fbdiv = self.device.fbdiv_int().read().fbdiv_int().bits();
+        let refdiv = self.device.cs().read().refdiv().bits();
+        let prim = self.device.prim().read();
         let frequency = self.state.frequency;
 
-        self.device.pwr.reset();
-        self.device.fbdiv_int.reset();
+        self.device.pwr().reset();
+        self.device.fbdiv_int().reset();
 
         self.transition(Disabled {
             refdiv,
