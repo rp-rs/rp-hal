@@ -24,7 +24,7 @@ use hal::pac;
 
 // Some traits we need
 use core::fmt::Write;
-use fugit::RateExtU32;
+use hal::fugit::RateExtU32;
 use rp2040_hal::clocks::Clock;
 
 // UART related types
@@ -68,7 +68,6 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-    .ok()
     .unwrap();
 
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());

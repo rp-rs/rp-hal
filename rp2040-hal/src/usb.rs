@@ -37,10 +37,10 @@
 //! ## Enumeration issue with small EP0 max packet size
 //!
 //! During enumeration Windows hosts send a `StatusOut` after the `DataIn` packet of the first
-//! `Get Descriptor` resquest even if the `DataIn` isn't completed (typically when the `max_packet_size_ep0`
+//! `Get Descriptor` request even if the `DataIn` isn't completed (typically when the `max_packet_size_ep0`
 //! is less than 18bytes). The next request is a `Set Address` that expect a `StatusIn`.
 //!
-//! The issue is that by the time the previous `DataIn` packet is acknoledged and the `StatusOut`
+//! The issue is that by the time the previous `DataIn` packet is acknowledged and the `StatusOut`
 //! followed by `Setup` are received, the usb stack may have already prepared the next `DataIn` payload
 //! in the EP0 IN mailbox resulting in the payload being transmitted to the host instead of the
 //! `StatusIn` for the `Set Address` request as expected by the host.
@@ -172,11 +172,12 @@ struct Inner {
     out_endpoints: [Option<Endpoint>; 16],
     next_offset: u16,
     read_setup: bool,
+    pll: UsbClock,
     #[cfg(feature = "rp2040-e5")]
     errata5_state: Option<errata5::Errata5State>,
 }
 impl Inner {
-    fn new(ctrl_reg: USBCTRL_REGS, ctrl_dpram: USBCTRL_DPRAM) -> Self {
+    fn new(ctrl_reg: USBCTRL_REGS, ctrl_dpram: USBCTRL_DPRAM, pll: UsbClock) -> Self {
         Self {
             ctrl_reg,
             ctrl_dpram,
@@ -184,6 +185,7 @@ impl Inner {
             out_endpoints: Default::default(),
             next_offset: 0,
             read_setup: false,
+            pll,
             #[cfg(feature = "rp2040-e5")]
             errata5_state: None,
         }
@@ -236,7 +238,8 @@ impl Inner {
         // Data Buffers are typically 64 bytes long as this is the max normal packet size for most FS packets.
         // For Isochronous endpoints a maximum buffer size of 1023 bytes is supported.
         // For other packet types the maximum size is 64 bytes per buffer.
-        if (ep_type != EndpointType::Isochronous && max_packet_size > 64) || max_packet_size > 1023
+        if (!matches!(ep_type, EndpointType::Isochronous { .. }) && max_packet_size > 64)
+            || max_packet_size > 1023
         {
             return Err(UsbError::Unsupported);
         }
@@ -270,13 +273,19 @@ impl Inner {
 
     fn ep_reset_all(&mut self) {
         self.ctrl_reg
-            .sie_ctrl
+            .sie_ctrl()
             .modify(|_, w| w.ep0_int_1buf().set_bit());
         // expect ctrl ep to receive on DATA first
-        self.ctrl_dpram.ep_buffer_control[0].write(|w| w.pid_0().set_bit());
-        self.ctrl_dpram.ep_buffer_control[1].write(|w| w.pid_0().set_bit());
+        self.ctrl_dpram
+            .ep_buffer_control(0)
+            .write(|w| w.pid_0().set_bit());
+        self.ctrl_dpram
+            .ep_buffer_control(1)
+            .write(|w| w.pid_0().set_bit());
         cortex_m::asm::delay(12);
-        self.ctrl_dpram.ep_buffer_control[1].write(|w| w.available_0().set_bit());
+        self.ctrl_dpram
+            .ep_buffer_control(1)
+            .write(|w| w.available_0().set_bit());
 
         for (index, ep) in itertools::interleave(
             self.in_endpoints.iter().skip(1),  // skip control endpoint
@@ -288,20 +297,20 @@ impl Inner {
             use crate::pac::usbctrl_dpram::ep_control::ENDPOINT_TYPE_A;
             let ep_type = match ep.ep_type {
                 EndpointType::Bulk => ENDPOINT_TYPE_A::BULK,
-                EndpointType::Isochronous => ENDPOINT_TYPE_A::ISOCHRONOUS,
+                EndpointType::Isochronous { .. } => ENDPOINT_TYPE_A::ISOCHRONOUS,
                 EndpointType::Control => ENDPOINT_TYPE_A::CONTROL,
                 EndpointType::Interrupt => ENDPOINT_TYPE_A::INTERRUPT,
             };
             // configure
             // ep 0 in&out are not part of index (skipped before enumeration)
-            self.ctrl_dpram.ep_control[index].modify(|_, w| unsafe {
+            self.ctrl_dpram.ep_control(index).modify(|_, w| unsafe {
                 w.endpoint_type().variant(ep_type);
                 w.interrupt_per_buff().set_bit();
                 w.enable().set_bit();
                 w.buffer_address().bits(0x180 + (ep.buffer_offset << 6))
             });
             // reset OUT ep and prepare IN ep to accept data
-            let buf_control = &self.ctrl_dpram.ep_buffer_control[index + 2];
+            let buf_control = &self.ctrl_dpram.ep_buffer_control(index + 2);
             if (index & 1) == 0 {
                 // first write occur on DATA0 so prepare the pid bit to be flipped
                 buf_control.write(|w| w.pid_0().set_bit());
@@ -324,7 +333,7 @@ impl Inner {
             .and_then(Option::as_mut)
             .ok_or(UsbError::InvalidEndpoint)?;
 
-        let buf_control = &self.ctrl_dpram.ep_buffer_control[index * 2];
+        let buf_control = &self.ctrl_dpram.ep_buffer_control(index * 2);
         if buf_control.read().available_0().bit_is_set() {
             return Err(UsbError::WouldBlock);
         }
@@ -354,7 +363,7 @@ impl Inner {
             .and_then(Option::as_mut)
             .ok_or(UsbError::InvalidEndpoint)?;
 
-        let buf_control = &self.ctrl_dpram.ep_buffer_control[index * 2 + 1];
+        let buf_control = &self.ctrl_dpram.ep_buffer_control(index * 2 + 1);
         let buf_control_val = buf_control.read();
 
         let process_setup = index == 0 && self.read_setup;
@@ -372,14 +381,16 @@ impl Inner {
             buf[..len].copy_from_slice(&ep_buf[..len]);
 
             // Next packet will be on DATA1 so clear pid_0 so it gets flipped by next buf config
-            self.ctrl_dpram.ep_buffer_control[0].modify(|_, w| w.pid_0().clear_bit());
+            self.ctrl_dpram
+                .ep_buffer_control(0)
+                .modify(|_, w| w.pid_0().clear_bit());
             // clear setup request flag
             self.ctrl_reg
-                .sie_status
+                .sie_status()
                 .write(|w| w.setup_rec().clear_bit_by_one());
 
             // clear any out standing out flag e.g. in case a zlp got discarded
-            self.ctrl_reg.buff_status.write(|w| unsafe { w.bits(2) });
+            self.ctrl_reg.buff_status().write(|w| unsafe { w.bits(2) });
 
             let is_in_request = (buf[0] & 0x80) == 0x80;
             let data_length = u16::from(buf[6]) | (u16::from(buf[7]) << 8);
@@ -408,7 +419,7 @@ impl Inner {
             buf[..len].copy_from_slice(&ep.get_buf()[..len]);
             // Clear OUT flag once it is read.
             self.ctrl_reg
-                .buff_status
+                .buff_status()
                 .write(|w| unsafe { w.bits(1 << (index * 2 + 1)) });
 
             buf_control.modify(|r, w| unsafe {
@@ -437,7 +448,7 @@ impl UsbBus {
     pub fn new(
         ctrl_reg: USBCTRL_REGS,
         ctrl_dpram: USBCTRL_DPRAM,
-        _pll: UsbClock,
+        pll: UsbClock,
         force_vbus_detect_bit: bool,
         resets: &mut RESETS,
     ) -> Self {
@@ -457,25 +468,25 @@ impl UsbBus {
             raw_ctrl_pdram.fill(0);
         }
 
-        ctrl_reg.usb_muxing.modify(|_, w| {
+        ctrl_reg.usb_muxing().modify(|_, w| {
             w.to_phy().set_bit();
             w.softcon().set_bit()
         });
 
         if force_vbus_detect_bit {
-            ctrl_reg.usb_pwr.modify(|_, w| {
+            ctrl_reg.usb_pwr().modify(|_, w| {
                 w.vbus_detect().set_bit();
                 w.vbus_detect_override_en().set_bit()
             });
         }
-        ctrl_reg.main_ctrl.modify(|_, w| {
+        ctrl_reg.main_ctrl().modify(|_, w| {
             w.sim_timing().clear_bit();
             w.host_ndevice().clear_bit();
             w.controller_en().set_bit()
         });
 
         Self {
-            inner: Mutex::new(RefCell::new(Inner::new(ctrl_reg, ctrl_dpram))),
+            inner: Mutex::new(RefCell::new(Inner::new(ctrl_reg, ctrl_dpram, pll))),
         }
     }
 
@@ -483,8 +494,22 @@ impl UsbBus {
     pub fn remote_wakeup(&self) {
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
-            inner.ctrl_reg.sie_ctrl.modify(|_, w| w.resume().set_bit());
+            inner
+                .ctrl_reg
+                .sie_ctrl()
+                .modify(|_, w| w.resume().set_bit());
         });
+    }
+
+    /// Stop and free the Usb resources
+    pub fn free(self, resets: &mut RESETS) -> (USBCTRL_REGS, USBCTRL_DPRAM, UsbClock) {
+        critical_section::with(|_cs| {
+            let inner = self.inner.into_inner().into_inner();
+
+            inner.ctrl_reg.reset_bring_down(resets);
+
+            (inner.ctrl_reg, inner.ctrl_dpram, inner.pll)
+        })
     }
 }
 
@@ -513,7 +538,7 @@ impl UsbBusTrait for UsbBus {
             // Enable interrupt generation when a buffer is done, when the bus is reset,
             // and when a setup packet is received
             // this should be sufficient for device mode, will need more for host.
-            inner.ctrl_reg.inte.modify(|_, w| {
+            inner.ctrl_reg.inte().modify(|_, w| {
                 w.buff_status()
                     .set_bit()
                     .bus_reset()
@@ -529,7 +554,7 @@ impl UsbBusTrait for UsbBus {
             // enable pull up to let the host know we exist.
             inner
                 .ctrl_reg
-                .sie_ctrl
+                .sie_ctrl()
                 .modify(|_, w| w.pullup_en().set_bit());
         })
     }
@@ -540,18 +565,18 @@ impl UsbBusTrait for UsbBus {
             // clear reset flag
             inner
                 .ctrl_reg
-                .sie_status
+                .sie_status()
                 .write(|w| w.bus_reset().clear_bit_by_one());
             inner
                 .ctrl_reg
-                .buff_status
+                .buff_status()
                 .write(|w| unsafe { w.bits(0xFFFF_FFFF) });
 
             // reset all endpoints
             inner.ep_reset_all();
 
             // Reset address register
-            inner.ctrl_reg.addr_endp.reset();
+            inner.ctrl_reg.addr_endp().reset();
             // TODO: RP2040-E5: work around implementation
             // TODO: reset all endpoints & buffer statuses
         })
@@ -561,11 +586,17 @@ impl UsbBusTrait for UsbBus {
             let inner = self.inner.borrow(cs).borrow_mut();
             inner
                 .ctrl_reg
-                .addr_endp
+                .addr_endp()
                 .modify(|_, w| unsafe { w.address().bits(addr & 0x7F) });
             // reset ep0
-            inner.ctrl_dpram.ep_buffer_control[0].modify(|_, w| w.pid_0().set_bit());
-            inner.ctrl_dpram.ep_buffer_control[1].modify(|_, w| w.pid_0().set_bit());
+            inner
+                .ctrl_dpram
+                .ep_buffer_control(0)
+                .modify(|_, w| w.pid_0().set_bit());
+            inner
+                .ctrl_dpram
+                .ep_buffer_control(1)
+                .modify(|_, w| w.pid_0().set_bit());
         })
     }
     fn write(&self, ep_addr: EndpointAddress, buf: &[u8]) -> UsbResult<usize> {
@@ -585,7 +616,7 @@ impl UsbBusTrait for UsbBus {
             let inner = self.inner.borrow(cs).borrow_mut();
 
             if ep_addr.index() == 0 {
-                inner.ctrl_reg.ep_stall_arm.modify(|_, w| {
+                inner.ctrl_reg.ep_stall_arm().modify(|_, w| {
                     if ep_addr.is_in() {
                         w.ep0_in().bit(stalled)
                     } else {
@@ -595,14 +626,19 @@ impl UsbBusTrait for UsbBus {
             }
 
             let index = ep_addr_to_ep_buf_ctrl_idx(ep_addr);
-            inner.ctrl_dpram.ep_buffer_control[index].modify(|_, w| w.stall().bit(stalled));
+            inner
+                .ctrl_dpram
+                .ep_buffer_control(index)
+                .modify(|_, w| w.stall().bit(stalled));
         })
     }
     fn is_stalled(&self, ep_addr: EndpointAddress) -> bool {
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
             let index = ep_addr_to_ep_buf_ctrl_idx(ep_addr);
-            inner.ctrl_dpram.ep_buffer_control[index]
+            inner
+                .ctrl_dpram
+                .ep_buffer_control(index)
                 .read()
                 .stall()
                 .bit_is_set()
@@ -627,12 +663,18 @@ impl UsbBusTrait for UsbBus {
             }
 
             // check for bus reset and/or suspended states.
-            let ints = inner.ctrl_reg.ints.read();
-            let mut buff_status = inner.ctrl_reg.buff_status.read().bits();
+            let ints = inner.ctrl_reg.ints().read();
+            let mut buff_status = inner.ctrl_reg.buff_status().read().bits();
 
             if ints.bus_reset().bit_is_set() {
                 #[cfg(feature = "rp2040-e5")]
-                if inner.ctrl_reg.sie_status.read().connected().bit_is_clear() {
+                if inner
+                    .ctrl_reg
+                    .sie_status()
+                    .read()
+                    .connected()
+                    .bit_is_clear()
+                {
                     inner.errata5_state = Some(errata5::Errata5State::start());
                     return PollResult::None;
                 } else {
@@ -645,13 +687,13 @@ impl UsbBusTrait for UsbBus {
                 if ints.dev_suspend().bit_is_set() {
                     inner
                         .ctrl_reg
-                        .sie_status
+                        .sie_status()
                         .write(|w| w.suspended().clear_bit_by_one());
                     return PollResult::Suspend;
                 } else if ints.dev_resume_from_host().bit_is_set() {
                     inner
                         .ctrl_reg
-                        .sie_status
+                        .sie_status()
                         .write(|w| w.resume().clear_bit_by_one());
                     return PollResult::Resume;
                 }
@@ -663,7 +705,7 @@ impl UsbBusTrait for UsbBus {
             // IN Complete shall only be reported once.
             inner
                 .ctrl_reg
-                .buff_status
+                .buff_status()
                 .write(|w| unsafe { w.bits(0x5555_5555) });
 
             for i in 0..32u32 {
@@ -684,7 +726,10 @@ impl UsbBusTrait for UsbBus {
             // check for setup request
             if ints.setup_req().bit_is_set() {
                 // Small max_packet_size_ep0 Work-Around
-                inner.ctrl_dpram.ep_buffer_control[0].modify(|_, w| w.available_0().clear_bit());
+                inner
+                    .ctrl_dpram
+                    .ep_buffer_control(0)
+                    .modify(|_, w| w.available_0().clear_bit());
 
                 ep_setup |= 1;
                 inner.read_setup = true;

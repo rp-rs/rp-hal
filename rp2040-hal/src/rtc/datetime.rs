@@ -133,3 +133,75 @@ pub(super) fn datetime_from_registers(rtc_0: rtc_0::R, rtc_1: rtc_1::R) -> Resul
         second,
     })
 }
+
+#[cfg(feature = "chrono")]
+pub mod chrono {
+    use super::{DateTime, DayOfWeek};
+    use chrono::{NaiveDateTime, Weekday};
+
+    /// The RP2040's RTC can only hold years up to 4095.
+    pub struct YearOutOfRangeError;
+
+    /// The given date/time is out of the range supported by `chrono::NaiveDateTime`.
+    pub enum OutOfRangeError {
+        YearMonthDay,
+        HourMinuteSecond,
+    }
+
+    impl From<Weekday> for DayOfWeek {
+        fn from(wd: Weekday) -> DayOfWeek {
+            use DayOfWeek::*;
+            match wd {
+                Weekday::Mon => Monday,
+                Weekday::Tue => Tuesday,
+                Weekday::Wed => Wednesday,
+                Weekday::Thu => Thursday,
+                Weekday::Fri => Friday,
+                Weekday::Sat => Saturday,
+                Weekday::Sun => Sunday,
+            }
+        }
+    }
+    impl From<DayOfWeek> for Weekday {
+        fn from(dow: DayOfWeek) -> Weekday {
+            use DayOfWeek::*;
+            match dow {
+                Monday => Weekday::Mon,
+                Tuesday => Weekday::Tue,
+                Wednesday => Weekday::Wed,
+                Thursday => Weekday::Thu,
+                Friday => Weekday::Fri,
+                Saturday => Weekday::Sat,
+                Sunday => Weekday::Sun,
+            }
+        }
+    }
+    impl TryFrom<NaiveDateTime> for DateTime {
+        type Error = YearOutOfRangeError;
+        fn try_from(dt: NaiveDateTime) -> Result<Self, YearOutOfRangeError> {
+            if dt.year() > 4095 {
+                return Err(YearOutOfRangeError);
+            }
+            use chrono::Datelike;
+            use chrono::Timelike;
+            Ok(Self {
+                year: dt.year() as u16,
+                month: dt.month() as u8,
+                day: dt.day() as u8,
+                day_of_week: dt.weekday().into(),
+                hour: dt.hour() as u8,
+                minute: dt.minute() as u8,
+                second: dt.second() as u8,
+            })
+        }
+    }
+    impl TryFrom<DateTime> for NaiveDateTime {
+        type Error = OutOfRangeError;
+        fn try_from(dt: DateTime) -> Result<NaiveDateTime, OutOfRangeError> {
+            chrono::NaiveDate::from_ymd_opt(dt.year.into(), dt.month.into(), dt.day.into())
+                .ok_or(OutOfRangeError::YearMonthDay)?
+                .and_hms_opt(dt.hour.into(), dt.minute.into(), dt.second.into())
+                .ok_or(OutOfRangeError::HourMinuteSecond)
+        }
+    }
+}

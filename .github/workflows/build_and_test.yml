@@ -13,23 +13,11 @@ jobs:
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-hack
-          version: "=0.5.28"
+          version: "=0.6.17"
       - name: Build rp2040-hal's workspace (without the examples)
         run: cargo hack build --optional-deps --each-feature
-  examples-builds:
-    name: Build rp2040-hal's examples
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          target: thumbv6m-none-eabi
-      - name: Install cargo-hack
-        uses: baptiste0928/cargo-install@v2
-        with:
-          crate: cargo-hack
-          version: "=0.5.28"
-      - name: Build workspace
+      - run: cargo clean
+      - name: Build rp2040-hal's workspace (with the examples)
         run: cargo hack build --examples --optional-deps --each-feature
   tests:
     name: Execute host-runable tests
@@ -43,15 +31,15 @@ jobs:
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-hack
-          version: "=0.5.28"
+          version: "=0.6.17"
       - name: Test
-        run: cargo hack test -p rp2040-hal --tests --target x86_64-unknown-linux-gnu  --optional-deps --each-feature --features critical-section-impl
+        run: cargo hack test -p rp2040-hal --target x86_64-unknown-linux-gnu --optional-deps --each-feature --tests --features critical-section-impl
       - name: Test docs
-        run: cargo hack test -p rp2040-hal --doc --target x86_64-unknown-linux-gnu  --optional-deps --each-feature --features critical-section-impl
+        run: cargo hack test -p rp2040-hal --target x86_64-unknown-linux-gnu --optional-deps --each-feature --doc --features critical-section-impl
       - name: Test macros
-        run: cargo hack test -p rp2040-hal-macros --tests --target x86_64-unknown-linux-gnu  --optional-deps --each-feature
+        run: cargo hack test -p rp2040-hal-macros --target x86_64-unknown-linux-gnu --optional-deps --tests --each-feature
       - name: Test macro docs
-        run: cargo hack test -p rp2040-hal-macros --doc --target x86_64-unknown-linux-gnu  --optional-deps --each-feature
+        run: cargo hack test -p rp2040-hal-macros --target x86_64-unknown-linux-gnu --optional-deps --doc --each-feature
       - name: Clean
         run: cargo clean
   udeps:
@@ -61,18 +49,18 @@ jobs:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2023-06-27
+          toolchain: nightly-2024-01-30
           target: thumbv6m-none-eabi
       - name: Install cargo-hack
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-hack
-          version: "=0.5.28"
+          version: "=0.6.17"
       - name: Install cargo-udeps
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-udeps
-          version: "=0.1.40"
+          version: "=0.1.45"
       - name: Check unused deps
         run: cargo hack udeps --optional-deps --each-feature
   msrv:
@@ -82,26 +70,14 @@ jobs:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.64
+          toolchain: 1.75
           target: thumbv6m-none-eabi
       - name: Install cargo-hack
         uses: baptiste0928/cargo-install@v2
         with:
           crate: cargo-hack
-          version: "=0.5.28"
+          version: "=0.6.17"
       - name: Use older version of regex
         run: cargo update -p regex --precise 1.9.3
       - name: Verifiy MSRV
         run: cargo hack build --examples --optional-deps --each-feature
-  on-target-build:
-    name: Build on-target-tests
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          target: thumbv6m-none-eabi
-      - name: Build on-target-tests
-        run: |
-          cd on-target-tests
-          cargo test --no-run

@@ -37,7 +37,7 @@
 //! #     &mut pac.RESETS,
 //! # );
 //! #
-//! use embedded_hal::PwmPin;
+//! use embedded_hal::pwm::SetDutyCycle;
 //!
 //! // Use B channel (which inputs from GPIO 25)
 //! let mut channel_b = pwm.channel_b;
@@ -48,8 +48,8 @@
 //! let channel_pin_a = channel_a.output_to(pins.gpio24);
 //!
 //! // Set duty cycle
-//! channel_a.set_duty(0x00ff);
-//! channel_a.get_duty();
+//! channel_a.set_duty_cycle(0x00ff);
+//! let max_duty_cycle = channel_a.max_duty_cycle();
 //! channel_a.set_inverted(); // Invert the output
 //! channel_a.clr_inverted(); // Don't invert the output
 //! ```
@@ -76,10 +76,11 @@
 //! min_config() leaves those registers in the state they were before it was called (Careful, this can lead to unexpected behavior)
 //! It's recommended to only call min_config() after calling default_config() on a pin that shares a PWM block.
 
+use core::convert::Infallible;
 use core::marker::PhantomData;
 
 use embedded_dma::Word;
-use embedded_hal::PwmPin;
+use embedded_hal::pwm::{ErrorType, SetDutyCycle};
 
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
@@ -339,7 +340,7 @@ where
         self.regs.write_div_frac(0); // No divisor
         self.regs.write_inv_a(false); //Don't invert the channel
         self.regs.write_inv_b(false); //Don't invert the channel
-        self.regs.write_top(0xffff); // Wrap at max
+        self.regs.write_top(0xfffe); // Wrap at 0xfffe, so cc = 0xffff can indicate 100% duty cycle
         self.regs.write_ctr(0x0000); //Reset the counter
         self.regs.write_cc_a(0); //Default duty cycle of 0%
         self.regs.write_cc_b(0); //Default duty cycle of 0%
@@ -416,6 +417,18 @@ where
     }
 
     /// Sets the top register value
+    ///
+    /// Don't set this to 0xffff if you need true 100% duty cycle:
+    ///
+    /// The CC register, which is used to configure the duty cycle,
+    /// must be set to TOP + 1 for 100% duty cycle, but also is a
+    /// 16 bit register.
+    ///
+    /// In case you do set TOP to 0xffff, [`SetDutyCycle::set_duty_cycle`]
+    /// will slightly violate the trait's documentation, as
+    /// `SetDutyCycle::set_duty_cycle_fully_on` and other calls that
+    /// should lead to 100% duty cycle will only reach a duty cycle of
+    /// about 99.998%.
     #[inline]
     pub fn set_top(&mut self, value: u16) {
         self.regs.write_top(value)
@@ -432,7 +445,7 @@ where
     pub fn enable_interrupt(&mut self) {
         unsafe {
             let pwm = &(*pac::PWM::ptr());
-            let reg = pwm.inte.as_ptr();
+            let reg = pwm.inte().as_ptr();
             write_bitmask_set(reg, self.bitmask());
         }
     }
@@ -442,7 +455,7 @@ where
     pub fn disable_interrupt(&mut self) {
         unsafe {
             let pwm = &(*pac::PWM::ptr());
-            let reg = pwm.inte.as_ptr();
+            let reg = pwm.inte().as_ptr();
             write_bitmask_clear(reg, self.bitmask());
         };
     }
@@ -455,13 +468,13 @@ where
     #[inline]
     pub fn has_overflown(&self) -> bool {
         let mask = self.bitmask();
-        unsafe { (*pac::PWM::ptr()).intr.read().bits() & mask == mask }
+        unsafe { (*pac::PWM::ptr()).intr().read().bits() & mask == mask }
     }
 
     /// Mark the interrupt handled for this slice.
     #[inline]
     pub fn clear_interrupt(&mut self) {
-        unsafe { (*pac::PWM::ptr()).intr.write(|w| w.bits(self.bitmask())) };
+        unsafe { (*pac::PWM::ptr()).intr().write(|w| w.bits(self.bitmask())) };
     }
 
     /// Force the interrupt. This bit is not cleared by hardware and must be manually cleared to
@@ -470,7 +483,7 @@ where
     pub fn force_interrupt(&mut self) {
         unsafe {
             let pwm = &(*pac::PWM::ptr());
-            let reg = pwm.intf.as_ptr();
+            let reg = pwm.intf().as_ptr();
             write_bitmask_set(reg, self.bitmask());
         }
     }
@@ -481,7 +494,7 @@ where
     pub fn clear_force_interrupt(&mut self) {
         unsafe {
             let pwm = &(*pac::PWM::ptr());
-            let reg = pwm.intf.as_ptr();
+            let reg = pwm.intf().as_ptr();
             write_bitmask_clear(reg, self.bitmask());
         }
     }
@@ -554,17 +567,16 @@ impl Slices {
         self._pwm
     }
 
-    //     /// Enable multiple slices at the same time to make their counters sync up.
-    //     ///
-    //     /// You still need to call `slice` to get an actual slice
-    //     pub fn enable_simultaneous<S: SliceId>(&mut self, bits: u8) {
-    //         // Enable all slices at the same time
-    //         unsafe {
-    //             &(*pac::PWM::ptr())
-    //                 .en
-    //                 .modify(|r, w| w.bits(((r.bits() as u8) | bits) as u32));
-    //         }
-    //     }
+    /// Enable multiple slices at the same time to make their counters sync up.
+    ///
+    /// You still need to call `slice` to get an actual slice
+    pub fn enable_simultaneous(&mut self, bits: u8) {
+        // Enable multiple slices at the same time
+        unsafe {
+            let reg = self._pwm.en().as_ptr();
+            write_bitmask_set(reg, bits as u32);
+        }
+    }
 
     // /// Get pwm slice based on gpio pin
     // pub fn borrow_mut_from_pin<
@@ -613,24 +625,15 @@ impl<S: AnySlice, C: ChannelId> Channel<S, C> {
 
 impl<S: AnySlice, C: ChannelId> Sealed for Channel<S, C> {}
 
-impl<S: AnySlice> PwmPin for Channel<S, A> {
+impl<S: AnySlice> embedded_hal_0_2::PwmPin for Channel<S, A> {
     type Duty = u16;
 
-    /// We cant disable the channel without disturbing the other channel.
-    /// So this just sets the duty cycle to zero
     fn disable(&mut self) {
-        if self.enabled {
-            self.duty_cycle = self.regs.read_cc_a();
-        }
-        self.enabled = false;
-        self.regs.write_cc_a(0)
+        self.set_enabled(false);
     }
 
     fn enable(&mut self) {
-        if !self.enabled {
-            self.enabled = true;
-            self.regs.write_cc_a(self.duty_cycle)
-        }
+        self.set_enabled(true);
     }
 
     fn get_duty(&self) -> Self::Duty {
@@ -642,35 +645,23 @@ impl<S: AnySlice> PwmPin for Channel<S, A> {
     }
 
     fn get_max_duty(&self) -> Self::Duty {
-        self.regs.read_top()
+        SetDutyCycle::max_duty_cycle(self)
     }
 
     fn set_duty(&mut self, duty: Self::Duty) {
-        self.duty_cycle = duty;
-        if self.enabled {
-            self.regs.write_cc_a(duty)
-        }
+        let _ = SetDutyCycle::set_duty_cycle(self, duty);
     }
 }
 
-impl<S: AnySlice> PwmPin for Channel<S, B> {
+impl<S: AnySlice> embedded_hal_0_2::PwmPin for Channel<S, B> {
     type Duty = u16;
 
-    /// We cant disable the channel without disturbing the other channel.
-    /// So this just sets the duty cycle to zero
     fn disable(&mut self) {
-        if self.enabled {
-            self.duty_cycle = self.regs.read_cc_b();
-        }
-        self.enabled = false;
-        self.regs.write_cc_b(0)
+        self.set_enabled(false);
     }
 
     fn enable(&mut self) {
-        if !self.enabled {
-            self.enabled = true;
-            self.regs.write_cc_b(self.duty_cycle)
-        }
+        self.set_enabled(true);
     }
 
     fn get_duty(&self) -> Self::Duty {
@@ -682,18 +673,66 @@ impl<S: AnySlice> PwmPin for Channel<S, B> {
     }
 
     fn get_max_duty(&self) -> Self::Duty {
-        self.regs.read_top()
+        SetDutyCycle::max_duty_cycle(self)
     }
 
     fn set_duty(&mut self, duty: Self::Duty) {
+        let _ = SetDutyCycle::set_duty_cycle(self, duty);
+    }
+}
+
+impl<S: AnySlice> ErrorType for Channel<S, A> {
+    type Error = Infallible;
+}
+
+impl<S: AnySlice> SetDutyCycle for Channel<S, A> {
+    fn max_duty_cycle(&self) -> u16 {
+        self.regs.read_top().saturating_add(1)
+    }
+
+    fn set_duty_cycle(&mut self, duty: u16) -> Result<(), Self::Error> {
+        self.duty_cycle = duty;
+        if self.enabled {
+            self.regs.write_cc_a(duty)
+        }
+        Ok(())
+    }
+}
+
+impl<S: AnySlice> ErrorType for Channel<S, B> {
+    type Error = Infallible;
+}
+
+impl<S: AnySlice> SetDutyCycle for Channel<S, B> {
+    fn max_duty_cycle(&self) -> u16 {
+        self.regs.read_top().saturating_add(1)
+    }
+
+    fn set_duty_cycle(&mut self, duty: u16) -> Result<(), Self::Error> {
         self.duty_cycle = duty;
         if self.enabled {
             self.regs.write_cc_b(duty)
         }
+        Ok(())
     }
 }
 
 impl<S: AnySlice> Channel<S, A> {
+    /// Enable or disable the PWM channel
+    pub fn set_enabled(&mut self, enable: bool) {
+        if enable && !self.enabled {
+            // Restore the duty cycle.
+            self.regs.write_cc_a(self.duty_cycle);
+            self.enabled = true;
+        } else if !enable && self.enabled {
+            // We can't disable it without disturbing the other channel so this
+            // just sets the duty cycle to zero.
+            self.duty_cycle = self.regs.read_cc_a();
+            self.regs.write_cc_a(0);
+            self.enabled = false;
+        }
+    }
+
     /// Capture a gpio pin and use it as pwm output for channel A
     pub fn output_to<P: AnyPin>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm, P::Pull>
     where
@@ -716,6 +755,21 @@ impl<S: AnySlice> Channel<S, A> {
 }
 
 impl<S: AnySlice> Channel<S, B> {
+    /// Enable or disable the PWM channel
+    pub fn set_enabled(&mut self, enable: bool) {
+        if enable && !self.enabled {
+            // Restore the duty cycle.
+            self.regs.write_cc_b(self.duty_cycle);
+            self.enabled = true;
+        } else if !enable && self.enabled {
+            // We can't disable it without disturbing the other channel so this
+            // just sets the duty cycle to zero.
+            self.duty_cycle = self.regs.read_cc_b();
+            self.regs.write_cc_b(0);
+            self.enabled = false;
+        }
+    }
+
     /// Capture a gpio pin and use it as pwm output for channel B
     pub fn output_to<P: AnyPin>(&mut self, pin: P) -> Pin<P::Id, FunctionPwm, P::Pull>
     where
@@ -825,7 +879,7 @@ pub struct SliceDmaWriteCc<S: SliceId, M: ValidSliceMode<S>> {
 /// pwm.channel_b.set_duty(0x1000);
 ///
 /// let buf = singleton!(: [TopFormat; 4] = [TopFormat::new(0x7fff); 4]).unwrap();
-/// let buf2 = singleton!(: [TopFormat; 4] = [TopFormat::new(0xffff); 4]).unwrap();
+/// let buf2 = singleton!(: [TopFormat; 4] = [TopFormat::new(0xfffe); 4]).unwrap();
 ///
 /// let dma = pac.DMA.split(&mut pac.RESETS);
 ///
@@ -951,7 +1005,7 @@ unsafe impl<S: SliceId, M: ValidSliceMode<S>> WriteTarget for SliceDmaWriteCc<S,
         let regs = Registers {
             id: PhantomData::<S> {},
         };
-        (regs.ch().cc.as_ptr() as u32, u32::MAX)
+        (regs.ch().cc().as_ptr() as u32, u32::MAX)
     }
 
     fn tx_increment(&self) -> bool {
@@ -972,7 +1026,7 @@ unsafe impl<S: SliceId, M: ValidSliceMode<S>> WriteTarget for SliceDmaWriteTop<S
         let regs = Registers {
             id: PhantomData::<S> {},
         };
-        (regs.ch().top.as_ptr() as u32, u32::MAX)
+        (regs.ch().top().as_ptr() as u32, u32::MAX)
     }
 
     fn tx_increment(&self) -> bool {

@@ -101,13 +101,13 @@ impl Sio {
 
     /// Reads the whole bank0 at once.
     pub fn read_bank0() -> u32 {
-        unsafe { (*pac::SIO::PTR).gpio_in.read().bits() }
+        unsafe { (*pac::SIO::PTR).gpio_in().read().bits() }
     }
 
     /// Returns whether we are running on Core 0 (`0`) or Core 1 (`1`).
     pub fn core() -> CoreId {
         // Safety: it is always safe to read this read-only register
-        match unsafe { (*pac::SIO::ptr()).cpuid.read().bits() as u8 } {
+        match unsafe { (*pac::SIO::ptr()).cpuid().read().bits() as u8 } {
             0 => CoreId::Core0,
             1 => CoreId::Core1,
             _ => unreachable!("This MCU only has 2 cores."),
@@ -122,7 +122,7 @@ impl SioFifo {
     /// and you must not read from it.
     pub fn is_read_ready(&mut self) -> bool {
         let sio = unsafe { &(*pac::SIO::ptr()) };
-        sio.fifo_st.read().vld().bit_is_set()
+        sio.fifo_st().read().vld().bit_is_set()
     }
 
     /// Check if the inter-core FIFO is ready to receive data.
@@ -131,13 +131,13 @@ impl SioFifo {
     /// must not write to it.
     pub fn is_write_ready(&mut self) -> bool {
         let sio = unsafe { &(*pac::SIO::ptr()) };
-        sio.fifo_st.read().rdy().bit_is_set()
+        sio.fifo_st().read().rdy().bit_is_set()
     }
 
     /// Return the FIFO status, as an integer.
     pub fn status(&self) -> u32 {
         let sio = unsafe { &(*pac::SIO::ptr()) };
-        sio.fifo_st.read().bits()
+        sio.fifo_st().read().bits()
     }
 
     /// Write to the inter-core FIFO.
@@ -145,7 +145,7 @@ impl SioFifo {
     /// You must ensure the FIFO has space by calling `is_write_ready`
     pub fn write(&mut self, value: u32) {
         let sio = unsafe { &(*pac::SIO::ptr()) };
-        sio.fifo_wr.write(|w| unsafe { w.bits(value) });
+        sio.fifo_wr().write(|w| unsafe { w.bits(value) });
         // Fire off an event to the other core.
         // This is required as the other core may be `wfe` (waiting for event)
         cortex_m::asm::sev();
@@ -157,7 +157,7 @@ impl SioFifo {
     pub fn read(&mut self) -> Option<u32> {
         if self.is_read_ready() {
             let sio = unsafe { &(*pac::SIO::ptr()) };
-            Some(sio.fifo_rd.read().bits())
+            Some(sio.fifo_rd().read().bits())
         } else {
             None
         }
@@ -202,79 +202,97 @@ impl SioFifo {
     }
 }
 
+macro_rules! concatln {
+    ($(,)*) => {
+        ""
+    };
+    ( $e:expr ) => {
+        $e
+    };
+    ( $e:expr $(, $es:expr)+ $(,)*) => {
+        ::core::concat!( $e, "\n", concatln!($($es),+) )
+    };
+}
+
 // This takes advantage of how AAPCS defines a 64-bit return on 32-bit registers
 // by packing it into r0[0:31] and r1[32:63].  So all we need to do is put
 // the remainder in the high order 32 bits of a 64 bit result.   We can also
 // alias the division operators to these for a similar reason r0 is the
 // result either way and r1 a scratch register, so the caller can't assume it
 // retains the argument value.
-#[cfg(target_arch = "arm")]
-core::arch::global_asm!(
-    ".macro hwdivider_head",
-    "ldr    r2, =(0xd0000000)", // SIO_BASE
-    // Check the DIRTY state of the divider by shifting it into the C
-    // status bit.
-    "ldr    r3, [r2, #0x078]", // DIV_CSR
-    "lsrs   r3, #2",           // DIRTY = 1, so shift 2 down
-    // We only need to save the state when DIRTY, otherwise we can just do the
-    // division directly.
-    "bcs    2f",
-    "1:",
-    // Do the actual division now, we're either not DIRTY, or we've saved the
-    // state and branched back here so it's safe now.
-    ".endm",
-    ".macro hwdivider_tail",
-    // 8 cycle delay to wait for the result.  Each branch takes two cycles
-    // and fits into a 2-byte Thumb instruction, so this is smaller than
-    // 8 NOPs.
-    "b      3f",
-    "3: b   3f",
-    "3: b   3f",
-    "3: b   3f",
-    "3:",
-    // Read the quotient last, since that's what clears the dirty flag.
-    "ldr    r1, [r2, #0x074]", // DIV_REMAINDER
-    "ldr    r0, [r2, #0x070]", // DIV_QUOTIENT
-    // Either return to the caller or back to the state restore.
-    "bx     lr",
-    "2:",
-    // Since we can't save the signed-ness of the calculation, we have to make
-    // sure that there's at least an 8 cycle delay before we read the result.
-    // The push takes 5 cycles, and we've already spent at least 7 checking
-    // the DIRTY state to get here.
-    "push   {{r4-r6, lr}}",
-    // Read the quotient last, since that's what clears the dirty flag.
-    "ldr    r3, [r2, #0x060]", // DIV_UDIVIDEND
-    "ldr    r4, [r2, #0x064]", // DIV_UDIVISOR
-    "ldr    r5, [r2, #0x074]", // DIV_REMAINDER
-    "ldr    r6, [r2, #0x070]", // DIV_QUOTIENT
-    // If we get interrupted here (before a write sets the DIRTY flag) it's
-    // fine, since we have the full state, so the interruptor doesn't have to
-    // restore it.  Once the write happens and the DIRTY flag is set, the
-    // interruptor becomes responsible for restoring our state.
-    "bl     1b",
-    // If we are interrupted here, then the interruptor will start an incorrect
-    // calculation using a wrong divisor, but we'll restore the divisor and
-    // result ourselves correctly. This sets DIRTY, so any interruptor will
-    // save the state.
-    "str    r3, [r2, #0x060]", // DIV_UDIVIDEND
-    // If we are interrupted here, the the interruptor may start the
-    // calculation using incorrectly signed inputs, but we'll restore the
-    // result ourselves. This sets DIRTY, so any interruptor will save the
-    // state.
-    "str    r4, [r2, #0x064]", // DIV_UDIVISOR
-    // If we are interrupted here, the interruptor will have restored
-    // everything but the quotient may be wrongly signed.  If the calculation
-    // started by the above writes is still ongoing it is stopped, so it won't
-    // replace the result we're restoring.  DIRTY and READY set, but only
-    // DIRTY matters to make the interruptor save the state.
-    "str    r5, [r2, #0x074]", // DIV_REMAINDER
-    // State fully restored after the quotient write.  This sets both DIRTY
-    // and READY, so whatever we may have interrupted can read the result.
-    "str    r6, [r2, #0x070]", // DIV_QUOTIENT
-    "pop    {{r4-r6, pc}}",
-    ".endm",
-);
+macro_rules! hwdivider_head {
+    () => {
+        concatln!(
+            "ldr    r2, =(0xd0000000)", // SIO_BASE
+            // Check the DIRTY state of the divider by shifting it into the C
+            // status bit.
+            "ldr    r3, [r2, #0x078]", // DIV_CSR
+            "lsrs   r3, #2",           // DIRTY = 1, so shift 2 down
+            // We only need to save the state when DIRTY, otherwise we can just do the
+            // division directly.
+            "bcs    2f",
+            "1:",
+            // Do the actual division now, we're either not DIRTY, or we've saved the
+            // state and branched back here so it's safe now.
+        )
+    };
+}
+
+macro_rules! hwdivider_tail {
+    () => {
+        concatln!(
+            // 8 cycle delay to wait for the result.  Each branch takes two cycles
+            // and fits into a 2-byte Thumb instruction, so this is smaller than
+            // 8 NOPs.
+            "b      3f",
+            "3: b   3f",
+            "3: b   3f",
+            "3: b   3f",
+            "3:",
+            // Read the quotient last, since that's what clears the dirty flag.
+            "ldr    r1, [r2, #0x074]", // DIV_REMAINDER
+            "ldr    r0, [r2, #0x070]", // DIV_QUOTIENT
+            // Either return to the caller or back to the state restore.
+            "bx     lr",
+            "2:",
+            // Since we can't save the signed-ness of the calculation, we have to make
+            // sure that there's at least an 8 cycle delay before we read the result.
+            // The push takes 5 cycles, and we've already spent at least 7 checking
+            // the DIRTY state to get here.
+            "push   {{r4-r6, lr}}",
+            // Read the quotient last, since that's what clears the dirty flag.
+            "ldr    r3, [r2, #0x060]", // DIV_UDIVIDEND
+            "ldr    r4, [r2, #0x064]", // DIV_UDIVISOR
+            "ldr    r5, [r2, #0x074]", // DIV_REMAINDER
+            "ldr    r6, [r2, #0x070]", // DIV_QUOTIENT
+            // If we get interrupted here (before a write sets the DIRTY flag) it's
+            // fine, since we have the full state, so the interruptor doesn't have to
+            // restore it.  Once the write happens and the DIRTY flag is set, the
+            // interruptor becomes responsible for restoring our state.
+            "bl     1b",
+            // If we are interrupted here, then the interruptor will start an incorrect
+            // calculation using a wrong divisor, but we'll restore the divisor and
+            // result ourselves correctly. This sets DIRTY, so any interruptor will
+            // save the state.
+            "str    r3, [r2, #0x060]", // DIV_UDIVIDEND
+            // If we are interrupted here, the the interruptor may start the
+            // calculation using incorrectly signed inputs, but we'll restore the
+            // result ourselves. This sets DIRTY, so any interruptor will save the
+            // state.
+            "str    r4, [r2, #0x064]", // DIV_UDIVISOR
+            // If we are interrupted here, the interruptor will have restored
+            // everything but the quotient may be wrongly signed.  If the calculation
+            // started by the above writes is still ongoing it is stopped, so it won't
+            // replace the result we're restoring.  DIRTY and READY set, but only
+            // DIRTY matters to make the interruptor save the state.
+            "str    r5, [r2, #0x074]", // DIV_REMAINDER
+            // State fully restored after the quotient write.  This sets both DIRTY
+            // and READY, so whatever we may have interrupted can read the result.
+            "str    r6, [r2, #0x070]", // DIV_QUOTIENT
+            "pop    {{r4-r6, pc}}",
+        )
+    };
+}
 
 macro_rules! division_function {
     (
@@ -295,9 +313,9 @@ macro_rules! division_function {
                 concat!(stringify!($intrinsic), ":"),
             )*
 
-            "hwdivider_head",
+            hwdivider_head!(),
             $($begin),+ ,
-            "hwdivider_tail",
+            hwdivider_tail!(),
         );
 
         #[cfg(all(target_arch = "arm", feature = "disable-intrinsics"))]
@@ -308,9 +326,9 @@ macro_rules! division_function {
             ".align 2",
             concat!("_rphal_", stringify!($name), ":"),
 
-            "hwdivider_head",
+            hwdivider_head!(),
             $($begin),+ ,
-            "hwdivider_tail",
+            hwdivider_tail!(),
         );
 
         #[cfg(target_arch = "arm")]
@@ -458,7 +476,7 @@ where
     pub fn try_claim() -> Option<Self> {
         // Safety: We're only reading from this register
         let sio = unsafe { &*pac::SIO::ptr() };
-        let lock = sio.spinlock[N].read().bits();
+        let lock = sio.spinlock(N).read().bits();
         if lock > 0 {
             Some(Self(core::marker::PhantomData))
         } else {
@@ -490,7 +508,7 @@ where
     pub unsafe fn release() {
         let sio = &*pac::SIO::ptr();
         // Write (any value): release the lock
-        sio.spinlock[N].write_with_zero(|b| b.bits(1));
+        sio.spinlock(N).write_with_zero(|b| b.bits(1));
     }
 }
 
@@ -541,7 +559,7 @@ pub fn spinlock_state() -> [bool; 32] {
     // Safety: we're only reading from a register
     let sio = unsafe { &*pac::SIO::ptr() };
     // A bitmap containing the state of all 32 spinlocks (1=locked).
-    let register = sio.spinlock_st.read().bits();
+    let register = sio.spinlock_st().read().bits();
     let mut result = [false; 32];
     #[allow(clippy::needless_range_loop)]
     for i in 0..32 {
@@ -646,7 +664,7 @@ impl LaneCtrl {
     }
 }
 
-///Trait representing the functionnality of a single lane of an interpolator.
+///Trait representing the functionality of a single lane of an interpolator.
 pub trait Lane: Sealed {
     ///Read the lane result, and simultaneously write lane results to both accumulators.
     fn pop(&mut self) -> u32;
@@ -670,7 +688,7 @@ pub trait Lane: Sealed {
     fn read_raw(&self) -> u32;
 }
 
-///Trait representing the functionnality of an interpolator.
+///Trait representing the functionality of an interpolator.
 /// ```no_run
 /// use rp2040_hal::sio::{Sio,LaneCtrl,Lane};
 /// use rp2040_hal::pac;
@@ -723,43 +741,43 @@ macro_rules! interpolators {
                         impl Lane for [<$interp $lane>]{
                             fn pop(&mut self) ->u32{
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _pop_ $lane:lower>].read().bits()
+                                sio.[<$interp:lower _pop_ $lane:lower>]().read().bits()
                             }
                             fn peek(&self) ->u32{
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _peek_ $lane:lower>].read().bits()
+                                sio.[<$interp:lower _peek_ $lane:lower>]().read().bits()
                             }
                             fn set_accum(&mut self,v:u32){
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _accum $lane_id>].write(|w| unsafe { w.bits(v) });
+                                sio.[<$interp:lower _accum $lane_id>]().write(|w| unsafe { w.bits(v) });
                             }
                             fn get_accum(&self)->u32{
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _accum $lane_id>].read().bits()
+                                sio.[<$interp:lower _accum $lane_id>]().read().bits()
                             }
                             fn set_base(&mut self, v:u32){
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _base $lane_id>].write(|w| unsafe { w.bits(v) });
+                                sio.[<$interp:lower _base $lane_id>]().write(|w| unsafe { w.bits(v) });
                             }
                             fn get_base(&self)->u32{
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _base $lane_id>].read().bits()
+                                sio.[<$interp:lower _base $lane_id>]().read().bits()
                             }
                             fn set_ctrl(&mut self, v:u32){
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _ctrl_lane $lane_id>].write(|w| unsafe { w.bits(v) });
+                                sio.[<$interp:lower _ctrl_lane $lane_id>]().write(|w| unsafe { w.bits(v) });
                             }
                             fn get_ctrl(&self)->u32{
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _ctrl_lane $lane_id>].read().bits()
+                                sio.[<$interp:lower _ctrl_lane $lane_id>]().read().bits()
                             }
                             fn add_accum(&mut self, v:u32){
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _accum $lane_id _add>].write(|w| unsafe { w.bits(v) });
+                                sio.[<$interp:lower _accum $lane_id _add>]().write(|w| unsafe { w.bits(v) });
                             }
                             fn read_raw(&self)->u32{
                                 let sio = unsafe { &*pac::SIO::ptr() };
-                                sio.[<$interp:lower _accum $lane_id _add>].read().bits()
+                                sio.[<$interp:lower _accum $lane_id _add>]().read().bits()
                             }
                         }
                         impl Sealed for [<$interp $lane>] {}
@@ -781,23 +799,23 @@ macro_rules! interpolators {
                     impl Interp for $interp{
                         fn pop(&mut self) ->u32{
                             let sio = unsafe { &*pac::SIO::ptr() };
-                            sio.[<$interp:lower _pop_full>].read().bits()
+                            sio.[<$interp:lower _pop_full>]().read().bits()
                         }
                         fn peek(&self) ->u32{
                             let sio = unsafe { &*pac::SIO::ptr() };
-                            sio.[<$interp:lower _peek_full>].read().bits()
+                            sio.[<$interp:lower _peek_full>]().read().bits()
                         }
                         fn set_base(&mut self, v:u32){
                             let sio = unsafe { &*pac::SIO::ptr() };
-                            sio.[<$interp:lower _base2>].write(|w| unsafe { w.bits(v)});
+                            sio.[<$interp:lower _base2>]().write(|w| unsafe { w.bits(v)});
                         }
                         fn get_base(&self)->u32{
                             let sio = unsafe { &*pac::SIO::ptr() };
-                            sio.[<$interp:lower _base2>].read().bits()
+                            sio.[<$interp:lower _base2>]().read().bits()
                         }
                         fn set_base_1and0(&mut self, v:u32){
                             let sio = unsafe { &*pac::SIO::ptr() };
-                            sio.[<$interp:lower _base_1and0>].write(|w| unsafe { w.bits(v)});
+                            sio.[<$interp:lower _base_1and0>]().write(|w| unsafe { w.bits(v)});
                         }
                     }
                     impl Sealed for $interp {}

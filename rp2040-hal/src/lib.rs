@@ -8,15 +8,14 @@
 //! # Crate features
 //!
 //! * **chrono** -
-//!   Modifies some RTC access functions to use chrono types instead of a rp2040-hal specific
-//!   DateTime type
+//!   Add conversion functions between chrono types and the rp2040-hal specific DateTime type
 //! * **critical-section-impl** -
 //!   critical section that is safe for multicore use
 //! * **defmt** -
 //!   Implement `defmt::Format` for several types.
 //! * **disable-intrinsics** -
 //!   Disable automatic mapping of language features (like floating point math) to ROM functions
-//! * **eh1_0_alpha** -
+//! * **embedded_hal_1** -
 //!   Support alpha release of embedded-hal
 //! * **rom-func-cache** -
 //!   Memoize(cache) ROM function pointers on first use to improve performance
@@ -34,10 +33,13 @@
 //! * **rtic-monotonic** -
 //!   Implement
 //!   `rtic_monotonic::Monotonic` based on the RP2040 timer peripheral
+//! * **i2c-write-iter** -
+//!   Implement `i2c_write_iter` traits for `I2C<_, _, Controller>`.
 
 #![warn(missing_docs)]
 #![no_std]
 
+#[doc(hidden)]
 pub use paste;
 
 /// Re-export of the PAC
@@ -47,6 +49,8 @@ pub use rp2040_pac as pac;
 mod intrinsics;
 
 pub mod adc;
+#[macro_use]
+pub mod async_utils;
 pub(crate) mod atomic_register_access;
 pub mod clocks;
 #[cfg(feature = "critical-section-impl")]
@@ -72,6 +76,7 @@ pub mod typelevel;
 pub mod uart;
 pub mod usb;
 pub mod vector_table;
+pub mod vreg;
 pub mod watchdog;
 pub mod xosc;
 
@@ -93,6 +98,8 @@ pub use sio::Sio;
 pub use spi::Spi;
 pub use timer::Timer;
 pub use watchdog::Watchdog;
+// Re-export crates used in rp2040-hal's public API
+pub extern crate fugit;
 
 /// Trigger full reset of the RP2040.
 ///
@@ -100,8 +107,10 @@ pub use watchdog::Watchdog;
 pub fn reset() -> ! {
     unsafe {
         cortex_m::interrupt::disable();
-        (*pac::PSM::PTR).wdsel.write(|w| w.bits(0x0001ffff));
-        (*pac::WATCHDOG::PTR).ctrl.write(|w| w.trigger().set_bit());
+        (*pac::PSM::PTR).wdsel().write(|w| w.bits(0x0001ffff));
+        (*pac::WATCHDOG::PTR)
+            .ctrl()
+            .write(|w| w.trigger().set_bit());
         #[allow(clippy::empty_loop)]
         loop {}
     }
@@ -118,8 +127,8 @@ pub fn halt() -> ! {
         cortex_m::interrupt::disable();
         // Stop other core
         match crate::Sio::core() {
-            CoreId::Core0 => (*pac::PSM::PTR).frce_off.write(|w| w.proc1().set_bit()),
-            CoreId::Core1 => (*pac::PSM::PTR).frce_off.write(|w| w.proc0().set_bit()),
+            CoreId::Core0 => (*pac::PSM::PTR).frce_off().write(|w| w.proc1().set_bit()),
+            CoreId::Core1 => (*pac::PSM::PTR).frce_off().write(|w| w.proc0().set_bit()),
         }
         // Keep current core running, so debugging stays possible
         loop {

@@ -2,7 +2,7 @@
 //!
 //! ## Basic usage
 //! ```no_run
-//! use embedded_hal::digital::v2::{InputPin, OutputPin};
+//! use embedded_hal::digital::{InputPin, OutputPin};
 //! use rp2040_hal::{clocks::init_clocks_and_plls, gpio::Pins, watchdog::Watchdog, pac, Sio};
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let mut watchdog = Watchdog::new(peripherals.WATCHDOG);
@@ -19,7 +19,7 @@
 //! // Drive output to 0V
 //! output_pin.set_low().unwrap();
 //! // Set a pin to input
-//! let input_pin = pins.gpio24.into_floating_input();
+//! let mut input_pin = pins.gpio24.into_floating_input();
 //! // pinstate will be true if the pin is above 2V
 //! let pinstate = input_pin.is_high().unwrap();
 //! // pinstate_low will be true if the pin is below 1.15V
@@ -34,12 +34,12 @@
 //
 // - The user must not be able to instantiate by themselves nor obtain an instance of the Type-level
 //   structure.
-// - non-typestated features (overides, irq configuration, pads' output disable, pad's input
+// - non-typestated features (overrides, irq configuration, pads' output disable, pad's input
 //   enable, drive strength, schmitt, slew rate, sio's in sync bypass) are considered somewhat
 //   advanced usage of the pin (relative to reading/writing a gpio) and it is the responsibility of
 //   the user to make sure these are in a correct state when converting and passing the pin around.
 
-pub use embedded_hal::digital::v2::PinState;
+pub use embedded_hal::digital::PinState;
 
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
@@ -223,7 +223,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
 
     /// # Safety
     /// This method does not check if the pin is actually configured as the target function or pull
-    /// mode. This may lead to inconcistencies between the type-state and the actual state of the
+    /// mode. This may lead to inconsistencies between the type-state and the actual state of the
     /// pin's configuration.
     pub unsafe fn into_unchecked<F2: func::Function, P2: PullType>(self) -> Pin<I, F2, P2> {
         Pin {
@@ -483,7 +483,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
             .modify(|_, w| w.slewfast().bit(OutputSlewRate::Fast == rate));
     }
 
-    /// Get wether the schmitt trigger (hysteresis) is enabled.
+    /// Get whether the schmitt trigger (hysteresis) is enabled.
     #[inline]
     pub fn get_schmitt_enabled(&self) -> bool {
         self.id.pad_ctrl().read().schmitt().bit_is_set()
@@ -495,25 +495,25 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
         self.id.pad_ctrl().modify(|_, w| w.schmitt().bit(enable));
     }
 
-    /// Get the state of the digital output circuitery of the pad.
+    /// Get the state of the digital output circuitry of the pad.
     #[inline]
     pub fn get_output_disable(&mut self) -> bool {
         self.id.pad_ctrl().read().od().bit_is_set()
     }
 
-    /// Set the digital output circuitery of the pad.
+    /// Set the digital output circuitry of the pad.
     #[inline]
     pub fn set_output_disable(&mut self, disable: bool) {
         self.id.pad_ctrl().modify(|_, w| w.od().bit(disable));
     }
 
-    /// Get the state of the digital input circuitery of the pad.
+    /// Get the state of the digital input circuitry of the pad.
     #[inline]
     pub fn get_input_enable(&mut self) -> bool {
         self.id.pad_ctrl().read().ie().bit_is_set()
     }
 
-    /// Set the digital input circuitery of the pad.
+    /// Set the digital input circuitry of the pad.
     #[inline]
     pub fn set_input_enable(&mut self, enable: bool) {
         self.id.pad_ctrl().modify(|_, w| w.ie().bit(enable));
@@ -521,6 +521,18 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
 
     // =======================
     // IO related methods
+
+    /// Get the input override.
+    #[inline]
+    pub fn get_input_override(&self) -> InputOverride {
+        use pac::io_bank0::gpio::gpio_ctrl::INOVER_A;
+        match self.id.io_ctrl().read().inover().variant() {
+            INOVER_A::NORMAL => InputOverride::Normal,
+            INOVER_A::INVERT => InputOverride::Invert,
+            INOVER_A::LOW => InputOverride::AlwaysLow,
+            INOVER_A::HIGH => InputOverride::AlwaysHigh,
+        }
+    }
 
     /// Set the input override.
     #[inline]
@@ -533,6 +545,18 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
             InputOverride::AlwaysHigh => INOVER_A::HIGH,
         };
         self.id.io_ctrl().modify(|_, w| w.inover().variant(variant));
+    }
+
+    /// Get the output enable override.
+    #[inline]
+    pub fn get_output_enable_override(&self) -> OutputEnableOverride {
+        use pac::io_bank0::gpio::gpio_ctrl::OEOVER_A;
+        match self.id.io_ctrl().read().oeover().variant() {
+            OEOVER_A::NORMAL => OutputEnableOverride::Normal,
+            OEOVER_A::INVERT => OutputEnableOverride::Invert,
+            OEOVER_A::DISABLE => OutputEnableOverride::Disable,
+            OEOVER_A::ENABLE => OutputEnableOverride::Enable,
+        }
     }
 
     /// Set the output enable override.
@@ -548,6 +572,18 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
         self.id.io_ctrl().modify(|_, w| w.oeover().variant(variant));
     }
 
+    /// Get the output override.
+    #[inline]
+    pub fn get_output_override(&self) -> OutputOverride {
+        use pac::io_bank0::gpio::gpio_ctrl::OUTOVER_A;
+        match self.id.io_ctrl().read().outover().variant() {
+            OUTOVER_A::NORMAL => OutputOverride::DontInvert,
+            OUTOVER_A::INVERT => OutputOverride::Invert,
+            OUTOVER_A::LOW => OutputOverride::AlwaysLow,
+            OUTOVER_A::HIGH => OutputOverride::AlwaysHigh,
+        }
+    }
+
     /// Set the output override.
     #[inline]
     pub fn set_output_override(&mut self, override_value: OutputOverride) {
@@ -561,6 +597,18 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
         self.id
             .io_ctrl()
             .modify(|_, w| w.outover().variant(variant));
+    }
+
+    /// Get the interrupt override.
+    #[inline]
+    pub fn get_interrupt_override(&self) -> InterruptOverride {
+        use pac::io_bank0::gpio::gpio_ctrl::IRQOVER_A;
+        match self.id.io_ctrl().read().irqover().variant() {
+            IRQOVER_A::NORMAL => InterruptOverride::Normal,
+            IRQOVER_A::INVERT => InterruptOverride::Invert,
+            IRQOVER_A::LOW => InterruptOverride::AlwaysLow,
+            IRQOVER_A::HIGH => InterruptOverride::AlwaysHigh,
+        }
     }
 
     /// Set the interrupt override.
@@ -765,7 +813,7 @@ impl<I: PinId, C: SioConfig, P: PullType> Pin<I, FunctionSio<C>, P> {
 
     /// Bypass the input sync stages.
     ///
-    /// This saves two clock cycles in the input signal's path at the risks of intruducing metastability.
+    /// This saves two clock cycles in the input signal's path at the risks of introducing metastability.
     #[inline]
     pub fn set_sync_bypass(&mut self, bypass: bool) {
         let mask = self.id.mask();
@@ -863,7 +911,7 @@ pub struct AsInputPin<'a, I: PinId, F: func::Function, P: PullType>(&'a Pin<I, F
 /// GPIO error type.
 pub type Error = core::convert::Infallible;
 
-impl<I, P> embedded_hal::digital::v2::OutputPin for Pin<I, FunctionSio<SioOutput>, P>
+impl<I, P> embedded_hal_0_2::digital::v2::OutputPin for Pin<I, FunctionSio<SioOutput>, P>
 where
     I: PinId,
     P: PullType,
@@ -882,8 +930,8 @@ where
 }
 
 /// Deprecated: Instead of implicitly implementing InputPin for function SioOutput,
-/// use `pin.as_input()` to get access to input values indepentent of the selected function.
-impl<I, P> embedded_hal::digital::v2::InputPin for Pin<I, FunctionSio<SioOutput>, P>
+/// use `pin.as_input()` to get access to input values independent of the selected function.
+impl<I, P> embedded_hal_0_2::digital::v2::InputPin for Pin<I, FunctionSio<SioOutput>, P>
 where
     I: PinId,
     P: PullType,
@@ -899,7 +947,7 @@ where
     }
 }
 
-impl<'a, I: PinId, F: func::Function, P: PullType> embedded_hal::digital::v2::InputPin
+impl<'a, I: PinId, F: func::Function, P: PullType> embedded_hal_0_2::digital::v2::InputPin
     for AsInputPin<'a, I, F, P>
 {
     type Error = core::convert::Infallible;
@@ -913,7 +961,7 @@ impl<'a, I: PinId, F: func::Function, P: PullType> embedded_hal::digital::v2::In
     }
 }
 
-impl<I, P> embedded_hal::digital::v2::StatefulOutputPin for Pin<I, FunctionSio<SioOutput>, P>
+impl<I, P> embedded_hal_0_2::digital::v2::StatefulOutputPin for Pin<I, FunctionSio<SioOutput>, P>
 where
     I: PinId,
     P: PullType,
@@ -927,7 +975,7 @@ where
     }
 }
 
-impl<I, P> embedded_hal::digital::v2::ToggleableOutputPin for Pin<I, FunctionSio<SioOutput>, P>
+impl<I, P> embedded_hal_0_2::digital::v2::ToggleableOutputPin for Pin<I, FunctionSio<SioOutput>, P>
 where
     I: PinId,
     P: PullType,
@@ -939,7 +987,7 @@ where
         Ok(())
     }
 }
-impl<I, P> embedded_hal::digital::v2::InputPin for Pin<I, FunctionSio<SioInput>, P>
+impl<I, P> embedded_hal_0_2::digital::v2::InputPin for Pin<I, FunctionSio<SioInput>, P>
 where
     I: PinId,
     P: PullType,
@@ -997,11 +1045,11 @@ macro_rules! gpio {
                             // SAFETY: this function owns the whole bank that will be affected.
                             let sio = unsafe { &*$crate::pac::SIO::PTR };
                             if DynBankId::$bank == DynBankId::Bank0 {
-                                sio.gpio_oe.reset();
-                                sio.gpio_out.reset();
+                                sio.gpio_oe().reset();
+                                sio.gpio_out().reset();
                             } else {
-                                sio.gpio_hi_oe.reset();
-                                sio.gpio_hi_out.reset();
+                                sio.gpio_hi_oe().reset();
+                                sio.gpio_hi_out().reset();
                             }
                         }
 
@@ -1367,7 +1415,7 @@ where
     }
 }
 
-impl<T: AnyPin> embedded_hal::digital::v2::InputPin for InOutPin<T> {
+impl<T: AnyPin> embedded_hal_0_2::digital::v2::InputPin for InOutPin<T> {
     type Error = Error;
     fn is_high(&self) -> Result<bool, Error> {
         self.inner.is_high()
@@ -1378,7 +1426,7 @@ impl<T: AnyPin> embedded_hal::digital::v2::InputPin for InOutPin<T> {
     }
 }
 
-impl<T: AnyPin> embedded_hal::digital::v2::OutputPin for InOutPin<T> {
+impl<T: AnyPin> embedded_hal_0_2::digital::v2::OutputPin for InOutPin<T> {
     type Error = Error;
     fn set_low(&mut self) -> Result<(), Error> {
         // The pin is already set to output low but this is inhibited by the override.
@@ -1396,13 +1444,13 @@ impl<T: AnyPin> embedded_hal::digital::v2::OutputPin for InOutPin<T> {
     }
 }
 
-#[cfg(feature = "eh1_0_alpha")]
 mod eh1 {
-    use eh1_0_alpha::digital::{
-        ErrorType, InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin,
-    };
+    use embedded_hal::digital::{ErrorType, InputPin, OutputPin, StatefulOutputPin};
 
-    use super::{Error, FunctionSio, Pin, PinId, PullType, SioConfig, SioInput, SioOutput};
+    use super::{
+        func, AnyPin, AsInputPin, Error, FunctionSio, InOutPin, Pin, PinId, PullType, SioConfig,
+        SioInput, SioOutput,
+    };
 
     impl<I, P, S> ErrorType for Pin<I, FunctionSio<S>, P>
     where
@@ -1434,20 +1482,14 @@ mod eh1 {
         I: PinId,
         P: PullType,
     {
-        fn is_set_high(&self) -> Result<bool, Self::Error> {
+        fn is_set_high(&mut self) -> Result<bool, Self::Error> {
             Ok(self._is_set_high())
         }
 
-        fn is_set_low(&self) -> Result<bool, Self::Error> {
+        fn is_set_low(&mut self) -> Result<bool, Self::Error> {
             Ok(self._is_set_low())
         }
-    }
 
-    impl<I, P> ToggleableOutputPin for Pin<I, FunctionSio<SioOutput>, P>
-    where
-        I: PinId,
-        P: PullType,
-    {
         fn toggle(&mut self) -> Result<(), Self::Error> {
             self._toggle();
             Ok(())
@@ -1459,33 +1501,66 @@ mod eh1 {
         I: PinId,
         P: PullType,
     {
-        fn is_high(&self) -> Result<bool, Self::Error> {
+        fn is_high(&mut self) -> Result<bool, Self::Error> {
             Ok(self._is_high())
         }
 
-        fn is_low(&self) -> Result<bool, Self::Error> {
+        fn is_low(&mut self) -> Result<bool, Self::Error> {
             Ok(self._is_low())
         }
     }
 
-    impl<'a, I, F, P> ErrorType for super::AsInputPin<'a, I, F, P>
+    impl<'a, I, F, P> ErrorType for AsInputPin<'a, I, F, P>
     where
         I: PinId,
-        F: super::func::Function,
+        F: func::Function,
         P: PullType,
     {
         type Error = Error;
     }
 
-    impl<'a, I: PinId, F: super::func::Function, P: PullType> InputPin
-        for super::AsInputPin<'a, I, F, P>
-    {
-        fn is_high(&self) -> Result<bool, Self::Error> {
+    impl<'a, I: PinId, F: func::Function, P: PullType> InputPin for AsInputPin<'a, I, F, P> {
+        fn is_high(&mut self) -> Result<bool, Self::Error> {
             Ok(self.0._is_high())
         }
 
-        fn is_low(&self) -> Result<bool, Self::Error> {
+        fn is_low(&mut self) -> Result<bool, Self::Error> {
             Ok(self.0._is_low())
+        }
+    }
+
+    impl<I> ErrorType for InOutPin<I>
+    where
+        I: AnyPin,
+    {
+        type Error = Error;
+    }
+
+    impl<I> OutputPin for InOutPin<I>
+    where
+        I: AnyPin,
+    {
+        fn set_low(&mut self) -> Result<(), Self::Error> {
+            self.inner._set_low();
+            Ok(())
+        }
+
+        fn set_high(&mut self) -> Result<(), Self::Error> {
+            self.inner._set_high();
+            Ok(())
+        }
+    }
+
+    impl<I> InputPin for InOutPin<I>
+    where
+        I: AnyPin,
+    {
+        fn is_high(&mut self) -> Result<bool, Self::Error> {
+            Ok(self.inner._is_high())
+        }
+
+        fn is_low(&mut self) -> Result<bool, Self::Error> {
+            Ok(self.inner._is_low())
         }
     }
 }

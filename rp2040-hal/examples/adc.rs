@@ -19,8 +19,9 @@ use rp2040_hal as hal;
 
 // Some traits we need
 use core::fmt::Write;
-use embedded_hal::adc::OneShot;
-use fugit::RateExtU32;
+// Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
+use embedded_hal_0_2::adc::OneShot;
+use hal::fugit::RateExtU32;
 use rp2040_hal::Clock;
 
 // UART related types
@@ -68,7 +69,6 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-    .ok()
     .unwrap();
 
     // The delay object lets us wait for specified amounts of time (in
@@ -110,7 +110,7 @@ fn main() -> ! {
     let mut temperature_sensor = adc.take_temp_sensor().unwrap();
 
     // Configure GPIO26 as an ADC input
-    let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26);
+    let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26).unwrap();
     loop {
         // Read the raw ADC counts from the temperature sensor channel.
         let temp_sens_adc_counts: u16 = adc.read(&mut temperature_sensor).unwrap();

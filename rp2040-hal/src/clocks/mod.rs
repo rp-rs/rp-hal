@@ -83,6 +83,160 @@ use clock_sources::PllSys;
 
 use self::clock_sources::{GPin0, GPin1, PllUsb, Rosc, Xosc};
 
+bitfield::bitfield! {
+    /// Bit field mapping clock enable bits.
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+    #[derive(Default)]
+    pub struct ClockGate(u64);
+    /// Clock gate to the clock controller.
+    pub sys_clock, set_sys_clock: 0;
+    /// Clock gate to the adc analog logic.
+    pub adc_adc, set_adc_adc: 1;
+    /// Clock gate to the adc peripheral.
+    pub sys_adc, set_sys_adc: 2;
+    /// Clock gate the memory bus controller.
+    pub sys_busctrl, set_sys_busctrl: 3;
+    /// Clock gate the memory bus fabric.
+    pub sys_busfabric, set_sys_busfabric: 4;
+    /// Clock gate the dma controller.
+    pub sys_dma, set_sys_dma: 5;
+    /// Clock gate I2C0.
+    pub sys_i2c0, set_sys_i2c0: 6;
+    /// Clock gate I2C1.
+    pub sys_i2c1, set_sys_i2c1: 7;
+    /// Clock gate the IO controller.
+    pub sys_io, set_sys_io: 8;
+    /// Clock gate the JTAG peripheral.
+    pub sys_jtag, set_sys_jtag: 9;
+    /// Clock gate the voltage regulator and reset controller.
+    pub sys_vreg_and_chip_reset, set_sys_vreg_and_chip_reset: 10;
+    /// Clock gate pad controller.
+    pub sys_pads, set_sys_pads: 11;
+    /// Clock gate PIO0 peripheral.
+    pub sys_pio0, set_sys_pio0: 12;
+    /// Clock gate PIO1 peripheral.
+    pub sys_pio1, set_sys_pio1: 13;
+    /// Clock gate .
+    pub sys_pll_sys, set_sys_pll_sys: 14;
+    /// Clock gate .
+    pub sys_pll_usb, set_sys_pll_usb: 15;
+    /// Clock gate the power state machine.
+    pub sys_psm, set_sys_psm: 16;
+    /// Clock gate PWM peripheral.
+    pub sys_pwm, set_sys_pwm: 17;
+    /// Clock gate the reset controller.
+    pub sys_resets, set_sys_resets: 18;
+    /// Clock gate the ROM.
+    pub sys_rom, set_sys_rom: 19;
+    /// Clock gate the ROSC controller (not the rosc itself).
+    pub sys_rosc, set_sys_rosc: 20;
+    /// Clock gate the RTC internal clock.
+    pub rtc_rtc, set_rtc_rtc: 21;
+    /// Clock gate the RTC peripheral.
+    pub sys_rtc, set_sys_rtc: 22;
+    /// Clock gate the SIO controller.
+    pub sys_sio, set_sys_sio: 23;
+    /// Clock gate SPI0's baud generation.
+    pub peri_spi0, set_peri_spi0: 24;
+    /// Clock gate SPI0's controller..
+    pub sys_spi0, set_sys_spi0: 25;
+    /// Clock gate SPI1's baud generation.
+    pub peri_spi1, set_peri_spi1: 26;
+    /// Clock gate SPI1's controller..
+    pub sys_spi1, set_sys_spi1: 27;
+    /// Clock gate SRAM0.
+    pub sys_sram0, set_sys_sram0: 28;
+    /// Clock gate SRAM1.
+    pub sys_sram1, set_sys_sram1: 29;
+    /// Clock gate SRAM2.
+    pub sys_sram2, set_sys_sram2: 30;
+    /// Clock gate SRAM3.
+    pub sys_sram3, set_sys_sram3: 31;
+
+    /// Clock gate SRAM4.
+    pub sys_sram4, set_sys_sram4: 32;
+    /// Clock gate SRAM5.
+    pub sys_sram5, set_sys_sram5: 33;
+    /// Clock gate the system configuration controller.
+    pub sys_syscfg, set_sys_syscfg: 34;
+    /// Clock gate the system information peripheral.
+    pub sys_sysinfo, set_sys_sysinfo: 35;
+    /// Clock gate the test bench manager.
+    pub sys_tbman, set_sys_tbman: 36;
+    /// Clock gate the Timer peripheral.
+    pub sys_timer, set_sys_timer: 37;
+    /// Clock gate UART0's baud generation.
+    pub peri_uart0, set_peri_uart0: 38;
+    /// Clock gate UART0's controller.
+    pub sys_uart0, set_sys_uart0: 39;
+    /// Clock gate UART1's baud generation.
+    pub peri_uart1, set_peri_uart1: 40;
+    /// Clock gate UART1's controller.
+    pub sys_uart1, set_sys_uart1: 41;
+    /// Clock gate the USB controller.
+    pub sys_usbctrl, set_sys_usbctrl: 42;
+    /// Clock gate the USB logic.
+    pub usb_usbctrl, set_usb_usbctrl: 43;
+    /// Clock gate the Watchdog controller.
+    pub sys_watchdog, set_sys_watchdog: 44;
+    /// .Clock gate the XIP controller.
+    pub sys_xip, set_sys_xip: 45;
+    /// Clock gate the XOSC controller (not xosc itself).
+    pub sys_xosc, set_sys_xosc: 46;
+}
+impl core::fmt::Debug for ClockGate {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("ClockGate")
+            .field("sys_clock", &self.sys_clock())
+            .field("adc_adc", &self.adc_adc())
+            .field("sys_adc", &self.sys_adc())
+            .field("sys_busctrl", &self.sys_busctrl())
+            .field("sys_busfabric", &self.sys_busfabric())
+            .field("sys_dma", &self.sys_dma())
+            .field("sys_i2c0", &self.sys_i2c0())
+            .field("sys_i2c1", &self.sys_i2c1())
+            .field("sys_io", &self.sys_io())
+            .field("sys_jtag", &self.sys_jtag())
+            .field("sys_vreg_and_chip_reset", &self.sys_vreg_and_chip_reset())
+            .field("sys_pads", &self.sys_pads())
+            .field("sys_pio0", &self.sys_pio0())
+            .field("sys_pio1", &self.sys_pio1())
+            .field("sys_pll_sys", &self.sys_pll_sys())
+            .field("sys_pll_usb", &self.sys_pll_usb())
+            .field("sys_psm", &self.sys_psm())
+            .field("sys_pwm", &self.sys_pwm())
+            .field("sys_resets", &self.sys_resets())
+            .field("sys_rom", &self.sys_rom())
+            .field("sys_rosc", &self.sys_rosc())
+            .field("rtc_rtc", &self.rtc_rtc())
+            .field("sys_rtc", &self.sys_rtc())
+            .field("sys_sio", &self.sys_sio())
+            .field("peri_spi0", &self.peri_spi0())
+            .field("sys_spi0", &self.sys_spi0())
+            .field("peri_spi1", &self.peri_spi1())
+            .field("sys_spi1", &self.sys_spi1())
+            .field("sys_sram0", &self.sys_sram0())
+            .field("sys_sram1", &self.sys_sram1())
+            .field("sys_sram2", &self.sys_sram2())
+            .field("sys_sram3", &self.sys_sram3())
+            .field("sys_sram4", &self.sys_sram4())
+            .field("sys_syscfg", &self.sys_syscfg())
+            .field("sys_sysinfo", &self.sys_sysinfo())
+            .field("sys_tbman", &self.sys_tbman())
+            .field("sys_timer", &self.sys_timer())
+            .field("peri_uart0", &self.peri_uart0())
+            .field("sys_uart0", &self.sys_uart0())
+            .field("peri_uart1", &self.peri_uart1())
+            .field("sys_uart1", &self.sys_uart1())
+            .field("sys_usbctrl", &self.sys_usbctrl())
+            .field("usb_usbctrl", &self.usb_usbctrl())
+            .field("sys_watchdog", &self.sys_watchdog())
+            .field("sys_xip", &self.sys_xip())
+            .field("sys_xosc", &self.sys_xosc())
+            .finish()
+    }
+}
+
 #[derive(Copy, Clone)]
 /// Provides refs to the CLOCKS block.
 struct ShareableClocks {
@@ -102,6 +256,7 @@ impl ShareableClocks {
 /// Something when wrong setting up the clock
 #[non_exhaustive]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ClockError {
     /// The frequency desired is higher than the source frequency
     CantIncreaseFreq,
@@ -173,7 +328,7 @@ pub trait ClockSource: Sealed {
     fn get_freq(&self) -> HertzU32;
 }
 
-/// Trait to contrain which ClockSource is valid for which Clock
+/// Trait to constrain which ClockSource is valid for which Clock
 pub trait ValidSrc<C: Clock>: Sealed + ClockSource {
     /// Is this a ClockSource for src or aux?
     fn is_aux(&self) -> bool;
@@ -301,6 +456,32 @@ impl ClocksManager {
             .configure_clock(&self.system_clock, self.system_clock.freq())
     }
 
+    /// Configure the clocks staying ON during deep-sleep.
+    pub fn configure_sleep_enable(&mut self, clock_gate: ClockGate) {
+        self.clocks
+            .sleep_en0()
+            .write(|w| unsafe { w.bits(clock_gate.0 as u32) });
+        self.clocks
+            .sleep_en1()
+            .write(|w| unsafe { w.bits((clock_gate.0 >> 32) as u32) });
+    }
+
+    /// Read the clock gate configuration while the device is in its (deep) sleep state.
+    pub fn sleep_enable(&self) -> ClockGate {
+        ClockGate(
+            (u64::from(self.clocks.sleep_en1().read().bits()) << 32)
+                | u64::from(self.clocks.sleep_en0().read().bits()),
+        )
+    }
+
+    /// Read the clock gate configuration while the device is in its wake state.
+    pub fn wake_enable(&self) -> ClockGate {
+        ClockGate(
+            (u64::from(self.clocks.wake_en1().read().bits()) << 32)
+                | u64::from(self.clocks.wake_en0().read().bits()),
+        )
+    }
+
     /// Releases the CLOCKS block
     pub fn free(self) -> CLOCKS {
         self.clocks
@@ -308,6 +489,8 @@ impl ClocksManager {
 }
 
 /// Possible init errors
+#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum InitError {
     /// Something went wrong setting up the Xosc
     XoscErr(XoscError),

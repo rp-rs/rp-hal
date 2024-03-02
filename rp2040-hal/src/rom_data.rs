@@ -150,6 +150,11 @@ macro_rules! declare_rom_function {
         }
 
         $(#[$outer])*
+        /// # Safety
+        ///
+        /// This is a low-level C function. It may be difficult to call safely from
+        /// Rust. If in doubt, check the RP2040 datasheet for details and do your own
+        /// safety evaluation.
         pub unsafe extern "C" fn $name( $($argname: $ty),* ) -> $ret {
             $name::ptr()($($argname),*)
         }

@@ -13,17 +13,17 @@
 // be linked)
 use panic_halt as _;
 
-// Some traits we need
-use embedded_hal::blocking::i2c::Write;
-use fugit::RateExtU32;
-
 // Alias for our HAL crate
 use rp2040_hal as hal;
+
+// Some traits we need
+use embedded_hal_0_2::blocking::i2c::Write;
+use hal::fugit::RateExtU32;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access and a gpio related types.
 use hal::{
-    gpio::{FunctionI2C, Pin, PullUp},
+    gpio::{FunctionI2C, Pin},
     pac,
 };
 
@@ -63,7 +63,6 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-    .ok()
     .unwrap();
 
     // The single-cycle I/O block controls our GPIO pins
@@ -78,8 +77,8 @@ fn main() -> ! {
     );
 
     // Configure two pins as being I²C, not GPIO
-    let sda_pin: Pin<_, FunctionI2C, PullUp> = pins.gpio18.reconfigure();
-    let scl_pin: Pin<_, FunctionI2C, PullUp> = pins.gpio19.reconfigure();
+    let sda_pin: Pin<_, FunctionI2C, _> = pins.gpio18.reconfigure();
+    let scl_pin: Pin<_, FunctionI2C, _> = pins.gpio19.reconfigure();
     // let not_an_scl_pin: Pin<_, FunctionI2C, PullUp> = pins.gpio20.reconfigure();
 
     // Create the I²C drive, using the two pre-configured pins. This will fail
@@ -95,7 +94,7 @@ fn main() -> ! {
     );
 
     // Write three bytes to the I²C device with 7-bit address 0x2C
-    i2c.write(0x2c, &[1, 2, 3]).unwrap();
+    i2c.write(0x2Cu8, &[1, 2, 3]).unwrap();
 
     // Demo finish - just loop until reset
 

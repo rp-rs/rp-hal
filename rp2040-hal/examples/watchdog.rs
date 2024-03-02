@@ -21,9 +21,8 @@ use rp2040_hal as hal;
 use hal::pac;
 
 // Some traits we need
-use embedded_hal::digital::v2::OutputPin;
-use embedded_hal::watchdog::{Watchdog, WatchdogEnable};
-use fugit::ExtU32;
+use embedded_hal::digital::OutputPin;
+use hal::fugit::ExtU32;
 use rp2040_hal::clocks::Clock;
 
 /// The linker will place this boot block at the start of our program image. We
@@ -65,7 +64,6 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-    .ok()
     .unwrap();
 
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());

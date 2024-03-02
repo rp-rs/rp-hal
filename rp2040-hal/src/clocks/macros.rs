@@ -28,7 +28,7 @@ macro_rules! clocks {
                 pub fn new(mut clocks_block: CLOCKS) -> Self {
                     // Disable resus that may be enabled from previous software
                     unsafe {
-                        clocks_block.clk_sys_resus_ctrl.write_with_zero(|w| w);
+                        clocks_block.clk_sys_resus_ctrl().write_with_zero(|w| w);
                     }
 
                     let shared_clocks = ShareableClocks::new(&mut clocks_block);
@@ -73,7 +73,7 @@ macro_rules! clock {
             ($name, $reg, auxsrc={$($auxsrc: $aux_variant),*})
         }
 
-        divisable_clock!($name, $reg);
+        divisible_clock!($name, $reg);
 
         $crate::paste::paste!{
             $(impl ValidSrc<$name> for $src {
@@ -91,7 +91,7 @@ macro_rules! clock {
                 fn await_select(&self, clock_token: &ChangingClockToken<Self>) -> nb::Result<(), Infallible> {
                     let shared_dev = unsafe { self.shared_dev.get() };
 
-                    let selected = shared_dev.[<$reg _selected>].read().bits();
+                    let selected = shared_dev.[<$reg _selected>]().read().bits();
                     if selected != 1 << clock_token.clock_nr {
                         return Err(nb::Error::WouldBlock);
                     }
@@ -136,7 +136,7 @@ macro_rules! clock {
                 pub fn reset_source_await(&mut self) -> nb::Result<(), Infallible> {
                     let shared_dev = unsafe { self.shared_dev.get() };
 
-                    shared_dev.[<$reg _ctrl>].modify(|_, w| {
+                    shared_dev.[<$reg _ctrl>]().modify(|_, w| {
                         w.src().variant(self.get_default_clock_source())
                     });
 
@@ -149,7 +149,7 @@ macro_rules! clock {
                 fn set_src<S: ValidSrc<$name>>(&mut self, src: &S)-> ChangingClockToken<$name> {
                     let shared_dev = unsafe { self.shared_dev.get() };
 
-                    shared_dev.[<$reg _ctrl>].modify(|_,w| {
+                    shared_dev.[<$reg _ctrl>]().modify(|_,w| {
                         w.src().variant(src.variant().unwrap_src())
                     });
 
@@ -160,7 +160,7 @@ macro_rules! clock {
                 }
 
                 fn set_self_aux_src(&mut self) -> ChangingClockToken<$name> {
-                    unsafe { self.shared_dev.get() }.[<$reg _ctrl>].modify(|_, w| {
+                    unsafe { self.shared_dev.get() }.[<$reg _ctrl>]().modify(|_, w| {
                         w.src().variant(self.get_aux_source())
                     });
 
@@ -259,23 +259,23 @@ macro_rules! clock {
             ($name, $reg, auxsrc={$($auxsrc: $variant),*})
         }
 
-        divisable_clock!($name, $reg);
+        divisible_clock!($name, $reg);
         stoppable_clock!($name, $reg);
     };
 }
 
-macro_rules! divisable_clock {
+macro_rules! divisible_clock {
     ($name:ident, $reg:ident) => {
         $crate::paste::paste! {
             impl ClockDivision for $name {
                 fn set_div(&mut self, div: u32) {
-                    unsafe { self.shared_dev.get() }.[<$reg _div>].modify(|_, w| unsafe {
+                    unsafe { self.shared_dev.get() }.[<$reg _div>]().modify(|_, w| unsafe {
                         w.bits(div);
                         w
                     });
                 }
                 fn get_div(&self) -> u32 {
-                    unsafe { self.shared_dev.get() }.[<$reg _div>].read().bits()
+                    unsafe { self.shared_dev.get() }.[<$reg _div>]().read().bits()
                 }
             }
         }
@@ -302,21 +302,21 @@ macro_rules! stoppable_clock {
             impl StoppableClock for $name {
                 /// Enable the clock
                 fn enable(&mut self) {
-                    unsafe { self.shared_dev.get() }.[<$reg _ctrl>].modify(|_, w| {
+                    unsafe { self.shared_dev.get() }.[<$reg _ctrl>]().modify(|_, w| {
                         w.enable().set_bit()
                     });
                 }
 
                 /// Disable the clock cleanly
                 fn disable(&mut self) {
-                    unsafe { self.shared_dev.get() }.[<$reg _ctrl>].modify(|_, w| {
+                    unsafe { self.shared_dev.get() }.[<$reg _ctrl>]().modify(|_, w| {
                         w.enable().clear_bit()
                     });
                 }
 
                 /// Disable the clock asynchronously
                 fn kill(&mut self) {
-                    unsafe { self.shared_dev.get() }.[<$reg _ctrl>].modify(|_, w| {
+                    unsafe { self.shared_dev.get() }.[<$reg _ctrl>]().modify(|_, w| {
                         w.kill().set_bit()
                     });
                 }
@@ -412,7 +412,7 @@ macro_rules! base_clock {
                 fn set_aux<S: ValidSrc<$name>>(&mut self, src: &S) {
                     let shared_dev = unsafe { self.shared_dev.get() };
 
-                    shared_dev.[<$reg _ctrl>].modify(|_,w| {
+                    shared_dev.[<$reg _ctrl>]().modify(|_,w| {
                         w.auxsrc().variant(src.variant().unwrap_aux())
                     });
                 }

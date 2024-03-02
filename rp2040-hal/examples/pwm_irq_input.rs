@@ -20,8 +20,7 @@ use panic_halt as _;
 use rp2040_hal as hal;
 
 // Some traits we need
-use embedded_hal::digital::v2::OutputPin;
-use embedded_hal::PwmPin;
+use embedded_hal::digital::OutputPin;
 
 // Our interrupt macro
 use hal::pac::interrupt;
@@ -108,7 +107,6 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-    .ok()
     .unwrap();
 
     // The single-cycle I/O block controls our GPIO pins
@@ -136,7 +134,7 @@ fn main() -> ! {
     // Connect to GPI O1 as the input to channel B on PWM0
     let input_pin = pins.gpio1.reconfigure();
     let channel = &mut pwm.channel_b;
-    channel.enable();
+    channel.set_enabled(true);
 
     // Enable an interrupt whenever GPI O1 goes from high to low (the end of a pulse)
     input_pin.set_interrupt_enabled(gpio::Interrupt::EdgeLow, true);

@@ -8,7 +8,7 @@
 
 use cortex_m::singleton;
 use cortex_m_rt::entry;
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::digital::OutputPin;
 use hal::dma::{single_buffer, DMAExt};
 use hal::pac;
 use panic_halt as _;
@@ -41,7 +41,6 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-    .ok()
     .unwrap();
 
     // Setup the pins.

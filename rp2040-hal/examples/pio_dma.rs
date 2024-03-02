@@ -1,6 +1,6 @@
 //! This example shows how to read from and write to PIO using DMA.
 //!
-//! If a LED is connected to that pin, like on a Pico board, it will continously output "HELLO
+//! If a LED is connected to that pin, like on a Pico board, it will continuously output "HELLO
 //! WORLD" in morse code. The example also tries to read the data back. If reading the data fails,
 //! the message will only be shown once, and then the LED remains dark.
 //!
@@ -62,7 +62,7 @@ fn main() -> ! {
     // Initialize and start PIO
     let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
     let installed = pio.install(&program.program).unwrap();
-    let (mut sm, rx, tx) = rp2040_hal::pio::PIOBuilder::from_program(installed)
+    let (mut sm, rx, tx) = rp2040_hal::pio::PIOBuilder::from_installed_program(installed)
         .out_pins(led_pin_id, 1)
         .clock_divisor_fixed_point(0, 0) // as slow as possible (0 is interpreted as 65536)
         .autopull(true)

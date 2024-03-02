@@ -21,8 +21,8 @@ use rp2040_hal as hal;
 
 // Some traits we need
 use cortex_m::prelude::*;
-use fugit::RateExtU32;
-use rp2040_hal::clocks::Clock;
+use hal::clocks::Clock;
+use hal::fugit::RateExtU32;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
@@ -65,7 +65,6 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-    .ok()
     .unwrap();
 
     // The single-cycle I/O block controls our GPIO pins
@@ -95,7 +94,7 @@ fn main() -> ! {
 
     // Write out 0, ignore return value
     if spi.write(&[0]).is_ok() {
-        // SPI write was succesful
+        // SPI write was successful
     };
 
     // write 50, then check the return

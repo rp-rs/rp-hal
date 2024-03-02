@@ -130,9 +130,9 @@ where
     /// Check if the transfer is completed
     pub fn is_done(&self) -> bool {
         if self.second_ch {
-            !self.ch.1.ch().ch_ctrl_trig.read().busy().bit_is_set()
+            !self.ch.1.ch().ch_ctrl_trig().read().busy().bit_is_set()
         } else {
-            !self.ch.0.ch().ch_ctrl_trig.read().busy().bit_is_set()
+            !self.ch.0.ch().ch_ctrl_trig().read().busy().bit_is_set()
         }
     }
 }

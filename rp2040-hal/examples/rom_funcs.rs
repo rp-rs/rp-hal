@@ -22,7 +22,7 @@ use hal::pac;
 
 // Some traits we need
 use core::fmt::Write;
-use fugit::RateExtU32;
+use hal::fugit::RateExtU32;
 use hal::Clock;
 
 // UART related types
@@ -70,7 +70,6 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-    .ok()
     .unwrap();
 
     // The single-cycle I/O block controls our GPIO pins

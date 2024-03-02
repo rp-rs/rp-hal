@@ -3,4 +3,4 @@
 
 @SET "CARGO_TARGET_THUMBV6M_NONE_EABI_RUNNER=probe-rs run"
 
-cargo test --no-fail-fast -- --chip rp2040
+cargo test -p on-target-tests --no-fail-fast -- --chip rp2040

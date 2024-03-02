@@ -26,7 +26,7 @@ use rp2040_hal as hal;
 use hal::pac;
 
 // Some traits we need
-use embedded_hal::digital::v2::ToggleableOutputPin;
+use embedded_hal::digital::StatefulOutputPin;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -53,7 +53,7 @@ const CORE1_DELAY: u32 = 1_000_000 / CORE1_FREQ;
 ///
 /// Core 0 gets its stack via the normal route - any memory not used by static
 /// values is reserved for stack and initialised by cortex-m-rt.
-/// To get the same for Core 1, we would need to compile everything seperately
+/// To get the same for Core 1, we would need to compile everything separately
 /// and modify the linker file for both programs, and that's quite annoying.
 /// So instead, core1.spawn takes a [usize] which gets used for the stack.
 /// NOTE: We use the `Stack` struct here to ensure that it has 32-byte
@@ -84,7 +84,6 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-    .ok()
     .unwrap();
 
     // Set up the GPIO pins

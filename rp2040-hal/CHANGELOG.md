@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Allow to use ADC free-running mode without FIFO.
+
+### Changed
+
+- bump MSRV to 1.65
+- Set startup\_delay\_multiplier of XOSC to 64, and make it configurable.
+  This should increase compatibility with boards where the oscillator starts up
+  more slowly than on the Raspberry Pico.
+- Some reorganization of ADC code, making sure that AdcPin can only
+  be created for pins that can actually be used as ADC channels.
+
+## [0.9.1]
+
+### Added
+
+- Add function to enable multiple PWM slices at the same time - #668 @jlpettersson
+- Add uart\_is\_busy() method - #711 @Rahix
+- Re-export fugit - #573 @jannic
+- Add function to clear PIO fifos - #670 @ThadHouse
+- Implement WriteIter and WriteIterRead - #703 @thejpster
+- Implement InputPin for all pin configurations - #689 @jannic
+- Provide functions to access watchdog scratch registers - #685 @jannic
+- Implement reset() and halt() functions - #613 @jannic
+
+### Fixed
+
+- Fix USB PLL's VCO frequency according to updated datasheet - #688 @ithinuel, @jannic
+- Fix UART transmit\_flushed method - #713 @jannic
+- Fix calculation of pll frequency for refdiv != 1 - #691 @vinsynth
+
+### Changed
+
+- Improve documentation - #692 #696 #697 #698 #699 #702 #704 #709 #714 @9names @fu5ha @ithinuel @jannic
+- Migrate to eh1\_0 rc 1 - #681 @ithinuel
+
 ## [0.9.0]
 
 ### MSRV
@@ -132,7 +170,7 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.62
 ### Added
 
 - Add docs.rs metadata - @icedrocket
-- Implement embedded-hal aplha SPI traits - @ptpaterson
+- Implement embedded-hal alpha SPI traits - @ptpaterson
 - Add derive(Debug) and derive(defmt::Format) to error types - @9names
 - Add ability to modify installed PIO program wrap bounds - @davidcole1340
 - Add rtic-monotonic support for timer & alarms (feature gated) - @ithinuel
@@ -214,7 +252,7 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.61
 ### Changed
 
 - Use thread send safe UART* marker when splitting, improves UART ergonmics - @marius-meissner
-- Improve performance for hardware division instrinsics. Internal intrinsics cleanup - @Sizurka
+- Improve performance for hardware division intrinsics. Internal intrinsics cleanup - @Sizurka
 - Provide a better alarm abstraction - @ithinuel
 - Update Multicore::spawn to be able to take a closure without requiring alloc.
   Improve Multicore ergonomics and add example for how to use new API - @Liamolucko
@@ -315,7 +353,8 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.54.
 
 - Initial release
 
-[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/rp-rs/rp-hal/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/rp-rs/rp-hal/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/rp-rs/rp-hal/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/rp-rs/rp-hal/compare/v0.7.0...v0.8.0

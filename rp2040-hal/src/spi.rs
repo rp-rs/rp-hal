@@ -1,5 +1,8 @@
 //! Serial Peripheral Interface (SPI)
 //!
+//! [`Spi`] is the main struct exported by this module, representing a configured Spi bus. See its
+//! docs for more information on its type parameters.
+//!
 //! See [Chapter 4 Section 4](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
 //!
 //! ## Usage
@@ -16,19 +19,19 @@
 //! let sclk = pins.gpio2.into_function::<FunctionSpi>();
 //! let mosi = pins.gpio3.into_function::<FunctionSpi>();
 //!
-//! let spi = Spi::<_, _, _, 8>::new(peripherals.SPI0, (mosi, sclk)).init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), MODE_0);
+//! let spi_device = peripherals.SPI0;
+//! let spi_pin_layout = (mosi, sclk);
+//!
+//! let spi = Spi::<_, _, _, 8>::new(spi_device, spi_pin_layout)
+//!     .init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), MODE_0);
 //! ```
 
 use core::{convert::Infallible, marker::PhantomData, ops::Deref};
 
-#[cfg(feature = "eh1_0_alpha")]
-use eh1_0_alpha::spi as eh1;
-#[cfg(feature = "eh1_0_alpha")]
-use eh_nb_1_0_alpha::spi as eh1nb;
-use embedded_hal::{
-    blocking::spi,
-    spi::{FullDuplex, Phase, Polarity},
-};
+use embedded_hal::spi::{self, Phase, Polarity};
+// Support Embedded HAL 0.2 for backwards-compatibility
+use embedded_hal_0_2::{blocking::spi as blocking_spi02, spi as spi02};
+use embedded_hal_nb::spi::FullDuplex;
 use fugit::{HertzU32, RateExtU32};
 
 use crate::{
@@ -41,14 +44,14 @@ use crate::{
 mod pins;
 pub use pins::*;
 
-impl From<embedded_hal::spi::Mode> for FrameFormat {
-    fn from(f: embedded_hal::spi::Mode) -> Self {
+impl From<spi::Mode> for FrameFormat {
+    fn from(f: spi::Mode) -> Self {
         Self::MotorolaSpi(f)
     }
 }
 
-impl From<&embedded_hal::spi::Mode> for FrameFormat {
-    fn from(f: &embedded_hal::spi::Mode) -> Self {
+impl From<&spi::Mode> for FrameFormat {
+    fn from(f: &spi::Mode) -> Self {
         Self::MotorolaSpi(*f)
     }
 }
@@ -57,35 +60,36 @@ impl From<&embedded_hal::spi::Mode> for FrameFormat {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FrameFormat {
     /// Motorola SPI format. See section 4.4.3.9 of RP2040 datasheet.
-    MotorolaSpi(embedded_hal::spi::Mode),
+    MotorolaSpi(spi::Mode),
     /// Texas Instruments synchronous serial frame format. See section 4.4.3.8 of RP2040 datasheet.
     TexasInstrumentsSynchronousSerial,
     /// National Semiconductor Microwire frame format. See section 4.4.3.14 of RP2040 datasheet.
     NationalSemiconductorMicrowire,
 }
 
-#[cfg(feature = "eh1_0_alpha")]
-impl From<eh1_0_alpha::spi::Mode> for FrameFormat {
-    fn from(f: eh1_0_alpha::spi::Mode) -> Self {
-        let eh1_0_alpha::spi::Mode { polarity, phase } = f;
+impl From<&embedded_hal_0_2::spi::Mode> for FrameFormat {
+    fn from(f: &embedded_hal_0_2::spi::Mode) -> Self {
+        let embedded_hal_0_2::spi::Mode { polarity, phase } = f;
         match (polarity, phase) {
-            (
-                eh1_0_alpha::spi::Polarity::IdleLow,
-                eh1_0_alpha::spi::Phase::CaptureOnFirstTransition,
-            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_0),
-            (
-                eh1_0_alpha::spi::Polarity::IdleLow,
-                eh1_0_alpha::spi::Phase::CaptureOnSecondTransition,
-            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_1),
-            (
-                eh1_0_alpha::spi::Polarity::IdleHigh,
-                eh1_0_alpha::spi::Phase::CaptureOnFirstTransition,
-            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_2),
-            (
-                eh1_0_alpha::spi::Polarity::IdleHigh,
-                eh1_0_alpha::spi::Phase::CaptureOnSecondTransition,
-            ) => FrameFormat::MotorolaSpi(embedded_hal::spi::MODE_3),
+            (spi02::Polarity::IdleLow, spi02::Phase::CaptureOnFirstTransition) => {
+                FrameFormat::MotorolaSpi(spi::MODE_0)
+            }
+            (spi02::Polarity::IdleLow, spi02::Phase::CaptureOnSecondTransition) => {
+                FrameFormat::MotorolaSpi(spi::MODE_1)
+            }
+            (spi02::Polarity::IdleHigh, spi02::Phase::CaptureOnFirstTransition) => {
+                FrameFormat::MotorolaSpi(spi::MODE_2)
+            }
+            (spi02::Polarity::IdleHigh, spi02::Phase::CaptureOnSecondTransition) => {
+                FrameFormat::MotorolaSpi(spi::MODE_3)
+            }
         }
+    }
+}
+
+impl From<embedded_hal_0_2::spi::Mode> for FrameFormat {
+    fn from(f: embedded_hal_0_2::spi::Mode) -> Self {
+        From::from(&f)
     }
 }
 
@@ -147,8 +151,31 @@ impl DataSize for u16 {}
 impl Sealed for u8 {}
 impl Sealed for u16 {}
 
-/// Spi
-pub struct Spi<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> {
+/// Configured Spi bus.
+///
+/// This struct implements the `embedded-hal` Spi-related traits. It represents unique ownership
+/// of the entire Spi bus of a single configured RP2040 Spi peripheral.
+///
+/// `Spi` has four generic parameters:
+/// - `S`: a typestate for whether the bus is [`Enabled`] or [`Disabled`]. Upon initial creation,
+/// the bus is [`Disabled`]. You will then need to initialize it as either a main (master) or sub
+/// (slave) device, providing the necessary configuration, at which point it will become [`Enabled`].
+/// - `D`: Which of the concrete Spi peripherals is being used, [`pac::SPI0`] or [`pac::SPI1`]
+/// - `P`: Which pins are being used to configure the Spi peripheral `D`. A table of valid
+/// pinouts for each Spi peripheral can be found in section 1.4.3 of the RP2040 datasheet.
+/// The [`ValidSpiPinout`] trait is implemented for tuples of pin types that follow the layout:
+///     - `(Tx, Sck)` (i.e. first the "Tx"/"MOSI" pin, then the "Sck"/"Clock" pin)
+///     - `(Tx, Rx, Sck)` (i.e. first "Tx"/"MOSI", then "Rx"/"MISO", then "Sck"/"Clock" pin)
+/// If you select an invalid layout, you will get a compile error that `P` does not implement
+/// [`ValidSpiPinout`] for your specified [`SpiDevice`] peripheral `D`
+/// - `DS`: The "data size", i.e. the number of bits transferred per data frame. Defaults to 8.
+///
+/// In most cases you won't have to specify these types manually and can let the compiler infer
+/// them for you based on the values you pass in to `new`. If you want to select a different
+/// data frame size, you'll need to do that by specifying the `DS` parameter manually.
+///
+/// See [the module level docs][self] for an example.
+pub struct Spi<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8 = 8u8> {
     device: D,
     pins: P,
     state: PhantomData<S>,
@@ -163,14 +190,18 @@ impl<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<S, D, P, DS
         }
     }
 
-    /// Releases the underlying device.
-    pub fn free(self) -> D {
-        self.device
+    /// Releases the underlying device and pins.
+    pub fn free(self) -> (D, P) {
+        (self.device, self.pins)
     }
 
-    /// Set baudrate based on peripheral clock
+    /// Set device pre-scale and post-div properties to match the given baudrate as
+    /// closely as possible based on the given peripheral clock frequency.
     ///
-    /// Typically the peripheral clock is set to 125_000_000
+    /// Typically the peripheral clock is set to 125_000_000 Hz.
+    ///
+    /// Returns the frequency that we were able to achieve, which may not be exactly
+    /// the requested baudrate.
     pub fn set_baudrate<F: Into<HertzU32>, B: Into<HertzU32>>(
         &mut self,
         peri_frequency: F,
@@ -185,7 +216,7 @@ impl<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<S, D, P, DS
         // post-divide. Prescale is an even number from 2 to 254 inclusive.
         for prescale_option in (2u32..=254).step_by(2) {
             // We need to use an saturating_mul here because with a high baudrate certain invalid prescale
-            // values might not fit in u32. However we can be sure those values exeed the max sys_clk frequency
+            // values might not fit in u32. However we can be sure those values exceed the max sys_clk frequency
             // So clamping a u32::MAX is fine here...
             if freq_in < ((prescale_option + 2) * 256).saturating_mul(baudrate) {
                 prescale = prescale_option as u8;
@@ -206,10 +237,10 @@ impl<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<S, D, P, DS
         }
 
         self.device
-            .sspcpsr
+            .sspcpsr()
             .write(|w| unsafe { w.cpsdvsr().bits(prescale) });
         self.device
-            .sspcr0
+            .sspcr0()
             .modify(|_, w| unsafe { w.scr().bits(postdiv) });
 
         // Return the frequency we were able to achieve
@@ -218,7 +249,13 @@ impl<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<S, D, P, DS
 }
 
 impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
-    /// Create new spi device
+    /// Create new not initialized Spi bus. Initialize it with [`.init`][Self::init]
+    /// or [`.init_slave`][Self::init_slave].
+    ///
+    /// Valid pin sets are in the form of `(Tx, Sck)` or `(Tx, Rx, Sck)`
+    ///
+    /// If you pins are dynamically identified (`Pin<DynPinId, _, _>`) they will first need to pass
+    /// validation using their corresponding [`ValidatedPinXX`](ValidatedPinTx).
     pub fn new(device: D, pins: P) -> Spi<Disabled, D, P, DS> {
         Spi {
             device,
@@ -229,7 +266,7 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
 
     /// Set format and datasize
     fn set_format(&mut self, data_bits: u8, frame_format: FrameFormat) {
-        self.device.sspcr0.modify(|_, w| unsafe {
+        self.device.sspcr0().modify(|_, w| unsafe {
             w.dss().bits(data_bits - 1).frf().bits(match &frame_format {
                 FrameFormat::MotorolaSpi(_) => 0x00,
                 FrameFormat::TexasInstrumentsSynchronousSerial => 0x01,
@@ -253,9 +290,9 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
     /// Set master/slave
     fn set_slave(&mut self, slave: bool) {
         if slave {
-            self.device.sspcr1.modify(|_, w| w.ms().set_bit());
+            self.device.sspcr1().modify(|_, w| w.ms().set_bit());
         } else {
-            self.device.sspcr1.modify(|_, w| w.ms().clear_bit());
+            self.device.sspcr1().modify(|_, w| w.ms().clear_bit());
         }
     }
 
@@ -275,11 +312,11 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
         self.set_slave(slave);
         // Always enable DREQ signals -- harmless if DMA is not listening
         self.device
-            .sspdmacr
+            .sspdmacr()
             .modify(|_, w| w.txdmae().set_bit().rxdmae().set_bit());
 
         // Finally enable the SPI
-        self.device.sspcr1.modify(|_, w| w.sse().set_bit());
+        self.device.sspcr1().modify(|_, w| w.sse().set_bit());
 
         self.transition(Enabled { __private: () })
     }
@@ -316,20 +353,21 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
 
 impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Enabled, D, P, DS> {
     fn is_writable(&self) -> bool {
-        self.device.sspsr.read().tnf().bit_is_set()
+        self.device.sspsr().read().tnf().bit_is_set()
     }
     fn is_readable(&self) -> bool {
-        self.device.sspsr.read().rne().bit_is_set()
+        self.device.sspsr().read().rne().bit_is_set()
     }
 
     /// Check if spi is busy transmitting and/or receiving
     pub fn is_busy(&self) -> bool {
-        self.device.sspsr.read().bsy().bit_is_set()
+        self.device.sspsr().read().bsy().bit_is_set()
     }
 
-    /// Disable the spi to reset its configuration
+    /// Disable the spi to reset its configuration. You'll then need to initialize it again to use
+    /// it.
     pub fn disable(self) -> Spi<Disabled, D, P, DS> {
-        self.device.sspcr1.modify(|_, w| w.sse().clear_bit());
+        self.device.sspcr1().modify(|_, w| w.sse().clear_bit());
 
         self.transition(Disabled { __private: () })
     }
@@ -339,7 +377,7 @@ macro_rules! impl_write {
     ($type:ident, [$($nr:expr),+]) => {
 
         $(
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> FullDuplex<$type> for Spi<Enabled, D, P, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi02::FullDuplex<$type> for Spi<Enabled, D, P, $nr> {
             type Error = Infallible;
 
             fn read(&mut self) -> Result<$type, nb::Error<Infallible>> {
@@ -347,7 +385,7 @@ macro_rules! impl_write {
                     return Err(nb::Error::WouldBlock);
                 }
 
-                Ok(self.device.sspdr.read().data().bits() as $type)
+                Ok(self.device.sspdr().read().data().bits() as $type)
             }
             fn send(&mut self, word: $type) -> Result<(), nb::Error<Infallible>> {
                 // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
@@ -358,34 +396,32 @@ macro_rules! impl_write {
                 }
 
                 self.device
-                    .sspdr
+                    .sspdr()
                     .write(|w| unsafe { w.data().bits(word as u16) });
                 Ok(())
             }
         }
 
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi::write::Default<$type> for Spi<Enabled, D, P, $nr> {}
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi::transfer::Default<$type> for Spi<Enabled, D, P, $nr> {}
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi::write_iter::Default<$type> for Spi<Enabled, D, P, $nr> {}
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> blocking_spi02::write::Default<$type> for Spi<Enabled, D, P, $nr> {}
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> blocking_spi02::transfer::Default<$type> for Spi<Enabled, D, P, $nr> {}
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> blocking_spi02::write_iter::Default<$type> for Spi<Enabled, D, P, $nr> {}
 
-        #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1::ErrorType for Spi<Enabled, D, P, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi::ErrorType for Spi<Enabled, D, P, $nr> {
             type Error = Infallible;
         }
 
-        #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1::SpiBus<$type> for Spi<Enabled, D, P, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> spi::SpiBus<$type> for Spi<Enabled, D, P, $nr> {
             fn read(&mut self, words: &mut [$type]) -> Result<(), Self::Error> {
                 for word in words.iter_mut() {
                     // write empty word
                     while !self.is_writable() {}
                     self.device
-                        .sspdr
+                        .sspdr()
                         .write(|w| unsafe { w.data().bits(0) });
 
                     // read one word
                     while !self.is_readable() {}
-                    *word = self.device.sspdr.read().data().bits() as $type;
+                    *word = self.device.sspdr().read().data().bits() as $type;
                 }
                 Ok(())
             }
@@ -395,12 +431,12 @@ macro_rules! impl_write {
                     // write one word
                     while !self.is_writable() {}
                     self.device
-                        .sspdr
+                        .sspdr()
                         .write(|w| unsafe { w.data().bits(*word as u16) });
 
                     // drop read wordd
                     while !self.is_readable() {}
-                    let _ = self.device.sspdr.read().data().bits();
+                    let _ = self.device.sspdr().read().data().bits();
                 }
                 Ok(())
             }
@@ -412,12 +448,12 @@ macro_rules! impl_write {
                     let wb = write.get(i).copied().unwrap_or(0);
                     while !self.is_writable() {}
                     self.device
-                        .sspdr
+                        .sspdr()
                         .write(|w| unsafe { w.data().bits(wb as u16) });
 
                     // read one word. Drop extra words if buffer is full.
                     while !self.is_readable() {}
-                    let rb = self.device.sspdr.read().data().bits() as $type;
+                    let rb = self.device.sspdr().read().data().bits() as $type;
                     if let Some(r) = read.get_mut(i) {
                         *r = rb;
                     }
@@ -431,12 +467,12 @@ macro_rules! impl_write {
                     // write one word
                     while !self.is_writable() {}
                     self.device
-                        .sspdr
+                        .sspdr()
                         .write(|w| unsafe { w.data().bits(*word as u16) });
 
                     // read one word
                     while !self.is_readable() {}
-                    *word = self.device.sspdr.read().data().bits() as $type;
+                    *word = self.device.sspdr().read().data().bits() as $type;
                 }
 
                 Ok(())
@@ -448,14 +484,13 @@ macro_rules! impl_write {
             }
         }
 
-        #[cfg(feature = "eh1_0_alpha")]
-        impl<D: SpiDevice, P: ValidSpiPinout<D>> eh1nb::FullDuplex<$type> for Spi<Enabled, D, P, $nr> {
+        impl<D: SpiDevice, P: ValidSpiPinout<D>> FullDuplex<$type> for Spi<Enabled, D, P, $nr> {
             fn read(&mut self) -> Result<$type, nb::Error<Infallible>> {
                 if !self.is_readable() {
                     return Err(nb::Error::WouldBlock);
                 }
 
-                Ok(self.device.sspdr.read().data().bits() as $type)
+                Ok(self.device.sspdr().read().data().bits() as $type)
             }
             fn write(&mut self, word: $type) -> Result<(), nb::Error<Infallible>> {
                 // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
@@ -466,7 +501,7 @@ macro_rules! impl_write {
                 }
 
                 self.device
-                    .sspdr
+                    .sspdr()
                     .write(|w| unsafe { w.data().bits(word as u16) });
                 Ok(())
             }
@@ -483,7 +518,7 @@ macro_rules! impl_write {
 
             fn rx_address_count(&self) -> (u32, u32) {
                 (
-                    &self.device.sspdr as *const _ as u32,
+                    self.device.sspdr().as_ptr() as u32,
                     u32::MAX,
                 )
             }
@@ -506,7 +541,7 @@ macro_rules! impl_write {
 
             fn tx_address_count(&mut self) -> (u32, u32) {
                 (
-                    &self.device.sspdr as *const _ as u32,
+                    self.device.sspdr().as_ptr() as u32,
                     u32::MAX,
                 )
             }

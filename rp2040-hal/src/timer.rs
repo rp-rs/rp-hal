@@ -69,10 +69,10 @@ impl Timer {
     pub fn get_counter(&self) -> Instant {
         // Safety: Only used for reading current timer value
         let timer = unsafe { &*pac::TIMER::PTR };
-        let mut hi0 = timer.timerawh.read().bits();
+        let mut hi0 = timer.timerawh().read().bits();
         let timestamp = loop {
-            let low = timer.timerawl.read().bits();
-            let hi1 = timer.timerawh.read().bits();
+            let low = timer.timerawl().read().bits();
+            let hi1 = timer.timerawh().read().bits();
             if hi0 == hi1 {
                 break (u64::from(hi0) << 32) | u64::from(low);
             }
@@ -84,7 +84,7 @@ impl Timer {
     /// Get the value of the least significant word of the counter.
     pub fn get_counter_low(&self) -> u32 {
         // Safety: Only used for reading current timer value
-        unsafe { &*pac::TIMER::PTR }.timerawl.read().bits()
+        unsafe { &*pac::TIMER::PTR }.timerawl().read().bits()
     }
 
     /// Initialized a Count Down instance without starting it.
@@ -143,14 +143,14 @@ impl Timer {
 macro_rules! impl_delay_traits {
     ($($t:ty),+) => {
         $(
-        impl embedded_hal::blocking::delay::DelayUs<$t> for Timer {
+        impl embedded_hal_0_2::blocking::delay::DelayUs<$t> for Timer {
             fn delay_us(&mut self, us: $t) {
                 #![allow(unused_comparisons)]
                 assert!(us >= 0); // Only meaningful for i32
                 self.delay_us_internal(us as u32)
             }
         }
-        impl embedded_hal::blocking::delay::DelayMs<$t> for Timer {
+        impl embedded_hal_0_2::blocking::delay::DelayMs<$t> for Timer {
             fn delay_ms(&mut self, ms: $t) {
                 #![allow(unused_comparisons)]
                 assert!(ms >= 0); // Only meaningful for i32
@@ -166,18 +166,37 @@ macro_rules! impl_delay_traits {
 // The implementation for i32 is a workaround to allow `delay_ms(42)` construction without specifying a type.
 impl_delay_traits!(u8, u16, u32, i32);
 
-#[cfg(feature = "eh1_0_alpha")]
-impl eh1_0_alpha::delay::DelayUs for Timer {
+impl embedded_hal::delay::DelayNs for Timer {
+    fn delay_ns(&mut self, ns: u32) {
+        // For now, just use microsecond delay, internally. Of course, this
+        // might cause a much longer delay than necessary. So a more advanced
+        // implementation would be desirable for sub-microsecond delays.
+        let us = ns / 1000 + if ns % 1000 == 0 { 0 } else { 1 };
+        // With rustc 1.73, this can be replaced by:
+        // let us = ns.div_ceil(1000);
+        self.delay_us_internal(us)
+    }
+
     fn delay_us(&mut self, us: u32) {
         self.delay_us_internal(us)
     }
+
+    fn delay_ms(&mut self, ms: u32) {
+        for _ in 0..ms {
+            self.delay_us_internal(1000);
+        }
+    }
 }
 
-/// Implementation of the embedded_hal::Timer traits using rp2040_hal::timer counter
+/// Implementation of the [`embedded_hal_0_2::timer`] traits using [`rp2040_hal::timer`] counter.
+///
+/// There is no Embedded HAL 1.0 equivalent at this time.
+///
+/// If all you need is a delay, [`Timer`] does implement [`embedded_hal::delay::DelayNs`].
 ///
 /// ## Usage
 /// ```no_run
-/// use embedded_hal::timer::{CountDown, Cancel};
+/// use embedded_hal_0_2::timer::{CountDown, Cancel};
 /// use fugit::ExtU32;
 /// use rp2040_hal;
 /// let mut pac = rp2040_hal::pac::Peripherals::take().unwrap();
@@ -202,7 +221,7 @@ pub struct CountDown<'timer> {
     next_end: Option<u64>,
 }
 
-impl embedded_hal::timer::CountDown for CountDown<'_> {
+impl embedded_hal_0_2::timer::CountDown for CountDown<'_> {
     type Time = MicrosDurationU64;
 
     fn start<T>(&mut self, count: T)
@@ -233,9 +252,9 @@ impl embedded_hal::timer::CountDown for CountDown<'_> {
     }
 }
 
-impl embedded_hal::timer::Periodic for CountDown<'_> {}
+impl embedded_hal_0_2::timer::Periodic for CountDown<'_> {}
 
-impl embedded_hal::timer::Cancel for CountDown<'_> {
+impl embedded_hal_0_2::timer::Cancel for CountDown<'_> {
     type Error = &'static str;
 
     fn cancel(&mut self) -> Result<(), Self::Error> {
@@ -300,22 +319,22 @@ macro_rules! impl_alarm {
 
                 // This lock is for time-criticality
                 cortex_m::interrupt::free(|_| {
-                    let alarm = &timer.$timer_alarm;
+                    let alarm = &timer.$timer_alarm();
 
                     // safety: This is the only code in the codebase that accesses memory address $timer_alarm
                     alarm.write(|w| unsafe { w.bits(timestamp_low) });
 
                     // If it is not set, it has already triggered.
                     let now = self.0.get_counter();
-                    if now > timestamp && (timer.armed.read().bits() & $armed_bit_mask) != 0 {
+                    if now > timestamp && (timer.armed().read().bits() & $armed_bit_mask) != 0 {
                         // timestamp was set to a value in the past
 
                         // safety: TIMER.armed is a write-clear register, and there can only be
                         // 1 instance of AlarmN so we can safely atomically clear this bit.
                         unsafe {
-                            timer.armed.write_with_zero(|w| w.bits($armed_bit_mask));
+                            timer.armed().write_with_zero(|w| w.bits($armed_bit_mask));
                             crate::atomic_register_access::write_bitmask_set(
-                                timer.intf.as_ptr(),
+                                timer.intf().as_ptr(),
                                 $armed_bit_mask,
                             );
                         }
@@ -339,11 +358,11 @@ macro_rules! impl_alarm {
                 unsafe {
                     let timer = &(*pac::TIMER::ptr());
                     crate::atomic_register_access::write_bitmask_clear(
-                        timer.intf.as_ptr(),
+                        timer.intf().as_ptr(),
                         $armed_bit_mask,
                     );
                     timer
-                        .intr
+                        .intr()
                         .write_with_zero(|w| w.$int_alarm().clear_bit_by_one());
                 }
             }
@@ -361,7 +380,7 @@ macro_rules! impl_alarm {
                 // of the TIMER.inte register
                 unsafe {
                     let timer = &(*pac::TIMER::ptr());
-                    let reg = (&timer.inte).as_ptr();
+                    let reg = (&timer.inte()).as_ptr();
                     write_bitmask_set(reg, $armed_bit_mask);
                 }
             }
@@ -373,7 +392,7 @@ macro_rules! impl_alarm {
                 // of the TIMER.inte register
                 unsafe {
                     let timer = &(*pac::TIMER::ptr());
-                    let reg = (&timer.inte).as_ptr();
+                    let reg = (&timer.inte()).as_ptr();
                     write_bitmask_clear(reg, $armed_bit_mask);
                 }
             }
@@ -412,7 +431,7 @@ macro_rules! impl_alarm {
             /// has not been scheduled yet.
             fn finished(&self) -> bool {
                 // safety: This is a read action and should not have any UB
-                let bits: u32 = unsafe { &*TIMER::ptr() }.armed.read().bits();
+                let bits: u32 = unsafe { &*TIMER::ptr() }.armed().read().bits();
                 (bits & $armed_bit_mask) == 0
             }
 
@@ -422,9 +441,9 @@ macro_rules! impl_alarm {
             fn cancel(&mut self) -> Result<(), ScheduleAlarmError> {
                 unsafe {
                     let timer = &*TIMER::ptr();
-                    timer.armed.write_with_zero(|w| w.bits($armed_bit_mask));
+                    timer.armed().write_with_zero(|w| w.bits($armed_bit_mask));
                     crate::atomic_register_access::write_bitmask_clear(
-                        timer.intf.as_ptr(),
+                        timer.intf().as_ptr(),
                         $armed_bit_mask,
                     );
                 }

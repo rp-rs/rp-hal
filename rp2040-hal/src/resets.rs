@@ -13,11 +13,11 @@ macro_rules! generate_reset {
     ($MODULE:ident, $module:ident) => {
         impl SubsystemReset for $crate::pac::$MODULE {
             fn reset_bring_up(&self, resets: &mut $crate::pac::RESETS) {
-                resets.reset.modify(|_, w| w.$module().clear_bit());
-                while resets.reset_done.read().$module().bit_is_clear() {}
+                resets.reset().modify(|_, w| w.$module().clear_bit());
+                while resets.reset_done().read().$module().bit_is_clear() {}
             }
             fn reset_bring_down(&self, resets: &mut $crate::pac::RESETS) {
-                resets.reset.modify(|_, w| w.$module().set_bit());
+                resets.reset().modify(|_, w| w.$module().set_bit());
             }
         }
     };

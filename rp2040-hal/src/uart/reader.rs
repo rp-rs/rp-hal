@@ -5,11 +5,10 @@
 use super::{FifoWatermark, UartDevice, ValidUartPinout};
 use crate::dma::{EndlessReadTarget, ReadTarget};
 use crate::pac::uart0::RegisterBlock;
-use embedded_hal::serial::Read;
+use embedded_hal_0_2::serial::Read as Read02;
 use nb::Error::*;
 
-#[cfg(feature = "eh1_0_alpha")]
-use eh_nb_1_0_alpha::serial as eh1nb;
+use embedded_hal_nb::serial::{Error, ErrorKind, ErrorType, Read};
 
 /// When there's a read error.
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -39,20 +38,19 @@ pub enum ReadErrorType {
     Framing,
 }
 
-#[cfg(feature = "eh1_0_alpha")]
-impl eh1nb::Error for ReadErrorType {
-    fn kind(&self) -> eh1nb::ErrorKind {
+impl Error for ReadErrorType {
+    fn kind(&self) -> ErrorKind {
         match self {
-            ReadErrorType::Overrun => eh1nb::ErrorKind::Overrun,
-            ReadErrorType::Break => eh1nb::ErrorKind::Other,
-            ReadErrorType::Parity => eh1nb::ErrorKind::Parity,
-            ReadErrorType::Framing => eh1nb::ErrorKind::FrameFormat,
+            ReadErrorType::Overrun => ErrorKind::Overrun,
+            ReadErrorType::Break => ErrorKind::Other,
+            ReadErrorType::Parity => ErrorKind::Parity,
+            ReadErrorType::Framing => ErrorKind::FrameFormat,
         }
     }
 }
 
 pub(crate) fn is_readable<D: UartDevice>(device: &D) -> bool {
-    device.uartfr.read().rxfe().bit_is_clear()
+    device.uartfr().read().rxfe().bit_is_clear()
 }
 
 /// Enable/disable the rx/tx FIFO
@@ -62,9 +60,9 @@ pub(crate) fn is_readable<D: UartDevice>(device: &D) -> bool {
 /// Default is false
 pub fn set_fifos(rb: &RegisterBlock, enable: bool) {
     if enable {
-        rb.uartlcr_h.modify(|_r, w| w.fen().set_bit())
+        rb.uartlcr_h().modify(|_r, w| w.fen().set_bit())
     } else {
-        rb.uartlcr_h.modify(|_r, w| w.fen().clear_bit())
+        rb.uartlcr_h().modify(|_r, w| w.fen().clear_bit())
     }
 }
 
@@ -79,7 +77,8 @@ pub fn set_rx_watermark(rb: &RegisterBlock, watermark: FifoWatermark) {
         FifoWatermark::Bytes24 => 3,
         FifoWatermark::Bytes28 => 4,
     };
-    rb.uartifls.modify(|_r, w| unsafe { w.rxiflsel().bits(wm) });
+    rb.uartifls()
+        .modify(|_r, w| unsafe { w.rxiflsel().bits(wm) });
 }
 
 /// Enables the Receive Interrupt.
@@ -94,7 +93,7 @@ pub(crate) fn enable_rx_interrupt(rb: &RegisterBlock) {
     // when the RX FIFO is non-empty, but 32-bit periods have passed with
     // no further data. This means we don't have to interrupt on every
     // single byte, but can make use of the hardware FIFO.
-    rb.uartimsc.modify(|_r, w| {
+    rb.uartimsc().modify(|_r, w| {
         w.rxim().set_bit();
         w.rtim().set_bit();
         w
@@ -106,7 +105,7 @@ pub(crate) fn disable_rx_interrupt(rb: &RegisterBlock) {
     // Access the UART Interrupt Mask Set/Clear register. Setting a bit
     // low disables the interrupt.
 
-    rb.uartimsc.modify(|_r, w| {
+    rb.uartimsc().modify(|_r, w| {
         w.rxim().clear_bit();
         w.rtim().clear_bit();
         w
@@ -131,21 +130,19 @@ pub(crate) fn read_raw<'b, D: UartDevice>(
         if bytes_read < buffer.len() {
             let mut error: Option<ReadErrorType> = None;
 
-            let read = device.uartdr.read();
+            let read = device.uartdr().read();
 
+            // If multiple status bits are set, report
+            // the most serious or most specific condition,
+            // in the following order of precedence:
+            // overrun > break > parity > framing
             if read.oe().bit_is_set() {
                 error = Some(ReadErrorType::Overrun);
-            }
-
-            if read.be().bit_is_set() {
+            } else if read.be().bit_is_set() {
                 error = Some(ReadErrorType::Break);
-            }
-
-            if read.pe().bit_is_set() {
+            } else if read.pe().bit_is_set() {
                 error = Some(ReadErrorType::Parity);
-            }
-
-            if read.fe().bit_is_set() {
+            } else if read.fe().bit_is_set() {
                 error = Some(ReadErrorType::Framing);
             }
 
@@ -221,7 +218,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Reader<D, P> {
     }
 }
 
-impl<D: UartDevice, P: ValidUartPinout<D>> Read<u8> for Reader<D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> Read02<u8> for Reader<D, P> {
     type Error = ReadErrorType;
 
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
@@ -247,7 +244,7 @@ unsafe impl<D: UartDevice, P: ValidUartPinout<D>> ReadTarget for Reader<D, P> {
     }
 
     fn rx_address_count(&self) -> (u32, u32) {
-        (&self.device.uartdr as *const _ as u32, u32::MAX)
+        (self.device.uartdr().as_ptr() as u32, u32::MAX)
     }
 
     fn rx_increment(&self) -> bool {
@@ -257,13 +254,11 @@ unsafe impl<D: UartDevice, P: ValidUartPinout<D>> ReadTarget for Reader<D, P> {
 
 impl<D: UartDevice, P: ValidUartPinout<D>> EndlessReadTarget for Reader<D, P> {}
 
-#[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::ErrorType for Reader<D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> ErrorType for Reader<D, P> {
     type Error = ReadErrorType;
 }
 
-#[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Read<u8> for Reader<D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> Read<u8> for Reader<D, P> {
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
         let byte: &mut [u8] = &mut [0; 1];
 

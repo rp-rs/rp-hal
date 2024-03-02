@@ -4,7 +4,7 @@
 //! UartPeripheral object that can both read and write.
 
 use core::{convert::Infallible, fmt};
-use embedded_hal::serial::{Read, Write};
+use embedded_hal_0_2::serial as eh0;
 use fugit::HertzU32;
 use nb::Error::{Other, WouldBlock};
 
@@ -14,8 +14,7 @@ use crate::{
     uart::*,
 };
 
-#[cfg(feature = "eh1_0_alpha")]
-use eh_nb_1_0_alpha::serial as eh1nb;
+use embedded_hal_nb::serial::{ErrorType, Read, Write};
 
 /// An UART Peripheral based on an underlying UART device.
 pub struct UartPeripheral<S: State, D: UartDevice, P: ValidUartPinout<D>> {
@@ -61,7 +60,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
         let (mut device, pins) = self.free();
         configure_baudrate(&mut device, config.baudrate, frequency)?;
 
-        device.uartlcr_h.write(|w| {
+        device.uartlcr_h().write(|w| {
             // FIFOs are enabled
             w.fen().set_bit(); // Leaved here for backward compatibility
             set_format(w, &config.data_bits, &config.stop_bits, &config.parity);
@@ -69,7 +68,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
         });
 
         // Enable the UART, and the TX,RC,CTS and RTS based on the pins
-        device.uartcr.write(|w| {
+        device.uartcr().write(|w| {
             w.uarten().set_bit();
             w.txe().bit(P::Tx::IS_SOME);
             w.rxe().bit(P::Rx::IS_SOME);
@@ -79,7 +78,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
             w
         });
 
-        device.uartdmacr.write(|w| {
+        device.uartdmacr().write(|w| {
             w.txdmae().set_bit();
             w.rxdmae().set_bit();
             w
@@ -97,7 +96,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
     /// Disable this UART Peripheral, falling back to the Disabled state.
     pub fn disable(self) -> UartPeripheral<Disabled, D, P> {
         // Disable the UART, both TX and RX
-        self.device.uartcr.write(|w| {
+        self.device.uartcr().write(|w| {
             w.uarten().clear_bit();
             w.txe().clear_bit();
             w.rxe().clear_bit();
@@ -159,6 +158,11 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
     /// Is there space in the UART TX FIFO for new data to be written?
     pub fn uart_is_writable(&self) -> bool {
         super::writer::uart_is_writable(&self.device)
+    }
+
+    /// Is the UART still busy transmitting data?
+    pub fn uart_is_busy(&self) -> bool {
+        super::writer::uart_is_busy(&self.device)
     }
 
     /// Is there data in the UART RX FIFO ready to be read?
@@ -282,20 +286,20 @@ fn configure_baudrate<U: UartDevice>(
     let (baud_div_int, baud_div_frac) = calculate_baudrate_dividers(wanted_baudrate, frequency)?;
 
     // First we load the integer part of the divider.
-    device.uartibrd.write(|w| unsafe {
+    device.uartibrd().write(|w| unsafe {
         w.baud_divint().bits(baud_div_int);
         w
     });
 
     // Then we load the fractional part of the divider.
-    device.uartfbrd.write(|w| unsafe {
+    device.uartfbrd().write(|w| unsafe {
         w.baud_divfrac().bits(baud_div_frac as u8);
         w
     });
 
     // PL011 needs a (dummy) line control register write to latch in the
     // divisors. We don't want to actually change LCR contents here.
-    device.uartlcr_h.modify(|_, w| w);
+    device.uartlcr_h().modify(|_, w| w);
 
     Ok(HertzU32::from_raw(
         (4 * frequency.to_Hz()) / (64 * baud_div_int as u32 + baud_div_frac as u32),
@@ -339,9 +343,27 @@ fn set_format<'w>(
     w
 }
 
+impl<D: UartDevice, P: ValidUartPinout<D>> eh0::Read<u8> for UartPeripheral<Enabled, D, P> {
+    type Error = ReadErrorType;
+
+    fn read(&mut self) -> nb::Result<u8, Self::Error> {
+        let byte: &mut [u8] = &mut [0; 1];
+
+        match self.read_raw(byte) {
+            Ok(_) => Ok(byte[0]),
+            Err(e) => match e {
+                Other(inner) => Err(Other(inner.err_type)),
+                WouldBlock => Err(WouldBlock),
+            },
+        }
+    }
+}
+
+impl<D: UartDevice, P: ValidUartPinout<D>> ErrorType for UartPeripheral<Enabled, D, P> {
+    type Error = ReadErrorType;
+}
+
 impl<D: UartDevice, P: ValidUartPinout<D>> Read<u8> for UartPeripheral<Enabled, D, P> {
-    type Error = ReadErrorType;
-
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
         let byte: &mut [u8] = &mut [0; 1];
 
@@ -355,27 +377,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Read<u8> for UartPeripheral<Enabled, 
     }
 }
 
-#[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::ErrorType for UartPeripheral<Enabled, D, P> {
-    type Error = ReadErrorType;
-}
-
-#[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Read<u8> for UartPeripheral<Enabled, D, P> {
-    fn read(&mut self) -> nb::Result<u8, Self::Error> {
-        let byte: &mut [u8] = &mut [0; 1];
-
-        match self.read_raw(byte) {
-            Ok(_) => Ok(byte[0]),
-            Err(e) => match e {
-                Other(inner) => Err(Other(inner.err_type)),
-                WouldBlock => Err(WouldBlock),
-            },
-        }
-    }
-}
-
-impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for UartPeripheral<Enabled, D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> eh0::Write<u8> for UartPeripheral<Enabled, D, P> {
     type Error = Infallible;
 
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
@@ -391,8 +393,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for UartPeripheral<Enabled,
     }
 }
 
-#[cfg(feature = "eh1_0_alpha")]
-impl<D: UartDevice, P: ValidUartPinout<D>> eh1nb::Write<u8> for UartPeripheral<Enabled, D, P> {
+impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for UartPeripheral<Enabled, D, P> {
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
         if self.write_raw(&[word]).is_err() {
             Err(WouldBlock)
@@ -414,5 +415,31 @@ impl<D: UartDevice, P: ValidUartPinout<D>> fmt::Write for UartPeripheral<Enabled
         s.bytes()
             .try_for_each(|c| nb::block!(self.write(c)))
             .map_err(|_| fmt::Error)
+    }
+}
+
+impl embedded_io::Error for ReadErrorType {
+    fn kind(&self) -> embedded_io::ErrorKind {
+        embedded_io::ErrorKind::Other
+    }
+}
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::ErrorType
+    for UartPeripheral<Enabled, D, P>
+{
+    type Error = ReadErrorType;
+}
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Read for UartPeripheral<Enabled, D, P> {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
+        nb::block!(self.read_raw(buf)).map_err(|e| e.err_type)
+    }
+}
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Write for UartPeripheral<Enabled, D, P> {
+    fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
+        self.write_full_blocking(buf);
+        Ok(buf.len())
+    }
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        nb::block!(super::writer::transmit_flushed(&self.device)).unwrap(); // Infallible
+        Ok(())
     }
 }

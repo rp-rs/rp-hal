@@ -24,7 +24,7 @@ use rp2040_hal as hal;
 use hal::pac;
 
 // Some traits we need
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::digital::OutputPin;
 use hal::Clock;
 
 /// The linker will place this boot block at the start of our program image. We
@@ -67,7 +67,6 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-    .ok()
     .unwrap();
 
     // The single-cycle I/O block controls our GPIO pins

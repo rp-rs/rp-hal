@@ -29,8 +29,6 @@ mod filter;
 
 pub use self::filter::DateTimeFilter;
 
-#[cfg_attr(feature = "chrono", path = "datetime_chrono.rs")]
-#[cfg_attr(not(feature = "chrono"), path = "datetime_no_deps.rs")]
 mod datetime;
 
 pub use self::datetime::{DateTime, DayOfWeek, Error as DateTimeError};
@@ -38,6 +36,7 @@ pub use self::datetime::{DateTime, DayOfWeek, Error as DateTimeError};
 /// A reference to the real time clock of the system
 pub struct RealTimeClock {
     rtc: RTC,
+    clock: RtcClock,
 }
 
 impl RealTimeClock {
@@ -60,34 +59,34 @@ impl RealTimeClock {
         initial_date: DateTime,
     ) -> Result<Self, RtcError> {
         // Toggle the RTC reset
-        resets.reset.modify(|_, w| w.rtc().set_bit());
-        resets.reset.modify(|_, w| w.rtc().clear_bit());
-        while resets.reset_done.read().rtc().bit_is_clear() {
+        resets.reset().modify(|_, w| w.rtc().set_bit());
+        resets.reset().modify(|_, w| w.rtc().clear_bit());
+        while resets.reset_done().read().rtc().bit_is_clear() {
             core::hint::spin_loop();
         }
 
         // Set the RTC divider
         let freq = clock.freq().to_Hz() - 1;
-        rtc.clkdiv_m1.write(|w| unsafe { w.bits(freq) });
+        rtc.clkdiv_m1().write(|w| unsafe { w.bits(freq) });
 
-        let mut result = Self { rtc };
+        let mut result = Self { rtc, clock };
         result.set_leap_year_check(true); // should be on by default, make sure this is the case.
         result.set_datetime(initial_date)?;
         Ok(result)
     }
 
-    /// Enable or disable the leap year check. The rp2040 chip will always add a Feb 29th on every year that is divisable by 4, but this may be incorrect (e.g. on century years). This function allows you to disable this check.
+    /// Enable or disable the leap year check. The rp2040 chip will always add a Feb 29th on every year that is divisible by 4, but this may be incorrect (e.g. on century years). This function allows you to disable this check.
     ///
     /// Leap year checking is enabled by default.
     pub fn set_leap_year_check(&mut self, leap_year_check_enabled: bool) {
         self.rtc
-            .ctrl
+            .ctrl()
             .modify(|_, w| w.force_notleapyear().bit(!leap_year_check_enabled));
     }
 
     /// Checks to see if this RealTimeClock is running
     pub fn is_running(&self) -> bool {
-        self.rtc.ctrl.read().rtc_active().bit_is_set()
+        self.rtc.ctrl().read().rtc_active().bit_is_set()
     }
 
     /// Set the datetime to a new value.
@@ -99,24 +98,24 @@ impl RealTimeClock {
         self::datetime::validate_datetime(&t).map_err(RtcError::InvalidDateTime)?;
 
         // disable RTC while we configure it
-        self.rtc.ctrl.modify(|_, w| w.rtc_enable().clear_bit());
-        while self.rtc.ctrl.read().rtc_active().bit_is_set() {
+        self.rtc.ctrl().modify(|_, w| w.rtc_enable().clear_bit());
+        while self.rtc.ctrl().read().rtc_active().bit_is_set() {
             core::hint::spin_loop();
         }
 
-        self.rtc.setup_0.write(|w| {
+        self.rtc.setup_0().write(|w| {
             self::datetime::write_setup_0(&t, w);
             w
         });
-        self.rtc.setup_1.write(|w| {
+        self.rtc.setup_1().write(|w| {
             self::datetime::write_setup_1(&t, w);
             w
         });
 
         // Load the new datetime and re-enable RTC
-        self.rtc.ctrl.write(|w| w.load().set_bit());
-        self.rtc.ctrl.write(|w| w.rtc_enable().set_bit());
-        while self.rtc.ctrl.read().rtc_active().bit_is_clear() {
+        self.rtc.ctrl().write(|w| w.load().set_bit());
+        self.rtc.ctrl().write(|w| w.rtc_enable().set_bit());
+        while self.rtc.ctrl().read().rtc_active().bit_is_clear() {
             core::hint::spin_loop();
         }
 
@@ -133,67 +132,76 @@ impl RealTimeClock {
             return Err(RtcError::NotRunning);
         }
 
-        let rtc_0 = self.rtc.rtc_0.read();
-        let rtc_1 = self.rtc.rtc_1.read();
+        let rtc_0 = self.rtc.rtc_0().read();
+        let rtc_1 = self.rtc.rtc_1().read();
 
         self::datetime::datetime_from_registers(rtc_0, rtc_1).map_err(RtcError::InvalidDateTime)
+    }
+
+    fn set_match_ena(&mut self, ena: bool) {
+        // Set the enable bit and check if it is set
+        self.rtc.irq_setup_0().modify(|_, w| w.match_ena().bit(ena));
+        while self.rtc.irq_setup_0().read().match_active().bit() != ena {
+            core::hint::spin_loop();
+        }
     }
 
     /// Disable the alarm that was scheduled with [`schedule_alarm`].
     ///
     /// [`schedule_alarm`]: #method.schedule_alarm
     pub fn disable_alarm(&mut self) {
-        self.rtc
-            .irq_setup_0
-            .modify(|_, s| s.match_ena().clear_bit());
-
-        while self.rtc.irq_setup_0.read().match_active().bit() {
-            core::hint::spin_loop();
-        }
+        self.set_match_ena(false)
     }
 
     /// Schedule an alarm. The `filter` determines at which point in time this alarm is set.
     ///
-    /// Keep in mind that the filter only triggers on the specified time. If you want to schedule this alarm every minute, you have to call:
+    /// If not all fields are set, the alarm will repeat each time the RTC reaches these values.
+    /// For example, to fire every minute, set:
     /// ```no_run
-    /// # #[cfg(feature = "chrono")]
-    /// # fn main() { }
-    /// # #[cfg(not(feature = "chrono"))]
-    /// # fn main() {
     /// # use rp2040_hal::rtc::{RealTimeClock, DateTimeFilter};
     /// # let mut real_time_clock: RealTimeClock = unsafe { core::mem::zeroed() };
-    /// let now = real_time_clock.now().unwrap();
-    /// real_time_clock.schedule_alarm(
-    ///     DateTimeFilter::default()
-    ///         .minute(if now.minute == 59 { 0 } else { now.minute + 1 })
-    /// );
-    /// # }
+    /// real_time_clock.schedule_alarm(DateTimeFilter::default().second(0));
     /// ```
+    ///
+    /// It is worth nothing that the alarm will not fire on schedule if the current time matches.
     pub fn schedule_alarm(&mut self, filter: DateTimeFilter) {
-        self.disable_alarm();
+        self.set_match_ena(false);
 
-        self.rtc.irq_setup_0.write(|w| {
+        self.rtc.irq_setup_0().write(|w| {
             filter.write_setup_0(w);
             w
         });
-        self.rtc.irq_setup_1.write(|w| {
+        self.rtc.irq_setup_1().write(|w| {
             filter.write_setup_1(w);
             w
         });
 
-        // Set the enable bit and check if it is set
-        self.rtc.irq_setup_0.modify(|_, w| w.match_ena().set_bit());
-        while self.rtc.irq_setup_0.read().match_active().bit_is_clear() {
-            core::hint::spin_loop();
-        }
+        self.set_match_ena(true);
     }
 
-    /// Clear the interrupt. This should be called every time the `RTC_IRQ` interrupt is triggered,
-    /// or the next [`schedule_alarm`] will never fire.
+    /// Enable the propagation of alarm to the NVIC.
+    pub fn enable_interrupt(&mut self) {
+        self.rtc.inte().modify(|_, w| w.rtc().set_bit());
+    }
+
+    /// Disable the propagation of the alarm to the NVIC.
+    pub fn disable_interrupt(&mut self) {
+        self.rtc.inte().modify(|_, w| w.rtc().clear_bit());
+    }
+
+    /// Clear the interrupt.
     ///
-    /// [`schedule_alarm`]: #method.schedule_alarm
+    /// This should be called every time the `RTC_IRQ` interrupt is triggered or the interrupt will
+    /// continually fire..
     pub fn clear_interrupt(&mut self) {
-        self.disable_alarm();
+        self.set_match_ena(false);
+        self.set_match_ena(true);
+    }
+
+    /// Free the RTC peripheral and RTC clock
+    pub fn free(self, resets: &mut RESETS) -> (RTC, RtcClock) {
+        resets.reset().modify(|_, w| w.rtc().set_bit());
+        (self.rtc, self.clock)
     }
 }
 

@@ -195,11 +195,11 @@ impl<'p> Core<'p> {
             // But there does not seem to be any obvious way to check that. A marker flag could be
             // set from this method and cleared for the wrapper after `entry` returned. But doing
             // so wouldn't be zero cost.
-            psm.frce_off.modify(|_, w| w.proc1().set_bit());
-            while !psm.frce_off.read().proc1().bit_is_set() {
+            psm.frce_off().modify(|_, w| w.proc1().set_bit());
+            while !psm.frce_off().read().proc1().bit_is_set() {
                 cortex_m::asm::nop();
             }
-            psm.frce_off.modify(|_, w| w.proc1().clear_bit());
+            psm.frce_off().modify(|_, w| w.proc1().clear_bit());
 
             // Set up the stack
             // AAPCS requires in 6.2.1.2 that the stack is 8bytes aligned., we may need to trim the
@@ -208,14 +208,14 @@ impl<'p> Core<'p> {
 
             let mut stack_ptr = stack.as_mut_ptr_range().end;
             // on rp2040, usize are 4 bytes, so align_offset(8) on a *mut usize returns either 0 or 1.
-            let misalignement_offset = stack_ptr.align_offset(8);
+            let misalignment_offset = stack_ptr.align_offset(8);
 
             // We don't want to drop this, since it's getting moved to the other core.
             let mut entry = ManuallyDrop::new(entry);
 
             // Push the arguments to `core1_startup` onto the stack.
             unsafe {
-                stack_ptr = stack_ptr.sub(misalignement_offset);
+                stack_ptr = stack_ptr.sub(misalignment_offset);
 
                 // Push `stack_limit`.
                 stack_ptr = stack_ptr.sub(1);
@@ -235,7 +235,7 @@ impl<'p> Core<'p> {
             // memory caches, and writes happen in-order.
             compiler_fence(Ordering::Release);
 
-            let vector_table = ppb.vtor.read().bits();
+            let vector_table = ppb.vtor().read().bits();
 
             // After reset, core 1 is waiting to receive commands over FIFO.
             // This is the sequence to have it jump to some code.

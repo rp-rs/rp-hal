@@ -1,7 +1,7 @@
 //! This example toggles the GPIO0 and GPIO1 pins, with each controlled from a
 //! separate PIO state machine.
 //!
-//! Despite running in separate state machines, the clocks are sychronized at
+//! Despite running in separate state machines, the clocks are synchronized at
 //! the rise and fall times will be simultaneous.
 #![no_std]
 #![no_main]
@@ -64,7 +64,7 @@ fn main() -> ! {
     let (int, frac) = (256, 0);
 
     let installed = pio.install(&program.program).unwrap();
-    let (mut sm0, _, _) = rp2040_hal::pio::PIOBuilder::from_program(
+    let (mut sm0, _, _) = rp2040_hal::pio::PIOBuilder::from_installed_program(
         // Safety: We won't uninstall the program, ever
         unsafe { installed.share() },
     )
@@ -74,7 +74,7 @@ fn main() -> ! {
     // The GPIO pin needs to be configured as an output.
     sm0.set_pindirs([(pin0, hal::pio::PinDir::Output)]);
 
-    let (mut sm1, _, _) = rp2040_hal::pio::PIOBuilder::from_program(installed)
+    let (mut sm1, _, _) = rp2040_hal::pio::PIOBuilder::from_installed_program(installed)
         .set_pins(pin1, 1)
         .clock_divisor_fixed_point(int, frac)
         .build(sm1);

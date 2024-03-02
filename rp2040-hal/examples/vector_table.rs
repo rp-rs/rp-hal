@@ -21,8 +21,8 @@ use hal::pac;
 // Some traits we need
 use core::cell::RefCell;
 use critical_section::Mutex;
-use embedded_hal::digital::v2::ToggleableOutputPin;
-use fugit::MicrosDurationU32;
+use embedded_hal::digital::StatefulOutputPin;
+use hal::fugit::MicrosDurationU32;
 use pac::interrupt;
 use rp2040_hal::clocks::Clock;
 use rp2040_hal::timer::Alarm;
@@ -93,7 +93,6 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-    .ok()
     .unwrap();
 
     // Create simple delay

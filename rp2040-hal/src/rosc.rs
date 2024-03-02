@@ -1,6 +1,18 @@
 //! Ring Oscillator (ROSC)
-// See [Chapter 2 Section 17](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
-
+//!
+//! See [Chapter 2 Section 17](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
+//!
+//! In addition to its obvious role as a clock source, [`RingOscillator`] can also be used as a random number source
+//! for the [`rand`] crate:
+//!
+//! ```no_run
+//! # let mut pac = rp2040_pac::Peripherals::take().unwrap();
+//! use rp2040_hal::rosc::RingOscillator;
+//! use rand::Rng;
+//! let mut rnd = RingOscillator::new(pac.ROSC).initialize();
+//! let random_value: u32 = rnd.gen();
+//! ```
+//! [`rand`]: https://docs.rs/rand
 use fugit::HertzU32;
 
 use crate::{pac::ROSC, typelevel::Sealed};
@@ -53,7 +65,7 @@ impl RingOscillator<Disabled> {
 
     /// Initializes the ROSC : frequency range is set, startup delay is calculated and set.
     pub fn initialize(self) -> RingOscillator<Enabled> {
-        self.device.ctrl.write(|w| w.enable().enable());
+        self.device.ctrl().write(|w| w.enable().enable());
 
         use fugit::RateExtU32;
         self.transition(Enabled {
@@ -66,7 +78,7 @@ impl RingOscillator<Disabled> {
     /// in the rp2040 datasheet for guidance on how to do this before initialising the ROSC.
     /// Also see `rosc_as_system_clock` example for usage.
     pub fn initialize_with_freq(self, known_freq: HertzU32) -> RingOscillator<Enabled> {
-        self.device.ctrl.write(|w| w.enable().enable());
+        self.device.ctrl().write(|w| w.enable().enable());
         self.transition(Enabled {
             freq_hz: known_freq,
         })
@@ -81,7 +93,7 @@ impl RingOscillator<Enabled> {
 
     /// Disables the ROSC
     pub fn disable(self) -> RingOscillator<Disabled> {
-        self.device.ctrl.modify(|_r, w| w.enable().disable());
+        self.device.ctrl().modify(|_r, w| w.enable().disable());
 
         self.transition(Disabled)
     }
@@ -89,7 +101,7 @@ impl RingOscillator<Enabled> {
     /// Generate random bit based on the Ring oscillator
     /// This is not suited for security purposes
     pub fn get_random_bit(&self) -> bool {
-        self.device.randombit.read().randombit().bit()
+        self.device.randombit().read().randombit().bit()
     }
 
     /// Put the ROSC in DORMANT state. The method returns after the processor awakens.
@@ -106,7 +118,7 @@ impl RingOscillator<Enabled> {
         //taken from the C SDK
         const ROSC_DORMANT_VALUE: u32 = 0x636f6d61;
 
-        self.device.dormant.write(|w| w.bits(ROSC_DORMANT_VALUE));
+        self.device.dormant().write(|w| w.bits(ROSC_DORMANT_VALUE));
     }
 }
 
