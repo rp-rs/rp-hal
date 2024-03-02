@@ -188,7 +188,7 @@ impl embedded_hal::delay::DelayNs for Timer {
     }
 }
 
-/// Implementation of the [`embedded_hal_0_2::timer`] traits using [`rp2040_hal::timer`] counter.
+/// Implementation of the [`embedded_hal_0_2::timer`] traits using [`rp2040_hal::timer`](crate::timer) counter.
 ///
 /// There is no Embedded HAL 1.0 equivalent at this time.
 ///

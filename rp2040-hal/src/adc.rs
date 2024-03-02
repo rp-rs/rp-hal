@@ -532,7 +532,7 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
         self
     }
 
-    /// Enable the FIFO interrupt ([`ADC_IRQ_FIFO`](pac::Interrupt::ADC_IRQ_FIFO))
+    /// Enable the FIFO interrupt ([`ADC_IRQ_FIFO`](crate::pac::Interrupt::ADC_IRQ_FIFO))
     ///
     /// It will be triggered whenever there are at least `threshold` samples waiting in the FIFO.
     pub fn enable_interrupt(self, threshold: u8) -> Self {
@@ -606,7 +606,7 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
         }
     }
 
-    /// Alias for [`start_paused`].
+    /// Alias for [`AdcFifoBuilder::start_paused`].
     #[deprecated(note = "Use `start_paused()` instead.", since = "0.10.0")]
     pub fn prepare(self) -> AdcFifo<'a, Word> {
         self.start_paused()
@@ -796,14 +796,14 @@ impl<'a, Word> AdcFifo<'a, Word> {
 
     /// Trigger a single conversion
     ///
-    /// Ignored unless in [`AdcFifoBuilder::manual_trigger`] mode.
+    /// Ignored when in [`Adc::free_running`] mode.
     pub fn trigger(&mut self) {
         self.adc.device.cs().modify(|_, w| w.start_once().set_bit());
     }
 
     /// Check if ADC is ready for the next conversion trigger
     ///
-    /// Only useful in [`AdcFifoBuilder::manual_trigger`] mode.
+    /// Not useful when in [`Adc::free_running`] mode.
     pub fn is_ready(&self) -> bool {
         self.adc.device.cs().read().ready().bit_is_set()
     }
