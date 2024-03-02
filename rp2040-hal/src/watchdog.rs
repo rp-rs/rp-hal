@@ -175,7 +175,7 @@ impl Watchdog {
     }
 
     /// Start the watchdog. This enables a timer which will reboot the
-    /// rp2040 if [`feed()`] doesnot get called for the configured period.
+    /// rp2040 if [`Watchdog::feed()`] does not get called for the configured period.
     pub fn start<T: Into<MicrosDurationU32>>(&mut self, period: T) {
         const MAX_PERIOD: u32 = 0xFFFFFF;
 

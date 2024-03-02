@@ -100,7 +100,7 @@ use reg::RegisterInterface;
 
 /// Used to pin traits to a specific channel (A or B)
 pub trait ChannelId: Sealed {
-    /// Corresponding [`DynChannelId`](dyn_slice::DynChannelId)
+    /// Corresponding [`DynChannelId`]
     const DYN: DynChannelId;
 }
 
@@ -140,7 +140,7 @@ pub trait ValidSliceInputMode<I: SliceId>: Sealed + ValidSliceMode<I> {}
 
 /// Mode for slice
 pub trait SliceMode: Sealed + Sized {
-    /// Corresponding [`DynSliceMode`](dyn_slice::DynSliceMode)
+    /// Corresponding [`DynSliceMode`]
     const DYN: DynSliceMode;
 }
 
@@ -175,7 +175,7 @@ impl<I: SliceId> ValidSliceInputMode<I> for CountFallingEdge {}
 
 /// Type-level `enum` for slice IDs
 pub trait SliceId: Sealed {
-    /// Corresponding [`DynSliceId`](dyn_slice::DynSliceId)
+    /// Corresponding [`DynSliceId`]
     const DYN: DynSliceId;
     /// [`SliceMode`] at reset
     type Reset;

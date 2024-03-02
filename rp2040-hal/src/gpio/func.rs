@@ -11,7 +11,6 @@ pub(crate) mod func_sealed {
         fn from(f: DynFunction) -> Self;
         fn as_dyn(&self) -> DynFunction;
     }
-    pub trait TypeLevelFunction {}
 }
 
 /// Type-level `enum` for pin function.
@@ -83,7 +82,6 @@ macro_rules! pin_func {
             /// Type-level `variant` for pin [`Function`].
             pub struct [<Function $fn>](pub(super) ());
             impl Function for [<Function $fn>] {}
-            impl func_sealed::TypeLevelFunction for [<Function $fn>] {}
             impl func_sealed::Function for [<Function $fn>] {
                 #[inline]
                 fn from(_f: DynFunction) -> Self {
@@ -110,7 +108,6 @@ pin_func!(Xip, Spi, Uart, I2c as I2C, Pwm, Pio0, Pio1, Clock, Usb, Null);
 /// Type-level `variant` for pin [`Function`].
 pub struct FunctionSio<C>(PhantomData<C>);
 impl<C: SioConfig> Function for FunctionSio<C> {}
-impl<C: SioConfig> func_sealed::TypeLevelFunction for FunctionSio<C> {}
 impl<C: SioConfig> func_sealed::Function for FunctionSio<C> {
     fn from(_f: DynFunction) -> Self {
         FunctionSio(PhantomData)
