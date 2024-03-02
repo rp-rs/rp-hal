@@ -15,27 +15,22 @@ pub trait State: Sealed {}
 /// XOSC is disabled (typestate)
 pub struct Disabled;
 
-/// XOSC is initialized, ie we've given parameters (typestate)
-pub struct Initialized {
+/// XOSC is initialized but has not yet stabilized (typestate)
+pub struct Unstable {
     freq_hz: HertzU32,
 }
 
-/// Stable state (typestate)
+/// XOSC is stable (typestate)
 pub struct Stable {
     freq_hz: HertzU32,
 }
 
-/// XOSC is in dormant mode (see Chapter 2, Section 16, §5)
-pub struct Dormant;
-
 impl State for Disabled {}
 impl Sealed for Disabled {}
-impl State for Initialized {}
-impl Sealed for Initialized {}
+impl State for Unstable {}
+impl Sealed for Unstable {}
 impl State for Stable {}
 impl Sealed for Stable {}
-impl State for Dormant {}
-impl Sealed for Dormant {}
 
 /// Possible errors when initializing the CrystalOscillator
 #[derive(Debug)]
@@ -121,7 +116,7 @@ impl CrystalOscillator<Disabled> {
         self,
         frequency: HertzU32,
         startup_delay_multiplier: u32,
-    ) -> Result<CrystalOscillator<Initialized>, Error> {
+    ) -> Result<CrystalOscillator<Unstable>, Error> {
         const ALLOWED_FREQUENCY_RANGE: RangeInclusive<HertzU32> =
             HertzU32::MHz(1)..=HertzU32::MHz(15);
         //1 ms = 10e-3 sec and Freq = 1/T where T is in seconds so 1ms converts to 1000Hz
@@ -161,17 +156,17 @@ impl CrystalOscillator<Disabled> {
             w
         });
 
-        Ok(self.transition(Initialized { freq_hz: frequency }))
+        Ok(self.transition(Unstable { freq_hz: frequency }))
     }
 }
 
-/// A token that's given when the oscillator is stablilzed, and can be exchanged to proceed to the next stage.
+/// A token that's given when the oscillator is stabilized, and can be exchanged to proceed to the next stage.
 pub struct StableOscillatorToken {
     _private: (),
 }
 
-impl CrystalOscillator<Initialized> {
-    /// One has to wait for the startup delay before using the oscillator, ie awaiting stablilzation of the XOSC
+impl CrystalOscillator<Unstable> {
+    /// One has to wait for the startup delay before using the oscillator, ie awaiting stabilization of the XOSC
     pub fn await_stabilization(&self) -> nb::Result<StableOscillatorToken, Infallible> {
         if self.device.status().read().stable().bit_is_clear() {
             return Err(WouldBlock);
@@ -180,7 +175,7 @@ impl CrystalOscillator<Initialized> {
         Ok(StableOscillatorToken { _private: () })
     }
 
-    /// Returns the stablilzed oscillator
+    /// Returns the stabilized oscillator
     pub fn get_stable(self, _token: StableOscillatorToken) -> CrystalOscillator<Stable> {
         let freq_hz = self.state.freq_hz;
         self.transition(Stable { freq_hz })
@@ -203,14 +198,17 @@ impl CrystalOscillator<Stable> {
         self.transition(Disabled)
     }
 
-    /// Put the XOSC in DORMANT state.
+    /// Put the XOSC in DORMANT state. The method returns after the processor awakens.
+    ///
+    /// After waking up from the DORMANT state, XOSC needs to re-stabilise.
     ///
     /// # Safety
     /// This method is marked unsafe because prior to switch the XOSC into DORMANT state,
     /// PLLs must be stopped and IRQs have to be properly configured.
     /// This method does not do any of that, it merely switches the XOSC to DORMANT state.
+    /// It should only be called if this oscillator is the clock source for the system clock.
     /// See Chapter 2, Section 16, §5) for details.
-    pub unsafe fn dormant(self) -> CrystalOscillator<Dormant> {
+    pub unsafe fn dormant(self) -> CrystalOscillator<Unstable> {
         //taken from the C SDK
         const XOSC_DORMANT_VALUE: u32 = 0x636f6d61;
 
@@ -219,6 +217,7 @@ impl CrystalOscillator<Stable> {
             w
         });
 
-        self.transition(Dormant)
+        let freq_hz = self.state.freq_hz;
+        self.transition(Unstable { freq_hz })
     }
 }

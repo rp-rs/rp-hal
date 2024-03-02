@@ -196,14 +196,14 @@ macro_rules! clock {
                         self.set_div(div);
                     }
 
-                    // If switching a glitchless slice (ref or sys) to an aux source, switch
-                    // away from aux *first* to avoid passing glitches when changing aux mux.
-                    // Assume (!!!) glitchless source 0 is no faster than the aux source.
-                    nb::block!(self.reset_source_await()).unwrap();
-
 
                     // Set aux mux first, and then glitchless mux if this self has one
                     let token = if src.is_aux() {
+                        // If switching a glitchless slice (ref or sys) to an aux source, switch
+                        // away from aux *first* to avoid passing glitches when changing aux mux.
+                        // Assume (!!!) glitchless source 0 is no faster than the aux source.
+                        nb::block!(self.reset_source_await()).unwrap();
+
                         self.set_aux(src);
                         self.set_self_aux_src()
                     } else {
