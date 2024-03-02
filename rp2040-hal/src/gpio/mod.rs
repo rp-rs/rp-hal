@@ -1015,6 +1015,20 @@ pub trait DefaultTypeState: crate::typelevel::Sealed {
     type PullType: PullType;
 }
 
+// Clear input enable for pins of bank0.
+// Pins 26-29 are ADC pins. If the pins are connected to an analog input,
+// the signal level may not be valid for a digital input. Therefore, input
+// should be disabled by default.
+// For the other GPIO pins, the same setting is applied for consistency.
+macro_rules! reset_ie {
+    ( Bank0, $pads:ident ) => {
+        for id in (0..=29) {
+            $pads.gpio(id).modify(|_, w| w.ie().clear_bit());
+        }
+    };
+    ( Qspi, $pads:ident ) => {};
+}
+
 macro_rules! gpio {
     ( $bank:ident:$prefix:ident, [ $(($id:expr, $pull_type:ident, $func:ident)),* ] ) => {
         paste::paste!{
@@ -1035,8 +1049,10 @@ macro_rules! gpio {
 
                 impl Pins {
                     /// Take ownership of the PAC peripherals and SIO slice and split it into discrete [`Pin`]s
+                    ///
+                    /// This clears the input-enable flag for all Bank0 pads.
                     pub fn new(io : [<IO_ $bank:upper>], pads: [<PADS_ $bank:upper>], sio: [<SioGpio $bank>], reset : &mut $crate::pac::RESETS) -> Self {
-                        use crate::resets::SubsystemReset;
+                        use $crate::resets::SubsystemReset;
                         pads.reset_bring_down(reset);
                         io.reset_bring_down(reset);
 
@@ -1055,6 +1071,7 @@ macro_rules! gpio {
 
                         io.reset_bring_up(reset);
                         pads.reset_bring_up(reset);
+                        reset_ie!($bank, pads);
                         gpio!(members: io, pads, sio, $(([<$prefix $id>], $func, $pull_type)),+)
                     }
                 }
