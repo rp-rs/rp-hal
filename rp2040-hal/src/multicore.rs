@@ -96,6 +96,12 @@ pub struct Stack<const SIZE: usize> {
     pub mem: [usize; SIZE],
 }
 
+impl<const SIZE: usize> Default for Stack<SIZE> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const SIZE: usize> Stack<SIZE> {
     /// Construct a stack of length SIZE, initialized to 0
     pub const fn new() -> Stack<SIZE> {

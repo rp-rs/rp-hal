@@ -21,6 +21,13 @@ pub(crate) mod sealed {
     pub struct IrqWaker {
         waker: Mutex<Cell<Option<Waker>>>,
     }
+
+    impl Default for IrqWaker {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
     impl IrqWaker {
         pub const fn new() -> Self {
             Self {
