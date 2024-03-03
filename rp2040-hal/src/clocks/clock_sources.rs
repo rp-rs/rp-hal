@@ -6,12 +6,8 @@ use crate::{
         bank0::{Gpio20, Gpio22},
         FunctionClock, Pin, PullNone, PullType,
     },
-    pll::{Locked, PhaseLockedLoop},
     rosc::{Enabled, RingOscillator},
-    typelevel::Sealed,
-    xosc::{CrystalOscillator, Stable},
 };
-use pac::{PLL_SYS, PLL_USB};
 
 pub(crate) type PllSys = PhaseLockedLoop<Locked, PLL_SYS>;
 impl Sealed for PllSys {}

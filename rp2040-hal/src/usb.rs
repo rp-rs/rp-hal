@@ -106,7 +106,7 @@
 //! ```
 
 use core::cell::RefCell;
-use critical_section::{self, Mutex};
+use critical_section::Mutex;
 
 use usb_device::{
     bus::{PollResult, UsbBus as UsbBusTrait},
