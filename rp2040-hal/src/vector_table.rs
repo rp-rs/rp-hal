@@ -30,6 +30,12 @@ pub struct VectorTable {
     table: [Vector; 48],
 }
 
+impl Default for VectorTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VectorTable {
     /// Create a new vector table. All entries will point to 0 - you must call init()
     /// on this to copy the current vector table before setting it as active

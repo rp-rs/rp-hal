@@ -34,7 +34,7 @@ pub struct DateTime {
     pub month: u8,
     /// 1..28,29,30,31 depending on month
     pub day: u8,
-    ///
+    /// The day of week
     pub day_of_week: DayOfWeek,
     /// 0..23
     pub hour: u8,

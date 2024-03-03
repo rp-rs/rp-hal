@@ -626,6 +626,12 @@ pub struct LaneCtrl {
     pub shift: u8,
 }
 
+impl Default for LaneCtrl {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LaneCtrl {
     /// Default configuration. Normal operation, unsigned, mask keeps all bits, no shift.
     pub const fn new() -> Self {
