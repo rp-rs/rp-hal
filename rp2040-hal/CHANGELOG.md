@@ -30,7 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Update lower VCO frequency limit according to datasheet update - #773 @ithinuel
-- bump MSRV to 1.75
+- Bump MSRV to 1.75 - #761 @ithinuel
+- Move on-target-tests back to the work space - #762 @ithinuel
 - Set startup\_delay\_multiplier of XOSC to 64, and make it configurable.
   This should increase compatibility with boards where the oscillator starts up
   more slowly than on the Raspberry Pico. - #746 @jannic
@@ -54,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix RealTimeClock & UsbBus ownership - #725 @jnthbdn
 - Make Spi::free also free up the pins - #719 @SCingolani
 - Add safety comments to unsafe rom function - #721 @jannic
+- Several cleanups and documentation updates - #716 #718 #720 #743 #763 #767 #776 #777 #778 #779 @jannic @ithinuel
 
 ## [0.9.1] - 2023-11-12
 
