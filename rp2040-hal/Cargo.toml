@@ -1,6 +1,6 @@
 [package]
 name = "rp2040-hal"
-version = "0.9.1"
+version = "0.10.0"
 authors = ["The rp-rs Developers"]
 edition = "2021"
 homepage = "https://github.com/rp-rs/rp-hal"
