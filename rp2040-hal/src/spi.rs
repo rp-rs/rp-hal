@@ -22,7 +22,7 @@
 //! let spi_device = peripherals.SPI0;
 //! let spi_pin_layout = (mosi, sclk);
 //!
-//! let spi = Spi::<_, _, _, 8>::new(spi_device, spi_pin_layout)
+//! let spi = Spi::new(spi_device, spi_pin_layout)
 //!     .init(&mut peripherals.RESETS, 125_000_000u32.Hz(), 16_000_000u32.Hz(), MODE_0);
 //! ```
 
@@ -171,11 +171,12 @@ impl Sealed for u16 {}
 /// - `DS`: The "data size", i.e. the number of bits transferred per data frame. Defaults to 8.
 ///
 /// In most cases you won't have to specify these types manually and can let the compiler infer
-/// them for you based on the values you pass in to `new`. If you want to select a different
-/// data frame size, you'll need to do that by specifying the `DS` parameter manually.
+/// them for you based on the values you pass in to [`new`][Self::new], which assumes the default
+/// data frame size of 8 bits. If you want to select a  different data frame size, you'll need to
+/// use [`new_with_data_size`][Self::new_with_data_size].
 ///
 /// See [the module level docs][self] for an example.
-pub struct Spi<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8 = 8u8> {
+pub struct Spi<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> {
     device: D,
     pins: P,
     state: PhantomData<S>,
@@ -248,15 +249,32 @@ impl<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<S, D, P, DS
     }
 }
 
-impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
-    /// Create new not initialized Spi bus. Initialize it with [`.init`][Self::init]
+impl<D: SpiDevice, P: ValidSpiPinout<D>> Spi<Disabled, D, P, 8> {
+    /// Create new (not initialized) Spi bus with the default data size (8 bits).
+    ///
+    /// Initialize it with [`.init`][Self::init]
     /// or [`.init_slave`][Self::init_slave].
     ///
     /// Valid pin sets are in the form of `(Tx, Sck)` or `(Tx, Rx, Sck)`
     ///
     /// If you pins are dynamically identified (`Pin<DynPinId, _, _>`) they will first need to pass
     /// validation using their corresponding [`ValidatedPinXX`](ValidatedPinTx).
-    pub fn new(device: D, pins: P) -> Spi<Disabled, D, P, DS> {
+    pub fn new(device: D, pins: P) -> Spi<Disabled, D, P, 8> {
+        Spi {
+            device,
+            pins,
+            state: PhantomData,
+        }
+    }
+}
+
+impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
+    /// Create new (not initialized) Spi bus with a non-default data size, provided
+    /// as a const generic parameter.
+    ///
+    /// Initialize it with [`.init`][Self::init]
+    /// or [`.init_slave`][Self::init_slave].
+    pub fn new_with_data_size<const DATA_SIZE: u8>(device: D, pins: P) -> Spi<Disabled, D, P, DATA_SIZE> {
         Spi {
             device,
             pins,
