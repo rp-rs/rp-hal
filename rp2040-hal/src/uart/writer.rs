@@ -131,6 +131,19 @@ pub(crate) fn disable_tx_interrupt(rb: &RegisterBlock) {
     });
 }
 
+/// A break on the current object
+pub struct Break<'a, T>(&'a mut T);
+impl<'a, T: UartDevice> Break<'a, T> {
+    pub(crate) fn new(dev: &'a mut T) -> Self {
+        dev.uartlcr_h.modify(|_, w| w.brk().set_bit());
+        Break(dev)
+    }
+    /// Stop the break
+    pub fn clear(self) {
+        self.0.uartlcr_h.modify(|_, w| w.brk().clear_bit());
+    }
+}
+
 /// Half of an [`UartPeripheral`] that is only capable of writing. Obtained by calling [`UartPeripheral::split()`]
 ///
 /// [`UartPeripheral`]: struct.UartPeripheral.html
@@ -171,6 +184,11 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Writer<D, P> {
     /// Disables the Transmit Interrupt.
     pub fn disable_tx_interrupt(&mut self) {
         disable_tx_interrupt(&self.device)
+    }
+
+    /// Initiates a break
+    pub fn send_break(&mut self) -> Break<'_, D> {
+        Break::new(&mut self.device)
     }
 }
 

@@ -200,6 +200,11 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
         super::reader::read_full_blocking(&self.device, buffer)
     }
 
+    /// Initiates a break
+    pub fn send_break(&mut self) -> super::writer::Break<'_, D> {
+        super::writer::Break::new(&mut self.device)
+    }
+
     /// Join the reader and writer halves together back into the original Uart peripheral.
     ///
     /// A reader/writer pair can be obtained by calling [`split`].
