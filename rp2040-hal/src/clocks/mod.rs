@@ -26,7 +26,7 @@
 //! let xosc = setup_xosc_blocking(peripherals.XOSC, XOSC_CRYSTAL_FREQ.Hz()).map_err(InitError::XoscErr)?;
 //!
 //! // Start tick in watchdog
-//! watchdog.enable_tick_generation((XOSC_CRYSTAL_FREQ / 1_000_000) as u8);
+//! watchdog.enable_tick_generation((XOSC_CRYSTAL_FREQ / 1_000_000) as u16);
 //!
 //! let mut clocks = ClocksManager::new(peripherals.CLOCKS);
 //!
@@ -513,7 +513,7 @@ pub fn init_clocks_and_plls(
     let xosc = setup_xosc_blocking(xosc_dev, xosc_crystal_freq.Hz()).map_err(InitError::XoscErr)?;
 
     // Configure watchdog tick generation to tick over every microsecond
-    watchdog.enable_tick_generation((xosc_crystal_freq / 1_000_000) as u8);
+    watchdog.enable_tick_generation((xosc_crystal_freq / 1_000_000) as u16);
 
     let mut clocks = ClocksManager::new(clocks_dev);
 
