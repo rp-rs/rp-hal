@@ -20,7 +20,6 @@
 //! );
 //!
 //! // Scan for devices on the bus by attempting to read from them
-//! use embedded_hal_0_2::prelude::_embedded_hal_blocking_i2c_Read;
 //! for i in 0..=127u8 {
 //!     let mut readbuf: [u8; 1] = [0; 1];
 //!     let result = i2c.read(i, &mut readbuf);
@@ -30,14 +29,12 @@
 //!     }
 //! }
 //!
-//! // Write some data to a device at 0x2c
-//! use embedded_hal_0_2::prelude::_embedded_hal_blocking_i2c_Write;
-//! i2c.write(0x2Cu8, &[1, 2, 3]).unwrap();
+//! // Write some data to a device with 7-bit address 0x2c
+//! i2c.write(0x2c_u8, &[1, 2, 3]).unwrap();
 //!
-//! // Write and then read from a device at 0x3a
-//! use embedded_hal_0_2::prelude::_embedded_hal_blocking_i2c_WriteRead;
+//! // Write and then read from a device with 7-bit address 0x3a
 //! let mut readbuf: [u8; 1] = [0; 1];
-//! i2c.write_read(0x2Cu8, &[1, 2, 3], &mut readbuf).unwrap();
+//! i2c.write_read(0x3a_u8, &[1, 2, 3], &mut readbuf).unwrap();
 //! ```
 //!
 //! See [examples/i2c.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/i2c.rs)
@@ -92,6 +89,7 @@ pub trait ValidAddress:
     /// Validates the address against address ranges supported by the hardware.
     fn is_valid(self) -> Result<(), Error>;
 }
+
 impl ValidAddress for u8 {
     const BIT_ADDR_M: IC_10BITADDR_MASTER_A = IC_10BITADDR_MASTER_A::ADDR_7BITS;
     const BIT_ADDR_S: IC_10BITADDR_SLAVE_A = IC_10BITADDR_SLAVE_A::ADDR_7BITS;
@@ -104,35 +102,40 @@ impl ValidAddress for u8 {
         }
     }
 }
+
 impl ValidAddress for u16 {
     const BIT_ADDR_M: IC_10BITADDR_MASTER_A = IC_10BITADDR_MASTER_A::ADDR_10BITS;
     const BIT_ADDR_S: IC_10BITADDR_SLAVE_A = IC_10BITADDR_SLAVE_A::ADDR_10BITS;
 
     fn is_valid(self) -> Result<(), Error> {
-        Ok(())
+        if self >= 0x400 {
+            Err(Error::AddressOutOfRange(self))
+        } else {
+            Ok(())
+        }
     }
 }
 
-/// I2C error
+/// I²C Error
 #[non_exhaustive]
 pub enum Error {
-    /// I2C abort with error
+    /// I²C abort with error
     Abort(u32),
     /// User passed in a read buffer that was 0 length
     ///
-    /// This is a limitation of the RP2040 I2C peripheral.
-    /// If the slave ACKs its address, the I2C peripheral must read
+    /// This is a limitation of the RP2040 I²C peripheral.
+    /// If the slave ACKs its address, the I²C peripheral must read
     /// at least one byte before sending the STOP condition.
     InvalidReadBufferLength,
     /// User passed in a write buffer that was 0 length
     ///
-    /// This is a limitation of the RP2040 I2C peripheral.
-    /// If the slave ACKs its address, the I2C peripheral must write
+    /// This is a limitation of the RP2040 I²C peripheral.
+    /// If the slave ACKs its address, the I²C peripheral must write
     /// at least one byte before sending the STOP condition.
     InvalidWriteBufferLength,
-    /// Target i2c address is out of range
+    /// Target I²C address is out of range
     AddressOutOfRange(u16),
-    /// Target i2c address is reserved
+    /// Target I²C address is reserved
     AddressReserved(u16),
 }
 
@@ -142,8 +145,8 @@ impl core::fmt::Debug for Error {
         match self {
             Error::InvalidReadBufferLength => write!(fmt, "InvalidReadBufferLength"),
             Error::InvalidWriteBufferLength => write!(fmt, "InvalidWriteBufferLength"),
-            Error::AddressOutOfRange(addr) => write!(fmt, "AddressOutOfRange({:x})", addr),
-            Error::AddressReserved(addr) => write!(fmt, "AddressReserved({:x})", addr),
+            Error::AddressOutOfRange(addr) => write!(fmt, "AddressOutOfRange({:?})", addr),
+            Error::AddressReserved(addr) => write!(fmt, "AddressReserved({:?})", addr),
             Error::Abort(_) => {
                 write!(fmt, "{:?}", self.kind())
             }
