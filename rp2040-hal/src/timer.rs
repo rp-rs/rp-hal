@@ -171,9 +171,7 @@ impl embedded_hal::delay::DelayNs for Timer {
         // For now, just use microsecond delay, internally. Of course, this
         // might cause a much longer delay than necessary. So a more advanced
         // implementation would be desirable for sub-microsecond delays.
-        let us = ns / 1000 + if ns % 1000 == 0 { 0 } else { 1 };
-        // With rustc 1.73, this can be replaced by:
-        // let us = ns.div_ceil(1000);
+        let us = ns.div_ceil(1000);
         self.delay_us_internal(us)
     }
 
