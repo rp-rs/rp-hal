@@ -118,18 +118,45 @@ pub fn reset() -> ! {
 
 /// Halt the RP2040.
 ///
-/// Completely disables the other core, and parks the current core in an
+/// Disables the other core, and parks the current core in an
 /// infinite loop with interrupts disabled.
 ///
 /// Doesn't stop other subsystems, like the DMA controller.
+///
+/// When called from core1, core0 will be kept forced off, which
+/// likely breaks debug connections. You may need to reboot with
+/// BOOTSEL pressed to reboot into a debuggable state.
 pub fn halt() -> ! {
     unsafe {
         cortex_m::interrupt::disable();
         // Stop other core
         match crate::Sio::core() {
-            CoreId::Core0 => (*pac::PSM::PTR).frce_off().write(|w| w.proc1().set_bit()),
-            CoreId::Core1 => (*pac::PSM::PTR).frce_off().write(|w| w.proc0().set_bit()),
-        }
+            CoreId::Core0 => {
+                // Stop core 1.
+                (*pac::PSM::PTR)
+                    .frce_off()
+                    .modify(|_, w| w.proc1().set_bit());
+                while !(*pac::PSM::PTR).frce_off().read().proc1().bit_is_set() {
+                    cortex_m::asm::nop();
+                }
+                // Restart core 1. Without this, most debuggers will fail connecting.
+                // It will loop indefinitely in BOOTROM, as nothing
+                // will trigger the wakeup sequence.
+                (*pac::PSM::PTR)
+                    .frce_off()
+                    .modify(|_, w| w.proc1().clear_bit());
+            }
+            CoreId::Core1 => {
+                // Stop core 0.
+                (*pac::PSM::PTR)
+                    .frce_off()
+                    .modify(|_, w| w.proc0().set_bit());
+                // We cannot restart core 0 here, as it would just boot into main.
+                // So the best we can do is to keep core 0 disabled, which may break
+                // further debug connections.
+            }
+        };
+
         // Keep current core running, so debugging stays possible
         loop {
             cortex_m::asm::wfe()
