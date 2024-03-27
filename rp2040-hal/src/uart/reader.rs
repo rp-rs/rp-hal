@@ -218,6 +218,16 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Reader<D, P> {
     }
 }
 
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::ErrorType for Reader<D, P> {
+    type Error = ReadErrorType;
+}
+
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Read for Reader<D, P> {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
+        nb::block!(self.read_raw(buf)).map_err(|e| e.err_type)
+    }
+}
+
 impl<D: UartDevice, P: ValidUartPinout<D>> Read02<u8> for Reader<D, P> {
     type Error = ReadErrorType;
 
