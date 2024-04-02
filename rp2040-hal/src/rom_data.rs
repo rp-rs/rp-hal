@@ -478,13 +478,13 @@ pub mod float_funcs {
         /// nearest(v/(2^n))`
         0x38 ufix_to_float(v: u32, n: i32) -> f32;
         /// Calculates the cosine of `angle`. The value
-        /// of `angle` is in radians, and must be in the range `-1024` to `1024`
+        /// of `angle` is in radians, and must be in the range `-128` to `128`
         0x3c fcos(angle: f32) -> f32;
         /// Calculates the sine of `angle`. The value of
-        /// `angle` is in radians, and must be in the range `-1024` to `1024`
+        /// `angle` is in radians, and must be in the range `-128` to `128`
         0x40 fsin(angle: f32) -> f32;
         /// Calculates the tangent of `angle`. The value
-        /// of `angle` is in radians, and must be in the range `-1024` to `1024`
+        /// of `angle` is in radians, and must be in the range `-128` to `128`
         0x44 ftan(angle: f32) -> f32;
 
         // 0x48 is deprecated
@@ -566,7 +566,7 @@ pub mod float_funcs {
         /// 16) == 0x8000`. This method rounds towards -Infinity, and clamps the
         /// resulting integer to lie within the range `-0x8000000000000000` to
         /// `0x7FFFFFFFFFFFFFFF`
-        0x70 float_to_fix64(v: f32, n: i32) -> f32;
+        0x70 float_to_fix64(v: f32, n: i32) -> i64;
         /// Converts an f32 to an unsigned 64-bit
         /// integer, rounding towards -Infinity, and clamping the result to lie
         /// within the range `0x0000000000000000` to `0xFFFFFFFFFFFFFFFF`
