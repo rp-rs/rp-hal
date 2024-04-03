@@ -592,10 +592,10 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     ///
     /// The program can be uninstalled to free space once it is no longer used by any state
     /// machine.
-    pub fn uninit(
+    pub fn uninit<RxSize, TxSize>(
         mut self,
-        _rx: Rx<SM>,
-        _tx: Tx<SM>,
+        _rx: Rx<SM, RxSize>,
+        _tx: Tx<SM, TxSize>,
     ) -> (UninitStateMachine<SM>, InstalledProgram<SM::PIO>) {
         self.sm.set_enabled(false);
         (self.sm, self.program)
@@ -1314,7 +1314,7 @@ unsafe impl<SM: ValidStateMachine + Send, RxSize> Send for Rx<SM, RxSize> {}
 
 // Safety: `Rx` is marked Send so ensure all accesses remain atomic and no new concurrent accesses
 // are added.
-impl<SM: ValidStateMachine> Rx<SM> {
+impl<SM: ValidStateMachine, RxSize: TransferSize> Rx<SM, RxSize> {
     unsafe fn block(&self) -> &pac::pio0::RegisterBlock {
         &*self.block
     }
@@ -2210,10 +2210,10 @@ impl<P: PIOExt> PIOBuilder<P> {
 
     /// Build the config and deploy it to a StateMachine.
     #[allow(clippy::type_complexity)] // The return type cannot really be simplified.
-    pub fn build<SM: StateMachineIndex>(
+    pub fn build<SM: StateMachineIndex, RX, TX>(
         self,
         mut sm: UninitStateMachine<(P, SM)>,
-    ) -> (StateMachine<(P, SM), Stopped>, Rx<(P, SM)>, Tx<(P, SM)>) {
+    ) -> (StateMachine<(P, SM), Stopped>, Rx<(P, SM), RX>, Tx<(P, SM), TX>) {
         let offset = self.program.offset;
 
         // Stop the SM
