@@ -1654,9 +1654,9 @@ impl<SM: ValidStateMachine, TxSize: TransferSize> Tx<SM, TxSize> {
     }
 
     /// Set the transfer size used in DMA transfers.
-    pub fn transfer_size<RSZ: TransferSize>(self, size: RSZ) -> Rx<SM, RSZ> {
+    pub fn transfer_size<RSZ: TransferSize>(self, size: RSZ) -> Tx<SM, RSZ> {
         let _ = size;
-        Rx {
+        Tx {
             block: self.block,
             _phantom: core::marker::PhantomData,
         }
