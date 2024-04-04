@@ -2210,10 +2210,10 @@ impl<P: PIOExt> PIOBuilder<P> {
 
     /// Build the config and deploy it to a StateMachine.
     #[allow(clippy::type_complexity)] // The return type cannot really be simplified.
-    pub fn build<SM: StateMachineIndex, RX, TX>(
+    pub fn build<SM: StateMachineIndex>(
         self,
         mut sm: UninitStateMachine<(P, SM)>,
-    ) -> (StateMachine<(P, SM), Stopped>, Rx<(P, SM), RX>, Tx<(P, SM), TX>) {
+    ) -> (StateMachine<(P, SM), Stopped>, Rx<(P, SM)>, Tx<(P, SM)>) {
         let offset = self.program.offset;
 
         // Stop the SM
