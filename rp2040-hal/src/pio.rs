@@ -14,8 +14,8 @@ use crate::{
 
 const PIO_INSTRUCTION_COUNT: usize = 32;
 
-impl crate::typelevel::Sealed for PIO0 {}
-impl crate::typelevel::Sealed for PIO1 {}
+impl Sealed for PIO0 {}
+impl Sealed for PIO1 {}
 
 /// PIO Instance
 pub trait PIOExt: Deref<Target = RegisterBlock> + SubsystemReset + Sized + Send + Sealed {
@@ -592,10 +592,10 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     ///
     /// The program can be uninstalled to free space once it is no longer used by any state
     /// machine.
-    pub fn uninit(
+    pub fn uninit<RxSize, TxSize>(
         mut self,
-        _rx: Rx<SM>,
-        _tx: Tx<SM>,
+        _rx: Rx<SM, RxSize>,
+        _tx: Tx<SM, TxSize>,
     ) -> (UninitStateMachine<SM>, InstalledProgram<SM::PIO>) {
         self.sm.set_enabled(false);
         (self.sm, self.program)
@@ -1304,17 +1304,17 @@ impl<SM: ValidStateMachine> StateMachine<SM, Running> {
 }
 
 /// PIO RX FIFO handle.
-pub struct Rx<SM: ValidStateMachine> {
+pub struct Rx<SM: ValidStateMachine, RxSize = Word> {
     block: *const RegisterBlock,
-    _phantom: core::marker::PhantomData<SM>,
+    _phantom: core::marker::PhantomData<(SM, RxSize)>,
 }
 
 // Safety: All shared register accesses are atomic.
-unsafe impl<SM: ValidStateMachine + Send> Send for Rx<SM> {}
+unsafe impl<SM: ValidStateMachine + Send, RxSize> Send for Rx<SM, RxSize> {}
 
 // Safety: `Rx` is marked Send so ensure all accesses remain atomic and no new concurrent accesses
 // are added.
-impl<SM: ValidStateMachine> Rx<SM> {
+impl<SM: ValidStateMachine, RxSize: TransferSize> Rx<SM, RxSize> {
     unsafe fn block(&self) -> &pac::pio0::RegisterBlock {
         &*self.block
     }
@@ -1419,12 +1419,51 @@ impl<SM: ValidStateMachine> Rx<SM> {
             );
         }
     }
+
+    /// Set the transfer size used in DMA transfers.
+    pub fn transfer_size<RSZ: TransferSize>(self, size: RSZ) -> Rx<SM, RSZ> {
+        let _ = size;
+        Rx {
+            block: self.block,
+            _phantom: core::marker::PhantomData,
+        }
+    }
+}
+
+/// Constraint on transfer size types
+pub trait TransferSize: Sealed {
+    /// Actual type of transfer
+    type Type;
+}
+
+/// DMA transfer in bytes (u8)
+#[derive(Debug, Copy, Clone)]
+pub struct Byte;
+/// DMA transfer in half words (u16)
+#[derive(Debug, Copy, Clone)]
+pub struct HalfWord;
+/// DMA transfer in words (u32)
+#[derive(Debug, Copy, Clone)]
+pub struct Word;
+
+impl Sealed for Byte {}
+impl Sealed for HalfWord {}
+impl Sealed for Word {}
+
+impl TransferSize for Byte {
+    type Type = u8;
+}
+impl TransferSize for HalfWord {
+    type Type = u16;
+}
+impl TransferSize for Word {
+    type Type = u32;
 }
 
 // Safety: This only reads from the state machine fifo, so it doesn't
 // interact with rust-managed memory.
-unsafe impl<SM: ValidStateMachine> ReadTarget for Rx<SM> {
-    type ReceivedWord = u32;
+unsafe impl<SM: ValidStateMachine, RxSize: TransferSize> ReadTarget for Rx<SM, RxSize> {
+    type ReceivedWord = RxSize::Type;
 
     fn rx_treq() -> Option<u8> {
         Some(SM::rx_dreq())
@@ -1442,20 +1481,20 @@ unsafe impl<SM: ValidStateMachine> ReadTarget for Rx<SM> {
     }
 }
 
-impl<SM: ValidStateMachine> EndlessReadTarget for Rx<SM> {}
+impl<SM: ValidStateMachine, RxSize: TransferSize> EndlessReadTarget for Rx<SM, RxSize> {}
 
 /// PIO TX FIFO handle.
-pub struct Tx<SM: ValidStateMachine> {
+pub struct Tx<SM: ValidStateMachine, TxSize = Word> {
     block: *const RegisterBlock,
-    _phantom: core::marker::PhantomData<SM>,
+    _phantom: core::marker::PhantomData<(SM, TxSize)>,
 }
 
 // Safety: All shared register accesses are atomic.
-unsafe impl<SM: ValidStateMachine + Send> Send for Tx<SM> {}
+unsafe impl<SM: ValidStateMachine + Send, TxSize> Send for Tx<SM, TxSize> {}
 
 // Safety: `Tx` is marked Send so ensure all accesses remain atomic and no new concurrent accesses
 // are added.
-impl<SM: ValidStateMachine> Tx<SM> {
+impl<SM: ValidStateMachine, TxSize: TransferSize> Tx<SM, TxSize> {
     unsafe fn block(&self) -> &pac::pio0::RegisterBlock {
         &*self.block
     }
@@ -1613,12 +1652,21 @@ impl<SM: ValidStateMachine> Tx<SM> {
             );
         }
     }
+
+    /// Set the transfer size used in DMA transfers.
+    pub fn transfer_size<RSZ: TransferSize>(self, size: RSZ) -> Tx<SM, RSZ> {
+        let _ = size;
+        Tx {
+            block: self.block,
+            _phantom: core::marker::PhantomData,
+        }
+    }
 }
 
 // Safety: This only writes to the state machine fifo, so it doesn't
 // interact with rust-managed memory.
-unsafe impl<SM: ValidStateMachine> WriteTarget for Tx<SM> {
-    type TransmittedWord = u32;
+unsafe impl<SM: ValidStateMachine, TxSize: TransferSize> WriteTarget for Tx<SM, TxSize> {
+    type TransmittedWord = TxSize::Type;
 
     fn tx_treq() -> Option<u8> {
         Some(SM::tx_dreq())
@@ -1636,7 +1684,7 @@ unsafe impl<SM: ValidStateMachine> WriteTarget for Tx<SM> {
     }
 }
 
-impl<SM: ValidStateMachine> EndlessWriteTarget for Tx<SM> {}
+impl<SM: ValidStateMachine, TxSize: TransferSize> EndlessWriteTarget for Tx<SM, TxSize> {}
 
 /// PIO Interrupt controller.
 #[derive(Debug)]
