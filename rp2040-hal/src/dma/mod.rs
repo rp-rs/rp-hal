@@ -295,3 +295,33 @@ pub enum DMAError {
     /// was specified.
     IllegalConfig,
 }
+
+/// Constraint on transfer size types
+pub trait TransferSize: Sealed {
+    /// Actual type of transfer
+    type Type;
+}
+
+/// DMA transfer in bytes (u8)
+#[derive(Debug, Copy, Clone)]
+pub struct Byte;
+/// DMA transfer in half words (u16)
+#[derive(Debug, Copy, Clone)]
+pub struct HalfWord;
+/// DMA transfer in words (u32)
+#[derive(Debug, Copy, Clone)]
+pub struct Word;
+
+impl Sealed for Byte {}
+impl Sealed for HalfWord {}
+impl Sealed for Word {}
+
+impl TransferSize for Byte {
+    type Type = u8;
+}
+impl TransferSize for HalfWord {
+    type Type = u16;
+}
+impl TransferSize for Word {
+    type Type = u32;
+}

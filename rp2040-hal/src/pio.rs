@@ -5,7 +5,7 @@ use pio::{Instruction, InstructionOperands, Program, SideSet, Wrap};
 
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
-    dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, WriteTarget},
+    dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, TransferSize, Word, WriteTarget},
     gpio::{Function, FunctionPio0, FunctionPio1},
     pac::{self, dma::ch::ch_ctrl_trig::TREQ_SEL_A, pio0::RegisterBlock, PIO0, PIO1},
     resets::SubsystemReset,
@@ -1428,36 +1428,6 @@ impl<SM: ValidStateMachine, RxSize: TransferSize> Rx<SM, RxSize> {
             _phantom: core::marker::PhantomData,
         }
     }
-}
-
-/// Constraint on transfer size types
-pub trait TransferSize: Sealed {
-    /// Actual type of transfer
-    type Type;
-}
-
-/// DMA transfer in bytes (u8)
-#[derive(Debug, Copy, Clone)]
-pub struct Byte;
-/// DMA transfer in half words (u16)
-#[derive(Debug, Copy, Clone)]
-pub struct HalfWord;
-/// DMA transfer in words (u32)
-#[derive(Debug, Copy, Clone)]
-pub struct Word;
-
-impl Sealed for Byte {}
-impl Sealed for HalfWord {}
-impl Sealed for Word {}
-
-impl TransferSize for Byte {
-    type Type = u8;
-}
-impl TransferSize for HalfWord {
-    type Type = u16;
-}
-impl TransferSize for Word {
-    type Type = u32;
 }
 
 // Safety: This only reads from the state machine fifo, so it doesn't
