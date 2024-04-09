@@ -1997,7 +1997,9 @@ impl<P: PIOExt> PIOBuilder<P> {
     /// defaults to `ShiftDirection::Left`, which is different from the
     /// rp2040 reset value. The alternative [`Self::from_installed_program`],
     /// fixes this.
-    #[deprecated(note = "please use `from_installed_program` instead")]
+    #[deprecated(
+        note = "please use `from_installed_program` instead and update shift direction if necessary"
+    )]
     pub fn from_program(p: InstalledProgram<P>) -> Self {
         PIOBuilder {
             clock_divisor: (1, 0),
