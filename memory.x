@@ -34,3 +34,37 @@ SECTIONS {
         KEEP(*(.boot2));
     } > BOOT2
 } INSERT BEFORE .text;
+
+/* Per-core (thread) data into flash */
+SECTIONS {
+    .tdata : ALIGN(4)
+    {
+        . = ALIGN(4);
+        PROVIDE(__tdata_start = .);
+        *(.tdata .tdata.*);
+        . = ALIGN(4);
+        PROVIDE(__tdata_end = .);
+    } > FLASH
+    PROVIDE(__tdata_len = __tdata_end - __tdata_start);
+} INSERT AFTER .data;
+
+/* Size per-core state and allocate bss space for each core */
+SECTIONS {
+    .tbss (NOLOAD) : ALIGN(4)
+    {
+        . = ALIGN(4);
+        PROVIDE(__tbss_start = .);
+        *(.tbss .tbss.*);
+        *(.tcommon);
+        . = ALIGN(4);
+        PROVIDE(__tbss_end = .);
+    } > RAM
+    PROVIDE(__tbss_len = __tbss_end - __tbss_start);
+
+    .tls_state (NOLOAD) : ALIGN(4) {
+        PROVIDE(TLS_CORE_0 = ALIGN(4));
+        . += __tdata_len + __tbss_len;
+        PROVIDE(TLS_CORE_1 = ALIGN(4));
+        . += __tdata_len + __tbss_len;
+    } > RAM
+} INSERT AFTER .bss;

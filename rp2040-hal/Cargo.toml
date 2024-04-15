@@ -106,6 +106,9 @@ rtic-monotonic = ["dep:rtic-monotonic"]
 # Implement `i2c-write-iter` traits
 i2c-write-iter = ["dep:i2c-write-iter"]
 
+# Enable use of thread-local variables for multicore state
+thread_local = []
+
 [[example]]
 # irq example uses cortex-m-rt::interrupt, need rt feature for that
 name = "gpio_irq_example"
