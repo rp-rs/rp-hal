@@ -204,6 +204,10 @@ name = "multicore_polyblink"
 required-features = ["critical-section-impl"]
 
 [[example]]
+name = "multicore_percore_data"
+required-features = ["critical-section-impl", "thread_local"]
+
+[[example]]
 name = "pio_blink"
 required-features = ["critical-section-impl"]
 
