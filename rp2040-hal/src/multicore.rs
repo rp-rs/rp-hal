@@ -33,6 +33,47 @@
 //! For inter-processor communications, see [`crate::sio::SioFifo`] and [`crate::sio::Spinlock0`]
 //!
 //! For a detailed example, see [examples/multicore_fifo_blink.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/multicore_fifo_blink.rs)
+//!
+//! ## Per-core static data
+//!
+//! Both cores share the same memory, so a `static` variable will be accessible
+//! and shared by both, requiring the same care as it would in a multi-threaded
+//! program.
+//!
+//! With the `thread_local` feature enabled, this module supports the use of the
+//! ([unstable](https://github.com/rust-lang/rust/issues/29594))
+//! `#[thread_local]` attribute to make these per-core variables. This allows
+//! the same code to run on both cores but with its own core-specific static
+//! state, such maintaining program state, or for things like DMA buffers.
+//!
+//! For example:
+//! ```rust,ignore
+//! #![feature(thread_local)]
+//! # use core::cell::RefCell;
+//!
+//! #[thread_local]
+//! static MY_COUNTER: RefCell<usize> = RefCell::new(0);
+//!
+//! fn next_id() -> usize {
+//!   MY_COUNTER.replace_with(|c| *c + 1)
+//! }
+//! ```
+//!
+//! Each core will get its own instance of the `MY_COUNTER` variable. Since
+//! these are not shared, they do not need atomic operations to update.
+//!
+//! These core-local variables are initialized on program startup and retain
+//! their value from there on, even between invocations of [`Core::spawn`].
+//!
+//! Note that this requires some setup in the linker script to allocate space
+//! for the static data. See memory.x for details.
+//!
+//! If the variables are zero-initialized then they will be reserved space in
+//! the `.tbss` section in the executable, and then space in `.bss` for each
+//! core. Similarly, variables initialized with non-zero constants will be in
+//! the executable's `.tdata` section, and have space reserved in `.bss`; the
+//! initial values are copied at program startup. Note that this uses the
+//! `__pre_init` hook to do this, so it won't be available for other uses.
 
 use core::mem::ManuallyDrop;
 use core::sync::atomic::compiler_fence;
