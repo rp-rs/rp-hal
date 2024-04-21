@@ -335,18 +335,14 @@ impl<'p> Core<'p> {
 #[cfg(all(target_arch = "arm", feature = "thread_local"))]
 mod thread_local {
     use core::arch::global_asm;
-    use core::ptr::addr_of;
+    use core::ptr::{addr_of, addr_of_mut};
 
     extern "C" {
-        static TLS_CORE_0: u8;
-        static TLS_CORE_1: u8;
+        static mut TLS_CORE_0: u8;
+        static mut TLS_CORE_1: u8;
+        static __tdata_start: u8;
+        static __tdata_len: u8;
     }
-    // Not really a const pointer, but we reform it into mut in the asm
-    static mut TLS_STATE: [*const u8; 2] = [
-        // Point to linker-allocated space in .bss
-        unsafe { addr_of!(TLS_CORE_0) },
-        unsafe { addr_of!(TLS_CORE_1) },
-    ];
 
     // Define `__aeabi_read_tp` called by the compiler to get access to
     // thread-local storage.
@@ -358,41 +354,28 @@ mod thread_local {
         ".type __aeabi_read_tp,%function",
 
         "__aeabi_read_tp:",
-        "    push {{r1, lr}}",
-        "    ldr r1, =0xd0000000",      // Load SIO CPUID addr
-        "    ldr r1, [r1]",             // Get current CPUID
-        "    lsls r1, r1, #2",          // Scale by 4
-        "    ldr r0, ={tls_state}",     // Load TLS_STATE base addr
-        "    ldr r0, [r0, r1]",         // Load CPU per-thread
-        "    pop {{r1, pc}}",
+        "    ldr r0, =0xd0000000",      // Load SIO CPUID addr
+        "    ldr r0, [r0]",             // Load CPUID
+        "    cmp r0, #0",               // Check core 0
+        "    ldr r0, ={core_0}",        // Set TLS_CORE_0
+        "    beq 1f",                   // skip if done
+        "    ldr r0, ={core_1}",        // Set TLS_CORE_1
+        "1:  bx lr",
 
         ".popsection",
-        tls_state = sym TLS_STATE,
+        core_0 = sym TLS_CORE_0,
+        core_1 = sym TLS_CORE_1,
     }
 
     // Intercept __pre_init to hook into the startup code to copy the tdata into
     // TLS_CORE_[01].
-    global_asm! {
-        ".pushsection .text.__pre_init",
-        ".align 4",
-        ".p2align 4,,15",
-        ".global __pre_init",
-        ".type __pre_init,%function",
-
-        "__pre_init:",
-        "    push {{lr}}",
-        "    ldr r0, ={tls_core_0}",
-        "    ldr r1, =__tdata_start",
-        "    ldr r2, =__tdata_len",
-        "    bl __aeabi_memcpy",
-        "    ldr r0, ={tls_core_1}",
-        "    ldr r1, =__tdata_start",
-        "    ldr r2, =__tdata_len",
-        "    bl __aeabi_memcpy",
-        "    pop {{pc}}",
-
-        ".popsection",
-        tls_core_0 = sym TLS_CORE_0,
-        tls_core_1 = sym TLS_CORE_1,
+    //
+    // NB: Run as the very first thing, nothing has been initialized and memory
+    // could be in arbitrary state, so we only deal with things via raw pointers.
+    #[cortex_m_rt::pre_init]
+    unsafe fn tls_pre_init_hook() {
+        for dst in [addr_of_mut!(TLS_CORE_0), addr_of_mut!(TLS_CORE_1)] {
+            core::ptr::copy(addr_of!(__tdata_start), dst, addr_of!(__tdata_len) as usize);
+        }
     }
 }

@@ -52,6 +52,8 @@ bitfield = { version = "0.14.0" }
 
 i2c-write-iter = { version = "1.0.0", features = ["async"], optional = true }
 
+cortex-m-rt = { version = "0.7", optional = true }
+
 [dev-dependencies]
 cortex-m-rt = "0.7"
 cortex-m-rtic = "1.1.4"
@@ -107,7 +109,7 @@ rtic-monotonic = ["dep:rtic-monotonic"]
 i2c-write-iter = ["dep:i2c-write-iter"]
 
 # Enable use of thread-local variables for multicore state
-thread_local = []
+thread_local = ["dep:cortex-m-rt"]
 
 [[example]]
 # irq example uses cortex-m-rt::interrupt, need rt feature for that
