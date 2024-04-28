@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1] - 2024-04-28
+
+### Added
+
+- Implement send_break support - #700 @ithinuel
+- Implement embedded_io traits for Reader/Writer - #781 @jannic
+
+### Changed
+
+- Fix debugging after halt() - #785 @jannic
+- Slightly improve deprecation note on from_program - #792 @jannic
+- Fix float_to_fix64 return value & f32 trig function doc corrections - #787 @Text-Input
+- Simplify ceiling division in delay calculation - #783 @jannic
+
 ## [0.10.0] - 2024-03-10
 
 ### Added
@@ -391,7 +405,8 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.54.
 
 - Initial release
 
-[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.10.1...HEAD
+[0.10.1]: https://github.com/rp-rs/rp-hal/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/rp-rs/rp-hal/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/rp-rs/rp-hal/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/rp-rs/rp-hal/compare/v0.8.1...v0.9.0
