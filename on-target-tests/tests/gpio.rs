@@ -149,4 +149,15 @@ mod tests {
         cortex_m::asm::delay(10);
         assert_eq!(group.read(), 0b1010);
     }
+
+    #[test]
+    fn read_adc() {
+        use embedded_hal_0_2::adc::OneShot;
+
+        // Safety: Test cases do not run in parallel
+        let mut pac = unsafe { pac::Peripherals::steal() };
+        let mut adc = hal::Adc::new(pac.ADC, &mut pac.RESETS);
+        let mut temp_sensor = hal::adc::Adc::take_temp_sensor(&mut adc).unwrap();
+        let _temperature: u16 = adc.read(&mut temp_sensor).unwrap();
+    }
 }
