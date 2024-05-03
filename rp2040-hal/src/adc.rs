@@ -404,10 +404,14 @@ impl Adc {
     ///
     /// Also returns immediately if start_many is set, to avoid indefinite blocking.
     pub fn wait_ready(&self) {
-        let cs = self.device.cs().read();
-        while !cs.ready().bit_is_set() && !cs.start_many().bit_is_set() {
+        while !self.is_ready_or_free_running() {
             cortex_m::asm::nop();
         }
+    }
+
+    fn is_ready_or_free_running(&self) -> bool {
+        let cs = self.device.cs().read();
+        cs.ready().bit_is_set() || cs.start_many().bit_is_set()
     }
 
     /// Returns true if the ADC is ready for the next conversion.
