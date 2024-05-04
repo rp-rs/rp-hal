@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Fix oneshot adc read waiting indefinitely - #799 @mjptree
+
 ## [0.10.1] - 2024-04-28
 
 ### Added
