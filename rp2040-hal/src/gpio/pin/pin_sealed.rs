@@ -43,7 +43,7 @@ macro_rules! accessor_fns {
                 unsafe {
                     let sio = &*$crate::pac::SIO::PTR;
                     match pin.bank {
-                        DynBankId::Bank0 =>sio.[<gpio_ $reg:lower>](),
+                        DynBankId::Bank0 => sio.[<gpio_ $reg:lower>](),
                         DynBankId::Qspi => core::mem::transmute::<&$crate::pac::sio::[<GPIO_HI_ $reg:upper>],&$crate::pac::sio::[<GPIO_ $reg:upper>]>(sio.[<gpio_hi_ $reg:lower>]()),
                     }
                 }
