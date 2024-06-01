@@ -1465,8 +1465,8 @@ mod eh1 {
     use embedded_hal::digital::{ErrorType, InputPin, OutputPin, StatefulOutputPin};
 
     use super::{
-        func, AnyPin, AsInputPin, Error, FunctionSio, InOutPin, Pin, PinId, PullType, SioConfig,
-        SioInput, SioOutput,
+        func, AnyPin, AsInputPin, Error, FunctionSio, InOutPin, OutputEnableOverride, Pin, PinId,
+        PullType, SioConfig, SioInput, SioOutput,
     };
 
     impl<I, P, S> ErrorType for Pin<I, FunctionSio<S>, P>
@@ -1558,12 +1558,17 @@ mod eh1 {
         I: AnyPin,
     {
         fn set_low(&mut self) -> Result<(), Self::Error> {
-            self.inner._set_low();
+            // The pin is already set to output low but this is inhibited by the override.
+            self.inner
+                .set_output_enable_override(OutputEnableOverride::Enable);
             Ok(())
         }
 
         fn set_high(&mut self) -> Result<(), Self::Error> {
-            self.inner._set_high();
+            // To set the open-drain pin to high, just disable the output driver by configuring the
+            // output override. That way, the DHT11 can still pull the data line down to send its response.
+            self.inner
+                .set_output_enable_override(OutputEnableOverride::Disable);
             Ok(())
         }
     }
