@@ -73,7 +73,7 @@ You may also want to install these helpful tools:
 # Useful to creating UF2 images for the RP2040 USB Bootloader
 cargo install elf2uf2-rs --locked
 # Useful for flashing over the SWD pins using a supported JTAG probe
-cargo install probe-rs --features cli --locked
+cargo install --locked probe-rs-tools
 ```
 
 ## Packages
@@ -196,8 +196,10 @@ probe-rs can autodetect your debug probe, which can make it easier to use.
 *Step 1* - Install `probe-rs`:
 
 ```console
-$ cargo install probe-rs --features cli --locked
+$ cargo install --locked probe-rs-tools
 ```
+
+Alternatively, follow the installation instructions on https://probe.rs/.
 
 *Step 2* - Make sure your .cargo/config contains the following:
 
