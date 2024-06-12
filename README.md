@@ -184,8 +184,11 @@ specified 'runner'. As the 'runner' is the elf2uf2-rs tool, it will build a UF2
 file and copy it to your RP2040.
 
 ```console
-$ cargo run --release --example pwm_blink
+$ cargo run --release --features "critical-section-impl,rt,defmt" --example pwm_blink
 ```
+
+(The `pwm_blink` example doesn't need all these feature flags. They are listed here
+so you can use the same command for all examples.)
 
 ### Loading with probe-rs
 [probe-rs](https://github.com/probe-rs/probe-rs) is a library and a
