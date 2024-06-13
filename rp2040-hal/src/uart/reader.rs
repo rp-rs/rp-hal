@@ -187,6 +187,7 @@ pub(crate) fn read_full_blocking<D: UartDevice>(
 pub struct Reader<D: UartDevice, P: ValidUartPinout<D>> {
     pub(super) device: D,
     pub(super) pins: P,
+    pub(super) read_error: Option<ReadErrorType>,
 }
 
 impl<D: UartDevice, P: ValidUartPinout<D>> Reader<D, P> {
@@ -224,7 +225,21 @@ impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::ErrorType for Reader<D, 
 
 impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Read for Reader<D, P> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
-        nb::block!(self.read_raw(buf)).map_err(|e| e.err_type)
+        // If the last read stored an error, report it now
+        if let Some(err) = self.read_error.take() {
+            return Err(err);
+        }
+        match nb::block!(self.read_raw(buf)) {
+            Ok(bytes_read) => Ok(bytes_read),
+            Err(err) if !err.discarded.is_empty() => {
+                // If an error was reported but some bytes were already read,
+                // return the data now and store the error for the next
+                // invocation.
+                self.read_error = Some(err.err_type);
+                Ok(err.discarded.len())
+            }
+            Err(err) => Err(err.err_type),
+        }
     }
 }
 
