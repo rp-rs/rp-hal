@@ -13,10 +13,11 @@ use fugit::{MicrosDurationU32, MicrosDurationU64, TimerInstantU64};
 
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
-    clocks::ClocksManager,
+    clocks::ReferenceClock,
     pac::{self, RESETS, TIMER},
     resets::SubsystemReset,
     typelevel::Sealed,
+    Clock, Watchdog,
 };
 
 /// Instant type used by the Timer & Alarm methods.
@@ -59,7 +60,16 @@ impl Timer {
     /// Make sure that clocks and watchdog are configured, so
     /// that timer ticks happen at a frequency of 1MHz.
     /// Otherwise, `Timer` won't work as expected.
-    pub fn new(timer: TIMER, resets: &mut RESETS, _clocks: &ClocksManager) -> Self {
+    pub fn new(
+        timer: TIMER,
+        resets: &mut RESETS,
+        watchdog: &Watchdog,
+        clocks: &ReferenceClock,
+    ) -> Self {
+        assert_eq!(
+            clocks.freq().to_Hz(),
+            1_000_000 * u32::from(watchdog.cycles_per_ticks())
+        );
         timer.reset_bring_down(resets);
         timer.reset_bring_up(resets);
         Self { _private: () }
@@ -201,8 +211,9 @@ impl embedded_hal::delay::DelayNs for Timer {
 /// // Make sure to initialize clocks, otherwise the timer wouldn't work
 /// // properly. Omitted here for terseness.
 /// let clocks: rp2040_hal::clocks::ClocksManager = todo!();
+/// let watchdog: rp2040_hal::Watchdog = todo!();
 /// // Configure the Timer peripheral in count-down mode
-/// let timer = rp2040_hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
+/// let timer = rp2040_hal::Timer::new(pac.TIMER, &mut pac.RESETS, &watchdog, &clocks.reference_clock);
 /// let mut count_down = timer.count_down();
 /// // Create a count_down timer for 500 milliseconds
 /// count_down.start(500.millis());
