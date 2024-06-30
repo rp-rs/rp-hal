@@ -26,6 +26,7 @@ mod tests {
     use crate::hal::pac;
     use crate::XTAL_FREQ_HZ;
     use hal::watchdog::Watchdog;
+    use rp2040_hal::gpio::{PinGroup, PinState};
 
     #[init]
     fn setup() -> () {
@@ -99,5 +100,33 @@ mod tests {
                 .unwrap();
             assert!(pac.PADS_BANK0.gpio(id).read().ie().bit_is_clear());
         }
+    }
+
+    #[test]
+    fn check_pin_groups() {
+        // Safety: Test cases do not run in parallel
+        let mut pac = unsafe { pac::Peripherals::steal() };
+        let pingroup = PinGroup::new();
+        let sio = hal::Sio::new(pac.SIO);
+        let pins = hal::gpio::Pins::new(
+            pac.IO_BANK0,
+            pac.PADS_BANK0,
+            sio.gpio_bank0,
+            &mut pac.RESETS,
+        );
+
+        let pingroup = pingroup.add_pin(pins.gpio0.into_push_pull_output_in_state(PinState::Low));
+        let pingroup = pingroup.add_pin(pins.gpio1.into_push_pull_output_in_state(PinState::Low));
+        let pingroup = pingroup.add_pin(pins.gpio2.into_bus_keep_input());
+        let mut pingroup = pingroup.add_pin(pins.gpio3.into_bus_keep_input());
+
+        cortex_m::asm::delay(10);
+        assert!(pingroup.read() == 0);
+        pingroup.toggle();
+        cortex_m::asm::delay(10);
+        assert!(pingroup.read() == 0xf);
+        pingroup.toggle();
+        cortex_m::asm::delay(10);
+        assert!(pingroup.read() == 0);
     }
 }
