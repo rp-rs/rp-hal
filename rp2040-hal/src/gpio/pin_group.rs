@@ -42,6 +42,7 @@ impl<P: PinId, M: PullType, T: WritePinHList> WritePinHList
     for HCons<Pin<P, FunctionSioInput, M>, T>
 {
     fn write_mask(&self) -> u32 {
+        // This is an input pin, so don't include it in write_mask
         self.tail.write_mask()
     }
 }
@@ -49,7 +50,7 @@ impl<P: PinId, M: PullType, T: WritePinHList> WritePinHList
     for HCons<Pin<P, FunctionSioOutput, M>, T>
 {
     fn write_mask(&self) -> u32 {
-        self.tail.write_mask()
+        (1 << self.head.id().num) | self.tail.write_mask()
     }
 }
 
@@ -144,6 +145,9 @@ where
     }
 
     /// Write this set of pins all at the same time.
+    ///
+    /// This only affects output pins. Input pins in the
+    /// set are ignored.
     pub fn set(&mut self, state: PinState) {
         use super::pin::pin_sealed::PinIdOps;
         let mask = self.0.write_mask();
@@ -156,6 +160,9 @@ where
     }
 
     /// Toggles this set of pins all at the same time.
+    ///
+    /// This only affects output pins. Input pins in the
+    /// set are ignored.
     pub fn toggle(&mut self) {
         use super::pin::pin_sealed::PinIdOps;
         let mask = self.0.write_mask();
