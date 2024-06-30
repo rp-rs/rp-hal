@@ -292,7 +292,7 @@ pub trait Alarm: Sealed {
     /// called, this will trigger interrupt whenever this timestamp is reached.
     ///
     /// The RP2040 is unable to schedule an event taking place in more than
-    /// `u32::max_value()` microseconds.
+    /// `u32::MAX` microseconds.
     ///
     /// [enable_interrupt]: #method.enable_interrupt
     fn schedule_at(&mut self, timestamp: Instant) -> Result<(), ScheduleAlarmError>;
@@ -412,13 +412,13 @@ macro_rules! impl_alarm {
             /// ` whenever this timestamp is reached.
             ///
             /// The RP2040 is unable to schedule an event taking place in more than
-            /// `u32::max_value()` microseconds.
+            /// `u32::MAX` microseconds.
             ///
             /// [enable_interrupt]: #method.enable_interrupt
             fn schedule_at(&mut self, timestamp: Instant) -> Result<(), ScheduleAlarmError> {
                 let now = self.0.get_counter();
                 let duration = timestamp.ticks().saturating_sub(now.ticks());
-                if duration > u32::max_value().into() {
+                if duration > u32::MAX.into() {
                     return Err(ScheduleAlarmError::AlarmTooLate);
                 }
 
@@ -464,7 +464,7 @@ macro_rules! impl_alarm {
 /// Errors that can be returned from any of the `AlarmX::schedule` methods.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ScheduleAlarmError {
-    /// Alarm time is too high. Should not be more than `u32::max_value()` in the future.
+    /// Alarm time is too high. Should not be more than `u32::MAX` in the future.
     AlarmTooLate,
 }
 
