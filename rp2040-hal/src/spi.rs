@@ -158,16 +158,17 @@ impl Sealed for u16 {}
 ///
 /// `Spi` has four generic parameters:
 /// - `S`: a typestate for whether the bus is [`Enabled`] or [`Disabled`]. Upon initial creation,
-/// the bus is [`Disabled`]. You will then need to initialize it as either a main (master) or sub
-/// (slave) device, providing the necessary configuration, at which point it will become [`Enabled`].
+///   the bus is [`Disabled`]. You will then need to initialize it as either a main (master) or sub
+///   (slave) device, providing the necessary configuration, at which point it will become [`Enabled`].
 /// - `D`: Which of the concrete Spi peripherals is being used, [`pac::SPI0`] or [`pac::SPI1`]
 /// - `P`: Which pins are being used to configure the Spi peripheral `D`. A table of valid
-/// pinouts for each Spi peripheral can be found in section 1.4.3 of the RP2040 datasheet.
-/// The [`ValidSpiPinout`] trait is implemented for tuples of pin types that follow the layout:
+///   pinouts for each Spi peripheral can be found in section 1.4.3 of the RP2040 datasheet.
+///   The [`ValidSpiPinout`] trait is implemented for tuples of pin types that follow the layout:
 ///     - `(Tx, Sck)` (i.e. first the "Tx"/"MOSI" pin, then the "Sck"/"Clock" pin)
 ///     - `(Tx, Rx, Sck)` (i.e. first "Tx"/"MOSI", then "Rx"/"MISO", then "Sck"/"Clock" pin)
-/// If you select an invalid layout, you will get a compile error that `P` does not implement
-/// [`ValidSpiPinout`] for your specified [`SpiDevice`] peripheral `D`
+///
+///   If you select an invalid layout, you will get a compile error that `P` does not implement
+///   [`ValidSpiPinout`] for your specified [`SpiDevice`] peripheral `D`
 /// - `DS`: The "data size", i.e. the number of bits transferred per data frame. Defaults to 8.
 ///
 /// In most cases you won't have to specify these types manually and can let the compiler infer

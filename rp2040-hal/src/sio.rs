@@ -591,16 +591,17 @@ pub unsafe fn spinlock_reset() {
 pub struct LaneCtrl {
     /// Bit 22 - Only present on INTERP1 on each core. If CLAMP mode is enabled:  
     /// - LANE0 result is shifted and masked ACCUM0, clamped by a lower bound of  
-    /// BASE0 and an upper bound of BASE1.  
+    ///   BASE0 and an upper bound of BASE1.
     /// - Signedness of these comparisons is determined by LANE0_CTRL_SIGNED
     pub clamp: bool,
     /// Bit 21 - Only present on INTERP0 on each core. If BLEND mode is enabled:
     /// - LANE1 result is a linear interpolation between BASE0 and BASE1, controlled
-    /// by the 8 LSBs of lane 1 shift and mask value (a fractional number between
-    /// 0 and 255/256ths)
+    ///   by the 8 LSBs of lane 1 shift and mask value (a fractional number between
+    ///   0 and 255/256ths)
     /// - LANE0 result does not have BASE0 added (yields only
-    /// the 8 LSBs of lane 1 shift+mask value)
+    ///   the 8 LSBs of lane 1 shift+mask value)
     /// - FULL result does not have lane 1 shift+mask value added (BASE2 + lane 0 shift+mask)
+    ///
     /// LANE1 SIGNED flag controls whether the interpolation is signed or unsigned.
     pub blend: bool,
     /// Bits 19:20 - ORed into bits 29:28 of the lane result presented to the processor on the bus.  
