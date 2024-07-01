@@ -174,6 +174,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
     /// This function writes as long as it can. As soon that the FIFO is full, if :
     /// - 0 bytes were written, a WouldBlock Error is returned
     /// - some bytes were written, it is deemed to be a success
+    ///
     /// Upon success, the remaining slice is returned.
     pub fn write_raw<'d>(&self, data: &'d [u8]) -> nb::Result<&'d [u8], Infallible> {
         super::writer::write_raw(&self.device, data)
@@ -183,6 +184,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
     /// This function reads as long as it can. As soon that the FIFO is empty, if :
     /// - 0 bytes were read, a WouldBlock Error is returned
     /// - some bytes were read, it is deemed to be a success
+    ///
     /// Upon success, it will return how many bytes were read.
     pub fn read_raw<'b>(&self, buffer: &'b mut [u8]) -> nb::Result<usize, ReadError<'b>> {
         super::reader::read_raw(&self.device, buffer)
