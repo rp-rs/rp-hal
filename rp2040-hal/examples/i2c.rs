@@ -17,7 +17,6 @@ use panic_halt as _;
 use rp2040_hal as hal;
 
 // Some traits we need
-use embedded_hal_0_2::blocking::i2c::Write;
 use hal::fugit::RateExtU32;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
@@ -81,7 +80,7 @@ fn main() -> ! {
     let scl_pin: Pin<_, FunctionI2C, _> = pins.gpio19.reconfigure();
     // let not_an_scl_pin: Pin<_, FunctionI2C, PullUp> = pins.gpio20.reconfigure();
 
-    // Create the I²C drive, using the two pre-configured pins. This will fail
+    // Create the I²C driver, using the two pre-configured pins. This will fail
     // at compile time if the pins are in the wrong mode, or if this I²C
     // peripheral isn't available on these pins!
     let mut i2c = hal::I2C::i2c1(

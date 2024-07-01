@@ -109,7 +109,7 @@ async fn demo() {
     }
 
     // Asynchronously write three bytes to the I²C device with 7-bit address 0x2C
-    i2c.write(0x76u8, &[1, 2, 3]).await.unwrap();
+    I2c::write(&mut i2c, 0x76u8, &[1, 2, 3]).await.unwrap();
 
     // Demo finish - just loop until reset
     core::future::pending().await
