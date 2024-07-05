@@ -98,6 +98,8 @@ fn main() -> ! {
     // Initialize DMA.
     let dma = pac.DMA.split(&mut pac.RESETS);
 
+    // The `write_full_blocking` calls in this example are only used to provide some structure to the
+    // output. They are not required for using the UART with DMA.
     uart.write_full_blocking(b"\r\n\r\nUART DMA echo example\r\n\r\n");
 
     // In order to use DMA we need to split the UART into a RX (receive) and TX (transmit) pair
@@ -109,6 +111,13 @@ fn main() -> ! {
     // And we can DMA from a buffer into the UART
     let teststring = b"DMA UART write\r\n";
     let tx_transfer = hal::dma::single_buffer::Config::new(dma.ch0, teststring, tx).start();
+
+    // The actual transfer happens in the background, asynchronously. So the CPU could do something
+    // else here:
+    //
+    //  while !tx_transfer.is_done() {
+    //     // do something else
+    //  }
 
     // Wait for the DMA transfer to finish so we can reuse the tx and the dma channel
     let (ch0, _teststring, tx) = tx_transfer.wait();
@@ -129,7 +138,7 @@ fn main() -> ! {
     let _tx_transfer = hal::dma::single_buffer::Config::new(ch0, rx, tx).start();
 
     loop {
-        // everything should be handled by DMA, nothing else to do
+        // Everything should be handled by DMA, nothing else to do. The CPU is free to do other tasks. Here, we just wait.
         delay.delay_ms(1000);
     }
 }
