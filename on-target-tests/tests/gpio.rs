@@ -46,8 +46,8 @@ mod tests {
             &mut pac.RESETS,
             &mut watchdog,
         )
-        .ok()
-        .unwrap();
+            .ok()
+            .unwrap();
 
         let sio = hal::Sio::new(pac.SIO);
 
@@ -106,7 +106,6 @@ mod tests {
     fn check_pin_groups() {
         // Safety: Test cases do not run in parallel
         let mut pac = unsafe { pac::Peripherals::steal() };
-        let pingroup = PinGroup::new();
         let sio = hal::Sio::new(pac.SIO);
         let pins = hal::gpio::Pins::new(
             pac.IO_BANK0,
@@ -115,18 +114,39 @@ mod tests {
             &mut pac.RESETS,
         );
 
-        let pingroup = pingroup.add_pin(pins.gpio0.into_push_pull_output_in_state(PinState::Low));
-        let pingroup = pingroup.add_pin(pins.gpio1.into_push_pull_output_in_state(PinState::Low));
-        let pingroup = pingroup.add_pin(pins.gpio2.into_bus_keep_input());
-        let mut pingroup = pingroup.add_pin(pins.gpio3.into_bus_keep_input());
+        // GPIO (0 <=> 2) and (1 <=> 3) connected together
+        let mut group = PinGroup::new()
+            .add_pin(pins.gpio0.into_push_pull_output())
+            .add_pin(pins.gpio1.into_push_pull_output())
+            .add_pin(pins.gpio2.into_bus_keep_input())
+            .add_pin(pins.gpio3.into_bus_keep_input());
 
+        group.set(PinState::Low);
         cortex_m::asm::delay(10);
-        assert!(pingroup.read() == 0);
-        pingroup.toggle();
+        assert_eq!(group.read(), 0b0000);
+        group.set(PinState::High);
         cortex_m::asm::delay(10);
-        assert!(pingroup.read() == 0xf);
-        pingroup.toggle();
+        assert_eq!(group.read(), 0b1111);
+        group.set(PinState::Low);
         cortex_m::asm::delay(10);
-        assert!(pingroup.read() == 0);
+        assert_eq!(group.read(), 0b0000);
+
+        group.set(PinState::Low);
+        group.toggle();
+        cortex_m::asm::delay(10);
+        assert_eq!(group.read(), 0b1111);
+        group.toggle();
+        cortex_m::asm::delay(10);
+        assert_eq!(group.read(), 0b0000);
+        group.toggle();
+        cortex_m::asm::delay(10);
+        assert_eq!(group.read(), 0b1111);
+
+        group.set_u32(0b0001);
+        cortex_m::asm::delay(10);
+        assert_eq!(group.read(), 0b0101);
+        group.set_u32(0b0010);
+        cortex_m::asm::delay(10);
+        assert_eq!(group.read(), 0b1010);
     }
 }
