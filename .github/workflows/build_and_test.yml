@@ -10,10 +10,8 @@ jobs:
         with:
           target: thumbv6m-none-eabi
       - name: Install cargo-hack
-        uses: baptiste0928/cargo-install@v2
-        with:
-          crate: cargo-hack
-          version: "=0.6.17"
+        run: |
+          curl -sSL https://github.com/taiki-e/cargo-hack/releases/download/v0.6.17/cargo-hack-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - -C ~/.cargo/bin
       - name: Build rp2040-hal's workspace (without the examples)
         run: cargo hack build --optional-deps --each-feature
       - run: cargo clean
@@ -28,10 +26,8 @@ jobs:
         with:
           target: thumbv6m-none-eabi
       - name: Install cargo-hack
-        uses: baptiste0928/cargo-install@v2
-        with:
-          crate: cargo-hack
-          version: "=0.6.17"
+        run: |
+          curl -sSL https://github.com/taiki-e/cargo-hack/releases/download/v0.6.17/cargo-hack-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - -C ~/.cargo/bin
       - name: Test
         run: cargo hack test -p rp2040-hal --target x86_64-unknown-linux-gnu --optional-deps --each-feature --tests --features critical-section-impl
       - name: Test docs
@@ -52,19 +48,15 @@ jobs:
           toolchain: nightly-2024-01-30
           target: thumbv6m-none-eabi
       - name: Install cargo-hack
-        uses: baptiste0928/cargo-install@v2
-        with:
-          crate: cargo-hack
-          version: "=0.6.17"
+        run: |
+          curl -sSL https://github.com/taiki-e/cargo-hack/releases/download/v0.6.17/cargo-hack-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - -C ~/.cargo/bin
       - name: Install cargo-udeps
-        uses: baptiste0928/cargo-install@v2
-        with:
-          crate: cargo-udeps
-          version: "=0.1.45"
+        run: |
+          curl -sSL https://github.com/est31/cargo-udeps/releases/download/v0.1.45/cargo-udeps-v0.1.45-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - --strip-components=2 -C ~/.cargo/bin ./cargo-udeps-v0.1.45-x86_64-unknown-linux-gnu/cargo-udeps
       - name: Check unused deps
         run: cargo hack udeps --optional-deps --each-feature
   msrv:
-    name: Verifiy build on MSRV
+    name: Verify build on MSRV
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -73,11 +65,9 @@ jobs:
           toolchain: 1.75
           target: thumbv6m-none-eabi
       - name: Install cargo-hack
-        uses: baptiste0928/cargo-install@v2
-        with:
-          crate: cargo-hack
-          version: "=0.6.17"
+        run: |
+          curl -sSL https://github.com/taiki-e/cargo-hack/releases/download/v0.6.17/cargo-hack-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - -C ~/.cargo/bin
       - name: Use older version of regex
         run: cargo update -p regex --precise 1.9.3
-      - name: Verifiy MSRV
+      - name: Verify MSRV
         run: cargo hack build --examples --optional-deps --each-feature
