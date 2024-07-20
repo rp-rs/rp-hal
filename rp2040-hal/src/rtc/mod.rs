@@ -205,8 +205,9 @@ impl RealTimeClock {
     }
 }
 
-/// Errors that can occur on methods on [RtcClock]
+/// Errors that can occur on methods on [RealTimeClock]
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum RtcError {
     /// An invalid DateTime was given or stored on the hardware.
     InvalidDateTime(DateTimeError),
