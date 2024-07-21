@@ -46,8 +46,8 @@ mod tests {
             &mut pac.RESETS,
             &mut watchdog,
         )
-            .ok()
-            .unwrap();
+        .ok()
+        .unwrap();
 
         let sio = hal::Sio::new(pac.SIO);
 
