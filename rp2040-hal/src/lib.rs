@@ -52,6 +52,7 @@ pub mod adc;
 #[macro_use]
 pub mod async_utils;
 pub(crate) mod atomic_register_access;
+pub mod binary_info;
 pub mod clocks;
 #[cfg(feature = "critical-section-impl")]
 mod critical_section_impl;

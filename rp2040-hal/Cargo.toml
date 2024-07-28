@@ -6,7 +6,7 @@ edition = "2021"
 homepage = "https://github.com/rp-rs/rp-hal"
 description = "A Rust Embedded-HAL impl for the rp2040 microcontroller"
 license = "MIT OR Apache-2.0"
-rust-version = "1.75"
+rust-version = "1.77"
 repository = "https://github.com/rp-rs/rp-hal"
 categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
 keywords = ["embedded", "hal", "raspberry-pi", "rp2040", "embedded-hal"]
@@ -105,6 +105,16 @@ rtic-monotonic = ["dep:rtic-monotonic"]
 
 # Implement `i2c-write-iter` traits
 i2c-write-iter = ["dep:i2c-write-iter"]
+
+# Add a binary-info header block containing picotool-compatible metadata.
+#
+# Requires 'rt' so that the vector table is correctly sized and therefore the
+# header is within reach of picotool.
+binary-info = ["rt"]
+
+[[example]]
+name = "binary_info_demo"
+required-features = ["binary-info", "critical-section-impl"]
 
 [[example]]
 # irq example uses cortex-m-rt::interrupt, need rt feature for that
