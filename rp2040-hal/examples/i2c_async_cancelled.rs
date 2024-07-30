@@ -128,12 +128,12 @@ async fn demo() {
 
     // Asynchronously write three bytes to the I²C device with 7-bit address 0x2C
     futures::select_biased! {
-        r = i2c.write(0x76u8, &v).fuse() => r.unwrap(),
+        r = I2c::write(&mut i2c, 0x76u8, &v).fuse() => r.unwrap(),
         _ = timeout.fuse() => {
             defmt::info!("Timed out.");
         }
     }
-    i2c.write(0x76u8, &v).await.unwrap();
+    I2c::write(&mut i2c, 0x76u8, &v).await.unwrap();
 
     // Demo finish - just loop until reset
     core::future::pending().await
