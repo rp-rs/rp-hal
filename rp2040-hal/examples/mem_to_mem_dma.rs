@@ -2,7 +2,7 @@
 //!
 //! This application demonstrates how to use DMA to transfer data from memory to memory buffers.
 //!
-//! See the `Cargo.toml` file for Copyright and licence details.
+//! See the top-level `README.md` file for Copyright and licence details.
 #![no_std]
 #![no_main]
 

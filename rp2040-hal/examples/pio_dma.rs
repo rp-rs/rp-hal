@@ -4,7 +4,7 @@
 //! WORLD" in morse code. The example also tries to read the data back. If reading the data fails,
 //! the message will only be shown once, and then the LED remains dark.
 //!
-//! See the `Cargo.toml` file for Copyright and licence details.
+//! See the top-level `README.md` file for Copyright and licence details.
 #![no_std]
 #![no_main]
 

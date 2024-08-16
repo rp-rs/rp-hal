@@ -9,7 +9,7 @@
 //! While blinkin the LED, it will continuously push to a `Vec`, which will
 //! eventually lead to a panic due to an out of memory condition.
 //!
-//! See the `Cargo.toml` file for Copyright and licence details.
+//! See the top-level `README.md` file for Copyright and licence details.
 
 #![no_std]
 #![no_main]

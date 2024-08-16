@@ -6,6 +6,7 @@ readme = "README.md"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/rp-rs/rp-hal"
+authors = ["The rp-rs Developers"]
 
 [lib]
 proc-macro = true

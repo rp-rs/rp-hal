@@ -4,7 +4,7 @@
 //! To demonstrate the extra utility of this, we also replace an entry in the Vector Table
 //! with a new one.
 //!
-//! See the `Cargo.toml` file for Copyright and license details.
+//! See the top-level `README.md` file for Copyright and license details.
 
 #![no_std]
 #![no_main]

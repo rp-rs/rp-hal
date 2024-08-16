@@ -10,7 +10,7 @@
 //! resistor on each of GPIO 2, 3, 4, 5.  
 //! The other side of the LED + resistor pair should be connected to GND.
 //!
-//! See the `Cargo.toml` file for Copyright and license details.
+//! See the top-level `README.md` file for Copyright and license details.
 
 #![no_std]
 #![no_main]

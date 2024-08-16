@@ -1,12 +1,8 @@
 #
 # Cargo Configuration for the https://github.com/rp-rs/rp-hal.git repository.
 #
-# Copyright (c) The RP-RS Developers, 2021
-#
 # You might want to make a similar file in your own repository if you are
 # writing programs for Raspberry Silicon microcontrollers.
-#
-# This file is MIT or Apache-2.0 as per the repository README.md file
 #
 
 [build]

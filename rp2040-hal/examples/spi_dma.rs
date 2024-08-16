@@ -5,7 +5,7 @@
 //! The application expects the MISO and MOSI pins to be wired together so that it is able to check
 //! whether the data was sent and received correctly.
 //!
-//! See the `Cargo.toml` file for Copyright and licence details.
+//! See the top-level `README.md` file for Copyright and licence details.
 #![no_std]
 #![no_main]
 

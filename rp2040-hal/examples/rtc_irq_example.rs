@@ -4,7 +4,7 @@
 //! It is also intended as a general introduction to interrupts with RP2040.
 //!
 //!
-//! See the `Cargo.toml` file for Copyright and license details.
+//! See the top-level `README.md` file for Copyright and license details.
 
 #![no_std]
 #![no_main]
