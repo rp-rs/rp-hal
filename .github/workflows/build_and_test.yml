@@ -5,7 +5,7 @@ jobs:
     name: Build rp2040-hal's features
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           target: thumbv6m-none-eabi
@@ -26,7 +26,7 @@ jobs:
     name: Execute host-runable tests
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           target: thumbv6m-none-eabi
@@ -49,7 +49,7 @@ jobs:
     name: Check rp2040-hal for unused dependencies
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2024-01-30
@@ -74,7 +74,7 @@ jobs:
     name: Verify build on MSRV
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.77
