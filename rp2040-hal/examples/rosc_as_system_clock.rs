@@ -5,7 +5,7 @@
 //! It shows setting the frequency of the ROSC to a measured known frequency, and contains
 //! helper functions to configure the ROSC drive strength to reach a desired target frequency.
 //!
-//! See the `Cargo.toml` file for Copyright and license details.
+//! See the top-level `README.md` file for Copyright and license details.
 
 #![no_std]
 #![no_main]

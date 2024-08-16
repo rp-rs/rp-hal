@@ -3,7 +3,7 @@
 //! This application blinks two LEDs on GPIOs 2 and 3 at different rates (3Hz
 //! and 4Hz respectively.)
 //!
-//! See the `Cargo.toml` file for Copyright and licence details.
+//! See the top-level `README.md` file for Copyright and licence details.
 
 #![no_std]
 #![no_main]

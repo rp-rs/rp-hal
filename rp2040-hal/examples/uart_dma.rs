@@ -6,7 +6,7 @@
 //! It may need to be adapted to your particular board layout and/or pin
 //! assignment.
 //!
-//! See the `Cargo.toml` file for Copyright and license details.
+//! See the top-level `README.md` file for Copyright and license details.
 
 #![no_std]
 #![no_main]
