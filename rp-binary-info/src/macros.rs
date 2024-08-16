@@ -3,9 +3,9 @@
 /// Generate a static item containing the given environment variable,
 /// and return its [`EntryAddr`](super::EntryAddr).
 #[macro_export]
-macro_rules! binary_info_env {
+macro_rules! env {
     ($tag:expr, $id:expr, $env_var_name:expr) => {
-        $crate::binary_info_str!($tag, $id, {
+        $crate::str!($tag, $id, {
             let value = concat!(env!($env_var_name), "\0");
             // # Safety
             //
@@ -23,10 +23,9 @@ macro_rules! binary_info_env {
 /// You must pass a numeric tag, a numeric ID, and `&CStr` (which is always
 /// null-terminated).
 #[macro_export]
-macro_rules! binary_info_str {
+macro_rules! str {
     ($tag:expr, $id:expr, $str:expr) => {{
-        static ENTRY: $crate::binary_info::StringEntry =
-            $crate::binary_info::StringEntry::new($tag, $id, $str);
+        static ENTRY: $crate::StringEntry = $crate::StringEntry::new($tag, $id, $str);
         ENTRY.addr()
     }};
 }
@@ -37,10 +36,9 @@ macro_rules! binary_info_str {
 /// You must pass a numeric tag, a numeric ID, and `&CStr` (which is always
 /// null-terminated).
 #[macro_export]
-macro_rules! binary_info_int {
+macro_rules! int {
     ($tag:expr, $id:expr, $int:expr) => {{
-        static ENTRY: $crate::binary_info::IntegerEntry =
-            $crate::binary_info::IntegerEntry::new($tag, $id, $int);
+        static ENTRY: $crate::IntegerEntry = $crate::IntegerEntry::new($tag, $id, $int);
         ENTRY.addr()
     }};
 }
@@ -48,11 +46,11 @@ macro_rules! binary_info_int {
 /// Generate a static item containing the program name, and return its
 /// [`EntryAddr`](super::EntryAddr).
 #[macro_export]
-macro_rules! binary_info_rp_program_name {
+macro_rules! rp_program_name {
     ($name:expr) => {
-        $crate::binary_info_str!(
-            $crate::binary_info::consts::TAG_RASPBERRY_PI,
-            $crate::binary_info::consts::ID_RP_PROGRAM_NAME,
+        $crate::str!(
+            $crate::consts::TAG_RASPBERRY_PI,
+            $crate::consts::ID_RP_PROGRAM_NAME,
             $name
         )
     };
@@ -61,11 +59,11 @@ macro_rules! binary_info_rp_program_name {
 /// Generate a static item containing the program version, and return its
 /// [`EntryAddr`](super::EntryAddr).
 #[macro_export]
-macro_rules! binary_info_rp_program_version {
+macro_rules! rp_program_version {
     ($version:expr) => {{
-        $crate::binary_info_str!(
-            $crate::binary_info::consts::TAG_RASPBERRY_PI,
-            $crate::binary_info::consts::ID_RP_PROGRAM_VERSION,
+        $crate::str!(
+            $crate::consts::TAG_RASPBERRY_PI,
+            $crate::consts::ID_RP_PROGRAM_VERSION,
             $version
         )
     }};
@@ -74,11 +72,11 @@ macro_rules! binary_info_rp_program_version {
 /// Generate a static item containing the `CARGO_PKG_VERSION` as the program
 /// version, and return its [`EntryAddr`](super::EntryAddr).
 #[macro_export]
-macro_rules! binary_info_rp_cargo_version {
+macro_rules! rp_cargo_version {
     () => {
-        $crate::binary_info_env!(
-            $crate::binary_info::consts::TAG_RASPBERRY_PI,
-            $crate::binary_info::consts::ID_RP_PROGRAM_VERSION_STRING,
+        $crate::env!(
+            $crate::consts::TAG_RASPBERRY_PI,
+            $crate::consts::ID_RP_PROGRAM_VERSION_STRING,
             "CARGO_PKG_VERSION"
         )
     };
@@ -87,11 +85,11 @@ macro_rules! binary_info_rp_cargo_version {
 /// Generate a static item containing the program url, and return its
 /// [`EntryAddr`](super::EntryAddr).
 #[macro_export]
-macro_rules! binary_info_rp_program_url {
+macro_rules! rp_program_url {
     ($url:expr) => {
-        $crate::binary_info_str!(
-            $crate::binary_info::consts::TAG_RASPBERRY_PI,
-            $crate::binary_info::consts::ID_RP_PROGRAM_URL,
+        $crate::str!(
+            $crate::consts::TAG_RASPBERRY_PI,
+            $crate::consts::ID_RP_PROGRAM_URL,
             $url
         )
     };
@@ -100,11 +98,11 @@ macro_rules! binary_info_rp_program_url {
 /// Generate a static item containing the program description, and return its
 /// [`EntryAddr`](super::EntryAddr).
 #[macro_export]
-macro_rules! binary_info_rp_program_description {
+macro_rules! rp_program_description {
     ($description:expr) => {
-        $crate::binary_info_str!(
-            $crate::binary_info::consts::TAG_RASPBERRY_PI,
-            $crate::binary_info::consts::ID_RP_PROGRAM_DESCRIPTION,
+        $crate::str!(
+            $crate::consts::TAG_RASPBERRY_PI,
+            $crate::consts::ID_RP_PROGRAM_DESCRIPTION,
             $description
         )
     };
@@ -113,11 +111,11 @@ macro_rules! binary_info_rp_program_description {
 /// Generate a static item containing whether this is a debug or a release
 /// build, and return its [`EntryAddr`](super::EntryAddr).
 #[macro_export]
-macro_rules! binary_info_rp_program_build_attribute {
+macro_rules! rp_program_build_attribute {
     () => {
-        $crate::binary_info_str!(
-            $crate::binary_info::consts::TAG_RASPBERRY_PI,
-            $crate::binary_info::consts::ID_RP_PROGRAM_BUILD_ATTRIBUTE,
+        $crate::str!(
+            $crate::consts::TAG_RASPBERRY_PI,
+            $crate::consts::ID_RP_PROGRAM_BUILD_ATTRIBUTE,
             {
                 if cfg!(debug_assertions) {
                     c"debug"
@@ -132,11 +130,11 @@ macro_rules! binary_info_rp_program_build_attribute {
 /// Generate a static item containing the specific board this program runs on,
 /// and return its [`EntryAddr`](super::EntryAddr).
 #[macro_export]
-macro_rules! binary_info_rp_pico_board {
+macro_rules! rp_pico_board {
     ($board:expr) => {
-        $crate::binary_info_str!(
-            $crate::binary_info::consts::TAG_RASPBERRY_PI,
-            $crate::binary_info::consts::ID_RP_PICO_BOARD,
+        $crate::str!(
+            $crate::consts::TAG_RASPBERRY_PI,
+            $crate::consts::ID_RP_PICO_BOARD,
             $board
         )
     };

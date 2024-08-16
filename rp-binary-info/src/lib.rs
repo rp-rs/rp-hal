@@ -1,22 +1,75 @@
 //! Code and types for creating Picotool compatible "Binary Info" metadata
 //!
-//! Add something like this to your program, and compile with the "binary-info"
-//! and "rt" features:
+//! ## Example usage
+//!
+//! Enable the Cargo feature `binary-info`.
+//!
+//! Add this to your linker script (usually named `memory.x`):
+//!
+//! ```not_rust,ignore
+//! SECTIONS {
+//!     /* ### Boot ROM info
+//!      *
+//!      * Goes after .vector_table, to keep it in the first 512 bytes of flash,
+//!      * where picotool can find it
+//!      */
+//!     .boot_info : ALIGN(4)
+//!     {
+//!         KEEP(*(.boot_info));
+//!     } > FLASH
+//!
+//! } INSERT AFTER .vector_table;
+//!
+//! /* move .text to start /after/ the boot info */
+//! _stext = ADDR(.boot_info) + SIZEOF(.boot_info);
+//!
+//! SECTIONS {
+//!     /* ### Picotool 'Binary Info' Entries
+//!      *
+//!      * Picotool looks through this block (as we have pointers to it in our
+//!      * header) to find interesting information.
+//!      */
+//!     .bi_entries : ALIGN(4)
+//!     {
+//!         /* We put this in the header */
+//!         __bi_entries_start = .;
+//!         /* Here are the entries */
+//!         KEEP(*(.bi_entries));
+//!         /* Keep this block a nice round size */
+//!         . = ALIGN(4);
+//!         /* We put this in the header */
+//!         __bi_entries_end = .;
+//!     } > FLASH
+//! } INSERT AFTER .text;
+//! ```
+//!
+//! Then, add this to your Rust code:
 //!
 //! ```
-//! # use rp2040_hal as hal;
 //! #[link_section = ".bi_entries"]
 //! #[used]
-//! pub static PICOTOOL_ENTRIES: [hal::binary_info::EntryAddr; 3] = [
-//!     hal::binary_info_rp_program_name!(c"Program Name Here"),
-//!     hal::binary_info_rp_cargo_version!(),
-//!     hal::binary_info_int!(
-//!         hal::binary_info::make_tag(b"JP"),
+//! pub static PICOTOOL_ENTRIES: [rp_binary_info::EntryAddr; 3] = [
+//!     rp_binary_info::rp_program_name!(c"Program Name Here"),
+//!     rp_binary_info::rp_cargo_version!(),
+//!     rp_binary_info::int!(
+//!         rp_binary_info::make_tag(b"JP"),
 //!         0x0000_0001,
 //!         0x12345678
 //!     ),
 //! ];
 //! ```
+//!
+//! ## Cargo features
+//!
+//! The `binary-info` Cargo feature enables emitting the main `PICOTOOL_HEADER`
+//! static, which is what Picotool looks for to discover the binary info.
+//!
+//! It is optional to allow you to emit the static yourself differently, for e.g.
+//! compatibility with different linker scripts, while still allowing using the
+//! rest of the utilities in the crate to format the info.
+
+#![no_std]
+#![warn(missing_docs)]
 
 pub mod consts;
 
@@ -50,8 +103,8 @@ extern "C" {
 ///
 /// The data here tells picotool the start and end flash addresses of our
 /// metadata.
-#[cfg(feature = "binary-info")]
 #[link_section = ".boot_info"]
+#[cfg(feature = "binary-info")]
 #[used]
 pub static PICOTOOL_HEADER: Header = unsafe {
     Header::new(
@@ -62,7 +115,6 @@ pub static PICOTOOL_HEADER: Header = unsafe {
 };
 
 /// This tells picotool how to convert RAM addresses back into Flash addresses
-#[cfg(feature = "binary-info")]
 pub static MAPPING_TABLE: [MappingTableEntry; 2] = [
     // This is the entry for .data
     MappingTableEntry {
@@ -187,8 +239,7 @@ pub const fn rp_boot2_name(value: &'static core::ffi::CStr) -> StringEntry {
 /// Create a tag from two ASCII letters.
 ///
 /// ```
-/// # use rp2040_hal as hal;
-/// let tag = hal::binary_info::make_tag(b"RP");
+/// let tag = rp_binary_info::make_tag(b"RP");
 /// assert_eq!(tag, 0x5052);
 /// ```
 pub const fn make_tag(c: &[u8; 2]) -> u16 {

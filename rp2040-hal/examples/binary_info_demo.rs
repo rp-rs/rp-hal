@@ -96,14 +96,14 @@ fn main() -> ! {
 #[link_section = ".bi_entries"]
 #[used]
 pub static PICOTOOL_ENTRIES: [binary_info::EntryAddr; 7] = [
-    hal::binary_info_rp_program_name!(c"rp2040-hal Binary Info Example"),
-    hal::binary_info_rp_cargo_version!(),
-    hal::binary_info_rp_program_description!(c"A GPIO blinky with extra metadata."),
-    hal::binary_info_rp_program_url!(c"https://github.com/rp-rs/rp-hal"),
-    hal::binary_info_rp_program_build_attribute!(),
-    hal::binary_info_rp_pico_board!(c"pico"),
+    binary_info::rp_program_name!(c"rp2040-hal Binary Info Example"),
+    binary_info::rp_cargo_version!(),
+    binary_info::rp_program_description!(c"A GPIO blinky with extra metadata."),
+    binary_info::rp_program_url!(c"https://github.com/rp-rs/rp-hal"),
+    binary_info::rp_program_build_attribute!(),
+    binary_info::rp_pico_board!(c"pico"),
     // An example with a non-Raspberry-Pi tag
-    hal::binary_info_int!(binary_info::make_tag(b"JP"), 0x0000_0001, 0x12345678),
+    binary_info::int!(binary_info::make_tag(b"JP"), 0x0000_0001, 0x12345678),
 ];
 
 // End of file
