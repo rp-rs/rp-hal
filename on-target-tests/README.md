@@ -9,10 +9,12 @@ Adding a test:
 Running all tests:  
 Linux (and any other Unix-likes where probe-rs are supported):
 ```system
+cd on-target-tests
 ./run_tests.sh
 ```
 Windows
 ```system
+cd on-target-tests
 run_tests.bat
 ```
 

@@ -18,59 +18,36 @@ targets = ["thumbv6m-none-eabi"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rp2040-hal-macros = { version = "0.1.0", path = "../rp2040-hal-macros" }
-rp-binary-info = { version = "0.1.0", path = "../rp-binary-info" }
-
+bitfield = { version = "0.14.0" }
+chrono = { version = "0.4", default-features = false, optional = true }
 cortex-m = "0.7.2"
-embedded_hal_0_2 = { package = "embedded-hal", version = "0.2.5", features = [
-  "unproven",
-] }
-embedded-hal = "1.0.0"
-embedded-hal-nb = "1.0.0"
-embedded-hal-async = "1.0.0"
+critical-section = { version = "1.0.0" }
+defmt = { version = ">=0.2.0, <0.4", optional = true }
+embedded_hal_0_2 = { package = "embedded-hal", version = "0.2.5", features = ["unproven"] }
 embedded-dma = "0.2.0"
+embedded-hal = "1.0.0"
+embedded-hal-async = "1.0.0"
+embedded-hal-nb = "1.0.0"
 embedded-io = "0.6.1"
+frunk = { version = "0.4.1", default-features = false }
 fugit = "0.3.6"
+i2c-write-iter = { version = "1.0.0", features = ["async"], optional = true }
 itertools = { version = "0.10.1", default-features = false }
 nb = "1.0"
-rp2040-pac = { version = "0.6.0", features = ["critical-section"] }
 paste = "1.0"
 pio = "0.2.0"
+rand_core = "0.6.3"
+rp-binary-info = { version = "0.1.0", path = "../rp-binary-info" }
+rp2040-hal-macros = { version = "0.1.0", path = "../rp2040-hal-macros" }
+rp2040-pac = { version = "0.6.0", features = ["critical-section"] }
+rtic-monotonic = { version = "1.0.0", optional = true }
 usb-device = "0.3"
 vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
-rand_core = "0.6.3"
-critical-section = { version = "1.0.0" }
-
-chrono = { version = "0.4", default-features = false, optional = true }
-
-defmt = { version = ">=0.2.0, <0.4", optional = true }
-
-rtic-monotonic = { version = "1.0.0", optional = true }
-
-frunk = { version = "0.4.1", default-features = false }
-
-bitfield = { version = "0.14.0" }
-
-i2c-write-iter = { version = "1.0.0", features = ["async"], optional = true }
 
 [dev-dependencies]
-cortex-m-rt = "0.7"
-cortex-m-rtic = "1.1.4"
-panic-halt = "0.2.0"
-rp2040-boot2 = "0.3.0"
-hd44780-driver = "0.4.0"
 pio-proc = "0.2.0"
-dht-sensor = "0.2.1"
 rand = { version = "0.8.5", default-features = false }
-nostd_async = { version = "0.6.1", features = ["cortex_m"] }
-futures = { version = "0.3.30", default-features = false, features = [
-  "async-await",
-] }
-defmt-rtt = "0.4.0"
-panic-probe = { version = "0.3.1", features = ["print-defmt"] }
-defmt = "0.3"
-embedded-alloc = "0.5.1"
 
 [features]
 # Minimal startup / runtime for Cortex-M microcontrollers
@@ -113,159 +90,3 @@ i2c-write-iter = ["dep:i2c-write-iter"]
 # Requires 'rt' so that the vector table is correctly sized and therefore the
 # header is within reach of picotool.
 binary-info = ["rt", "rp-binary-info/binary-info"]
-
-[[example]]
-name = "binary_info_demo"
-required-features = ["binary-info", "critical-section-impl"]
-
-[[example]]
-# irq example uses cortex-m-rt::interrupt, need rt feature for that
-name = "gpio_irq_example"
-required-features = ["rt", "critical-section-impl"]
-
-[[example]]
-# irq example uses cortex-m-rt::interrupt, need rt feature for that
-name = "rtc_irq_example"
-required-features = ["rt", "critical-section-impl"]
-
-[[example]]
-# irq example uses cortex-m-rt::interrupt, need rt feature for that
-name = "rtc_sleep_example"
-required-features = ["rt", "critical-section-impl"]
-
-[[example]]
-# pwm irq input example uses cortex-m-rt::interrupt, need rt feature for that
-name = "pwm_irq_input"
-required-features = ["rt", "critical-section-impl"]
-
-[[example]]
-# vector_table example uses cortex-m-rt::interrupt, need rt feature for that
-name = "vector_table"
-required-features = ["rt", "critical-section-impl"]
-
-[[example]]
-# adc_fifo_irq example uses cortex-m-rt::interrupt, need rt feature for that
-name = "adc_fifo_irq"
-required-features = ["rt", "critical-section-impl"]
-
-[[example]]
-# adc_fifo_dma example uses cortex-m-rt::interrupt, need rt feature for that
-name = "adc_fifo_dma"
-required-features = ["rt", "critical-section-impl"]
-
-[[example]]
-name = "adc"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "adc_fifo_poll"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "alloc"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "blinky"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "dht11"
-required-features = ["critical-section-impl"]
-
-[[example]]
-# dormant_sleep example uses cortex-m-rt::interrupt, need rt feature for that
-name = "dormant_sleep"
-required-features = ["rt", "critical-section-impl"]
-
-[[example]]
-name = "gpio_in_out"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "i2c"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "i2c_async"
-required-features = ["critical-section-impl", "rt"]
-
-[[example]]
-name = "i2c_async_cancelled"
-required-features = ["critical-section-impl", "rt", "defmt"]
-
-[[example]]
-name = "lcd_display"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "mem_to_mem_dma"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "multicore_fifo_blink"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "multicore_polyblink"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "pio_blink"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "pio_dma"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "pio_proc_blink"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "pio_side_set"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "pio_synchronized"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "pwm_blink"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "pwm_blink_embedded_hal_1"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "rom_funcs"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "rosc_as_system_clock"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "spi"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "spi_dma"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "uart"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "uart_dma"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "watchdog"
-required-features = ["critical-section-impl"]
-
-[[example]]
-name = "gpio_dyn_pin_array"
-required-features = ["critical-section-impl"]

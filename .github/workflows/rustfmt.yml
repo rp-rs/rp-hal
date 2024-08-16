@@ -12,4 +12,13 @@ jobs:
         with:
           target: thumbv6m-none-eabi
           components: rustfmt
-      - run: cargo fmt -- --check
+      - name: Check format of rp2040-hal
+        run: cd rp2040-hal && cargo fmt -- --check
+      - name: Check format of rp2040-hal-macros
+        run: cd rp2040-hal-macros && cargo fmt -- --check
+      - name: Check format of on-target-tests
+        run: cd on-target-tests && cargo fmt -- --check
+      - name: Check format of rp2040-hal-examples
+        run: cd rp2040-hal-examples && cargo fmt -- --check
+      - name: Check format of rp-binary-info
+        run: cd rp-binary-info && cargo fmt -- --check
