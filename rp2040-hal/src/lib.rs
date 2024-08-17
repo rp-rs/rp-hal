@@ -52,7 +52,6 @@ pub mod adc;
 #[macro_use]
 pub mod async_utils;
 pub(crate) mod atomic_register_access;
-#[cfg(feature = "binary-info")]
 pub use rp_binary_info as binary_info;
 pub mod clocks;
 #[cfg(feature = "critical-section-impl")]
