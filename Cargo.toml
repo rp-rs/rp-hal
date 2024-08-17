@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["rp2040-hal", "rp2040-hal-macros", "on-target-tests"]
+members = ["rp2040-hal", "rp2040-hal-macros", "on-target-tests", "rp-binary-info"]
 exclude = []
 
 [patch.'https://github.com/rp-rs/rp-hal.git']

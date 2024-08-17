@@ -18,6 +18,9 @@ targets = ["thumbv6m-none-eabi"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+rp2040-hal-macros = { version = "0.1.0", path = "../rp2040-hal-macros" }
+rp-binary-info = { version = "0.1.0", path = "../rp-binary-info" }
+
 cortex-m = "0.7.2"
 embedded_hal_0_2 = { package = "embedded-hal", version = "0.2.5", features = [
   "unproven",
@@ -33,7 +36,6 @@ nb = "1.0"
 rp2040-pac = { version = "0.6.0", features = ["critical-section"] }
 paste = "1.0"
 pio = "0.2.0"
-rp2040-hal-macros = { version = "0.1.0", path = "../rp2040-hal-macros" }
 usb-device = "0.3"
 vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
@@ -110,7 +112,7 @@ i2c-write-iter = ["dep:i2c-write-iter"]
 #
 # Requires 'rt' so that the vector table is correctly sized and therefore the
 # header is within reach of picotool.
-binary-info = ["rt"]
+binary-info = ["rt", "rp-binary-info/binary-info"]
 
 [[example]]
 name = "binary_info_demo"
