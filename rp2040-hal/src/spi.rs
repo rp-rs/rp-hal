@@ -278,7 +278,7 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
     ///
     /// Valid pin sets are in the form of `(Tx, Sck)` or `(Tx, Rx, Sck)`
     ///
-    /// If you pins are dynamically identified (`Pin<DynPinId, _, _>`) they will first need to pass
+    /// If your pins are dynamically identified (`Pin<DynPinId, _, _>`) they will first need to pass
     /// validation using their corresponding [`ValidatedPinXX`](ValidatedPinTx).
     pub fn new(device: D, pins: P) -> Spi<Disabled, D, P, DS> {
         Spi {
