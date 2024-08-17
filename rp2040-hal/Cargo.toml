@@ -1,15 +1,15 @@
 [package]
-name = "rp2040-hal"
-version = "0.10.0"
 authors = ["The rp-rs Developers"]
+categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
+description = "A Rust Embedded-HAL impl for the rp2040 microcontroller"
 edition = "2021"
 homepage = "https://github.com/rp-rs/rp-hal"
-description = "A Rust Embedded-HAL impl for the rp2040 microcontroller"
-license = "MIT OR Apache-2.0"
-rust-version = "1.77"
-repository = "https://github.com/rp-rs/rp-hal"
-categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
 keywords = ["embedded", "hal", "raspberry-pi", "rp2040", "embedded-hal"]
+license = "MIT OR Apache-2.0"
+name = "rp2040-hal"
+repository = "https://github.com/rp-rs/rp-hal"
+rust-version = "1.77"
+version = "0.10.0"
 
 [package.metadata.docs.rs]
 features = ["rt", "rom-v2-intrinsics", "defmt", "rtic-monotonic"]
@@ -18,36 +18,43 @@ targets = ["thumbv6m-none-eabi"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bitfield = { version = "0.14.0" }
-chrono = { version = "0.4", default-features = false, optional = true }
+# Non-optional dependencies. Keep these sorted by name.
+bitfield = {version = "0.14.0"}
 cortex-m = "0.7.2"
-critical-section = { version = "1.0.0" }
-defmt = { version = ">=0.2.0, <0.4", optional = true }
-embedded_hal_0_2 = { package = "embedded-hal", version = "0.2.5", features = ["unproven"] }
+critical-section = {version = "1.0.0"}
 embedded-dma = "0.2.0"
 embedded-hal = "1.0.0"
 embedded-hal-async = "1.0.0"
 embedded-hal-nb = "1.0.0"
 embedded-io = "0.6.1"
-frunk = { version = "0.4.1", default-features = false }
+embedded_hal_0_2 = {package = "embedded-hal", version = "0.2.5", features = ["unproven"]}
+frunk = {version = "0.4.1", default-features = false}
 fugit = "0.3.6"
-i2c-write-iter = { version = "1.0.0", features = ["async"], optional = true }
-itertools = { version = "0.10.1", default-features = false }
+itertools = {version = "0.10.1", default-features = false}
 nb = "1.0"
 paste = "1.0"
 pio = "0.2.0"
 rand_core = "0.6.3"
 rp-binary-info = { version = "0.1.0", path = "../rp-binary-info" }
-rp2040-hal-macros = { version = "0.1.0", path = "../rp2040-hal-macros" }
-rp2040-pac = { version = "0.6.0", features = ["critical-section"] }
-rtic-monotonic = { version = "1.0.0", optional = true }
+rp2040-hal-macros = {version = "0.1.0", path = "../rp2040-hal-macros"}
+rp2040-pac = {version = "0.6.0", features = ["critical-section"]}
 usb-device = "0.3"
 vcell = "0.1"
-void = { version = "1.0.2", default-features = false }
+void = {version = "1.0.2", default-features = false}
+
+# Optional dependencies. Keep these sorted by name.
+chrono = {version = "0.4", default-features = false, optional = true}
+defmt = {version = ">=0.2.0, <0.4", optional = true}
+i2c-write-iter = {version = "1.0.0", features = ["async"], optional = true}
+rtic-monotonic = {version = "1.0.0", optional = true}
 
 [dev-dependencies]
+# Non-optional dependencies. Keep these sorted by name.
 pio-proc = "0.2.0"
-rand = { version = "0.8.5", default-features = false }
+rand = {version = "0.8.5", default-features = false}
+
+# Optional dependencies. Keep these sorted by name.
+# None
 
 [features]
 # Minimal startup / runtime for Cortex-M microcontrollers
