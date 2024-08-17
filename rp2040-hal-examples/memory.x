@@ -1,5 +1,10 @@
 MEMORY {
     BOOT2 : ORIGIN = 0x10000000, LENGTH = 0x100
+    /*
+     * Here we assume you have 2048 KiB of Flash. This is what the Pi Pico
+     * has, but your board may have more or less Flash and you should adjust
+     * this value to suit.
+     */
     FLASH : ORIGIN = 0x10000100, LENGTH = 2048K - 0x100
     /*
      * RAM consists of 4 banks, SRAM0-SRAM3, with a striped mapping.

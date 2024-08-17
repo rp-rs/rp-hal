@@ -8,12 +8,12 @@
    <h3 align="center">rp-hal</h3>
 
   <p align="center">
-    High-level Rust drivers for the Raspberry Silicon RP2040 Microcontroller
+    Rust Examples for the Raspberry Silicon RP2040 Microcontroller
     <br />
     <a href="https://docs.rs/rp2040-hal"><strong>Explore the API docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/rp-rs/rp-hal-boards/tree/main/boards/rp-pico/examples">View Demos</a>
+    <a href="https://github.com/rp-rs/rp-hal-boards/tree/main/boards/rp-pico/examples">View more Demos</a>
     ·
     <a href="https://github.com/rp-rs/rp-hal/issues">Report a Bug</a>
     ·
@@ -40,20 +40,15 @@
 <!-- INTRODUCTION -->
 ## Introduction
 
-This is the `rp2040-hal` package - a library crate of high-level Rust drivers
-for the Raspberry Silicon RP2040 microcontroller, along with a collection of
-non-board specific example programs for you to study. You should use this crate
-in your application if you want to write code for the RP2040 microcontroller.
-The *HAL* in the name standards for *Hardware Abstraction Layer*, and comes from
-the fact that many of the drivers included implement the generic
-hardware-abstraction interfaces defined in the Rust Embedded Working Group's
-[embedded-hal](https://github.com/rust-embedded/embedded-hal) crate.
+The `rp2040-hal` package is a library crate of high-level Rust drivers for the
+Raspberry Silicon RP2040 microcontroller. This folder contains a collection of
+non-board specific example programs for you to study.
 
-We also provide a series of [*Board Support Package* (BSP) crates][BSPs], which take
-this HAL crate and pre-configure the pins according to a specific PCB design. If
-you are using one of the supported boards, you should use one of those crates in
-preference, and return here to see documentation about specific peripherals on
-the RP2040 and how to use them. See the `boards` folder in
+We also provide a series of [*Board Support Package* (BSP) crates][BSPs], which
+take the HAL crate and pre-configure the pins according to a specific PCB
+design. If you are using one of the supported boards, you should use one of
+those crates in preference, and return here to see documentation about specific
+peripherals on the RP2040 and how to use them. See the `boards` folder in
 https://github.com/rp-rs/rp-hal-boards/ for more details.
 
 [BSPs]: https://github.com/rp-rs/rp-hal-boards/
@@ -61,38 +56,59 @@ https://github.com/rp-rs/rp-hal-boards/ for more details.
 <!-- GETTING STARTED -->
 ## Getting Started
 
-To include this crate in your project, amend your `Cargo.toml` file to include
-
-```toml
-rp2040-hal = "0.10.0"
-```
-
-To obtain a copy of the source code (e.g. if you want to propose a bug-fix or
-new feature, or simply to study the code), run:
+To build all the examples, first grab a copy of the source code:
 
 ```console
 $ git clone https://github.com/rp-rs/rp-hal.git
 ```
 
-For details on how to program an RP2040 microcontroller, see the [top-level
-rp-hal README](https://github.com/rp-rs/rp-hal/). To see this HAL in use,
-see either the examples in this repository, or the examples included with each
-BSP.
+Then use `rustup` to grab the Rust Standard Library for the appropriate target and our preferred flashing tool:
+
+```console
+$ rustup target add thumbv6m-none-eabi
+```
+
+Then you can build the examples:
+
+```console
+$ cd rp2040-hal-examples
+$ cargo build
+   Compiling rp2040-hal-examples v0.1.0 (/home/user/rp-hal/rp2040-hal-examples)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.53s
+$ cargo build --bin dormant_sleep
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.06s
+$ file ./target/thumbv6m-none-eabi/debug/dormant_sleep
+./target/thumbv6m-none-eabi/debug/dormant_sleep: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), statically linked, with debug_info, not stripped
+```
+
+You can also 'run' an example, which will invoke [`elf2uf2-rs`] to copy it to an
+RP2040's virtual USB Mass Storage Device (which it puts over the USB port when
+in its ROM bootloader). You should install that if you don't have it already:
+
+```console
+$ cargo install elf2uf2-rs --locked
+$ cd rp2040-hal-examples
+$ cargo run --bin dormant_sleep
+   Compiling rp2040-hal v0.10.0 (/home/user/rp-hal/rp2040-hal)
+   Compiling rp2040-hal-examples v0.1.0 (/home/user/rp-hal/rp2040-hal-examples)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.62s
+     Running `elf2uf2-rs -d target/thumbv6m-none-eabi/debug/dormant_sleep`
+Found pico uf2 disk /media/user/RP2040
+Transfering program to pico
+88.50 KB / 88.50 KB [=====================================] 100.00 % 430.77 KB/s
+$
+```
+
+[`elf2uf2-rs`]: https://github.com/JoNil/elf2uf2-rs
 
 <!-- ROADMAP -->
 ## Roadmap
 
-NOTE This HAL is under active development. As such, it is likely to remain
-volatile until a 1.0.0 release.
+NOTE The HAL is under active development, and so are these examples. As such, it
+is likely to remain volatile until a 1.0.0 release.
 
 See the [open issues](https://github.com/rp-rs/rp-hal/issues) for a list of
 proposed features (and known issues).
-
-### Implemented traits
-
-This crate aims to implement all traits from embedded-hal, both version
-0.2 and 1.0. They can be used at the same time, so you can upgrade drivers
-incrementally.
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -106,6 +122,7 @@ appreciated**.
 3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
+
 
 <!-- LICENSE -->
 ## License
