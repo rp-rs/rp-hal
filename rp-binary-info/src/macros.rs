@@ -56,6 +56,19 @@ macro_rules! rp_program_name {
     };
 }
 
+/// Generate a static item containing the `CARGO_BIN_NAME` as the program name,
+/// and return its [`EntryAddr`](super::EntryAddr).
+#[macro_export]
+macro_rules! rp_cargo_bin_name {
+    () => {
+        $crate::env!(
+            $crate::consts::TAG_RASPBERRY_PI,
+            $crate::consts::ID_RP_PROGRAM_NAME,
+            "CARGO_BIN_NAME"
+        )
+    };
+}
+
 /// Generate a static item containing the program version, and return its
 /// [`EntryAddr`](super::EntryAddr).
 #[macro_export]
@@ -82,7 +95,7 @@ macro_rules! rp_cargo_version {
     };
 }
 
-/// Generate a static item containing the program url, and return its
+/// Generate a static item containing the program URL, and return its
 /// [`EntryAddr`](super::EntryAddr).
 #[macro_export]
 macro_rules! rp_program_url {
@@ -91,6 +104,19 @@ macro_rules! rp_program_url {
             $crate::consts::TAG_RASPBERRY_PI,
             $crate::consts::ID_RP_PROGRAM_URL,
             $url
+        )
+    };
+}
+
+/// Generate a static item containing the `CARGO_PKG_HOMEPAGE` as the program URL,
+/// and return its [`EntryAddr`](super::EntryAddr).
+#[macro_export]
+macro_rules! rp_cargo_homepage_url {
+    () => {
+        $crate::env!(
+            $crate::consts::TAG_RASPBERRY_PI,
+            $crate::consts::ID_RP_PROGRAM_URL,
+            "CARGO_PKG_HOMEPAGE"
         )
     };
 }

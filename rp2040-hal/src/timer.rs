@@ -6,7 +6,7 @@
 //!
 //! Each of the 4 alarms can match on the lower 32 bits of Counter and trigger an interrupt.
 //!
-//! See [Chapter 4 Section 6](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) of the datasheet for more details.
+//! See [Chapter 4 Section 6](https://datasheets.raspberrypi.org/rp2040/rp2040-datasheet.pdf) of the datasheet for more details.
 
 use core::sync::atomic::{AtomicU8, Ordering};
 use fugit::{MicrosDurationU32, MicrosDurationU64, TimerInstantU64};

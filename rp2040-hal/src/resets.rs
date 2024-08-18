@@ -1,5 +1,7 @@
 //! Subsystem Resets
-// See [Chapter 2 Section 14](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
+//!
+//! See [Chapter 2 Section 14](https://datasheets.raspberrypi.org/rp2040/rp2040-datasheet.pdf) for more details.
+
 mod private {
     pub trait SubsystemReset {
         fn reset_bring_up(&self, resets: &mut crate::pac::RESETS);

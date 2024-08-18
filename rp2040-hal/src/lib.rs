@@ -35,6 +35,8 @@
 //!   `rtic_monotonic::Monotonic` based on the RP2040 timer peripheral
 //! * **i2c-write-iter** -
 //!   Implement `i2c_write_iter` traits for `I2C<_, _, Controller>`.
+//! * **binary-info** -
+//!   Include a `static` variable containing picotool compatible binary info.
 
 #![warn(missing_docs)]
 #![no_std]

@@ -1,6 +1,6 @@
 //! Analog-Digital Converter (ADC)
 //!
-//! See [Chapter 4 Section 9](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) of the datasheet for more details
+//! See [Chapter 4 Section 9](https://datasheets.raspberrypi.org/rp2040/rp2040-datasheet.pdf) of the datasheet for more details
 //!
 //! ## Usage
 //!

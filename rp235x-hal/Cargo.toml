@@ -1,0 +1,101 @@
+[package]
+name = "rp235x-hal"
+version = "0.2.0"
+authors = ["The rp-rs Developers"]
+edition = "2021"
+homepage = "https://github.com/rp-rs/rp-hal"
+description = "A Rust Embeded-HAL impl for the RP2350 microcontroller"
+license = "MIT OR Apache-2.0"
+rust-version = "1.77"
+repository = "https://github.com/rp-rs/rp-hal"
+categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
+keywords = ["embedded", "hal", "raspberry-pi", "rp2350", "embedded-hal"]
+
+[package.metadata.docs.rs]
+features = ["rt", "defmt", "rtic-monotonic"]
+targets = ["thumbv8m.main-none-eabihf"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# Non-optional dependencies. Keep these sorted by name.
+bitfield = "0.14.0"
+critical-section = "1.0.0"
+embedded_hal_0_2 = { package = "embedded-hal", version = "0.2.5", features = ["unproven"] }
+embedded-dma = "0.2.0"
+embedded-hal = "1.0.0"
+embedded-hal-async = "1.0.0"
+embedded-hal-nb = "1.0.0"
+embedded-io = "0.6.1"
+frunk = { version = "0.4.1", default-features = false }
+fugit = "0.3.6"
+gcd = ">=2.1,<3.0"
+itertools = { version = "0.13.0", default-features = false }
+nb = "1.0"
+paste = "1.0"
+pio = "0.2.0"
+rand_core = "0.6.3"
+rp-binary-info = { version = "0.1.0", path = "../rp-binary-info" }
+rp-hal-common = {version="0.1.0", path="../rp-hal-common"}
+rp235x-hal-macros = { version = "0.1.0", path = "../rp235x-hal-macros" }
+rp235x-pac = { git = "https://github.com/rp-rs/rp235x-pac", branch="import-pac", features = ["critical-section", "rt"] }
+sha2-const-stable = "0.1"
+usb-device = "0.3.2"
+vcell = "0.1"
+void = { version = "1.0.2", default-features = false }
+
+# Optional dependencies. Keep these sorted by name.
+defmt = { version = ">=0.2.0, <0.4", optional = true }
+i2c-write-iter = { version = "1.0.0", features = ["async"], optional = true }
+rtic-monotonic = { version = "1.0.0", optional = true }
+
+[target.'thumbv8m.main-none-eabihf'.dependencies]
+cortex-m = "0.7.2"
+cortex-m-rt = "0.7"
+
+[target.riscv32imac-unknown-none-elf.dependencies]
+riscv = "0.11"
+riscv-rt = "0.12"
+
+[dev-dependencies]
+# Non-optional dependencies. Keep these sorted by name.
+pio-proc = "0.2.0"
+rand = {version = "0.8.5", default-features = false}
+
+# Optional dependencies. Keep these sorted by name.
+# None
+
+[features]
+# Enable the boot-up code from the arch runtime
+rt = ["rp235x-pac/rt"]
+
+# Memoize(cache) ROM function pointers on first use to improve performance
+rom-func-cache = []
+
+# critical section that is safe for multicore use
+critical-section-impl = ["critical-section/restore-state-u8"]
+
+# Implement `defmt::Format` for several types.
+defmt = ["dep:defmt"]
+
+# Implement `rtic_monotonic::Monotonic` based on the RP235x timer peripheral
+rtic-monotonic = ["dep:rtic-monotonic"]
+
+# Implement `i2c-write-iter` traits
+i2c-write-iter = ["dep:i2c-write-iter"]
+
+# Use DCP to accelerate some (but not all) f64 operations.
+#
+# If you really want to save every last micro-amp, and know you aren't doing any
+# f64 operations, you can disable this feature (which is on by default) and then
+# manually disable the DCP by either clearing the bits we set for you in the
+# CPACR register, or changing the #[entry] macro to not set those bits.
+#
+# Almost everyone will want this on, but we let the BSPs make that choice.
+dcp-fast-f64 = []
+
+# Add a binary-info header block containing picotool-compatible metadata.
+#
+# Requires 'rt' so that the vector table is correctly sized and therefore the
+# header is within reach of picotool.
+binary-info = ["rt", "rp-binary-info/binary-info"]

@@ -3,7 +3,7 @@
 //! [`Spi`] is the main struct exported by this module, representing a configured Spi bus. See its
 //! docs for more information on its type parameters.
 //!
-//! See [Chapter 4 Section 4](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
+//! See [Chapter 4 Section 4](https://datasheets.raspberrypi.org/rp2040/rp2040-datasheet.pdf) for more details
 //!
 //! ## Usage
 //!
