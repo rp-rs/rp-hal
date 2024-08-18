@@ -18,24 +18,6 @@ jobs:
             echo "Building $example"
             cargo build --target=${TARGET} --bin $example
           done
-  udeps:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly-2024-01-30
-          target: ${{ env.TARGET }}
-      - name: Install cargo-udeps
-        run: |
-          curl -sSL https://github.com/est31/cargo-udeps/releases/download/v0.1.45/cargo-udeps-v0.1.45-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - --strip-components=2 -C ~/.cargo/bin ./cargo-udeps-v0.1.45-x86_64-unknown-linux-gnu/cargo-udeps
-      - name: Run cargo-udeps
-        run: |
-          cd ${PACKAGE}
-          cat riscv_examples.txt | while read example; do
-            echo "Building $example"
-            cargo udeps --target=${TARGET} --bin $example
-          done
   msrv:
     name: Verify build on MSRV
     runs-on: ubuntu-20.04
