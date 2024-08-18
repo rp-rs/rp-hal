@@ -38,7 +38,7 @@ rand_core = "0.6.3"
 rp-binary-info = {version = "0.1.0", path = "../rp-binary-info"}
 rp-hal-common = {version = "0.1.0", path = "../rp-hal-common"}
 rp235x-hal-macros = {version = "0.1.0", path = "../rp235x-hal-macros"}
-rp235x-pac = {git = "https://github.com/rp-rs/rp235x-pac", branch = "import-pac", features = ["critical-section", "rt"]}
+rp235x-pac = {version = "0.1.0", features = ["critical-section", "rt"]}
 sha2-const-stable = "0.1"
 usb-device = "0.3.2"
 vcell = "0.1"
