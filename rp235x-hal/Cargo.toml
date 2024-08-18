@@ -1,15 +1,15 @@
 [package]
-name = "rp235x-hal"
-version = "0.2.0"
 authors = ["The rp-rs Developers"]
+categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
+description = "A Rust Embeded-HAL impl for the RP2350 microcontroller"
 edition = "2021"
 homepage = "https://github.com/rp-rs/rp-hal"
-description = "A Rust Embeded-HAL impl for the RP2350 microcontroller"
-license = "MIT OR Apache-2.0"
-rust-version = "1.77"
-repository = "https://github.com/rp-rs/rp-hal"
-categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
 keywords = ["embedded", "hal", "raspberry-pi", "rp2350", "embedded-hal"]
+license = "MIT OR Apache-2.0"
+name = "rp235x-hal"
+repository = "https://github.com/rp-rs/rp-hal"
+rust-version = "1.77"
+version = "0.2.0"
 
 [package.metadata.docs.rs]
 features = ["rt", "defmt", "rtic-monotonic"]
@@ -21,33 +21,33 @@ targets = ["thumbv8m.main-none-eabihf"]
 # Non-optional dependencies. Keep these sorted by name.
 bitfield = "0.14.0"
 critical-section = "1.0.0"
-embedded_hal_0_2 = { package = "embedded-hal", version = "0.2.5", features = ["unproven"] }
 embedded-dma = "0.2.0"
 embedded-hal = "1.0.0"
 embedded-hal-async = "1.0.0"
 embedded-hal-nb = "1.0.0"
 embedded-io = "0.6.1"
-frunk = { version = "0.4.1", default-features = false }
+embedded_hal_0_2 = {package = "embedded-hal", version = "0.2.5", features = ["unproven"]}
+frunk = {version = "0.4.1", default-features = false}
 fugit = "0.3.6"
 gcd = ">=2.1,<3.0"
-itertools = { version = "0.13.0", default-features = false }
+itertools = {version = "0.13.0", default-features = false}
 nb = "1.0"
 paste = "1.0"
 pio = "0.2.0"
 rand_core = "0.6.3"
-rp-binary-info = { version = "0.1.0", path = "../rp-binary-info" }
-rp-hal-common = {version="0.1.0", path="../rp-hal-common"}
-rp235x-hal-macros = { version = "0.1.0", path = "../rp235x-hal-macros" }
-rp235x-pac = { git = "https://github.com/rp-rs/rp235x-pac", branch="import-pac", features = ["critical-section", "rt"] }
+rp-binary-info = {version = "0.1.0", path = "../rp-binary-info"}
+rp-hal-common = {version = "0.1.0", path = "../rp-hal-common"}
+rp235x-hal-macros = {version = "0.1.0", path = "../rp235x-hal-macros"}
+rp235x-pac = {git = "https://github.com/rp-rs/rp235x-pac", branch = "import-pac", features = ["critical-section", "rt"]}
 sha2-const-stable = "0.1"
 usb-device = "0.3.2"
 vcell = "0.1"
-void = { version = "1.0.2", default-features = false }
+void = {version = "1.0.2", default-features = false}
 
 # Optional dependencies. Keep these sorted by name.
-defmt = { version = ">=0.2.0, <0.4", optional = true }
-i2c-write-iter = { version = "1.0.0", features = ["async"], optional = true }
-rtic-monotonic = { version = "1.0.0", optional = true }
+defmt = {version = ">=0.2.0, <0.4", optional = true}
+i2c-write-iter = {version = "1.0.0", features = ["async"], optional = true}
+rtic-monotonic = {version = "1.0.0", optional = true}
 
 [target.'thumbv8m.main-none-eabihf'.dependencies]
 cortex-m = "0.7.2"
