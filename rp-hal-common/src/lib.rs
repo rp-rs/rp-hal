@@ -8,5 +8,4 @@
 
 #![no_std]
 
-/// Not useful - just a placeholder.
-pub struct Placeholder;
+pub mod uart;

@@ -9,5 +9,6 @@ repository = "https://github.com/rp-rs/rp-hal"
 rust-version = "1.77"
 version = "0.1.0"
 
-[dependencies]
 # DO NOT LIST ANY PAC CRATES OR ARCHITECTURE CRATES HERE
+[dependencies]
+fugit = "0.3.7"
