@@ -22,7 +22,7 @@ dht-sensor = "0.2.1"
 embedded-alloc = "0.5.1"
 embedded-hal = "1.0.0"
 embedded-hal-async = "1.0.0"
-embedded-hal-bus = { version = "0.2.0", features = ["defmt-03"] }
+embedded-hal-bus = {version = "0.2.0", features = ["defmt-03"]}
 embedded_hal_0_2 = {package = "embedded-hal", version = "0.2.5", features = ["unproven"]}
 fugit = "0.3.6"
 futures = {version = "0.3.30", default-features = false, features = ["async-await"]}
@@ -35,6 +35,6 @@ pio = "0.2.0"
 pio-proc = "0.2.0"
 # We aren't using this, but embedded-hal-bus 0.2 unconditionally requires atomics.
 # Should be fixed in e-h-b 0.3 via https://github.com/rust-embedded/embedded-hal/pull/607
-portable-atomic = { version = "1.7.0", features = ["critical-section"] }
+portable-atomic = {version = "1.7.0", features = ["critical-section"]}
 rp2040-boot2 = "0.3.0"
 rp2040-hal = {path = "../rp2040-hal", version = "0.10.0", features = ["binary-info", "critical-section-impl", "rt", "defmt"]}

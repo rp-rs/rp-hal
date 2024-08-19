@@ -61,17 +61,17 @@ enum MyError<SPI> {
     // Add other errors for your driver here.
 }
 
-/// Implementation of the business logic for the remote Spi IC
+/// Implementation of the business logic for the remote SPI IC
 impl<SPI> MySpiDriver<SPI>
 where
     SPI: SpiDevice,
 {
-    /// Construct a new instance of Spi device driver
+    /// Construct a new instance of SPI device driver
     pub fn new(spi: SPI) -> Self {
         Self { spi }
     }
 
-    /// Our hypothetical Spi device has a register at 0x20, that accepts a u8 value
+    /// Our hypothetical SPI device has a register at 0x20, that accepts a u8 value
     pub fn set_value(&mut self, value: u8) -> Result<(), MyError<SPI::Error>> {
         self.spi
             .transaction(&mut [Operation::Write(&[0x20, value])])
@@ -138,10 +138,10 @@ fn main() -> ! {
         pins.gpio1.into_function(),
     );
 
-    // Set up a uart so we can print out the values from our Spi peripheral
+    // Set up a uart so we can print out the values from our SPI peripheral
     let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
-            UartConfig::new(9600.Hz(), DataBits::Eight, None, StopBits::One),
+            UartConfig::new(115200.Hz(), DataBits::Eight, None, StopBits::One),
             clocks.peripheral_clock.freq(),
         )
         .unwrap();
@@ -150,10 +150,14 @@ fn main() -> ! {
     let spi_mosi = pins.gpio7.into_function::<hal::gpio::FunctionSpi>();
     let spi_miso = pins.gpio4.into_function::<hal::gpio::FunctionSpi>();
     let spi_sclk = pins.gpio6.into_function::<hal::gpio::FunctionSpi>();
+
+    // Chip select is handled by SpiDevice, not SpiBus. It logically belongs with the specific SPI device we're talking to
     let spi_cs = pins.gpio8.into_push_pull_output_in_state(PinState::High);
+
+    // Create new, uninitialized SPI bus with one of the 2 SPI peripherals from our PAC, and our SPI data/clock pins
     let spi = hal::spi::Spi::<_, _, _, 8>::new(pac.SPI0, (spi_mosi, spi_miso, spi_sclk));
 
-    // Exchange the uninitialised SPI driver for an initialised one
+    // Exchange the uninitialised Spi bus for an initialised one, passing in the extra bus parameters required
     let spi = spi.init(
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
@@ -164,11 +168,12 @@ fn main() -> ! {
     // We are the only task talking to this SPI peripheral, so we can use ExclusiveDevice here.
     // If we had multiple tasks accessing this, you would need to use a different interface to
     // ensure that we have exclusive access to this bus (via AtomicDevice or CriticalSectionDevice, for example)
+    //
     // We can safely unwrap here, because the only possible failure is CS assertion failure, but our CS pin is infallible
-    let spi_bus = ExclusiveDevice::new(spi, spi_cs, timer).unwrap();
+    let excl_dev = ExclusiveDevice::new(spi, spi_cs, timer).unwrap();
 
     // Now that we've constructed a SpiDevice for our driver to use, we can finally construct our Spi driver
-    let mut driver = MySpiDriver::new(spi_bus);
+    let mut driver = MySpiDriver::new(excl_dev);
 
     match driver.set_value(10) {
         Ok(_) => {
