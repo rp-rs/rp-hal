@@ -147,39 +147,34 @@ fn main() -> ! {
     // ========================================================================
 
     // Grab our singleton objects
-    let mut pac = hal::pac::Peripherals::take().unwrap();
+    let mut p = hal::pac::Peripherals::take().unwrap();
 
     // Set up the watchdog driver - needed by the clock setup code
-    let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
+    let mut watchdog = hal::Watchdog::new(p.WATCHDOG);
 
     // Configure the clocks
     let clocks = hal::clocks::init_clocks_and_plls(
         XTAL_FREQ_HZ,
-        pac.XOSC,
-        pac.CLOCKS,
-        pac.PLL_SYS,
-        pac.PLL_USB,
-        &mut pac.RESETS,
+        p.XOSC,
+        p.CLOCKS,
+        p.PLL_SYS,
+        p.PLL_USB,
+        &mut p.RESETS,
         &mut watchdog,
     )
     .unwrap();
 
     // The single-cycle I/O block controls our GPIO pins
-    let sio = hal::Sio::new(pac.SIO);
+    let sio = hal::Sio::new(p.SIO);
 
     // Set the pins to their default state
-    let pins = hal::gpio::Pins::new(
-        pac.IO_BANK0,
-        pac.PADS_BANK0,
-        sio.gpio_bank0,
-        &mut pac.RESETS,
-    );
+    let pins = hal::gpio::Pins::new(p.IO_BANK0, p.PADS_BANK0, sio.gpio_bank0, &mut p.RESETS);
 
     // ========================================================================
     // Construct a timer object, which we will need later.
     // ========================================================================
 
-    let timer = rp2040_hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
+    let timer = rp2040_hal::Timer::new(p.TIMER, &mut p.RESETS, &clocks);
 
     // ========================================================================
     // Set up a UART so we can print out the values we read using our *Device
@@ -200,7 +195,7 @@ fn main() -> ! {
     // Create new, uninitialized UART driver with one of the two UART objects
     // from our PAC, and our UART pins. We need temporary access to the RESETS
     // object to reset the UART.
-    let uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS);
+    let uart = hal::uart::UartPeripheral::new(p.UART0, uart_pins, &mut p.RESETS);
 
     // Swap the uninitialised UART driver for an initialised one, passing in the
     // desired configuration. We need to know the internal UART clock frequency
@@ -226,7 +221,7 @@ fn main() -> ! {
     // work them out for us. The only one we need to specify is the size of a
     // word sent over the *SPI Bus* to our device - and we picked 8 bits (a
     // byte).
-    let spi_bus = hal::spi::Spi::<_, _, _, 8>::new(pac.SPI0, (spi_copi, spi_cipo, spi_sclk));
+    let spi_bus = hal::spi::Spi::<_, _, _, 8>::new(p.SPI0, (spi_copi, spi_cipo, spi_sclk));
 
     // Exchange the uninitialised *SPI Bus* driver for an initialised one, by
     // passing in the extra bus parameters required.
@@ -235,7 +230,7 @@ fn main() -> ! {
     // peripheral, and we need to know the internal clock speed in order to set
     // up the clock dividers correctly.
     let spi_bus = spi_bus.init(
-        &mut pac.RESETS,
+        &mut p.RESETS,
         clocks.peripheral_clock.freq(),
         16.MHz(),
         embedded_hal::spi::MODE_0,
