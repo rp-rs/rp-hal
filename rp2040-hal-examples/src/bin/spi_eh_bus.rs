@@ -174,7 +174,7 @@ fn main() -> ! {
     // Construct a timer object, which we will need later.
     // ========================================================================
 
-    let timer = rp2040_hal::Timer::new(p.TIMER, &mut p.RESETS, &clocks);
+    let timer = hal::Timer::new(p.TIMER, &mut p.RESETS, &clocks);
 
     // ========================================================================
     // Set up a UART so we can print out the values we read using our *Device
