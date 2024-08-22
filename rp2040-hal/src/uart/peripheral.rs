@@ -490,6 +490,15 @@ impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Read for UartPeripheral<
         }
     }
 }
+
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::ReadReady
+    for UartPeripheral<Enabled, D, P>
+{
+    fn read_ready(&mut self) -> Result<bool, Self::Error> {
+        Ok(self.uart_is_readable())
+    }
+}
+
 impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Write for UartPeripheral<Enabled, D, P> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
         self.write_full_blocking(buf);
@@ -498,5 +507,13 @@ impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Write for UartPeripheral
     fn flush(&mut self) -> Result<(), Self::Error> {
         nb::block!(super::writer::transmit_flushed(&self.device)).unwrap(); // Infallible
         Ok(())
+    }
+}
+
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::WriteReady
+    for UartPeripheral<Enabled, D, P>
+{
+    fn write_ready(&mut self) -> Result<bool, Self::Error> {
+        Ok(self.uart_is_writable())
     }
 }
