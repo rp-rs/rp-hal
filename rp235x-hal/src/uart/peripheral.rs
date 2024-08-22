@@ -297,8 +297,8 @@ fn calculate_baudrate_dividers(
     wanted_baudrate: HertzU32,
     frequency: HertzU32,
 ) -> Result<(u16, u16), Error> {
-    // See Chapter 4, Section 2 §7.1 from the datasheet for an explanation of how baudrate is
-    // calculated
+    // See [Section 12.1.7.1](https://rptl.io/rp2350-datasheet#section_uart)
+    // of the RP2350 datasheet for an explanation of how baudrate is calculated
     let baudrate_div = frequency
         .to_Hz()
         .checked_mul(8)

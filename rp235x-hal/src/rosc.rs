@@ -1,6 +1,6 @@
 //! Ring Oscillator (ROSC)
 //!
-//! See [Chapter 8.3](https://datasheets.raspberrypi.com/rp2350/rp2350-datasheet.pdf#section_rosc) for more details.
+//! See [Section 8.3](https://rptl.io/rp2350-datasheet#section_rosc) for more details.
 //!
 //! In addition to its obvious role as a clock source, [`RingOscillator`] can also be used as a random number source
 //! for the [`rand`] crate:
@@ -113,7 +113,9 @@ impl RingOscillator<Enabled> {
     /// PLLs must be stopped and IRQs have to be properly configured.
     /// This method does not do any of that, it merely switches the ROSC to DORMANT state.
     /// It should only be called if this oscillator is the clock source for the system clock.
-    /// See Chapter 2, Section 16, §5) for details.
+    ///
+    /// See [Section 6.5.3](https://rptl.io/rp2350-datasheet#section_bootrom) of the RP2350
+    /// datasheet.
     pub unsafe fn dormant(&self) {
         //taken from the C SDK
         const ROSC_DORMANT_VALUE: u32 = 0x636f6d61;

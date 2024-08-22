@@ -1,6 +1,6 @@
 //! Subsystem Resets
 //!
-//! See [Chapter 7](https://datasheets.raspberrypi.org/rp2350/rp2350-datasheet.pdf#section_resets) for more details.
+//! See [Chapter 7](https://rptl.io/rp2350-datasheet#section_resets) for more details.
 
 mod private {
     pub trait SubsystemReset {

@@ -18,7 +18,7 @@ pub trait Function: func_sealed::Function {}
 
 /// Describes the function currently assigned to a pin with a dynamic type.
 ///
-/// A 'pin' on the RP2040 can be connected to different parts of the chip
+/// A 'pin' on the RP2350 can be connected to different parts of the chip
 /// internally - for example, it could be configured as a GPIO pin and connected
 /// to the SIO block, or it could be configured as a UART pin and connected to
 /// the UART block.

@@ -4,7 +4,7 @@
 //! processor if software gets stuck in an infinite loop. The programmer must periodically write a value to the watchdog to
 //! stop it from reaching zero.
 //!
-//! See [Chapter 4 Section 7](https://datasheets.raspberrypi.org/rp235x/rp235x_datasheet.pdf) of the datasheet for more details
+//! See [Section 12.9](https://rptl.io/rp2350-datasheet) of the datasheet for more details
 //!
 //! ## Usage
 //! ```no_run

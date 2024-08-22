@@ -1,7 +1,7 @@
 //! Low Power Oscillator (ROSC)
 //!
 //! See [Section
-//! 8.4](https://datasheets.raspberrypi.org/rp2350/rp2350_datasheet.pdf) for
+//! 8.4](https://datasheets.raspberrypi.org/.pdf) for
 //! more details
 //!
 //! The on-chip 32kHz Low Power Oscillator requires no external

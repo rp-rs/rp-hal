@@ -21,7 +21,10 @@ pub struct ReadError<'err> {
     pub discarded: &'err [u8],
 }
 
-/// Possible types of read errors. See Chapter 4, Section 2 §8 - Table 436: "UARTDR Register"
+/// Possible types of read errors.
+///
+/// See [Section 12.1.8](https://rptl.io/rp2350-datasheet#section_uart) "UARTDR
+/// Register"
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug)]
 pub enum ReadErrorType {

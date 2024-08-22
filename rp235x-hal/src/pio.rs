@@ -1,6 +1,7 @@
 //! Programmable IO (PIO)
 //!
-//! See [Chapter 11 of the datasheet](https://datasheets.raspberrypi.org/rp2350/rp2350-datasheet.pdf#section_pio) for more details.
+//! See [Chapter 11](https://rptl.io/rp2350-datasheet#section_pio) of the RP2350
+//! datasheet for more details.
 
 use core::ops::Deref;
 use pio::{Instruction, InstructionOperands, Program, SideSet, Wrap};
@@ -216,10 +217,18 @@ impl<P: PIOExt> PIO<P> {
 
     /// Allocates space in instruction memory and installs the program.
     ///
-    /// The function returns a handle to the installed program that can be used to configure a
-    /// `StateMachine` via `PIOBuilder`. The program can be uninstalled to free instruction memory
-    /// via `uninstall()` once the state machine using the program has been uninitialized.
-    // Safety: PIOExt is marked send and should be the only object allowed to access pio.instr_mem
+    /// The function returns a handle to the installed program that can be used
+    /// to configure a `StateMachine` via `PIOBuilder`. The program can be
+    /// uninstalled to free instruction memory via `uninstall()` once the state
+    /// machine using the program has been uninitialized.
+    ///
+    /// Note: We use the RP2040 program size constant, but the RP2350 has the
+    /// same size instruction memory.
+    ///
+    /// # Safety
+    ///
+    /// `PIOExt` is marked send and should be the only object allowed to access
+    /// `pio.instr_mem`
     pub fn install(
         &mut self,
         p: &Program<{ pio::RP2040_MAX_PROGRAM_SIZE }>,
@@ -1520,7 +1529,7 @@ impl<SM: ValidStateMachine, TxSize: TransferSize> Tx<SM, TxSize> {
     /// Memory mapped register writes that are smaller than 32bits will trigger
     /// "Narrow IO Register Write" behaviour in rp235x - the value written will
     /// be replicated to the rest of the register as described in
-    /// [rp235x Datasheet: 2.1.4. - Narrow IO Register Writes][section_2_1_4]
+    /// [RP2350 Datasheet: 2.1.5. - Narrow IO Register Writes][section_2_1_5]
     ///
     ///
     /// This 8bit write will set all 4 bytes of the FIFO to `value`
@@ -1532,7 +1541,7 @@ impl<SM: ValidStateMachine, TxSize: TransferSize> Tx<SM, TxSize> {
     ///
     /// Returns `true` if the value was written to FIFO, `false` otherwise.
     ///
-    /// [section_2_1_4]: <https://datasheets.raspberrypi.com/rp235x/rp235x-datasheet.pdf#_narrow_io_register_writes>
+    /// [section_2_1_5]: <https://rptl.io/rp2350-datasheet#_narrow_io_register_writes>
     pub fn write_u8_replicated(&mut self, value: u8) -> bool {
         self.write_generic(value)
     }
@@ -1542,7 +1551,7 @@ impl<SM: ValidStateMachine, TxSize: TransferSize> Tx<SM, TxSize> {
     /// Memory mapped register writes that are smaller than 32bits will trigger
     /// "Narrow IO Register Write" behaviour in rp235x - the value written will
     /// be replicated to the rest of the register as described in
-    /// [rp235x Datasheet: 2.1.4. - Narrow IO Register Writes][section_2_1_4]
+    /// [RP2350 Datasheet: 2.1.5. - Narrow IO Register Writes][section_2_1_5]
     ///
     /// This 16bit write will set both the upper and lower half of the FIFO entry to `value`.
     ///
@@ -1554,7 +1563,7 @@ impl<SM: ValidStateMachine, TxSize: TransferSize> Tx<SM, TxSize> {
     ///
     /// Returns `true` if the value was written to FIFO, `false` otherwise.
     ///
-    /// [section_2_1_4]: <https://datasheets.raspberrypi.com/rp235x/rp235x-datasheet.pdf#_narrow_io_register_writes>
+    /// [section_2_1_5]: <https://rptl.io/rp2350-datasheet#_narrow_io_register_writes>
     pub fn write_u16_replicated(&mut self, value: u16) -> bool {
         self.write_generic(value)
     }

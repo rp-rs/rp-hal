@@ -9,7 +9,8 @@
 //! * [ ] Using as GPIO as a time reference or wake-up signal
 //! * [ ] The power-on statemachine, including last-power-on reason
 //!
-//! See Section 6.5 in the datasheet for more details
+//! See [Section 6.5](https://rptl.io/rp2350-datasheet) of the RP2350 datasheet
+//! for more details
 
 use crate::{
     gpio::{

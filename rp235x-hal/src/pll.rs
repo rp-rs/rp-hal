@@ -1,6 +1,6 @@
 //! Phase-Locked Loops (PLL)
 //!
-//! See [Chapter 8.6](https://datasheets.raspberrypi.org/rp2350/rp2350-datasheet.pdf#section_pll) for more details
+//! See [Section 8.6](https://rptl.io/rp2350-datasheet#section_pll) for more details
 
 use core::{
     convert::{Infallible, TryInto},
@@ -77,7 +77,9 @@ impl<S: State, D: PhaseLockedLoopDevice> PhaseLockedLoop<S, D> {
 }
 
 /// Error type for the PLL module.
-/// See Chapter 2, Section 18 §2 for details on constraints triggering these errors.
+///
+/// See [Section 8.6](https://rptl.io/rp2350-datasheet) for
+/// details on constraints triggering these errors.
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {
@@ -113,7 +115,8 @@ pub struct PLLConfig {
 }
 
 /// Common configs for the two PLLs. Both assume the XOSC is cadenced at 12MHz !
-/// See Datasheet Section 8.6.2
+///
+/// See [Section 8.6.2](https://rptl.io/rp2350-datasheet) of the RP2350 datasheet.
 pub mod common_configs {
     use super::PLLConfig;
     use fugit::HertzU32;

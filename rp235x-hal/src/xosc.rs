@@ -1,6 +1,6 @@
 //! Crystal Oscillator (XOSC)
 //!
-//! See [Chapter 8.2](https://datasheets.raspberrypi.com/rp2350/rp2350-datasheet.pdf#section_xosc) for more details.
+//! See [Section 8.2](https://rptl.io/rp2350-datasheet#section_xosc) for more details.
 
 use core::{convert::Infallible, ops::RangeInclusive};
 
@@ -136,10 +136,13 @@ impl CrystalOscillator<Disabled> {
             w
         });
 
-        //startup_delay = ((freq_hz * STABLE_DELAY) / 256) = ((freq_hz / delay_to_hz) / 256)
-        //              = freq_hz / (delay_to_hz * 256)
-        //See Chapter 2, Section 16, §3)
-        //We do the calculation first.
+        //startup_delay = ((freq_hz * STABLE_DELAY) / 256) = ((freq_hz /
+        //              delay_to_hz) / 256) = freq_hz / (delay_to_hz * 256)
+        //
+        // See [Section 12.14.4](https://rptl.io/rp2350-datasheet#section_bootrom)
+        // of the RP2350 datasheet.
+        //
+        // We do the calculation first.
         let startup_delay = frequency.to_Hz() / (STABLE_DELAY_AS_HZ.to_Hz() * DIVIDER);
         let startup_delay = startup_delay.saturating_mul(startup_delay_multiplier);
 
@@ -207,7 +210,8 @@ impl CrystalOscillator<Stable> {
     /// PLLs must be stopped and IRQs have to be properly configured.
     /// This method does not do any of that, it merely switches the XOSC to DORMANT state.
     /// It should only be called if this oscillator is the clock source for the system clock.
-    /// See Chapter 2, Section 16, §5) for details.
+    ///
+    /// See Sectiom 2.16, §5 for details.
     pub unsafe fn dormant(self) -> CrystalOscillator<Unstable> {
         //taken from the C SDK
         const XOSC_DORMANT_VALUE: u32 = 0x636f6d61;

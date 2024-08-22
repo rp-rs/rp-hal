@@ -1,17 +1,17 @@
 //! Provide atomic access to peripheral registers
 //!
 //! This feature is not available for all peripherals.
-//! See [section 2.1.2 of the rp235x datasheet][section_2_1_2] for details.
+//! See [Section 2.1.3][section_2_1_3] of the RP2350 datasheet for details.
 //!
-//! [section_2_1_2]: https://datasheets.raspberrypi.com/rp235x/rp235x-datasheet.pdf#atomic-rwtype
+//! [section_2_1_3]: https://rptl.io/rp2350-datasheet#atomic-rwtype
 
 use core::ptr::write_volatile;
 
 /// Perform atomic bitmask set operation on register
 ///
-/// See [section 2.1.2 of the rp235x datasheet][section_2_1_2] for details.
+/// See [Section 2.1.3][section_2_1_3] of the RP2350 datasheet for details.
 ///
-/// [section_2_1_2]: https://datasheets.raspberrypi.com/rp235x/rp235x-datasheet.pdf#atomic-rwtype
+/// [section_2_1_3]: https://rptl.io/rp2350-datasheet#atomic-rwtype
 ///
 /// # Safety
 ///
@@ -25,9 +25,9 @@ pub(crate) unsafe fn write_bitmask_set(register: *mut u32, bits: u32) {
 
 /// Perform atomic bitmask clear operation on register
 ///
-/// See [section 2.1.2 of the rp235x datasheet][section_2_1_2] for details.
+/// See [Section 2.1.3][section_2_1_3] of the RP2350 datasheet for details.
 ///
-/// [section_2_1_2]: https://datasheets.raspberrypi.com/rp235x/rp235x-datasheet.pdf#atomic-rwtype
+/// [section_2_1_3]: https://rptl.io/rp2350-datasheet#atomic-rwtype
 ///
 /// # Safety
 ///

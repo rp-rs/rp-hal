@@ -41,7 +41,7 @@ const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 /// The `#[hal::entry]` macro ensures the Cortex-M start-up code calls this function
 /// as soon as all global variables and the spinlock are initialised.
 ///
-/// The function configures the RP2040 peripherals, then fades the LED in an
+/// The function configures the RP2350 peripherals, then fades the LED in an
 /// infinite loop.
 #[hal::entry]
 fn main() -> ! {

@@ -58,7 +58,7 @@ const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 /// as soon as all global variables are initialised.
 ///
 /// The function configures the RP2040 peripherals, then blinks the LED in an
-/// infinite loop.
+/// infinite loop where the duration indicates how many items were allocated.
 #[entry]
 fn main() -> ! {
     {

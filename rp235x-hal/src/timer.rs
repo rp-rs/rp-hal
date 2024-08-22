@@ -6,7 +6,7 @@
 //!
 //! Each of the 4 alarms can match on the lower 32 bits of Counter and trigger an interrupt.
 //!
-//! See [Chapter 4 Section 6](https://datasheets.raspberrypi.org/rp235x/rp235x_datasheet.pdf) of the datasheet for more details.
+//! See [Section 12.8](https://datasheets.raspberrypi.org/.pdf) of the datasheet for more details.
 
 use core::sync::atomic::{AtomicU8, Ordering};
 use fugit::{MicrosDurationU32, MicrosDurationU64, TimerInstantU64};

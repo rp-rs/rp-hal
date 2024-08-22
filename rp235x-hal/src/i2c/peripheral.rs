@@ -1,6 +1,6 @@
 //! # I2C Peripheral (slave) implementation
 //!
-//! The RP2040 I2C block can behave as a peripheral node on an I2C bus.
+//! The RP2350 I2C block can behave as a peripheral node on an I2C bus.
 //!
 //! In order to handle peripheral transactions this driver exposes an iterator streaming I2C event
 //! that the usercode must handle to properly handle the I2C communitation. See [`Event`] for a
@@ -19,7 +19,7 @@
 //!   The I2C block holds the SCL line (clock stretching) until there is room for more data in the
 //!   Rx FIFO using [`read`](I2C::read).  
 //!   Data are automatically acknowledged by the I2C block and it is not possible to NACK incoming
-//!   data coming to the rp2040.
+//!   data coming to the RP2350.
 //!
 //! ## Warning
 //!

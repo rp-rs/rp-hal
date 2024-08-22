@@ -70,7 +70,7 @@
 //! # }
 //! ```
 //!
-//! See [Chapter 8](https://datasheets.raspberrypi.com/rp2350/rp2350-datasheet.pdf#section_clocks) for more details.
+//! See [Chapter 8](https://rptl.io/rp2350-datasheet#section_clocks) for more details.
 
 use core::{convert::Infallible, marker::PhantomData};
 use fugit::{HertzU32, RateExtU32};

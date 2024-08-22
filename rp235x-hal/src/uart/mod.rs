@@ -1,6 +1,6 @@
 //! Universal Asynchronous Receiver Transmitter (UART)
 //!
-//! See [Chapter 12.1](https://datasheets.raspberrypi.com/rp2350/rp2350-datasheet.pdf#section_uart) of the datasheet for more details.
+//! See [Section 12.1](https://rptl.io/rp2350-datasheet#section_uart) of the datasheet for more details.
 //!
 //! ## Usage
 //!

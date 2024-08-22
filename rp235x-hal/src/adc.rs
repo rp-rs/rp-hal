@@ -1,6 +1,6 @@
 //! Analog-Digital Converter (ADC)
 //!
-//! See [Chapter 12.4](https://datasheets.raspberrypi.org/rp2350/rp2350-datasheet.pdf#section_adc) of the datasheet for more details
+//! See [Section 12.4](https://rptl.io/rp2350-datasheet#section_adc) of the datasheet for more details
 //!
 //! ## Usage
 //!
@@ -306,7 +306,7 @@ impl Channel<Adc> for TempSense {
 
 /// Analog to Digital Convertor (ADC).
 ///
-/// Represents an ADC within the RP2040. Each ADC has multiple channels, and each
+/// Represents an ADC within the RP2350. Each ADC has multiple channels, and each
 /// channel is either associated with a specific GPIO pin or attached to the internal
 /// temperature sensor. You should put the relevant pin into ADC mode by creating an
 /// [`AdcPin`] object with it, or you can put the ADC into `Temperature Sensing Mode`
@@ -478,7 +478,7 @@ where
 
 /// Used to configure & build an [`AdcFifo`]
 ///
-/// See [`Adc::build_fifo`] for details, as well as the `adc_fifo_*` [examples](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples).
+/// See [`Adc::build_fifo`] for details, as well as the `adc_fifo_*` [examples](https://github.com/rp-rs/rp-hal/tree/main/rp235x-hal/examples).
 pub struct AdcFifoBuilder<'a, Word> {
     adc: &'a mut Adc,
     marker: PhantomData<Word>,
@@ -487,9 +487,9 @@ pub struct AdcFifoBuilder<'a, Word> {
 impl<'a, Word> AdcFifoBuilder<'a, Word> {
     /// Manually set clock divider to control sample rate
     ///
-    /// The ADC is tied to the USB clock, normally running at 48MHz.
-    /// ADC conversion happens at 96 cycles per sample, so with the dividers
-    /// both set to 0 (the default) the sample rate will be `48MHz / 96 = 500ksps`.
+    /// The ADC is tied to the USB clock, normally running at 48MHz. ADC
+    /// conversion happens at 96 cycles per sample, so with the dividers both
+    /// set to 0 (the default) the sample rate will be `48MHz / 96 = 500ksps`.
     ///
     /// Setting the `int` and / or `frac` dividers will hold off between
     /// samples, leading to an effective rate of:
@@ -498,8 +498,8 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     ///  rate = 48MHz / (1 + int + (frac / 256))
     /// ```
     ///
-    /// To determine the required `int` and `frac` values for a given target rate,
-    /// use these equations:
+    /// To determine the required `int` and `frac` values for a given target
+    /// rate, use these equations:
     ///
     /// ```text
     ///  int = floor((48MHz / rate) - 1)
@@ -516,12 +516,16 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     /// | 4096sps     | `11717` |  `192` |
     /// | 96ksps      |   `499` |    `0` |
     ///
-    /// Since each conversion takes 96 cycles, setting `int` to anything below 96 does
-    /// not make a difference, and leads to the same result as setting it to 0.
+    /// Since each conversion takes 96 cycles, setting `int` to anything below
+    /// 96 does not make a difference, and leads to the same result as setting
+    /// it to 0.
     ///
-    /// The lowest possible rate is 732.41Hz, attainable by setting `int = 0xFFFF, frac = 0xFF`.
+    /// The lowest possible rate is 732.41Hz, attainable by setting `int =
+    /// 0xFFFF, frac = 0xFF`.
     ///
-    /// For more details, please refer to section 4.9.2.2 in the RP2040 datasheet.
+    /// For more details, please refer to [Section
+    /// 12.4.3.2](https://rptl.io/rp2350-datasheet#section_adc) in the RP2350
+    /// datasheet.
     pub fn clock_divider(self, int: u16, frac: u8) -> Self {
         self.adc
             .device

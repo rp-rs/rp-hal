@@ -3,7 +3,7 @@
 //! [`Spi`] is the main struct exported by this module, representing a configured Spi bus. See its
 //! docs for more information on its type parameters.
 //!
-//! See [Chapter 12.3](https://datasheets.raspberrypi.com/rp2350/rp2350-datasheet.pdf#section_spi) for more details.
+//! See [Section 12.3](https://rptl.io/rp2350-datasheet#section_spi) for more details.
 //!
 //! ## Usage
 //!

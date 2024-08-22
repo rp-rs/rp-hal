@@ -58,6 +58,9 @@ https://github.com/rp-rs/rp-hal-boards/ for more details.
 
 [BSPs]: https://github.com/rp-rs/rp-hal-boards/
 
+Some of the source code herein refers to the "RP2350 Datasheet". This can be
+found at <https://rptl.io/rp2350-datasheet>.
+
 <!-- GETTING STARTED -->
 ## Getting Started
 

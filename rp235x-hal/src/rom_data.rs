@@ -1,12 +1,12 @@
 //! Functions and data from the RPI Bootrom.
 //!
-//! From the [rp235x datasheet](https://datasheets.raspberrypi.org/rp235x/rp235x-datasheet.pdf), Section 2.8.3.1:
+//! From [Section 5.4](https://rptl.io/rp2350-datasheet#section_bootrom) of the
+//! RP2350 datasheet:
 //!
-//! > The Bootrom contains a number of public functions that provide useful
-//! > rp235x functionality that might be needed in the absence of any other code
-//! > on the device, as well as highly optimized versions of certain key
-//! > functionality that would otherwise have to take up space in most user
-//! > binaries.
+//! > Whilst some ROM space is dedicated to the implementation of the boot
+//! > sequence and USB/UART boot interfaces, the bootrom also contains public
+//! > functions that provide useful RP2350 functionality that may be useful for
+//! > any code or runtime running on the device
 
 /// A bootrom function table code.
 pub type RomFnTableCode = [u8; 2];
@@ -397,7 +397,8 @@ declare_rom_function! {
     /// identity map, i.e. the mapped and unmapped address are equal, and the
     /// entire space is fully mapped.
     ///
-    /// See Section 12.14.4.
+    /// See [Section 12.14.4](https://rptl.io/rp2350-datasheet#section_bootrom) of the RP2350
+    /// datasheet.
     ///
     /// Supported architectures: ARM-S, RISC-V
     unsafe fn flash_reset_address_trans() -> () {
@@ -411,7 +412,8 @@ declare_rom_function! {
     /// Applies the address translation currently configured by QMI address
     /// translation registers, ATRANS0 through ATRANS7.
     ///
-    /// See Section 12.14.4.
+    /// See [Section 12.14.4](https://rptl.io/rp2350-datasheet#section_bootrom) of the RP2350
+    /// datasheet.
     ///
     /// Translating an address outside of the XIP runtime address window, or
     /// beyond the bounds of an ATRANSx_SIZE field, returns

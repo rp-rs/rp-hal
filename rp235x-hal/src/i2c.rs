@@ -1,6 +1,6 @@
 //! Inter-Integrated Circuit (I2C) bus
 //!
-//! See [Chapter 12.2](https://datasheets.raspberrypi.org/rp2350/rp2350-datasheet.pdf#section_i2c) for more details
+//! See [Section 12.2](https://rptl.io/rp2350-datasheet#section_i2c) for more details
 //!
 //! ## Usage
 //! ```no_run
