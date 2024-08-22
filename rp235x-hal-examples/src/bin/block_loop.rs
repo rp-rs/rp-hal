@@ -1,4 +1,14 @@
-//! # An example application with two Blocks
+//! # An example application with two Blocks.
+//!
+//! Our first block is an *Image Definition* Block and it points at our second
+//! Block which contains a placeholder item for the purposes of this example.
+//! The placeholder isn't useful per se, but it allows us to show how to
+//! construct two Blocks in a loop without having to use `picotool` to modify
+//! the application after compilation and linking.
+//!
+//! See [Section
+//! 5.1.5.2](https://rptl.io/rp2350-datasheet#bootrom-concept-block-loop) in the
+//! RP2350 datasheet for more information about Blocks and Block Loops.
 //!
 //! See the `Cargo.toml` file for Copyright and license details.
 
