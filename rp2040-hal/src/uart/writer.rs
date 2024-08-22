@@ -214,8 +214,8 @@ impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::ErrorType for Writer<D, 
 
 impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Write for Writer<D, P> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
-        self.write_full_blocking(buf);
-        Ok(buf.len())
+        let remaining = nb::block!(write_raw(&self.device, buf)).unwrap(); // Infallible
+        Ok(buf.len() - remaining.len())
     }
     fn flush(&mut self) -> Result<(), Self::Error> {
         nb::block!(transmit_flushed(&self.device)).unwrap(); // Infallible
