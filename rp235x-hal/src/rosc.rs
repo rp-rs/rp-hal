@@ -74,9 +74,11 @@ impl RingOscillator<Disabled> {
     }
 
     /// Initializes the ROSC with a known frequency.
-    /// See sections 2.17.3. "Modifying the frequency", and 2.15.6.2. "Using the frequency counter"
-    /// in the rp235x datasheet for guidance on how to do this before initialising the ROSC.
-    /// Also see `rosc_as_system_clock` example for usage.
+    /// 
+    /// See Sections 8.3.4 "Modifying the frequency", and 8.3.8 "Using the
+    /// frequency counter" in the [RP2350 datasheet](https://rptl.io/rp2350-datasheet)
+    /// for guidance on how to do this before initialising the ROSC. Also see
+    /// `rosc_as_system_clock` example for usage.
     pub fn initialize_with_freq(self, known_freq: HertzU32) -> RingOscillator<Enabled> {
         self.device.ctrl().write(|w| w.enable().enable());
         self.transition(Enabled {
