@@ -82,25 +82,24 @@ $ file ./target/thumbv8m.main-none-eabihf/debug/blinky
 ```
 
 You can also 'run' an example, which thanks to our supplied
-[`.cargo/config.toml`](./.cargo/config.toml) will invoke [`elf2uf2-rs`] to copy
-it to an RP235x in USB Bootloader mode. You should install that if
-you don't have it already.
-
-```console
-$ cargo install elf2uf2-rs --locked
-```
-
-[`elf2uf2-rs`]: https://github.com/JoNil/elf2uf2-rs
+[`.cargo/config.toml`](./.cargo/config.toml) will invoke Raspberry Pi's
+`picotool` to copy it to an RP235x in USB Bootloader mode. You should install
+that if you don't have it already, from
+<https://github.com/raspberrypi/pico-sdk-tools/releases>.
 
 ```console
 $ cargo run --bin blinky --target=thumbv8m.main-none-eabihf
    Compiling rp235x-hal v0.10.0 (/home/user/rp-hal/rp235x-hal)
    Compiling rp235x-hal-examples v0.1.0 (/home/user/rp-hal/rp235x-hal-examples)
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.62s
-     Running `elf2uf2-rs -d target/thumbv8m.main-none-eabihf/debug/blinky`
-Found pico uf2 disk /media/user/RP235x
-Transfering program to pico
-88.50 KB / 88.50 KB [=====================================] 100.00 % 430.77 KB/s
+     Running `picotool load -u -v -x -t elf target/thumbv8m.main-none-eabihf/debug/blinky`
+Family id 'rp2350-arm-s' can be downloaded in absolute space:
+  00000000->02000000
+Loading into Flash: [==============================]  100%
+Verifying Flash:    [==============================]  100%
+  OK
+
+The device was rebooted to start the application.
 ```
 
 It is currently possible to build *some* of the examples in RISC-V mode. See
@@ -113,14 +112,17 @@ $ cargo build --bin blinky --target=riscv32imac-unknown-none-elf
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.06s
 $ file ./target/riscv32imac-unknown-none-elf/debug/blinky
 ./target/riscv32imac-unknown-none-elf/debug/blinky: ELF 32-bit LSB executable, UCB RISC-V, RVC, soft-float ABI, version 1 (SYSV), statically linked, with debug_info, not stripped
-```
+$ cargo run --bin blinky --target=riscv32imac-unknown-none-elf
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running `picotool load -u -v -x -t elf target/riscv32imac-unknown-none-elf/debug/blinky`
+Family id 'rp2350-riscv' can be downloaded in absolute space:
+  00000000->02000000
+Loading into Flash: [==============================]  100%
+Verifying Flash:    [==============================]  100%
+  OK
 
-You cannot use `cargo run` with a RISC-V example because [`elf2uf2-rs`] doesn't
-know about RISC-V binaries yet. If you look in
-[`.cargo/config.toml`](./.cargo/config.toml) you'll see some alternative runner
-definitions which are commented out. For RISC-V mode, try the `picotool` runner
-- but you'll have to install the official Raspberry Pi Pico SDK first in order
-to get a copy of `picotool`, which is why we don't recommend it by default.
+The device was rebooted to start the application.
+```
 
 <!-- ROADMAP -->
 ## Roadmap

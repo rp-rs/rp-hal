@@ -31,7 +31,8 @@ rustflags = [
     "-C", "target-cpu=cortex-m33",
 ]
 
-# Use picotool for loading, as probe-rs doesn't support RP2350 yet:
+# Use picotool for loading.
+#
 # Load an elf, skipping unchanged flash sectors, verify it, and execute it
 runner = "picotool load -u -v -x -t elf"
 
@@ -48,14 +49,10 @@ rustflags = [
     "-C", "link-arg=-Tdefmt.x",
 ]
 
-# This runner will make a UF2 file and then copy it to a mounted RP2040 in USB
-# Bootloader mode:
-runner = "elf2uf2-rs -d"
-
-# Alternatively, use picotool for loading.
+# Use picotool for loading.
 #
 # Load an elf, skipping unchanged flash sectors, verify it, and execute it
-# runner = "picotool load -u -v -x -t elf"
+runner = "picotool load -u -v -x -t elf"
 
 # This is the soft-float ABI for RISC-V mode.
 #
@@ -78,11 +75,7 @@ rustflags = [
     "-C", "link-arg=-Tdefmt.x",
 ]
 
-# This runner will make a UF2 file and then copy it to a mounted RP2040 in USB
-# Bootloader mode:
-runner = "elf2uf2-rs -d"
-
-# Alternatively, use picotool for loading.
+# Use picotool for loading.
 #
 # Load an elf, skipping unchanged flash sectors, verify it, and execute it
-# runner = "picotool load -u -v -x -t elf"
+runner = "picotool load -u -v -x -t elf"
