@@ -1,5 +1,5 @@
 on: [push, pull_request]
-name: Check rp235x-hal-examples on Arm
+name: Check rp235x-hal-examples on RISC-V
 env:
   PACKAGE: rp235x-hal-examples
   TARGET: riscv32imac-unknown-none-elf
