@@ -6,7 +6,7 @@
 //! the on-board LED. It may need to be adapted to your particular board layout
 //! and/or pin assignment.
 //!
-//! While blinkin the LED, it will continuously push to a `Vec`, which will
+//! While blinking the LED, it will continuously push to a `Vec`, which will
 //! eventually lead to a panic due to an out of memory condition.
 //!
 //! See the `Cargo.toml` file for Copyright and licence details.
