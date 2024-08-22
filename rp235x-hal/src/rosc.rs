@@ -74,7 +74,7 @@ impl RingOscillator<Disabled> {
     }
 
     /// Initializes the ROSC with a known frequency.
-    /// 
+    ///
     /// See Sections 8.3.4 "Modifying the frequency", and 8.3.8 "Using the
     /// frequency counter" in the [RP2350 datasheet](https://rptl.io/rp2350-datasheet)
     /// for guidance on how to do this before initialising the ROSC. Also see

@@ -74,17 +74,17 @@ impl From<&spi::Mode> for FrameFormat {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FrameFormat {
     /// Motorola SPI format.
-    /// 
+    ///
     /// See [Section 12.3.4.9](https://rptl.io/rp2350-datasheet) of the RP2350
     /// datasheet.
     MotorolaSpi(spi::Mode),
     /// Texas Instruments synchronous serial frame format.
-    /// 
+    ///
     /// See [Section 12.3.4.8](https://rptl.io/rp2350-datasheet) of the RP2350
     /// datasheet.
     TexasInstrumentsSynchronousSerial,
     /// National Semiconductor Microwire frame format.
-    /// 
+    ///
     /// See [Section 12.3.4.14](https://rptl.io/rp2350-datasheet) of the RP2350
     /// datasheet.
     NationalSemiconductorMicrowire,
