@@ -24,8 +24,8 @@ use panic_halt as _;
 #[used]
 pub static IMAGE_DEF: hal::block::ImageDef = hal::block::ImageDef::secure_exe();
 
-/// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz. Adjust
-/// if your board has a different frequency
+/// External high-speed crystal on the Raspberry Pi Pico 2 board is 12 MHz.
+/// Adjust if your board has a different frequency
 const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
 #[hal::entry]

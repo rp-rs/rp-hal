@@ -47,8 +47,8 @@ const LOW_US: u16 = 1475;
 /// The PWM threshold value for turning on the LED in us
 const HIGH_US: u16 = 1525;
 
-/// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz. Adjust
-/// if your board has a different frequency
+/// External high-speed crystal on the Raspberry Pi Pico 2 board is 12 MHz.
+/// Adjust if your board has a different frequency
 const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
 /// Pin types quickly become very long!
