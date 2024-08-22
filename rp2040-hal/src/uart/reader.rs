@@ -244,6 +244,12 @@ impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Read for Reader<D, P> {
     }
 }
 
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::ReadReady for Reader<D, P> {
+    fn read_ready(&mut self) -> Result<bool, Self::Error> {
+        Ok(is_readable(&self.device))
+    }
+}
+
 impl<D: UartDevice, P: ValidUartPinout<D>> Read02<u8> for Reader<D, P> {
     type Error = ReadErrorType;
 

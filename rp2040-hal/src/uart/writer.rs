@@ -223,6 +223,12 @@ impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Write for Writer<D, P> {
     }
 }
 
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::WriteReady for Writer<D, P> {
+    fn write_ready(&mut self) -> Result<bool, Self::Error> {
+        Ok(uart_is_writable(&self.device))
+    }
+}
+
 impl<D: UartDevice, P: ValidUartPinout<D>> Write02<u8> for Writer<D, P> {
     type Error = Infallible;
 
