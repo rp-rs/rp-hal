@@ -1,7 +1,7 @@
 //! # ADC Example
 //!
 //! This application demonstrates how to read ADC samples from the temperature
-//! sensor and pin and output them to the UART on pins 1 and 2 at 9600 baud.
+//! sensor and pin and output them to the UART on pins 1 and 2 at 115200 baud.
 //!
 //! It may need to be adapted to your particular board layout and/or pin assignment.
 //!
@@ -95,7 +95,7 @@ fn main() -> ! {
     // Create a UART driver
     let mut uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
-            UartConfig::new(9600.Hz(), DataBits::Eight, None, StopBits::One),
+            UartConfig::new(115200.Hz(), DataBits::Eight, None, StopBits::One),
             clocks.peripheral_clock.freq(),
         )
         .unwrap();

@@ -2,6 +2,7 @@ on: [push, pull_request]
 name: Check rp2040-hal-examples
 env:
   PACKAGE: rp2040-hal-examples
+  TARGET: thumbv6m-none-eabi
 jobs:
   build:
     runs-on: ubuntu-20.04
@@ -9,12 +10,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          target: thumbv6m-none-eabi
-      - name: Install cargo-hack
-        run: |
-          curl -sSL https://github.com/taiki-e/cargo-hack/releases/download/v0.6.17/cargo-hack-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - -C ~/.cargo/bin
+          target: ${{ env.TARGET }}
       - name: Build
-        run: cd ${PACKAGE} && cargo hack build --optional-deps --each-feature
+        run: cd ${PACKAGE} && cargo build
   udeps:
     runs-on: ubuntu-20.04
     steps:
@@ -22,15 +20,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2024-01-30
-          target: thumbv6m-none-eabi
-      - name: Install cargo-hack
-        run: |
-          curl -sSL https://github.com/taiki-e/cargo-hack/releases/download/v0.6.17/cargo-hack-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - -C ~/.cargo/bin
+          target: ${{ env.TARGET }}
       - name: Install cargo-udeps
         run: |
           curl -sSL https://github.com/est31/cargo-udeps/releases/download/v0.1.45/cargo-udeps-v0.1.45-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - --strip-components=2 -C ~/.cargo/bin ./cargo-udeps-v0.1.45-x86_64-unknown-linux-gnu/cargo-udeps
       - name: Run cargo-udeps
-        run: cd ${PACKAGE} && cargo hack udeps --optional-deps --each-feature
+        run: cd ${PACKAGE} && cargo udeps
   msrv:
     name: Verify build on MSRV
     runs-on: ubuntu-20.04
@@ -39,14 +34,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.77
-          target: thumbv6m-none-eabi
-      - name: Install cargo-hack
-        run: |
-          curl -sSL https://github.com/taiki-e/cargo-hack/releases/download/v0.6.17/cargo-hack-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - -C ~/.cargo/bin
+          target: ${{ env.TARGET }}
       - name: Use older version of regex
         run: cd ${PACKAGE} && cargo update -p regex --precise 1.9.3
       - name: Build on MSRV
-        run: cd ${PACKAGE} && cargo hack build --optional-deps --each-feature
+        run: cd ${PACKAGE} && cargo build 
   fmt:
     runs-on: ubuntu-20.04
     env:
@@ -66,7 +58,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          target: thumbv6m-none-eabi
+          target: ${{ env.TARGET }}
           components: clippy
       - name: Run cargo clippy
         run: cd ${PACKAGE} && cargo clippy

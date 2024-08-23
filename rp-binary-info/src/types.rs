@@ -4,7 +4,7 @@
 /// file/ELF file/Pico in Bootloader Mode to give you useful metadata about your
 /// program.
 ///
-/// It should be placed in the first 512 bytes of flash, so use your `memory.x`
+/// It should be placed in the first 4096 bytes of flash, so use your `memory.x`
 /// to insert a section between `.text` and `.vector_table` and put a static
 /// value of this type in that section.
 #[repr(C)]

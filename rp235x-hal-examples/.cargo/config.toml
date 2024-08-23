@@ -1,0 +1,81 @@
+#
+# Cargo Configuration for the https://github.com/rp-rs/rp-hal.git repository.
+#
+# You might want to make a similar file in your own repository if you are
+# writing programs for Raspberry Silicon microcontrollers.
+#
+
+[build]
+# Set the default target to match the Cortex-M33 in the RP2350
+target = "thumbv8m.main-none-eabihf"
+
+# This is the hard-float ABI for Arm mode.
+#
+# The FPU is enabled by default, and float function arguments use FPU
+# registers.
+[target.thumbv8m.main-none-eabihf]
+# Pass some extra options to rustc, some of which get passed on to the linker.
+#
+# * linker argument --nmagic turns off page alignment of sections (which saves
+#   flash space)
+# * linker argument -Tlink.x tells the linker to use link.x as a linker script.
+#   This is usually provided by the cortex-m-rt crate, and by default the
+#   version in that crate will include a file called `memory.x` which describes
+#   the particular memory layout for your specific chip. 
+# * linker argument -Tdefmt.x also tells the linker to use `defmt.x` as a
+#   secondary linker script. This is required to make defmt_rtt work.
+rustflags = [
+    "-C", "link-arg=--nmagic",
+    "-C", "link-arg=-Tlink.x",
+    "-C", "link-arg=-Tdefmt.x",
+    "-C", "target-cpu=cortex-m33",
+]
+
+# Use picotool for loading.
+#
+# Load an elf, skipping unchanged flash sectors, verify it, and execute it
+runner = "picotool load -u -v -x -t elf"
+
+# This is the soft-float ABI for Arm mode.
+#
+# The FPU is disabled by default, and float function arguments use integer
+# registers. Only useful for making the `float_test` example give really bad
+# results on the `f32` benchmark.
+[target.thumbv8m.main-none-eabi]
+# Pass some extra options to rustc. See above for descriptions.
+rustflags = [
+    "-C", "link-arg=--nmagic",
+    "-C", "link-arg=-Tlink.x",
+    "-C", "link-arg=-Tdefmt.x",
+]
+
+# Use picotool for loading.
+#
+# Load an elf, skipping unchanged flash sectors, verify it, and execute it
+runner = "picotool load -u -v -x -t elf"
+
+# This is the soft-float ABI for RISC-V mode.
+#
+# Hazard 3 does not have an FPU and so float function arguments use integer
+# registers.
+[target.riscv32imac-unknown-none-elf]
+# Pass some extra options to rustc, some of which get passed on to the linker.
+#
+# * linker argument --nmagic turns off page alignment of sections (which saves
+#   flash space)
+# * linker argument -Trp235x_riscv.x also tells the linker to use
+#   `rp235x_riscv.x` as a linker script. This adds in RP2350 RISC-V specific
+#   things that the riscv-rt crate's `link.x` requires and then includes
+#   `link.x` automatically. This is the reverse of how we do it on Cortex-M.
+# * linker argument -Tdefmt.x also tells the linker to use `defmt.x` as a
+#   secondary linker script. This is required to make defmt_rtt work.
+rustflags = [
+    "-C", "link-arg=--nmagic",
+    "-C", "link-arg=-Trp235x_riscv.x",
+    "-C", "link-arg=-Tdefmt.x",
+]
+
+# Use picotool for loading.
+#
+# Load an elf, skipping unchanged flash sectors, verify it, and execute it
+runner = "picotool load -u -v -x -t elf"

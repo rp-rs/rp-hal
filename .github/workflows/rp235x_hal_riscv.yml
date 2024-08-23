@@ -1,0 +1,99 @@
+on: [push, pull_request]
+name: Check rp235x-hal on RISC-V
+env:
+  PACKAGE: rp235x-hal
+  TARGET: riscv32imac-unknown-none-elf
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ env.TARGET }}
+      - name: Install cargo-hack
+        run: |
+          curl -sSL https://github.com/taiki-e/cargo-hack/releases/download/v0.6.17/cargo-hack-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - -C ~/.cargo/bin
+      - name: Build rp235x-hal
+        run: cd ${PACKAGE} && cargo hack build --optional-deps --each-feature --target=${TARGET}
+      - name: Build rp235x-hal-macros
+        run: cd ${PACKAGE}-macros && cargo hack build --optional-deps --each-feature
+  test:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ env.TARGET }}
+      - name: Install cargo-hack
+        run: |
+          curl -sSL https://github.com/taiki-e/cargo-hack/releases/download/v0.6.17/cargo-hack-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - -C ~/.cargo/bin
+      - name: Test rp235x-hal
+        run: cd ${PACKAGE} && cargo hack test --optional-deps --each-feature --tests --features critical-section-impl
+      - name: Test rp235x-hal docs
+        run: cd ${PACKAGE} && cargo hack test --optional-deps --each-feature --doc --features critical-section-impl
+      - name: Test rp235x-hal-macros
+        run: cd ${PACKAGE}-macros && cargo hack test --optional-deps --tests --each-feature
+      - name: Test rp235x-hal-macros docs
+        run: cd ${PACKAGE}-macros && cargo hack test --optional-deps --doc --each-feature
+  udeps:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2024-01-30
+          target: ${{ env.TARGET }}
+      - name: Install cargo-hack
+        run: |
+          curl -sSL https://github.com/taiki-e/cargo-hack/releases/download/v0.6.17/cargo-hack-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - -C ~/.cargo/bin
+      - name: Install cargo-udeps
+        run: |
+          curl -sSL https://github.com/est31/cargo-udeps/releases/download/v0.1.45/cargo-udeps-v0.1.45-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - --strip-components=2 -C ~/.cargo/bin ./cargo-udeps-v0.1.45-x86_64-unknown-linux-gnu/cargo-udeps
+      - name: Run cargo-udeps on rp235x-hal
+        run: cd ${PACKAGE} && cargo hack udeps --optional-deps --each-feature --target=${TARGET}
+      - name: Run cargo-udeps on rp235x-hal-macros
+        run: cd ${PACKAGE}-macros && cargo hack udeps --optional-deps --each-feature
+  msrv:
+    name: Verify build on MSRV
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.77
+          target: ${{ env.TARGET }}
+      - name: Install cargo-hack
+        run: |
+          curl -sSL https://github.com/taiki-e/cargo-hack/releases/download/v0.6.17/cargo-hack-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - -C ~/.cargo/bin
+      - name: Use older version of regex
+        run: cd ${PACKAGE}-examples && cargo update -p regex --precise 1.9.3
+      - name: Build rp235x-hal (on MSRV)
+        run: cd ${PACKAGE} && cargo hack build --optional-deps --each-feature --target=${TARGET}
+      - name: Build rp235x-hal-macros (on MSRV)
+        run: cd ${PACKAGE}-macros && cargo hack build --optional-deps --each-feature
+  fmt:
+    runs-on: ubuntu-20.04
+    env:
+      RUSTFLAGS: "-D warnings"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Check format of rp235x-hal
+        run: cd ${PACKAGE} && cargo fmt -- --check
+      - name: Check format of rp235x-hal-macros
+        run: cd ${PACKAGE}-macros && cargo fmt -- --check
+  clippy:
+    runs-on: ubuntu-20.04
+    env:
+      RUSTFLAGS: "-D warnings"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ env.TARGET }}
+          components: clippy
+      - name: Run cargo clippy
+        run: cd ${PACKAGE} && cargo clippy --target=${TARGET}

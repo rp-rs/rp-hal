@@ -1,0 +1,14 @@
+[package]
+authors = ["The rp-rs Developers"]
+description = "Shared HAL code for the Raspberry Pi microcontrollers"
+edition = "2021"
+homepage = "https://github.com/rp-rs/rp-hal"
+license = "MIT OR Apache-2.0"
+name = "rp-hal-common"
+repository = "https://github.com/rp-rs/rp-hal"
+rust-version = "1.77"
+version = "0.1.0"
+
+# DO NOT LIST ANY PAC CRATES OR ARCHITECTURE CRATES HERE
+[dependencies]
+fugit = "0.3.7"

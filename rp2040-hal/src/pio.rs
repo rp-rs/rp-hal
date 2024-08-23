@@ -1,5 +1,7 @@
 //! Programmable IO (PIO)
-//! See [Chapter 3 of the datasheet](https://rptl.io/rp2040-datasheet#section_pio) for more details.
+//!
+//! See [Chapter 3 of the datasheet](https://datasheets.raspberrypi.org/rp2040/rp2040-datasheet.pdf#section_pio) for more details.
+
 use core::ops::Deref;
 use pio::{Instruction, InstructionOperands, Program, SideSet, Wrap};
 
