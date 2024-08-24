@@ -273,26 +273,9 @@ impl<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<S, D, P, DS
         // Return the frequency we were able to achieve
         (freq_in / (prescale as u32 * (1 + postdiv as u32))).Hz()
     }
-}
-
-impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
-    /// Create new not initialized Spi bus. Initialize it with [`.init`][Self::init]
-    /// or [`.init_slave`][Self::init_slave].
-    ///
-    /// Valid pin sets are in the form of `(Tx, Sck)` or `(Tx, Rx, Sck)`
-    ///
-    /// If you pins are dynamically identified (`Pin<DynPinId, _, _>`) they will first need to pass
-    /// validation using their corresponding [`ValidatedPinXX`](ValidatedPinTx).
-    pub fn new(device: D, pins: P) -> Spi<Disabled, D, P, DS> {
-        Spi {
-            device,
-            pins,
-            state: PhantomData,
-        }
-    }
 
     /// Set format and datasize
-    fn set_format(&mut self, data_bits: u8, frame_format: FrameFormat) {
+    pub fn set_format(&mut self, data_bits: u8, frame_format: FrameFormat) {
         self.device.sspcr0().modify(|_, w| unsafe {
             w.dss().bits(data_bits - 1).frf().bits(match &frame_format {
                 FrameFormat::MotorolaSpi(_) => 0x00,
@@ -312,6 +295,23 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
             }
             w
         });
+    }
+}
+
+impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
+    /// Create new not initialized Spi bus. Initialize it with [`.init`][Self::init]
+    /// or [`.init_slave`][Self::init_slave].
+    ///
+    /// Valid pin sets are in the form of `(Tx, Sck)` or `(Tx, Rx, Sck)`
+    ///
+    /// If your pins are dynamically identified (`Pin<DynPinId, _, _>`) they will first need to pass
+    /// validation using their corresponding [`ValidatedPinXX`](ValidatedPinTx).
+    pub fn new(device: D, pins: P) -> Spi<Disabled, D, P, DS> {
+        Spi {
+            device,
+            pins,
+            state: PhantomData,
+        }
     }
 
     /// Set master/slave
