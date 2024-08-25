@@ -183,7 +183,7 @@ fn main() -> ! {
     }
     _ = writeln!(uart);
 
-    // Do an asynchronous reset in 2000ms time, into the bootloader.
+    // Do a reset into the bootloader.
     hal::reboot::reboot(
         hal::reboot::RebootKind::BootSel {
             msd_disabled: false,
