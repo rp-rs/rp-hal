@@ -25,5 +25,6 @@ spi
 spi_dma
 uart
 uart_dma
+uart_loopback
 usb
 watchdog

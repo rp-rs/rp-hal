@@ -498,7 +498,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::ReadReady
     for UartPeripheral<Enabled, D, P>
 {
     fn read_ready(&mut self) -> Result<bool, Self::Error> {
-        Ok(self.uart_is_readable())
+        Ok(self.uart_is_readable() || self.read_error.is_some())
     }
 }
 
