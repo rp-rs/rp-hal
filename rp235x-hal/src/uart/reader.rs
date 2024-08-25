@@ -124,7 +124,29 @@ pub(crate) fn read_raw<'b, D: UartDevice>(
     Ok(loop {
         if !is_readable(device) {
             if bytes_read == 0 {
-                return Err(WouldBlock);
+                // The overrun error (OE) bit is checked separately as it
+                // doesn't really correspond to a specific byte we've read. If
+                // we don't do this here, the overrun error is hidden until the
+                // next byte turns up - which may never happen.
+                if device.uartrsr().read().oe().bit_is_set() {
+                    // We observed a FIFO overrun on an empty FIFO. Clear the
+                    // error otherwise it sticks.
+                    unsafe {
+                        device.uartrsr().write_with_zero(|w| w);
+                    }
+                    // Now report the error.
+                    //
+                    // Note that you will also get an overrun error on the first
+                    // byte that turns up after this error - we can't stop that
+                    // as we have no mutable state to indicate that it's already
+                    // been handled. But two overrun errors is better that none.
+                    return Err(Other(ReadError {
+                        err_type: ReadErrorType::Overrun,
+                        discarded: &buffer[..bytes_read],
+                    }));
+                } else {
+                    return Err(WouldBlock);
+                }
             } else {
                 break bytes_read;
             }
@@ -138,15 +160,20 @@ pub(crate) fn read_raw<'b, D: UartDevice>(
             // If multiple status bits are set, report
             // the most serious or most specific condition,
             // in the following order of precedence:
-            // overrun > break > parity > framing
-            if read.oe().bit_is_set() {
-                error = Some(ReadErrorType::Overrun);
-            } else if read.be().bit_is_set() {
+            // break > parity > framing
+            //
+            // overrun is last because the byte associated with it is still good.
+            if read.be().bit_is_set() {
                 error = Some(ReadErrorType::Break);
             } else if read.pe().bit_is_set() {
                 error = Some(ReadErrorType::Parity);
             } else if read.fe().bit_is_set() {
                 error = Some(ReadErrorType::Framing);
+            } else if read.oe().bit_is_set() {
+                error = Some(ReadErrorType::Overrun);
+                // if we get an overrun - there's still data there
+                buffer[bytes_read] = read.data().bits();
+                bytes_read += 1;
             }
 
             if let Some(err_type) = error {
