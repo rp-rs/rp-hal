@@ -82,7 +82,7 @@ fn main() -> ! {
         // UART TX (characters sent from RP2350)
         pins.gpio0.into_function(),
         // UART RX (characters received by RP2350)
-        pins.gpio1.into_function(),
+        pins.gpio1.into_pull_up_input().into_function(),
     );
     let mut uart0 = hal::uart::UartPeripheral::new(pac.UART0, uart0_pins, &mut pac.RESETS)
         .enable(
@@ -101,7 +101,7 @@ fn main() -> ! {
         // UART TX (characters sent from RP2350)
         pins.gpio4.into_function(),
         // UART RX (characters received by RP2350)
-        pins.gpio5.into_function(),
+        pins.gpio5.into_pull_up_input().into_function(),
     );
     let mut uart1 = hal::uart::UartPeripheral::new(pac.UART1, uart1_pins, &mut pac.RESETS)
         .enable(
