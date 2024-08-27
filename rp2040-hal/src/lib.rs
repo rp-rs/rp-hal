@@ -51,6 +51,7 @@ pub use rp2040_pac as pac;
 mod intrinsics;
 
 pub mod adc;
+pub mod arch;
 #[macro_use]
 pub mod async_utils;
 pub(crate) mod atomic_register_access;

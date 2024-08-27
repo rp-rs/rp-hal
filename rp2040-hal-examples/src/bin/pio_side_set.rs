@@ -65,6 +65,6 @@ fn main() -> ! {
 
     // PIO runs in background, independently from CPU
     loop {
-        cortex_m::asm::wfi();
+        hal::arch::wfi();
     }
 }
