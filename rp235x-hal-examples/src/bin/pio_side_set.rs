@@ -44,7 +44,7 @@ fn main() -> ! {
 
     // Define some simple PIO program.
     let program = pio_proc::pio_asm!(
-        ".side_set 1", // each instruction may set 1 bit
+        ".side_set 1", // each instruction must set 1 bit
         ".wrap_target",
         "    nop side 1 [15]",
         "    nop side 0 [15]",
