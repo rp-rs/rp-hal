@@ -11,6 +11,8 @@ gpio_dyn_pin_array
 gpio_in_out
 gpio_irq_example
 i2c
+i2c_async
+i2c_async_cancelled
 lcd_display
 mem_to_mem_dma
 pio_blink
