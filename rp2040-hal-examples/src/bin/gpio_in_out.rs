@@ -1,6 +1,6 @@
-//! # GPIO 'Blinky' Example
+//! # GPIO In/Out Example
 //!
-//! This application demonstrates how to control a GPIO pin on the RP2040.
+//! This application demonstrates how to control GPIO pins on the RP2040.
 //!
 //! It may need to be adapted to your particular board layout and/or pin assignment.
 //!

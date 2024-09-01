@@ -4,7 +4,7 @@
 //! processor if software gets stuck in an infinite loop. The programmer must periodically write a value to the watchdog to
 //! stop it from reaching zero.
 //!
-//! See [Chapter 4 Section 7](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) of the datasheet for more details
+//! See [Chapter 4 Section 7](https://datasheets.raspberrypi.org/rp2040/rp2040-datasheet.pdf) of the datasheet for more details
 //!
 //! ## Usage
 //! ```no_run

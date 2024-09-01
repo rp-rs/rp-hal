@@ -23,6 +23,7 @@ embedded-alloc = "0.5.1"
 embedded-hal = "1.0.0"
 embedded-hal-async = "1.0.0"
 embedded-hal-bus = {version = "0.2.0", features = ["defmt-03"]}
+embedded-io = "0.6.1"
 embedded_hal_0_2 = {package = "embedded-hal", version = "0.2.5", features = ["unproven"]}
 fugit = "0.3.6"
 futures = {version = "0.3.30", default-features = false, features = ["async-await"]}

@@ -98,7 +98,7 @@ fn main() -> ! {
         watchdog.feed();
     }
 
-    // Blink 10 times per second, not feeding the watchdog.
+    // Blink 5 times per second, not feeding the watchdog.
     // The processor should reset in 1.05 seconds, or 5 blinks time
     loop {
         led_pin.set_low().unwrap();

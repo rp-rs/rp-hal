@@ -35,6 +35,8 @@
 //!   `rtic_monotonic::Monotonic` based on the RP2040 timer peripheral
 //! * **i2c-write-iter** -
 //!   Implement `i2c_write_iter` traits for `I2C<_, _, Controller>`.
+//! * **binary-info** -
+//!   Include a `static` variable containing picotool compatible binary info.
 
 #![warn(missing_docs)]
 #![no_std]
@@ -49,6 +51,7 @@ pub use rp2040_pac as pac;
 mod intrinsics;
 
 pub mod adc;
+pub mod arch;
 #[macro_use]
 pub mod async_utils;
 pub(crate) mod atomic_register_access;

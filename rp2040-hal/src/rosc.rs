@@ -1,6 +1,6 @@
 //! Ring Oscillator (ROSC)
 //!
-//! See [Chapter 2 Section 17](https://datasheets.raspberrypi.org/rp2040/rp2040_datasheet.pdf) for more details
+//! See [Chapter 2 Section 17](https://datasheets.raspberrypi.org/rp2040/rp2040-datasheet.pdf) for more details
 //!
 //! In addition to its obvious role as a clock source, [`RingOscillator`] can also be used as a random number source
 //! for the [`rand`] crate:

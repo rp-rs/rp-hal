@@ -195,12 +195,14 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
     }
 
     /// Writes bytes to the UART.
+    ///
     /// This function blocks until the full buffer has been sent.
     pub fn write_full_blocking(&self, data: &[u8]) {
         super::writer::write_full_blocking(&self.device, data);
     }
 
     /// Reads bytes from the UART.
+    ///
     /// This function blocks until the full buffer has been received.
     pub fn read_full_blocking(&self, buffer: &mut [u8]) -> Result<(), ReadErrorType> {
         super::reader::read_full_blocking(&self.device, buffer)
@@ -219,15 +221,16 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
     /// ```no_run
     /// # use rp2040_hal::uart::{Pins, ValidUartPinout, Enabled, UartPeripheral};
     /// # use rp2040_hal::pac::UART0;
+    /// # use rp2040_hal::timer::Timer;
     /// # use rp2040_hal::typelevel::OptionTNone;
     /// # use embedded_hal_0_2::blocking::delay::DelayUs;
     /// # type PINS = Pins<OptionTNone, OptionTNone, OptionTNone, OptionTNone>;
-    /// # let mut serial: UartPeripheral<Enabled, UART0, PINS> = unsafe { core::mem::zeroed() };
-    /// # let mut timer: rp2040_hal::Timer = unsafe { core::mem::zeroed() };
+    /// # fn example(mut serial: UartPeripheral<Enabled, rp2040_hal::pac::UART0, PINS>, mut timer: Timer) {
     /// serial.lowlevel_break_start();
     /// // at 115_200Bps on 8N1 configuration, 20bits takes (20*10⁶)/115200 = 173.611…μs.
     /// timer.delay_us(175);
     /// serial.lowlevel_break_stop();
+    /// }
     /// ```
     pub fn lowlevel_break_start(&mut self) {
         self.device.uartlcr_h().modify(|_, w| w.brk().set_bit());
@@ -490,6 +493,15 @@ impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Read for UartPeripheral<
         }
     }
 }
+
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::ReadReady
+    for UartPeripheral<Enabled, D, P>
+{
+    fn read_ready(&mut self) -> Result<bool, Self::Error> {
+        Ok(self.uart_is_readable() || self.read_error.is_some())
+    }
+}
+
 impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Write for UartPeripheral<Enabled, D, P> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
         self.write_full_blocking(buf);
@@ -498,5 +510,13 @@ impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Write for UartPeripheral
     fn flush(&mut self) -> Result<(), Self::Error> {
         nb::block!(super::writer::transmit_flushed(&self.device)).unwrap(); // Infallible
         Ok(())
+    }
+}
+
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::WriteReady
+    for UartPeripheral<Enabled, D, P>
+{
+    fn write_ready(&mut self) -> Result<bool, Self::Error> {
+        Ok(self.uart_is_writable())
     }
 }

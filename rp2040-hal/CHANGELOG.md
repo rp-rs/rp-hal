@@ -16,6 +16,10 @@ The Minimum-Supported Rust Version (MSRV) for the next release is 1.77
 - Support for *binary info*, which is metadata that `picotool` can read from your binary.
 - Bump MSRV to 1.77, because *binary info* examples need C-Strings.
 
+### Fixed
+
+- Let UART embedded\_io::Write::write return some bytes were written.
+
 ## [0.10.0] - 2024-03-10
 
 ### Added
