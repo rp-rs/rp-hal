@@ -21,6 +21,7 @@ pub struct UartPeripheral<S: State, D: UartDevice, P: ValidUartPinout<D>> {
     device: D,
     _state: S,
     pins: P,
+    read_error: Option<ReadErrorType>,
 }
 
 impl<S: State, D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<S, D, P> {
@@ -29,6 +30,7 @@ impl<S: State, D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<S, D, P> {
             device: self.device,
             pins: self.pins,
             _state: state,
+            read_error: None,
         }
     }
 
@@ -48,6 +50,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
             device,
             _state: Disabled,
             pins,
+            read_error: None,
         }
     }
 
@@ -88,6 +91,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Disabled, D, P> {
             device,
             pins,
             _state: Enabled,
+            read_error: None,
         })
     }
 }
@@ -250,6 +254,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
             device: reader.device,
             _state: Enabled,
             pins: reader.pins,
+            read_error: reader.read_error,
         }
     }
 }
@@ -260,6 +265,7 @@ impl<P: ValidUartPinout<UART0>> UartPeripheral<Enabled, UART0, P> {
         let reader = Reader {
             device: self.device,
             pins: self.pins,
+            read_error: self.read_error,
         };
         // Safety: reader and writer will never write to the same address
         let device_copy = unsafe { Peripherals::steal().UART0 };
@@ -278,6 +284,7 @@ impl<P: ValidUartPinout<UART1>> UartPeripheral<Enabled, UART1, P> {
         let reader = Reader {
             device: self.device,
             pins: self.pins,
+            read_error: self.read_error,
         };
         // Safety: reader and writer will never write to the same address
         let device_copy = unsafe { Peripherals::steal().UART1 };
@@ -469,9 +476,32 @@ impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::ErrorType
 }
 impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Read for UartPeripheral<Enabled, D, P> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
-        nb::block!(self.read_raw(buf)).map_err(|e| e.err_type)
+        // If the last read stored an error, report it now
+        if let Some(err) = self.read_error.take() {
+            return Err(err);
+        }
+        match nb::block!(self.read_raw(buf)) {
+            Ok(bytes_read) => Ok(bytes_read),
+            Err(err) if !err.discarded.is_empty() => {
+                // If an error was reported but some bytes were already read,
+                // return the data now and store the error for the next
+                // invocation.
+                self.read_error = Some(err.err_type);
+                Ok(err.discarded.len())
+            }
+            Err(err) => Err(err.err_type),
+        }
     }
 }
+
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::ReadReady
+    for UartPeripheral<Enabled, D, P>
+{
+    fn read_ready(&mut self) -> Result<bool, Self::Error> {
+        Ok(self.uart_is_readable() || self.read_error.is_some())
+    }
+}
+
 impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Write for UartPeripheral<Enabled, D, P> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
         self.write_full_blocking(buf);
@@ -480,5 +510,13 @@ impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Write for UartPeripheral
     fn flush(&mut self) -> Result<(), Self::Error> {
         nb::block!(super::writer::transmit_flushed(&self.device)).unwrap(); // Infallible
         Ok(())
+    }
+}
+
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::WriteReady
+    for UartPeripheral<Enabled, D, P>
+{
+    fn write_ready(&mut self) -> Result<bool, Self::Error> {
+        Ok(self.uart_is_writable())
     }
 }
