@@ -17,6 +17,7 @@ pio_dma
 pio_proc_blink
 pio_side_set
 pio_synchronized
+powman_test
 pwm_blink
 pwm_blink_embedded_hal_1
 rom_funcs
