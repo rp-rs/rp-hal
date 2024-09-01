@@ -70,6 +70,7 @@ pub mod uart;
 pub mod usb;
 pub mod vector_table;
 pub mod watchdog;
+pub mod xh3irq;
 pub mod xosc;
 
 // Provide access to common datastructures to avoid repeating ourselves
