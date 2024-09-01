@@ -22,9 +22,6 @@ use rp235x_hal as hal;
 // Some things we need
 use embedded_hal::digital::OutputPin;
 
-// Our interrupt macro
-use hal::pac::interrupt;
-
 // Shorter alias for gpio and pwm modules
 use hal::gpio;
 use hal::pwm;
@@ -143,12 +140,12 @@ fn main() -> ! {
         GLOBAL_PINS.borrow(cs).replace(Some((led, input_pin, pwm)));
     });
 
-    // Unmask the IO_BANK0 IRQ so that the NVIC interrupt controller
-    // will jump to the interrupt function when the interrupt occurs.
-    // We do this last so that the interrupt can't go off while
-    // it is in the middle of being configured
+    // Unmask the IO_BANK0 IRQ so that the interrupt controller will jump to the
+    // interrupt function when the interrupt occurs. We do this last so that the
+    // interrupt can't go off while it is in the middle of being configured
     unsafe {
-        cortex_m::peripheral::NVIC::unmask(hal::pac::Interrupt::IO_IRQ_BANK0);
+        hal::arch::interrupt_unmask(hal::pac::Interrupt::IO_IRQ_BANK0);
+        hal::arch::interrupt_enable();
     }
 
     loop {
@@ -157,16 +154,18 @@ fn main() -> ! {
     }
 }
 
-#[interrupt]
+#[no_mangle]
+#[allow(non_snake_case)]
 fn IO_IRQ_BANK0() {
     // The `#[interrupt]` attribute covertly converts this to `&'static mut Option<LedAndInput>`
     static mut LED_INPUT_AND_PWM: Option<LedInputAndPwm> = None;
+    let led_input_and_pwm = unsafe { &mut *core::ptr::addr_of_mut!(LED_INPUT_AND_PWM) };
 
     // This is one-time lazy initialisation. We steal the variables given to us
     // via `GLOBAL_PINS`.
-    if LED_INPUT_AND_PWM.is_none() {
+    if led_input_and_pwm.is_none() {
         critical_section::with(|cs| {
-            *LED_INPUT_AND_PWM = GLOBAL_PINS.borrow(cs).take();
+            *led_input_and_pwm = GLOBAL_PINS.borrow(cs).take();
         });
     }
 
@@ -174,7 +173,7 @@ fn IO_IRQ_BANK0() {
     // borrow led, input and pwm by *destructuring* the tuple
     // these will be of type `&mut LedPin`, `&mut InputPwmPin` and `&mut PwmSlice`, so we
     // don't have to move them back into the static after we use them
-    if let Some((led, input, pwm)) = LED_INPUT_AND_PWM {
+    if let Some((led, input, pwm)) = led_input_and_pwm {
         // Check if the interrupt source is from the input pin going from high-to-low.
         // Note: this will always be true in this example, as that is the only enabled GPIO interrupt source
         if input.interrupt_status(gpio::Interrupt::EdgeLow) {

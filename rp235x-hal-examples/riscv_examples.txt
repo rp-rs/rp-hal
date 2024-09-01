@@ -9,6 +9,7 @@ block_loop
 dht11
 gpio_dyn_pin_array
 gpio_in_out
+gpio_irq_example
 i2c
 lcd_display
 mem_to_mem_dma
@@ -20,6 +21,7 @@ pio_synchronized
 powman_test
 pwm_blink
 pwm_blink_embedded_hal_1
+pwm_irq_input
 rom_funcs
 rosc_as_system_clock
 spi

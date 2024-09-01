@@ -32,9 +32,6 @@ use rp235x_hal as hal;
 // Some things we need
 use embedded_hal::digital::StatefulOutputPin;
 
-// Our interrupt macro
-use hal::pac::interrupt;
-
 // Some short-cuts to useful types
 use core::cell::RefCell;
 use critical_section::Mutex;
@@ -133,7 +130,8 @@ fn main() -> ! {
     // We do this last so that the interrupt can't go off while
     // it is in the middle of being configured
     unsafe {
-        cortex_m::peripheral::NVIC::unmask(hal::pac::Interrupt::IO_IRQ_BANK0);
+        hal::arch::interrupt_unmask(hal::pac::Interrupt::IO_IRQ_BANK0);
+        hal::arch::interrupt_enable();
     }
 
     loop {
@@ -142,21 +140,23 @@ fn main() -> ! {
     }
 }
 
-#[interrupt]
+#[no_mangle]
+#[allow(non_snake_case)]
 fn IO_IRQ_BANK0() {
     // The `#[interrupt]` attribute covertly converts this to `&'static mut Option<LedAndButton>`
     static mut LED_AND_BUTTON: Option<LedAndButton> = None;
+    let led_and_button = unsafe { &mut *core::ptr::addr_of_mut!(LED_AND_BUTTON) };
 
     // This is one-time lazy initialisation. We steal the variables given to us
     // via `GLOBAL_PINS`.
-    if LED_AND_BUTTON.is_none() {
+    if led_and_button.is_none() {
         critical_section::with(|cs| {
-            *LED_AND_BUTTON = GLOBAL_PINS.borrow(cs).take();
+            *led_and_button = GLOBAL_PINS.borrow(cs).take();
         });
     }
 
     // Need to check if our Option<LedAndButtonPins> contains our pins
-    if let Some(gpios) = LED_AND_BUTTON {
+    if let Some(gpios) = led_and_button {
         // borrow led and button by *destructuring* the tuple
         // these will be of type `&mut LedPin` and `&mut ButtonPin`, so we don't have
         // to move them back into the static after we use them
