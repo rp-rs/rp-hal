@@ -124,8 +124,15 @@ fn main() -> ! {
     print_aot_status(&mut powman);
     _ = writeln!(&GLOBAL_UART, "AOT time: 0x{:016x}", powman.aot_get_time());
 
+    // Unmask the IRQ for POWMAN's Timer. We do this after the driver init so
+    // that the interrupt can't go off while it is in the middle of being
+    // configured
     unsafe {
-        hal::arch::interrupt_unmask(pac::Interrupt::POWMAN_IRQ_TIMER);
+        hal::arch::interrupt_unmask(hal::pac::Interrupt::POWMAN_IRQ_TIMER);
+    }
+
+    // Enable interrupts on this core
+    unsafe {
         hal::arch::interrupt_enable();
     }
 

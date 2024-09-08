@@ -125,12 +125,16 @@ fn main() -> ! {
         GLOBAL_PINS.borrow(cs).replace(Some((led, in_pin)));
     });
 
-    // Unmask the IO_BANK0 IRQ so that the NVIC interrupt controller
-    // will jump to the interrupt function when the interrupt occurs.
-    // We do this last so that the interrupt can't go off while
-    // it is in the middle of being configured
+    // Unmask the IRQ for I/O Bank 0 so that the RP2350's interrupt controller
+    // (NVIC in Arm mode, or Xh3irq in RISC-V mode) will jump to the interrupt
+    // function when the interrupt occurs. We do this last so that the interrupt
+    // can't go off while it is in the middle of being configured
     unsafe {
         hal::arch::interrupt_unmask(hal::pac::Interrupt::IO_IRQ_BANK0);
+    }
+
+    // Enable interrupts on this core
+    unsafe {
         hal::arch::interrupt_enable();
     }
 

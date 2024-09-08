@@ -96,9 +96,14 @@ async fn demo() {
         clocks.system_clock.freq(),
     );
 
-    // Unmask the interrupt in the NVIC to let the core wake up & enter the interrupt handler.
+    // Unmask the IRQ for I2C0. We do this after the driver init so that the
+    // interrupt can't go off while it is in the middle of being configured
     unsafe {
         hal::arch::interrupt_unmask(hal::pac::Interrupt::I2C0_IRQ);
+    }
+
+    // Enable interrupts on this core
+    unsafe {
         hal::arch::interrupt_enable();
     }
 
