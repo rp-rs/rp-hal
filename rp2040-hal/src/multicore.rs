@@ -8,7 +8,12 @@
 //! # Usage
 //!
 //! ```no_run
-//! use rp2040_hal::{pac, gpio::Pins, sio::Sio, multicore::{Multicore, Stack}};
+//! use rp2040_hal::{
+//!     gpio::Pins,
+//!     multicore::{Multicore, Stack},
+//!     pac,
+//!     sio::Sio,
+//! };
 //!
 //! static mut CORE1_STACK: Stack<4096> = Stack::new();
 //!
@@ -17,7 +22,7 @@
 //! }
 //!
 //! fn main() -> ! {
-//!     let mut pac = pac::Peripherals::take().unwrap();
+//!     let mut pac = hal::pac::Peripherals::take().unwrap();
 //!     let mut sio = Sio::new(pac.SIO);
 //!     // Other init code above this line
 //!     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
@@ -27,7 +32,6 @@
 //!     // The rest of your application below this line
 //!     # loop {}
 //! }
-//!
 //! ```
 //!
 //! For inter-processor communications, see [`crate::sio::SioFifo`] and [`crate::sio::Spinlock0`]
@@ -132,6 +136,17 @@ impl<'p> Multicore<'p> {
     }
 }
 
+extern "C" {
+    fn _core1_trampoline() -> !;
+}
+
+core::arch::global_asm!(
+    ".global _core1_trampoline",
+    ".thumb_func",
+    "_core1_trampoline:",
+    "pop {{r0, r1, pc}}",
+);
+
 /// A handle for controlling a logical core.
 pub struct Core<'p> {
     inner: Option<(
@@ -166,12 +181,8 @@ impl<'p> Core<'p> {
         F: FnOnce() + Send + 'static,
     {
         if let Some((psm, ppb, fifo)) = self.inner.as_mut() {
-            // The first two ignored `u64` parameters are there to take up all of the registers,
-            // which means that the rest of the arguments are taken from the stack,
-            // where we're able to put them from core 0.
+            /// Called from the asm `_core1_trampoline` function.
             extern "C" fn core1_startup<F: FnOnce()>(
-                _: u64,
-                _: u64,
                 entry: *mut ManuallyDrop<F>,
                 stack_limit: *mut usize,
             ) -> ! {
@@ -192,7 +203,7 @@ impl<'p> Core<'p> {
 
                 entry();
                 loop {
-                    cortex_m::asm::wfe()
+                    crate::arch::wfe()
                 }
             }
 
@@ -203,33 +214,50 @@ impl<'p> Core<'p> {
             // so wouldn't be zero cost.
             psm.frce_off().modify(|_, w| w.proc1().set_bit());
             while !psm.frce_off().read().proc1().bit_is_set() {
-                cortex_m::asm::nop();
+                crate::arch::nop();
             }
             psm.frce_off().modify(|_, w| w.proc1().clear_bit());
 
             // Set up the stack
             // AAPCS requires in 6.2.1.2 that the stack is 8bytes aligned., we may need to trim the
-            // array size to guaranty that the base of the stack (the end of the array) meets that requirement.
+            // array size to guarantee that the base of the stack (the end of the array) meets that requirement.
             // The start of the array does not need to be aligned.
 
-            let mut stack_ptr = stack.as_mut_ptr_range().end;
-            // on rp2040, usize are 4 bytes, so align_offset(8) on a *mut usize returns either 0 or 1.
-            let misalignment_offset = stack_ptr.align_offset(8);
+            let raw_stack_top = stack.as_mut_ptr_range().end;
+
+            // on arm, usize are 4 bytes, so align_offset(8) on a *mut usize returns either 0 or 1.
+            let misalignment_offset = raw_stack_top.align_offset(8);
+
+            let aligned_stack_top = unsafe { raw_stack_top.sub(misalignment_offset) };
 
             // We don't want to drop this, since it's getting moved to the other core.
             let mut entry = ManuallyDrop::new(entry);
 
-            // Push the arguments to `core1_startup` onto the stack.
+            let mut stack_ptr = aligned_stack_top;
+
+            // Push `core1_startup` and its the arguments to the stack.
+            //
+            // Our stack grows downwards. We want `entry` at the lowest address,
+            // which is the first to be popped.
             unsafe {
-                stack_ptr = stack_ptr.sub(misalignment_offset);
+                // Push extern "C" wrapper function.
+                //
+                // It will get the next two values as its args thanks to
+                // our trampoline.
+                //
+                // This ends up in pc.
+                stack_ptr = stack_ptr.sub(1);
+                stack_ptr.write(core1_startup::<F> as usize);
 
                 // Push `stack_limit`.
+                // This ends up in r1.
                 stack_ptr = stack_ptr.sub(1);
-                stack_ptr.cast::<*mut usize>().write(stack.as_mut_ptr());
+                stack_ptr.write(stack.as_mut_ptr() as usize);
 
                 // Push `entry`.
+                // This ends up in r0.
                 stack_ptr = stack_ptr.sub(1);
-                stack_ptr.cast::<*mut ManuallyDrop<F>>().write(&mut entry);
+                stack_ptr.write(&mut entry as *mut ManuallyDrop<F> as usize);
             }
 
             // Make sure the compiler does not reorder the stack writes after to after the
@@ -237,7 +265,7 @@ impl<'p> Core<'p> {
             // core.
             //
             // From the compiler perspective, this doesn't guarantee that the second core
-            // actually sees those writes. However, we know that the RP2040 doesn't have
+            // actually sees those writes. However, we know that the rp235x doesn't have
             // memory caches, and writes happen in-order.
             compiler_fence(Ordering::Release);
 
@@ -250,8 +278,11 @@ impl<'p> Core<'p> {
                 0,
                 1,
                 vector_table as usize,
+                // This points at where we put stuff on the stack. As the
+                // trampoline pops it off, the address will end up back at
+                // aligned_stack_top.
                 stack_ptr as usize,
-                core1_startup::<F> as usize,
+                _core1_trampoline as usize,
             ];
 
             let mut seq = 0;
@@ -260,7 +291,7 @@ impl<'p> Core<'p> {
                 let cmd = cmd_seq[seq] as u32;
                 if cmd == 0 {
                     fifo.drain();
-                    cortex_m::asm::sev();
+                    crate::arch::sev();
                 }
                 fifo.write_blocking(cmd);
                 let response = fifo.read_blocking();

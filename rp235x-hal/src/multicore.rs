@@ -57,14 +57,13 @@ pub enum Error {
 
 #[inline(always)]
 fn install_stack_guard(_stack_limit: *mut usize) {
-    // TBD Cortex-M33 MPU stack guard stuff.
-    // See the RP2040 code.
+    // TBD Cortex-M33 / Hazard3 MPU stack guard stuff. See the Pico SDK for
+    // ideas as to what to do here.
 }
 
 #[inline(always)]
 fn core1_setup(stack_limit: *mut usize) {
     install_stack_guard(stack_limit);
-    // TODO: irq priorities
 }
 
 /// Multicore execution management.
@@ -115,6 +114,38 @@ impl<'p> Multicore<'p> {
     }
 }
 
+extern "C" {
+    fn _core1_trampoline() -> !;
+}
+
+#[cfg(target_arch = "arm")]
+core::arch::global_asm!(
+    ".global _core1_trampoline",
+    ".thumb_func",
+    "_core1_trampoline:",
+    "pop {{r0, r1, pc}}",
+);
+
+#[cfg(not(target_arch = "arm"))]
+core::arch::global_asm!(
+    ".align 4",
+    ".section .text, \"ax\"",
+    ".global _core1_trampoline",
+    "_core1_trampoline:",
+    // load the pointer to the closure
+    "lw a0, 0(sp)",
+    // load the stack limit
+    "lw a1, 4(sp)",
+    // load the pointer to core1_startup
+    "lw a2, 8(sp)",
+    // load and set the GP
+    "lw gp, 12(sp)",
+    // move the stack pointer back 4 words
+    "addi sp, sp, 16",
+    // core1_startup(entry, stack_limit)
+    "jr a2",
+);
+
 /// A handle for controlling a logical core.
 pub struct Core<'p> {
     inner: Option<(
@@ -149,12 +180,8 @@ impl<'p> Core<'p> {
         F: FnOnce() + Send + 'static,
     {
         if let Some((psm, ppb, fifo)) = self.inner.as_mut() {
-            // The first two ignored `u64` parameters are there to take up all of the registers,
-            // which means that the rest of the arguments are taken from the stack,
-            // where we're able to put them from core 0.
+            /// Called from the asm `_core1_trampoline` function.
             extern "C" fn core1_startup<F: FnOnce()>(
-                _: u64,
-                _: u64,
                 entry: *mut ManuallyDrop<F>,
                 stack_limit: *mut usize,
             ) -> ! {
@@ -192,27 +219,55 @@ impl<'p> Core<'p> {
 
             // Set up the stack
             // AAPCS requires in 6.2.1.2 that the stack is 8bytes aligned., we may need to trim the
-            // array size to guaranty that the base of the stack (the end of the array) meets that requirement.
+            // array size to guarantee that the base of the stack (the end of the array) meets that requirement.
             // The start of the array does not need to be aligned.
 
-            let mut stack_ptr = stack.as_mut_ptr_range().end;
-            // on rp235x, usize are 4 bytes, so align_offset(8) on a *mut usize returns either 0 or 1.
-            let misalignment_offset = stack_ptr.align_offset(8);
+            let raw_stack_top = stack.as_mut_ptr_range().end;
+
+            // on arm, usize are 4 bytes, so align_offset(8) on a *mut usize returns either 0 or 1.
+            let misalignment_offset = raw_stack_top.align_offset(8);
+
+            let aligned_stack_top = unsafe { raw_stack_top.sub(misalignment_offset) };
 
             // We don't want to drop this, since it's getting moved to the other core.
             let mut entry = ManuallyDrop::new(entry);
 
-            // Push the arguments to `core1_startup` onto the stack.
+            let mut stack_ptr = aligned_stack_top;
+
+            // Push `core1_startup` and its the arguments to the stack.
+            //
+            // Our stack grows downwards. We want `entry` at the lowest address,
+            // which is the first to be popped.
             unsafe {
-                stack_ptr = stack_ptr.sub(misalignment_offset);
+                #[cfg(target_arch = "riscv32")]
+                {
+                    // Push `GP`.
+                    //
+                    // The trampoline puts this back in gp.
+                    let mut gp: usize;
+                    core::arch::asm!("mv {0},gp", out(reg) gp);
+                    stack_ptr = stack_ptr.sub(1);
+                    stack_ptr.write(gp);
+                }
+
+                // Push extern "C" wrapper function.
+                //
+                // It will get the next two values as its args thanks to
+                // our trampoline.
+                //
+                // This ends up in pc/a2.
+                stack_ptr = stack_ptr.sub(1);
+                stack_ptr.write(core1_startup::<F> as usize);
 
                 // Push `stack_limit`.
+                // This ends up in r1/a1.
                 stack_ptr = stack_ptr.sub(1);
-                stack_ptr.cast::<*mut usize>().write(stack.as_mut_ptr());
+                stack_ptr.write(stack.as_mut_ptr() as usize);
 
                 // Push `entry`.
+                // This ends up in r0/a0.
                 stack_ptr = stack_ptr.sub(1);
-                stack_ptr.cast::<*mut ManuallyDrop<F>>().write(&mut entry);
+                stack_ptr.write(&mut entry as *mut ManuallyDrop<F> as usize);
             }
 
             // Make sure the compiler does not reorder the stack writes after to after the
@@ -233,8 +288,11 @@ impl<'p> Core<'p> {
                 0,
                 1,
                 vector_table as usize,
+                // This points at where we put stuff on the stack. As the
+                // trampoline pops it off, the address will end up back at
+                // aligned_stack_top.
                 stack_ptr as usize,
-                core1_startup::<F> as usize,
+                _core1_trampoline as usize,
             ];
 
             let mut seq = 0;

@@ -1,29 +1,26 @@
 //! # Multicore Blinking Example
 //!
-//! This application blinks two LEDs on GPIOs 2 and 3 at different rates (3Hz
-//! and 4Hz respectively.)
+//! This application blinks two LEDs on GPIOs 2 and 25 at different rates (3 Hz
+//! and 1 Hz respectively.)
 //!
 //! See the `Cargo.toml` file for Copyright and licence details.
 
 #![no_std]
 #![no_main]
 
-use cortex_m::delay::Delay;
-
 // Alias for our HAL crate
 use rp235x_hal as hal;
-
-use hal::clocks::Clock;
-use hal::gpio::Pins;
-use hal::multicore::{Multicore, Stack};
-use hal::sio::Sio;
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
 
 // Some things we need
-use embedded_hal::digital::StatefulOutputPin;
+use embedded_hal::delay::DelayNs;
+use embedded_hal::digital::{OutputPin, StatefulOutputPin};
+use hal::gpio::Pins;
+use hal::multicore::{Multicore, Stack};
+use hal::sio::Sio;
 
 /// Tell the Boot ROM about our application
 #[link_section = ".start_block"]
@@ -37,16 +34,16 @@ const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 /// The frequency at which core 0 will blink its LED (Hz).
 const CORE0_FREQ: u32 = 3;
 /// The frequency at which core 1 will blink its LED (Hz).
-const CORE1_FREQ: u32 = 4;
+const CORE1_FREQ: u32 = 1;
 /// The delay between each toggle of core 0's LED (us).
-const CORE0_DELAY: u32 = 1_000_000 / CORE0_FREQ;
+const CORE0_DELAY_US: u32 = 1_000_000 / CORE0_FREQ;
 /// The delay between each toggle of core 1's LED (us).
-const CORE1_DELAY: u32 = 1_000_000 / CORE1_FREQ;
+const CORE1_DELAY_US: u32 = 1_000_000 / CORE1_FREQ;
 
 /// Stack for core 1
 ///
 /// Core 0 gets its stack via the normal route - any memory not used by static
-/// values is reserved for stack and initialised by cortex-m-rt.
+/// values is reserved for stack and initialised by cortex-m-rt / riscv-rt.
 /// To get the same for Core 1, we would need to compile everything seperately
 /// and modify the linker file for both programs, and that's quite annoying.
 /// So instead, core1.spawn takes a [usize] which gets used for the stack.
@@ -57,13 +54,12 @@ static mut CORE1_STACK: Stack<4096> = Stack::new();
 
 /// Entry point to our bare-metal application.
 ///
-/// The `#[hal::entry]` macro ensures the Cortex-M start-up code calls this function
+/// The `#[hal::entry]` macro ensures the start-up code calls this function
 /// as soon as all global variables and the spinlock are initialised.
 #[hal::entry]
 fn main() -> ! {
-    // Grab our singleton objects
+    // Grab our singleton object
     let mut pac = hal::pac::Peripherals::take().unwrap();
-    let core = cortex_m::Peripherals::take().unwrap();
 
     // Set up the watchdog driver - needed by the clock setup code
     let mut watchdog = hal::watchdog::Watchdog::new(pac.WATCHDOG);
@@ -88,12 +84,10 @@ fn main() -> ! {
         sio.gpio_bank0,
         &mut pac.RESETS,
     );
-    let mut led1 = pins.gpio2.into_push_pull_output();
-    let mut led2 = pins.gpio3.into_push_pull_output();
-
-    // Set up the delay for the first core.
-    let sys_freq = clocks.system_clock.freq().to_Hz();
-    let mut delay = Delay::new(core.SYST, sys_freq);
+    let mut led0 = pins.gpio2.into_push_pull_output();
+    let mut led1 = pins.gpio25.into_push_pull_output();
+    let mut timer0 = hal::Timer::new_timer0(pac.TIMER0, &mut pac.RESETS, &clocks);
+    let mut timer1 = hal::Timer::new_timer1(pac.TIMER1, &mut pac.RESETS, &clocks);
 
     // Start up the second core to blink the second LED
     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
@@ -101,24 +95,20 @@ fn main() -> ! {
     let core1 = &mut cores[1];
     core1
         .spawn(unsafe { &mut CORE1_STACK.mem }, move || {
-            // Get the second core's copy of the `CorePeripherals`, which are per-core.
-            // Unfortunately, `cortex-m` doesn't support this properly right now,
-            // so we have to use `steal`.
-            let core = unsafe { cortex_m::Peripherals::steal() };
-            // Set up the delay for the second core.
-            let mut delay = Delay::new(core.SYST, sys_freq);
-            // Blink the second LED.
+            // Blink the second LED using Timer 1
+            led1.set_high().unwrap();
             loop {
-                led2.toggle().unwrap();
-                delay.delay_us(CORE1_DELAY)
+                timer1.delay_us(CORE1_DELAY_US);
+                led1.toggle().unwrap();
             }
         })
         .unwrap();
 
     // Blink the first LED.
+    led0.set_high().unwrap();
     loop {
-        led1.toggle().unwrap();
-        delay.delay_us(CORE0_DELAY)
+        timer0.delay_us(CORE0_DELAY_US);
+        led0.toggle().unwrap();
     }
 }
 

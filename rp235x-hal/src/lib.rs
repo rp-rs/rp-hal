@@ -50,7 +50,6 @@ pub mod dma;
 pub mod gpio;
 pub mod i2c;
 pub mod lposc;
-#[cfg(all(target_arch = "arm", target_os = "none"))]
 pub mod multicore;
 pub mod otp;
 pub mod pio;
