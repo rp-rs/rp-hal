@@ -222,17 +222,20 @@ mod test {
 
     #[test]
     fn test_interrupt_to_mask() {
-        let (index, bitmask) = interrupt_to_mask(rp235x_pac::Interrupt::UART1_IRQ);
-        // 34 -> window 2, bit 3
+        let (index, bitmask) = interrupt_to_mask(rp235x_pac::Interrupt::ADC_IRQ_FIFO);
+        assert_eq!(rp235x_pac::Interrupt::ADC_IRQ_FIFO as u16, 35);
+        // ADC_IRQ_FIFO is IRQ 35, so that's index 2, bit 3
         assert_eq!(index, 2);
-        assert_eq!(bitmask, 0b0000_0000_0000_0100);
+        assert_eq!(bitmask, 1 << 3);
     }
 
     #[test]
     fn test_interrupt_to_mask_index() {
-        let mask = interrupt_to_mask_index(rp235x_pac::Interrupt::UART1_IRQ);
-        // 34 -> bit 3 | window 2
-        assert_eq!(mask, 0x0004_0002);
+        let mask = interrupt_to_mask_index(rp235x_pac::Interrupt::ADC_IRQ_FIFO);
+        assert_eq!(rp235x_pac::Interrupt::ADC_IRQ_FIFO as u16, 35);
+        // ADC_IRQ_FIFO is IRQ 35, so that's index 2, bit 3
+        // This value is in (bitmask | index) format, and 1 << 3 is 0x0008
+        assert_eq!(mask, 0x0008_0002);
     }
 }
 
