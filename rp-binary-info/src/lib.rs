@@ -117,6 +117,7 @@ pub static PICOTOOL_HEADER: Header = unsafe {
 /// This tells picotool how to convert RAM addresses back into Flash addresses
 pub static MAPPING_TABLE: [MappingTableEntry; 2] = [
     // This is the entry for .data
+    #[allow(unused_unsafe)]
     MappingTableEntry {
         source_addr_start: unsafe { core::ptr::addr_of!(__sidata) },
         dest_addr_start: unsafe { core::ptr::addr_of!(__sdata) },

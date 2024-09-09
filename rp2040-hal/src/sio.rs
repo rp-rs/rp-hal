@@ -202,6 +202,7 @@ impl SioFifo {
     }
 }
 
+#[cfg(target_arch = "arm")]
 macro_rules! concatln {
     ($(,)*) => {
         ""
@@ -220,6 +221,8 @@ macro_rules! concatln {
 // alias the division operators to these for a similar reason r0 is the
 // result either way and r1 a scratch register, so the caller can't assume it
 // retains the argument value.
+
+#[cfg(target_arch = "arm")]
 macro_rules! hwdivider_head {
     () => {
         concatln!(
@@ -238,6 +241,7 @@ macro_rules! hwdivider_head {
     };
 }
 
+#[cfg(target_arch = "arm")]
 macro_rules! hwdivider_tail {
     () => {
         concatln!(

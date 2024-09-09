@@ -87,6 +87,7 @@ pub(crate) fn write_raw<'d>(
 pub(crate) fn write_full_blocking(rb: &RegisterBlock, data: &[u8]) {
     let mut temp = data;
 
+    #[allow(unreachable_patterns)]
     while !temp.is_empty() {
         temp = match write_raw(rb, temp) {
             Ok(remaining) => remaining,
@@ -280,6 +281,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for Writer<D, P> {
     }
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
+        #[allow(unreachable_patterns)]
         transmit_flushed(&self.device).map_err(|e| match e {
             WouldBlock => WouldBlock,
             Other(v) => match v {},

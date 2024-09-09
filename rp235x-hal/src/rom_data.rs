@@ -358,7 +358,9 @@ declare_rom_function! {
 
 declare_rom_function! {
     /// Configure QMI for one of a small menu of XIP read modes supported by the
-    /// bootrom. This mode is configured for both memory windows (both chip
+    /// bootrom.
+    ///
+    /// This mode is configured for both memory windows (both chip
     /// selects), and the clock divisor is also applied to direct mode.
     ///
     /// The available modes are:
@@ -393,9 +395,10 @@ declare_rom_function! {
 
 declare_rom_function! {
     /// Restore the QMI address translation registers, ATRANS0 through ATRANS7,
-    /// to their reset state. This makes the runtime- to-storage address map an
-    /// identity map, i.e. the mapped and unmapped address are equal, and the
-    /// entire space is fully mapped.
+    /// to their reset state.
+    ///
+    /// This makes the runtime- to-storage address map an identity map, i.e. the
+    /// mapped and unmapped address are equal, and the entire space is fully mapped.
     ///
     /// See [Section 12.14.4](https://rptl.io/rp2350-datasheet#section_bootrom) of the RP2350
     /// datasheet.
