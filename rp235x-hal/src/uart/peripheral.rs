@@ -449,7 +449,6 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Write<u8> for UartPeripheral<Enabled,
     }
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
-        #[allow(unreachable_patterns)]
         super::writer::transmit_flushed(&self.device).map_err(|e| match e {
             WouldBlock => WouldBlock,
             Other(v) => match v {},
