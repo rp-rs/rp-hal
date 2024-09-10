@@ -8,6 +8,9 @@
 //! > functionality that would otherwise have to take up space in most user
 //! > binaries.
 
+#![allow(unknown_lints)]
+#![allow(clippy::too_long_first_doc_paragraph)]
+
 /// A bootrom function table code.
 pub type RomFnTableCode = [u8; 2];
 
@@ -211,6 +214,7 @@ rom_functions! {
     b"T3" fn ctz32(value: u32) -> u32;
 
     /// Resets the RP2040 and uses the watchdog facility to re-start in BOOTSEL mode:
+    ///
     ///   * gpio_activity_pin_mask is provided to enable an 'activity light' via GPIO attached LED
     ///     for the USB Mass Storage Device:
     ///     * 0 No pins are used as per cold boot.
@@ -254,16 +258,18 @@ rom_functions! {
     /// function configures the SSI with a fixed SCK clock divisor of /6.
     b"EX" unsafe fn flash_exit_xip() -> ();
 
-    /// Erase a count bytes, starting at addr (offset from start of flash). Optionally, pass a
-    /// block erase command e.g. D8h block erase, and the size of the block erased by this
-    /// command — this function will use the larger block erase where possible, for much higher
+    /// Erase a count bytes, starting at addr (offset from start of flash).
+    ///
+    /// Optionally, pass a block erase command e.g. D8h block erase, and the size of the block erased
+    /// by this command — this function will use the larger block erase where possible, for much higher
     /// erase speed. addr must be aligned to a 4096-byte sector, and count must be a multiple of
     /// 4096 bytes.
     b"RE" unsafe fn flash_range_erase(addr: u32, count: usize, block_size: u32, block_cmd: u8) -> ();
 
     /// Program data to a range of flash addresses starting at `addr` (and
-    /// offset from the start of flash) and `count` bytes in size. The value
-    /// `addr` must be aligned to a 256-byte boundary, and `count` must be a
+    /// offset from the start of flash) and `count` bytes in size.
+    ///
+    /// The value `addr` must be aligned to a 256-byte boundary, and `count` must be a
     /// multiple of 256.
     b"RP" unsafe fn flash_range_program(addr: u32, data: *const u8, count: usize) -> ();
 
@@ -272,13 +278,16 @@ rom_functions! {
     b"FC" unsafe fn flash_flush_cache() -> ();
 
     /// Configure the SSI to generate a standard 03h serial read command, with 24 address bits,
-    /// upon each XIP access. This is a very slow XIP configuration, but is very widely supported.
+    /// upon each XIP access.
+    ///
+    /// This is a very slow XIP configuration, but is very widely supported.
     /// The debugger calls this function after performing a flash erase/programming operation, so
     /// that the freshly-programmed code and data is visible to the debug host, without having to
     /// know exactly what kind of flash device is connected.
     b"CX" unsafe fn flash_enter_cmd_xip() -> ();
 
     /// This is the method that is entered by core 1 on reset to wait to be launched by core 0.
+    ///
     /// There are few cases where you should call this method (resetting core 1 is much better).
     /// This method does not return and should only ever be called on core 1.
     b"WV" unsafe fn wait_for_vector() -> !;
