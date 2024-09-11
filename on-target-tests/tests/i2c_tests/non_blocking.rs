@@ -30,8 +30,7 @@ pub struct State {
 }
 
 pub fn run_test(f: impl Future) {
-    let runtime = nostd_async::Runtime::new();
-    nostd_async::Task::new(f).spawn(&runtime).join();
+    super::test_executor::execute(f);
 }
 async fn wait_with(payload: &RefCell<TargetState>, mut f: impl FnMut(&TargetState) -> bool) {
     while f(payload.borrow().deref()) {
