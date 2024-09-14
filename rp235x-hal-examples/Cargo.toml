@@ -38,7 +38,7 @@ usbd-serial = "0.2.2"
 static_cell = "2.1.0"
 
 [target.'cfg( target_arch = "arm" )'.dependencies]
-embassy-executor = {version = "0.6", features = ["arch-cortex-m", "executor-thread"]}
+embassy-executor = {version = "0.5", features = ["arch-cortex-m", "executor-thread"]}
 
 [target.'cfg( target_arch = "riscv32" )'.dependencies]
-embassy-executor = {version = "0.6", features = ["arch-riscv32", "executor-thread"]}
+embassy-executor = {version = "0.5", features = ["arch-riscv32", "executor-thread"]}
