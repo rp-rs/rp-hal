@@ -15,7 +15,6 @@
 use panic_halt as _;
 
 use core::task::Poll;
-use embassy_executor::Executor;
 use embedded_hal_async::i2c::I2c;
 use futures::FutureExt;
 
@@ -33,6 +32,7 @@ use hal::{
 };
 
 use defmt_rtt as _;
+use embassy_executor::Executor;
 use static_cell::StaticCell;
 
 /// Tell the Boot ROM about our application

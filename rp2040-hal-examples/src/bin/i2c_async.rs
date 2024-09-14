@@ -10,7 +10,6 @@
 #![no_std]
 #![no_main]
 
-use embassy_executor::Executor;
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
@@ -27,6 +26,7 @@ use hal::{
 };
 
 // Import required types & traits.
+use embassy_executor::Executor;
 use embedded_hal_async::i2c::I2c;
 use hal::{
     gpio::{FunctionI2C, Pin, PullUp},

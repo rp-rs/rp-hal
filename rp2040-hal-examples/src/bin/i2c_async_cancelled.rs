@@ -16,7 +16,6 @@ use core::task::Poll;
 // be linked)
 //use panic_halt as _;
 
-use embassy_executor::Executor;
 use embedded_hal_async::i2c::I2c;
 use futures::FutureExt;
 
@@ -39,6 +38,7 @@ use hal::{
 };
 
 use defmt_rtt as _;
+use embassy_executor::Executor;
 use panic_probe as _;
 use static_cell::StaticCell;
 
