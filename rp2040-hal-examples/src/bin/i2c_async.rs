@@ -10,6 +10,7 @@
 #![no_std]
 #![no_main]
 
+use embassy_executor::Executor;
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
@@ -32,6 +33,7 @@ use hal::{
     pac::{self, interrupt},
     Clock,
 };
+use static_cell::StaticCell;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -54,6 +56,7 @@ unsafe fn I2C0_IRQ() {
 
 /// The function configures the RP2040 peripherals, then performs a single I²C
 /// write to a fixed address.
+#[embassy_executor::task]
 async fn demo() {
     let mut pac = pac::Peripherals::take().unwrap();
 
@@ -118,9 +121,7 @@ async fn demo() {
 /// Entry point to our bare-metal application.
 #[rp2040_hal::entry]
 fn main() -> ! {
-    let runtime = nostd_async::Runtime::new();
-    let mut task = nostd_async::Task::new(demo());
-    let handle = task.spawn(&runtime);
-    handle.join();
-    unreachable!()
+    static EXECUTOR: StaticCell<Executor> = StaticCell::new();
+    let executor = EXECUTOR.init(Executor::new());
+    executor.run(|spawner| spawner.spawn(demo()).unwrap());
 }
