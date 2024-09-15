@@ -32,6 +32,8 @@ use hal::{
 };
 
 use defmt_rtt as _;
+use embassy_executor::Executor;
+use static_cell::StaticCell;
 
 /// Tell the Boot ROM about our application
 #[link_section = ".start_block"]
@@ -50,6 +52,7 @@ unsafe fn I2C0_IRQ() {
 
 /// The function configures the RP235x peripherals, then performs a single I²C
 /// write to a fixed address.
+#[embassy_executor::task]
 async fn demo() {
     let mut pac = hal::pac::Peripherals::take().unwrap();
 
@@ -132,11 +135,9 @@ async fn demo() {
 /// Entry point to our bare-metal application.
 #[hal::entry]
 fn main() -> ! {
-    let runtime = nostd_async::Runtime::new();
-    let mut task = nostd_async::Task::new(demo());
-    let handle = task.spawn(&runtime);
-    handle.join();
-    unreachable!()
+    static EXECUTOR: StaticCell<Executor> = StaticCell::new();
+    let executor = EXECUTOR.init(Executor::new());
+    executor.run(|spawner| spawner.spawn(demo()).unwrap());
 }
 
 /// Program metadata for `picotool info`

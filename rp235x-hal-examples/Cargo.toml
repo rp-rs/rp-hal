@@ -29,10 +29,16 @@ futures = {version = "0.3.30", default-features = false, features = ["async-awai
 hd44780-driver = "0.4.0"
 heapless = "0.8.0"
 nb = "1.0"
-nostd_async = {version = "0.6.1", features = ["cortex_m"]}
 panic-halt = "0.2.0"
 pio = "0.2.0"
 pio-proc = "0.2.0"
 rp235x-hal = {path = "../rp235x-hal", version = "0.2.0", features = ["binary-info", "critical-section-impl", "rt", "defmt"]}
 usb-device = "0.3.2"
 usbd-serial = "0.2.2"
+static_cell = "2.1.0"
+
+[target.'cfg( target_arch = "arm" )'.dependencies]
+embassy-executor = {version = "0.5", features = ["arch-cortex-m", "executor-thread"]}
+
+[target.'cfg( target_arch = "riscv32" )'.dependencies]
+embassy-executor = {version = "0.5", features = ["arch-riscv32", "executor-thread"]}
