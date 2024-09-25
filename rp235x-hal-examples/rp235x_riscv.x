@@ -112,6 +112,7 @@ SECTIONS
     . = ALIGN(4);
     __start_block_addr = .;
     KEEP(*(.start_block));
+    KEEP(*(.boot_info));
     . = ALIGN(4);
     *(.trap);
     *(.trap.rust);
