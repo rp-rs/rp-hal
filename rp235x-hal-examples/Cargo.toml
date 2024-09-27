@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 name = "rp235x-hal-examples"
 repository = "https://github.com/rp-rs/rp-hal"
 rust-version = "1.77"
-version = "0.1.0"
+version = "0.0.1"
 
 [dependencies]
 cortex-m = "0.7.2"
@@ -32,7 +32,7 @@ nb = "1.0"
 panic-halt = "0.2.0"
 pio = "0.2.0"
 pio-proc = "0.2.0"
-rp235x-hal = {path = "../rp235x-hal", version = "0.2.0", features = ["binary-info", "critical-section-impl", "rt", "defmt"]}
+rp235x-hal = {path = "../rp235x-hal", version = "0.0.1", features = ["binary-info", "critical-section-impl", "rt", "defmt"]}
 usb-device = "0.3.2"
 usbd-serial = "0.2.2"
 static_cell = "2.1.0"

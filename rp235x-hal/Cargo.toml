@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 name = "rp235x-hal"
 repository = "https://github.com/rp-rs/rp-hal"
 rust-version = "1.77"
-version = "0.2.0"
+version = "0.0.1"
 
 [package.metadata.docs.rs]
 features = ["rt", "defmt", "rtic-monotonic"]
@@ -37,7 +37,7 @@ pio = "0.2.0"
 rand_core = "0.6.3"
 rp-binary-info = {version = "0.1.0", path = "../rp-binary-info"}
 rp-hal-common = {version = "0.1.0", path = "../rp-hal-common"}
-rp235x-hal-macros = {version = "0.1.0", path = "../rp235x-hal-macros"}
+rp235x-hal-macros = {version = "0.0.1", path = "../rp235x-hal-macros"}
 rp235x-pac = {version = "0.1.0", features = ["critical-section", "rt"]}
 sha2-const-stable = "0.1"
 usb-device = "0.3.2"
