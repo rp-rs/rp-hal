@@ -248,10 +248,10 @@ impl<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<S, D, P, DS
         (freq_in / (prescale as u32 * (1 + postdiv as u32))).Hz()
     }
 
-    /// Set format and datasize
-    pub fn set_format(&mut self, data_bits: u8, frame_format: FrameFormat) {
+    /// Set format
+    pub fn set_format(&mut self, frame_format: FrameFormat) {
         self.device.sspcr0().modify(|_, w| unsafe {
-            w.dss().bits(data_bits - 1).frf().bits(match &frame_format {
+            w.dss().bits(DS - 1).frf().bits(match &frame_format {
                 FrameFormat::MotorolaSpi(_) => 0x00,
                 FrameFormat::TexasInstrumentsSynchronousSerial => 0x01,
                 FrameFormat::NationalSemiconductorMicrowire => 0x10,
@@ -309,7 +309,7 @@ impl<D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<Disabled, D, P, DS> {
         self.device.reset_bring_up(resets);
 
         self.set_baudrate(peri_frequency, baudrate);
-        self.set_format(DS, frame_format);
+        self.set_format(frame_format);
         self.set_slave(slave);
         // Always enable DREQ signals -- harmless if DMA is not listening
         self.device
