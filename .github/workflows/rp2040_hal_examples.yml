@@ -14,7 +14,11 @@ jobs:
       - name: Build
         run: cd ${PACKAGE} && cargo build
       - name: Install picotool
-        run: sudo sh -c "apt-get install -y debian-archive-keyring && echo 'deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] http://deb.debian.org/debian testing main contrib non-free' >/etc/apt/sources.list.d/debian.list && apt update && apt-get install -y libxml2-utils picotool"
+        run: |
+          sudo apt-get install -y debian-archive-keyring
+          sudo sh -c "echo 'deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] http://deb.debian.org/debian testing main contrib non-free' >/etc/apt/sources.list.d/debian.list"
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils picotool
       - name: Test picotool
         run: picotool info ${PACKAGE}/target/${TARGET}/debug/binary_info_demo -t elf -a | tee /dev/stderr | grep -q "rp2040-hal Binary Info Example"
   udeps:
