@@ -5,7 +5,7 @@ env:
   TARGET: thumbv6m-none-eabi
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -13,6 +13,14 @@ jobs:
           target: ${{ env.TARGET }}
       - name: Build
         run: cd ${PACKAGE} && cargo build
+      - name: Install picotool
+        run: |
+          sudo apt-get install -y debian-archive-keyring
+          sudo sh -c "echo 'deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] http://deb.debian.org/debian testing main contrib non-free' >/etc/apt/sources.list.d/debian.list"
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils picotool
+      - name: Test picotool
+        run: picotool info ${PACKAGE}/target/${TARGET}/debug/binary_info_demo -t elf -a | tee /dev/stderr | grep -q "rp2040-hal Binary Info Example"
   udeps:
     runs-on: ubuntu-20.04
     steps:
