@@ -914,6 +914,7 @@ pub type Error = core::convert::Infallible;
 /// GPIO error type for pins with dynamic function
 #[derive(Debug)]
 pub enum DynPinError {
+    /// The DynPin is in a state incompatible with the requested function.
     IncompatibleFunction,
 }
 
@@ -1521,7 +1522,7 @@ mod eh1 {
         I: PinId,
         P: PullType,
     {
-        fn set_low(&mut self) -> Result<(), DynPinError> {
+        fn set_low(&mut self) -> Result<(), Self::Error> {
             match self.function() {
                 DynFunction::Sio(func::DynSioConfig::Output) => self._set_low(),
                 _ => return Err(DynPinError::IncompatibleFunction),
@@ -1529,12 +1530,32 @@ mod eh1 {
             Ok(())
         }
 
-        fn set_high(&mut self) -> Result<(), DynPinError> {
+        fn set_high(&mut self) -> Result<(), Self::Error> {
             match self.function() {
                 DynFunction::Sio(func::DynSioConfig::Output) => self._set_high(),
                 _ => return Err(DynPinError::IncompatibleFunction),
             }
             Ok(())
+        }
+    }
+
+    impl<I, P> InputPin for Pin<I, DynFunction, P>
+    where
+        I: PinId,
+        P: PullType,
+    {
+        fn is_high(&mut self) -> Result<bool, Self::Error> {
+            match self.function() {
+                DynFunction::Sio(func::DynSioConfig::Input) => Ok(self._is_high()),
+                _ => Err(DynPinError::IncompatibleFunction),
+            }
+        }
+
+        fn is_low(&mut self) -> Result<bool, Self::Error> {
+            match self.function() {
+                DynFunction::Sio(func::DynSioConfig::Input) => Ok(self._is_low()),
+                _ => Err(DynPinError::IncompatibleFunction),
+            }
         }
     }
 
