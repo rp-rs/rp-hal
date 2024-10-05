@@ -1480,7 +1480,8 @@ mod eh1 {
     use crate::gpio::DynPinError;
 
     use super::{
-        func, AnyPin, AsInputPin, DynFunction, Error, FunctionSio, InOutPin, OutputEnableOverride, Pin, PinId, PullType, SioConfig, SioInput, SioOutput
+        func, AnyPin, AsInputPin, DynFunction, Error, FunctionSio, InOutPin, OutputEnableOverride,
+        Pin, PinId, PullType, SioConfig, SioInput, SioOutput,
     };
 
     impl<I, P, S> ErrorType for Pin<I, FunctionSio<S>, P>
@@ -1499,7 +1500,6 @@ mod eh1 {
     {
         type Error = DynPinError;
     }
-
 
     impl<I, P> OutputPin for Pin<I, FunctionSio<SioOutput>, P>
     where
