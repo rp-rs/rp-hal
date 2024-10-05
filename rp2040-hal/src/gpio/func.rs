@@ -145,6 +145,7 @@ impl SioConfig for SioOutput {
 //==============================================================================
 
 /// Error type for invalid function conversion.
+#[derive(Debug)]
 pub struct InvalidFunction;
 
 /// Marker of valid pin -> function combination.
