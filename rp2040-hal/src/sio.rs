@@ -35,26 +35,31 @@ pub enum CoreId {
 }
 
 /// Marker struct for ownership of SIO gpio bank0
+#[derive(Debug)]
 pub struct SioGpioBank0 {
     _private: (),
 }
 
 /// Marker struct for ownership of SIO FIFO
+#[derive(Debug)]
 pub struct SioFifo {
     _private: (),
 }
 
 /// Marker struct for ownership of SIO gpio qspi
+#[derive(Debug)]
 pub struct SioGpioQspi {
     _private: (),
 }
 
 /// Marker struct for ownership of divide/modulo module
+#[derive(Debug)]
 pub struct HwDivider {
     _private: (),
 }
 
 /// Result of divide/modulo operation
+#[derive(Debug)]
 pub struct DivResult<T> {
     /// The quotient of divide/modulo operation
     pub quotient: T,
