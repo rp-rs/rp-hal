@@ -47,6 +47,7 @@ macro_rules! pin_pull_type {
     ($($pull_type:ident),*) => {
         $(paste! {
             /// Type-level `variant` of [`PullType`].
+            #[derive(Debug)]
             pub struct [<Pull $pull_type>](pub(super) ());
             impl PullType for [<Pull $pull_type>] {}
             impl pull_sealed::PullType for [<Pull $pull_type>] {
