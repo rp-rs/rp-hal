@@ -947,8 +947,8 @@ where
     }
 }
 
-impl<'a, I: PinId, F: func::Function, P: PullType> embedded_hal_0_2::digital::v2::InputPin
-    for AsInputPin<'a, I, F, P>
+impl<I: PinId, F: func::Function, P: PullType> embedded_hal_0_2::digital::v2::InputPin
+    for AsInputPin<'_, I, F, P>
 {
     type Error = core::convert::Infallible;
 
@@ -1527,7 +1527,7 @@ mod eh1 {
         }
     }
 
-    impl<'a, I, F, P> ErrorType for AsInputPin<'a, I, F, P>
+    impl<I, F, P> ErrorType for AsInputPin<'_, I, F, P>
     where
         I: PinId,
         F: func::Function,
@@ -1536,7 +1536,7 @@ mod eh1 {
         type Error = Error;
     }
 
-    impl<'a, I: PinId, F: func::Function, P: PullType> InputPin for AsInputPin<'a, I, F, P> {
+    impl<I: PinId, F: func::Function, P: PullType> InputPin for AsInputPin<'_, I, F, P> {
         fn is_high(&mut self) -> Result<bool, Self::Error> {
             Ok(self.0._is_high())
         }

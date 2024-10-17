@@ -839,14 +839,14 @@ impl<'a, Word> AdcFifo<'a, Word> {
     }
 }
 
-impl<'a> AdcFifo<'a, u16> {
+impl AdcFifo<'_, u16> {
     /// Read a single value from the fifo (u16 version, not shifted)
     pub fn read(&mut self) -> u16 {
         self.read_from_fifo()
     }
 }
 
-impl<'a> AdcFifo<'a, u8> {
+impl AdcFifo<'_, u8> {
     /// Read a single value from the fifo (u8 version, shifted)
     ///
     /// Also see [`AdcFifoBuilder::shift_8bit`].
