@@ -15,7 +15,7 @@ version = "0.1.0"
 cortex-m = "0.7.2"
 cortex-m-rt = "0.7"
 cortex-m-rtic = "1.1.4"
-critical-section = {version = "1.0.0"}
+critical-section = {version = "1.2.0"}
 defmt = "0.3"
 defmt-rtt = "0.4.0"
 dht-sensor = "0.2.1"
