@@ -106,6 +106,7 @@ extern "C" {
 #[link_section = ".boot_info"]
 #[cfg(feature = "binary-info")]
 #[used]
+#[allow(unused_unsafe)] // addr_of! is safe since rust 1.82.0
 pub static PICOTOOL_HEADER: Header = unsafe {
     Header::new(
         core::ptr::addr_of!(__bi_entries_start),
