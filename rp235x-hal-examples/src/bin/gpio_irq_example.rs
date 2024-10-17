@@ -142,6 +142,7 @@ fn main() -> ! {
     }
 }
 
+#[allow(static_mut_refs)] // See https://github.com/rust-embedded/cortex-m/pull/561
 #[interrupt]
 fn IO_IRQ_BANK0() {
     // The `#[interrupt]` attribute covertly converts this to `&'static mut Option<LedAndButton>`
