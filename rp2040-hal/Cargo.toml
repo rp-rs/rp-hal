@@ -21,7 +21,7 @@ targets = ["thumbv6m-none-eabi"]
 # Non-optional dependencies. Keep these sorted by name.
 bitfield = {version = "0.14.0"}
 cortex-m = "0.7.2"
-critical-section = {version = "1.0.0"}
+critical-section = {version = "1.2.0"}
 embedded-dma = "0.2.0"
 embedded-hal = "1.0.0"
 embedded-hal-async = "1.0.0"
