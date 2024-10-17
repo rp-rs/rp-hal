@@ -37,12 +37,14 @@ extern "C" {
 /// Tell the Boot ROM about our application
 #[link_section = ".start_block"]
 #[used]
+#[allow(unused_unsafe)] // addr_of! is safe since rust 1.82.0
 pub static START_IMAGE_DEF: hal::block::ImageDef =
     hal::block::ImageDef::secure_exe().with_offset(unsafe { core::ptr::addr_of!(start_to_end) });
 
 /// A second Block, and the end of the program in flash
 #[link_section = ".end_block"]
 #[used]
+#[allow(unused_unsafe)] // addr_of! is safe since rust 1.82.0
 pub static END_IMAGE_DEF: hal::block::Block<1> =
     // Put a placeholder item in the block.
     hal::block::Block::new([hal::block::item_ignored()])
