@@ -80,6 +80,7 @@ macro_rules! pin_func {
     ($($fn:ident $(as $alias:ident)?),*) => {
         $(paste! {
             /// Type-level `variant` for pin [`Function`].
+            #[derive(Debug)]
             pub struct [<Function $fn>](pub(super) ());
             impl Function for [<Function $fn>] {}
             impl func_sealed::Function for [<Function $fn>] {
@@ -106,6 +107,7 @@ pin_func!(Xip, Spi, Uart, I2c as I2C, Pwm, Pio0, Pio1, Clock, Usb, Null);
 //==============================================================================
 
 /// Type-level `variant` for pin [`Function`].
+#[derive(Debug)]
 pub struct FunctionSio<C>(PhantomData<C>);
 impl<C: SioConfig> Function for FunctionSio<C> {}
 impl<C: SioConfig> func_sealed::Function for FunctionSio<C> {
@@ -128,12 +130,14 @@ pub trait SioConfig {
 }
 
 /// Type-level `variant` for SIO configuration.
+#[derive(Debug)]
 pub enum SioInput {}
 impl SioConfig for SioInput {
     #[allow(missing_docs)]
     const DYN: DynSioConfig = DynSioConfig::Input;
 }
 /// Type-level `variant` for SIO configuration.
+#[derive(Debug)]
 pub enum SioOutput {}
 impl SioConfig for SioOutput {
     #[allow(missing_docs)]
