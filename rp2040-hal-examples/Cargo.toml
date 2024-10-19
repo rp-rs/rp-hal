@@ -42,3 +42,6 @@ static_cell = "2.1.0"
 
 [target.'cfg( target_arch = "arm" )'.dependencies]
 embassy-executor = {version = "0.5", features = ["arch-cortex-m", "executor-thread"]}
+
+[lints.clippy]
+too_long_first_doc_paragraph = "allow"

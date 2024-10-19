@@ -888,7 +888,6 @@ pub struct SliceDmaWriteCc<S: SliceId, M: ValidSliceMode<S>> {
 ///
 /// let dma_conf = double_buffer::Config::new((dma.ch0, dma.ch1), buf, dma_pwm.top);
 /// ```
-
 pub struct SliceDmaWriteTop<S: SliceId, M: ValidSliceMode<S>> {
     slice: PhantomData<S>,
     mode: PhantomData<M>,

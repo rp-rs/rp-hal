@@ -144,6 +144,7 @@ fn main() -> ! {
 }
 
 #[allow(non_snake_case)]
+#[allow(static_mut_refs)] // See https://github.com/rust-embedded/cortex-m/pull/561
 #[interrupt]
 fn RTC_IRQ() {
     // The `#[interrupt]` attribute covertly converts this to `&'static mut Option<LedAndRtc>`

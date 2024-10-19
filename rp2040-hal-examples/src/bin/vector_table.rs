@@ -17,6 +17,7 @@ use rp2040_hal as hal;
 
 // A shorter alias for the Peripheral Access Crate
 use hal::pac;
+use static_cell::ConstStaticCell;
 
 // Some traits we need
 use core::cell::RefCell;
@@ -29,7 +30,7 @@ use rp2040_hal::timer::Alarm;
 use rp2040_hal::vector_table::VectorTable;
 
 // Memory that will hold our vector table in RAM
-static mut RAM_VTABLE: VectorTable = VectorTable::new();
+static RAM_VTABLE: ConstStaticCell<VectorTable> = ConstStaticCell::new(VectorTable::new());
 
 // Give our LED and Alarm a type alias to make it easier to refer to them
 type LedAndAlarm = (
@@ -38,7 +39,7 @@ type LedAndAlarm = (
 );
 
 // Place our LED and Alarm type in a static variable, so we can access it from interrupts
-static mut LED_AND_ALARM: Mutex<RefCell<Option<LedAndAlarm>>> = Mutex::new(RefCell::new(None));
+static LED_AND_ALARM: Mutex<RefCell<Option<LedAndAlarm>>> = Mutex::new(RefCell::new(None));
 
 // Period that each of the alarms will be set for - 1 second and 300ms respectively
 const SLOW_BLINK_INTERVAL_US: MicrosDurationU32 = MicrosDurationU32::secs(1);
@@ -76,12 +77,12 @@ fn main() -> ! {
 
     // Need to make a reference to the Peripheral Base at this scope to avoid confusing the borrow checker
     let ppb = &mut pac.PPB;
-    unsafe {
-        // Copy the vector table that cortex_m_rt produced into the RAM vector table
-        RAM_VTABLE.init(ppb);
-        // Replace the function that is called on Alarm0 interrupts with a new one
-        RAM_VTABLE.register_handler(pac::Interrupt::TIMER_IRQ_0 as usize, timer_irq0_replacement);
-    }
+
+    let ram_vtable = RAM_VTABLE.take();
+    // Copy the vector table that cortex_m_rt produced into the RAM vector table
+    ram_vtable.init(ppb);
+    // Replace the function that is called on Alarm0 interrupts with a new one
+    ram_vtable.register_handler(pac::Interrupt::TIMER_IRQ_0 as usize, timer_irq0_replacement);
 
     // Configure the clocks
     let clocks = hal::clocks::init_clocks_and_plls(
@@ -117,9 +118,7 @@ fn main() -> ! {
         // Enable generating an interrupt on alarm
         alarm.enable_interrupt();
         // Move alarm into ALARM, so that it can be accessed from interrupts
-        unsafe {
-            LED_AND_ALARM.borrow(cs).replace(Some((led_pin, alarm)));
-        }
+        LED_AND_ALARM.borrow(cs).replace(Some((led_pin, alarm)));
     });
     // Unmask the timer0 IRQ so that it will generate an interrupt
     unsafe {
@@ -130,7 +129,7 @@ fn main() -> ! {
     delay.delay_ms(5000);
     unsafe {
         critical_section::with(|_| {
-            RAM_VTABLE.activate(ppb);
+            ram_vtable.activate(ppb);
         });
     }
 
@@ -146,7 +145,7 @@ fn main() -> ! {
 fn TIMER_IRQ_0() {
     critical_section::with(|cs| {
         // Temporarily take our LED_AND_ALARM
-        let ledalarm = unsafe { LED_AND_ALARM.borrow(cs).take() };
+        let ledalarm = LED_AND_ALARM.borrow(cs).take();
         if let Some((mut led, mut alarm)) = ledalarm {
             // Clear the alarm interrupt or this interrupt service routine will keep firing
             alarm.clear_interrupt();
@@ -155,11 +154,9 @@ fn TIMER_IRQ_0() {
             // Blink the LED so we know we hit this interrupt
             led.toggle().unwrap();
             // Return LED_AND_ALARM into our static variable
-            unsafe {
-                LED_AND_ALARM
-                    .borrow(cs)
-                    .replace_with(|_| Some((led, alarm)));
-            }
+            LED_AND_ALARM
+                .borrow(cs)
+                .replace_with(|_| Some((led, alarm)));
         }
     });
 }
@@ -167,7 +164,7 @@ fn TIMER_IRQ_0() {
 // This is the function we will use to replace TIMER_IRQ_0 in our RAM Vector Table
 extern "C" fn timer_irq0_replacement() {
     critical_section::with(|cs| {
-        let ledalarm = unsafe { LED_AND_ALARM.borrow(cs).take() };
+        let ledalarm = LED_AND_ALARM.borrow(cs).take();
         if let Some((mut led, mut alarm)) = ledalarm {
             // Clear the alarm interrupt or this interrupt service routine will keep firing
             alarm.clear_interrupt();
@@ -175,11 +172,9 @@ extern "C" fn timer_irq0_replacement() {
             let _ = alarm.schedule(FAST_BLINK_INTERVAL_US);
             led.toggle().unwrap();
             // Return LED_AND_ALARM into our static variable
-            unsafe {
-                LED_AND_ALARM
-                    .borrow(cs)
-                    .replace_with(|_| Some((led, alarm)));
-            }
+            LED_AND_ALARM
+                .borrow(cs)
+                .replace_with(|_| Some((led, alarm)));
         }
     });
 }

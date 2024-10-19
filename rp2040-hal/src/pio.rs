@@ -1243,7 +1243,7 @@ impl<'sm, P: PIOExt, SM: StateMachineIndex> Synchronize<'sm, (P, SM)> {
     }
 }
 
-impl<'sm, SM: ValidStateMachine> Drop for Synchronize<'sm, SM> {
+impl<SM: ValidStateMachine> Drop for Synchronize<'_, SM> {
     fn drop(&mut self) {
         // Restart the clocks of all state machines specified by the mask.
         // Bits 11:8 of CTRL contain CLKDIV_RESTART.
@@ -1666,13 +1666,13 @@ pub struct Interrupt<'a, P: PIOExt, const IRQ: usize> {
 }
 
 // Safety: `Interrupt` provides exclusive access to interrupt registers.
-unsafe impl<'a, P: PIOExt, const IRQ: usize> Send for Interrupt<'a, P, IRQ> {}
+unsafe impl<P: PIOExt, const IRQ: usize> Send for Interrupt<'_, P, IRQ> {}
 
 // Safety: `Interrupt` is marked Send so ensure all accesses remain atomic and no new concurrent
 // accesses are added.
 // `Interrupt` provides exclusive access to `irq_intf` to `irq_inte` for it's state machine, this
 // must remain true to satisfy Send.
-impl<'a, P: PIOExt, const IRQ: usize> Interrupt<'a, P, IRQ> {
+impl<P: PIOExt, const IRQ: usize> Interrupt<'_, P, IRQ> {
     /// Enable interrupts raised by state machines.
     ///
     /// The PIO peripheral has 4 outside visible interrupts that can be raised by the state machines. Note that this

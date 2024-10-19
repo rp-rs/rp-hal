@@ -128,8 +128,8 @@ where
         r
     }
 }
-impl<'periph, Periph, PFn, EnIrqFn, CancelFn, OutputTy> Drop
-    for CancellablePollFn<'periph, Periph, PFn, EnIrqFn, CancelFn, OutputTy>
+impl<Periph, PFn, EnIrqFn, CancelFn, OutputTy> Drop
+    for CancellablePollFn<'_, Periph, PFn, EnIrqFn, CancelFn, OutputTy>
 where
     Periph: sealed::Wakeable,
     CancelFn: FnMut(&mut Periph),

@@ -141,7 +141,7 @@ pub struct Core<'p> {
     )>,
 }
 
-impl<'p> Core<'p> {
+impl Core<'_> {
     /// Get the id of this core.
     pub fn id(&self) -> u8 {
         match self.inner {

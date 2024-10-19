@@ -105,6 +105,7 @@ fn main() -> ! {
     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
     let cores = mc.cores();
     let core1 = &mut cores[1];
+    #[allow(static_mut_refs)]
     core1
         .spawn(unsafe { &mut CORE1_STACK.mem }, move || {
             // Get the second core's copy of the `CorePeripherals`, which are per-core.
