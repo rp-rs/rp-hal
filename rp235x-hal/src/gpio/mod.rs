@@ -175,6 +175,7 @@ pub enum OutputOverride {
 
 /// Represents a pin, with a given ID (e.g. Gpio3), a given function (e.g. FunctionUart) and a given pull type
 /// (e.g. pull-down).
+#[derive(Debug)]
 pub struct Pin<I: PinId, F: func::Function, P: PullType> {
     id: I,
     function: F,
@@ -1115,6 +1116,7 @@ macro_rules! gpio {
     (struct: $bank:ident $prefix:ident $($PXi:ident, $id:expr, $func:ident, $pull_type:ident),*) => {
         paste::paste!{
                 /// Collection of all the individual [`Pin`]s
+                #[derive(Debug)]
                 pub struct Pins {
                     _io: [<IO_ $bank:upper>],
                     _pads: [<PADS_ $bank:upper>],

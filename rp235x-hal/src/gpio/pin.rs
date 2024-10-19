@@ -88,6 +88,7 @@ macro_rules! pin_ids {
         paste::paste!{
             $(
                 #[doc = "Type level variant for the pin `" $name "` in bank `" $prefix "`."]
+                #[derive(Debug)]
                 pub struct [<$prefix $name>] (pub(crate) ());
                 impl crate::typelevel::Sealed for [<$prefix $name>] {}
                 impl PinId for [<$prefix $name>] {

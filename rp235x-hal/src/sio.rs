@@ -40,16 +40,19 @@ pub enum CoreId {
 }
 
 /// Marker struct for ownership of SIO gpio bank0
+#[derive(Debug)]
 pub struct SioGpioBank0 {
     _private: (),
 }
 
 /// Marker struct for ownership of SIO FIFO
+#[derive(Debug)]
 pub struct SioFifo {
     _private: (),
 }
 
 /// Marker struct for ownership of SIO gpio qspi
+#[derive(Debug)]
 pub struct SioGpioQspi {
     _private: (),
 }
