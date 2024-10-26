@@ -5,6 +5,13 @@
 # writing programs for Raspberry Silicon microcontrollers.
 #
 
+# Add aliases for building and running for the ARM and RISC-V targets.
+[alias]
+build-arm = "build --target=thumbv8m.main-none-eabihf"
+run-arm = "run --target=thumbv8m.main-none-eabihf"
+build-riscv = "build --target=riscv32imac-unknown-none-elf"
+run-riscv = "run --target=riscv32imac-unknown-none-elf"
+
 [build]
 # Set the default target to match the Cortex-M33 in the RP2350
 target = "thumbv8m.main-none-eabihf"
