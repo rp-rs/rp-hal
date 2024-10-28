@@ -1940,6 +1940,8 @@ pub struct PIOBuilder<P> {
     autopull: bool,
     /// Enable autopush.
     autopush: bool,
+    /// Number of pins which are not masked to 0 when read by an `IN PINS`, `WAIT PIN` or `MOV x, PINS` instruction.
+    in_count: u8,
 
     /// Number of pins asserted by a `SET`.
     set_count: u8,
@@ -1995,6 +1997,7 @@ impl<P: PIOExt> PIOBuilder<P> {
             in_shiftdir: ShiftDirection::Right,
             autopull: false,
             autopush: false,
+            in_count: 0,
             set_count: 5,
             out_count: 0,
             in_base: 0,
@@ -2029,6 +2032,7 @@ impl<P: PIOExt> PIOBuilder<P> {
             in_shiftdir: ShiftDirection::Left,
             autopull: false,
             autopush: false,
+            in_count: 0,
             set_count: 5,
             out_count: 0,
             in_base: 0,
@@ -2157,6 +2161,17 @@ impl<P: PIOExt> PIOBuilder<P> {
         self
     }
 
+    /// Set the number of pins which are not masked to 0 when read by an `IN PINS`, `WAIT PIN` or `MOV x, PINS` instruction.
+    ///
+    /// For example, an IN_COUNT of 5 means that the 5 LSBs of the IN pin group are
+    /// visible (bits 4:0), but the remaining 27 MSBs are masked to 0. A count of 32 is
+    /// encoded with a field value of 0, so the default behaviour is to not perform any
+    /// masking.
+    pub fn in_count(mut self, count: u8) -> Self {
+        self.in_count = count;
+        self
+    }
+
     /// Set the number of bits pushed into ISR before autopush or conditional push will take place.
     pub fn push_threshold(mut self, threshold: u8) -> Self {
         self.push_threshold = threshold;
@@ -2262,7 +2277,9 @@ impl<P: PIOExt> PIOBuilder<P> {
                 w.in_shiftdir().bit(self.in_shiftdir.bit());
 
                 w.autopull().bit(self.autopull);
-                w.autopush().bit(self.autopush)
+                w.autopush().bit(self.autopush);
+
+                w.in_count().bits(self.in_count)
             });
 
             sm.sm().sm_pinctrl().write(|w| {
