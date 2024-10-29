@@ -8,28 +8,16 @@
 # Add aliases for building and running for the ARM and RISC-V targets.
 [alias]
 
-# Build arm or riscv using defaults or other options
+# Build arm or riscv
 bld-arm = "build --target=thumbv8m.main-none-eabihf"
 bld-riscv = "build --target=riscv32imac-unknown-none-elf"
 
-# Run arm or riscv using defaults or other options
+# Run arm or riscv
 run-arm = "run --target=thumbv8m.main-none-eabihf"
 run-riscv = "run --target=riscv32imac-unknown-none-elf"
 
-# Build dev and release for arm
-bda = "bld-arm"
-bra = "bld-arm --release"
-
-# Build dev and release for risc-v
-bdr = "bld-riscv"
-brr = "bld-riscv --release"
-
-# Run dev and release for arm
-rda = "run-arm"
+# Run release for arm or riscv, add other cumstom aliases as desired.
 rra = "run-arm --release"
-
-# Run dev and release for risc-v
-rdr = "run-riscv"
 rrr = "run-riscv --release"
 
 [build]
