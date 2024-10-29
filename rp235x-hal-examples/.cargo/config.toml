@@ -9,16 +9,16 @@
 [alias]
 
 # Build arm or riscv
-bld-arm = "build --target=thumbv8m.main-none-eabihf"
-bld-riscv = "build --target=riscv32imac-unknown-none-elf"
+build-arm = "build --target=thumbv8m.main-none-eabihf"
+build-riscv = "build --target=riscv32imac-unknown-none-elf"
 
 # Run arm or riscv
 run-arm = "run --target=thumbv8m.main-none-eabihf"
 run-riscv = "run --target=riscv32imac-unknown-none-elf"
 
-# Run release for arm or riscv, add other cumstom aliases as desired.
-rra = "run-arm --release"
-rrr = "run-riscv --release"
+# Add other custom aliases here, `rrr-blinky` which
+# runs in release mode a riscv version of blinky.
+rrr-blinky = "run-riscv --release --bin=blinky"
 
 [build]
 # Set the default target to match the Cortex-M33 in the RP2350
