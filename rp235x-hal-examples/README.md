@@ -215,7 +215,7 @@ Verifying Flash:    [==============================]  100%
 The device was rebooted to start the application.
 ```
 
-The LED should be blinking and looking at `blinky`
+The LED should be blinking as we are now running this binary:
 
 ```console
 $ file ./target/riscv32imac-unknown-none-elf/release/blinky
