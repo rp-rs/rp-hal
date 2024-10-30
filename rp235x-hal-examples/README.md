@@ -124,7 +124,7 @@ You can also specify the Arm mode target directly by using
 `--target thumbv8m.main-none-eabihf` instead of `--target riscv32imac-unknown-none-elf`.
 
 To build, flash and start the application on the RP235x
-you use `cargo run` with one of the following commands:
+you use `cargo run` with one of the following commands. Note: be sure the RP235x is in BOOTSEL mode before using the `run` command because we use `picotool` to flash and run the binary:
 
 ```console
 $ cargo run --target thumbv8m.main-none-eabihf --bin blinky
@@ -168,7 +168,7 @@ haven't ported to work in RISC-V mode yet.
 
 Here is an example using the `blinky` example in RISC-V mode. We'll build and
 run it first using the default dev profile, emulating the development cycle **Note:** be sure
-the pico 2 is in BOOTSEL mode before the `run` command:
+the RP235x is in BOOTSEL mode before using the `run` command because we use `picotool` to flash and run the binary:
 
 ```console
 $ cargo build --bin blinky --target=riscv32imac-unknown-none-elf
@@ -195,7 +195,7 @@ $ file ./target/riscv32imac-unknown-none-elf/debug/blinky
 ```
 
 Next we'll build and run it using the release profile for "final" testing,
-again be sure the pico 2 is in BOOTSEL mode:
+again be sure the RP235x is in BOOTSEL mode:
 
 ```console
 $ cargo run --bin blinky --target=riscv32imac-unknown-none-elf --release
