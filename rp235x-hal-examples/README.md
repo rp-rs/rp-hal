@@ -99,7 +99,7 @@ $ file ./target/thumbv8m.main-none-eabihf/debug/blinky
 ./target/thumbv8m.main-none-eabihf/debug/blinky: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), statically linked, with debug_info, not stripped
 ```
 
-If you want to build the RISC-V mode you specify the target directly to override the default:
+If you want to build a binary that runs in RISC-V mode, then you must specify the RISC-V target to override the default:
 
 ```console
 $ cargo build --target=riscv32imac-unknown-none-elf --bin blinky
