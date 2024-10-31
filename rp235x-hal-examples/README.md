@@ -56,44 +56,128 @@ https://github.com/rp-rs/rp-hal-boards/ for more details.
 <!-- GETTING STARTED -->
 ## Getting Started
 
-To build all the examples, first grab a copy of the source code:
+To build the examples, first grab a copy of the source code:
 
 ```console
 $ git clone https://github.com/rp-rs/rp-hal.git
 ```
 
-Then use `rustup` to grab the Rust Standard Library for the appropriate targets. There are two targets because the RP2350 has both an Arm mode and a RISC-V mode.
+Then use `rustup` to grab the Rust Standard Library for the appropriate targets.
+RP2350 has two possible targets: `thumbv8m.main-none-eabihf` for the Arm mode, and
+`riscv32imac-unknown-none-elf` for the RISC-V mode.
 
 ```console
 $ rustup target add thumbv8m.main-none-eabihf
 $ rustup target add riscv32imac-unknown-none-elf
 ```
 
-To build all the examples for Arm mode, run:
+**Note: all examples assume the current directory is `<repo root>/rp235x-hal-examples`.**
+```
+cd rp235x-hal-examples
+```
+
+The most basic method is to use `cargo build` with the `--bin` flag to specify the example you want to
+build. For example, to build the `blinky` example:
 
 ```console
-$ cargo build --target=thumbv8m.main-none-eabihf
-   Compiling rp235x-hal-examples v0.1.0 (/home/user/rp-hal/rp235x-hal-examples)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.53s
 $ cargo build --bin blinky
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.06s
+   Compiling proc-macro2 v1.0.89
+   Compiling unicode-ident v1.0.13
+   Compiling syn v1.0.109
+...
+   Compiling pio-parser v0.2.2
+   Compiling rp235x-hal v0.2.0
+   Compiling pio-proc v0.2.2
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 14.97s
+```
+
+This builds the default target, which is Arm mode and the ELF file
+is located at `./target/thumbv8m.main-none-eabihf/debug/blinky`:
+
+```console
 $ file ./target/thumbv8m.main-none-eabihf/debug/blinky
 ./target/thumbv8m.main-none-eabihf/debug/blinky: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), statically linked, with debug_info, not stripped
 ```
 
-You can also 'run' an example, which thanks to our supplied
-[`.cargo/config.toml`](./.cargo/config.toml) will invoke Raspberry Pi's
-`picotool` to copy it to an RP235x in USB Bootloader mode. You should install
-that if you don't have it already, from
-<https://github.com/raspberrypi/pico-sdk-tools/releases>.
+If you want to build a binary that runs in RISC-V mode, then you must specify the RISC-V target to override the default:
 
 ```console
-$ cargo run --bin blinky --target=thumbv8m.main-none-eabihf
-   Compiling rp235x-hal v0.10.0 (/home/user/rp-hal/rp235x-hal)
-   Compiling rp235x-hal-examples v0.1.0 (/home/user/rp-hal/rp235x-hal-examples)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.62s
-     Running `picotool load -u -v -x -t elf target/thumbv8m.main-none-eabihf/debug/blinky`
-Family id 'rp2350-arm-s' can be downloaded in absolute space:
+$ cargo build --target=riscv32imac-unknown-none-elf --bin blinky
+   Compiling nb v1.1.0
+   Compiling byteorder v1.5.0
+   Compiling stable_deref_trait v1.2.0
+..
+   Compiling futures v0.3.31
+   Compiling frunk v0.4.3
+   Compiling rp235x-hal v0.2.0
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.23s```
+```
+
+And we see that the RISC-V mode ELF file is now present at `./target/riscv32imac-unknown-none-elf/debug/blinky`:
+
+```console
+$ file ./target/riscv32imac-unknown-none-elf/debug/blinky
+./target/riscv32imac-unknown-none-elf/debug/blinky: ELF 32-bit LSB executable, UCB RISC-V, RVC, soft-float ABI, version 1 (SYSV), statically linked, with debug_info, not stripped
+```
+
+You can also specify the Arm mode target directly by using
+`--target thumbv8m.main-none-eabihf` instead of `--target riscv32imac-unknown-none-elf`.
+
+To build, flash and start the application on the RP235x
+you use `cargo run` with one of the following commands. Note: be sure the RP235x is in BOOTSEL mode before using the `run` command because we use `picotool` to flash and run the binary:
+
+```console
+$ cargo run --target thumbv8m.main-none-eabihf --bin blinky
+$ cargo run --target riscv32imac-unknown-none-elf --bin blinky
+```
+
+For the release profile build pass `--release` to the `cargo build`
+or `cargo run` commands. This will build the example with optimizations enabled:
+
+```console
+$ cargo run --target thumbv8m.main-none-eabihf --release --bin blinky
+$ cargo run --target riscv32imac-unknown-none-elf --release --bin blinky
+```
+
+For the Arm mode target all of the examples are built if no `--bin` is specified:
+
+```console
+$ cargo clean
+     Removed 1488 files, 398.6MiB total
+$ cargo build --target thumbv8m.main-none-eabihf
+   Compiling proc-macro2 v1.0.89
+   Compiling unicode-ident v1.0.13
+..
+   Compiling rp235x-hal v0.2.0
+   Compiling pio-proc v0.2.2
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 16.08s
+$ find target/thumbv8m.main-none-eabihf/debug/ -maxdepth 1 -type f -executable | sort
+target/thumbv8m.main-none-eabihf/debug/adc
+target/thumbv8m.main-none-eabihf/debug/adc_fifo_dma
+..
+target/thumbv8m.main-none-eabihf/debug/blinky
+..
+target/thumbv8m.main-none-eabihf/debug/vector_table
+target/thumbv8m.main-none-eabihf/debug/watchdog
+```
+
+For the RISC-V mode it is currently possible to build only *some* of the examples. See
+[`riscv_examples.txt`](./riscv_examples.txt) for a list of known working examples.
+The missing ones probably rely on interrupts, or some other thing we
+haven't ported to work in RISC-V mode yet.
+
+Here is an example using the `blinky` example in RISC-V mode. We'll build and
+run it first using the default dev profile, emulating the development cycle **Note:** be sure
+the RP235x is in BOOTSEL mode before using the `run` command because we use `picotool` to flash and run the binary:
+
+```console
+$ cargo build --bin blinky --target=riscv32imac-unknown-none-elf
+   Compiling rp235x-hal-examples v0.1.0
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.15s
+$ cargo run --bin blinky --target=riscv32imac-unknown-none-elf
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.07s
+     Running `picotool load -u -v -x -t elf target/riscv32imac-unknown-none-elf/debug/blinky`
+Family id 'rp2350-riscv' can be downloaded in absolute space:
   00000000->02000000
 Loading into Flash: [==============================]  100%
 Verifying Flash:    [==============================]  100%
@@ -102,19 +186,78 @@ Verifying Flash:    [==============================]  100%
 The device was rebooted to start the application.
 ```
 
-It is currently possible to build *some* of the examples in RISC-V mode. See
-[`riscv_examples.txt`](./riscv_examples.txt) for a list of the examples known to
-work. The missing ones probably rely on interrupts, or some other thing we
-haven't ported to work in RISC-V mode yet.
+At this point the development version is running on the RP2350 and the LED is blinking.
+When we look at `blinky` using `file` we see we have generated a RISC-V mode ELF file:
 
 ```console
-$ cargo build --bin blinky --target=riscv32imac-unknown-none-elf
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.06s
 $ file ./target/riscv32imac-unknown-none-elf/debug/blinky
 ./target/riscv32imac-unknown-none-elf/debug/blinky: ELF 32-bit LSB executable, UCB RISC-V, RVC, soft-float ABI, version 1 (SYSV), statically linked, with debug_info, not stripped
-$ cargo run --bin blinky --target=riscv32imac-unknown-none-elf
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.06s
+```
+
+Next we'll build and run it using the release profile for "final" testing,
+again be sure the RP235x is in BOOTSEL mode:
+
+```console
+$ cargo run --bin blinky --target=riscv32imac-unknown-none-elf --release
+   Compiling proc-macro2 v1.0.89
+   Compiling unicode-ident v1.0.13
+..
+   Compiling pio-parser v0.2.2
+   Compiling pio-proc v0.2.2
+    Finished `release` profile [optimized] target(s) in 17.05s
+     Running `picotool load -u -v -x -t elf target/riscv32imac-unknown-none-elf/release/blinky`
+Family id 'rp2350-riscv' can be downloaded in absolute space:
+  00000000->02000000
+Loading into Flash: [==============================]  100%
+Verifying Flash:    [==============================]  100%
+  OK
+
+The device was rebooted to start the application.
+```
+
+The LED should be blinking as we are now running this binary:
+
+```console
+$ file ./target/riscv32imac-unknown-none-elf/release/blinky
+./target/riscv32imac-unknown-none-elf/release/blinky: ELF 32-bit LSB executable, UCB RISC-V, RVC, soft-float ABI, version 1 (SYSV), statically linked, not stripped
+```
+
+The above commands work well, but the commands are somewhat verbose.
+To make building and running commands more succinct an `[alias]` section
+has been added to [.cargo/config.toml](../.cargo/config.toml) that define:
+| Command Alias   | Description |
+|---|---|
+| build-arm   | build for ARM |
+| build-riscv | build for RISC-V |
+| run-arm   | run on ARM |
+| run-riscv | run on RISC-V |
+| rrr-blinky | run release on RISC-V blinky |
+
+When using these aliases your build and run commands are much shorter.
+Below we see the development cycle using `build-riscv` and `run-riscv`:
+
+```console
+$ cargo build-riscv --bin blinky
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+$ cargo run-riscv --bin blinky
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
      Running `picotool load -u -v -x -t elf target/riscv32imac-unknown-none-elf/debug/blinky`
+Family id 'rp2350-riscv' can be downloaded in absolute space:
+  00000000->02000000
+Loading into Flash: [==============================]  100%
+Verifying Flash:    [==============================]  100%
+  OK
+
+The device was rebooted to start the application.
+```
+
+And for the `run` command in `--release` profile and a RISC-V mode we added the `rrr-blinky` alias
+as an example of customization. You might want to add others as you see fit:
+
+```console
+$ cargo rrr-blinky
+    Finished `release` profile [optimized] target(s) in 0.05s
+     Running `picotool load -u -v -x -t elf target/riscv32imac-unknown-none-elf/release/blinky`
 Family id 'rp2350-riscv' can be downloaded in absolute space:
   00000000->02000000
 Loading into Flash: [==============================]  100%
