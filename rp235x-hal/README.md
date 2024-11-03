@@ -70,6 +70,16 @@ To include this crate in your project, amend your `Cargo.toml` file to include
 rp235x-hal = "*"
 ```
 
+Or to include this version specifically:
+
+```toml
+rp235x-hal = "0.3.0"
+```
+
+Then, in your Rust code, include the crate like so:
+
+```rust
+
 To obtain a copy of the source code (e.g. if you want to propose a bug-fix or
 new feature, or simply to study the code), run:
 
