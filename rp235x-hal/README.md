@@ -76,10 +76,6 @@ Or to include this version specifically:
 rp235x-hal = "0.3.0"
 ```
 
-Then, in your Rust code, include the crate like so:
-
-```rust
-
 To obtain a copy of the source code (e.g. if you want to propose a bug-fix or
 new feature, or simply to study the code), run:
 

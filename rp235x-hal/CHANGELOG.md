@@ -11,7 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Release rp235x-hal v0.3.0
 - feat: add support for PIO `in_count`
 - implement Debug support for the GPIO structures (RP235x)
 - Fix clippy warnings reported by rust beta
