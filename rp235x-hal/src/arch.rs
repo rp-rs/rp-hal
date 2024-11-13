@@ -473,16 +473,15 @@ mod inner {
 
     /// Our default IRQ handler.
     ///
-    /// Just panics.
-    ///
-    /// # Safety
-    ///
-    /// Do not call this function - it is called automatically when our
-    /// `MachineExternal` interrupt handler can't find anything better to call.
+    /// Just spins.
     #[no_mangle]
     #[allow(non_snake_case)]
-    unsafe fn DefaultIrqHandler() {
-        panic!();
+    fn DefaultIrqHandler() {
+        // Spin, so you can attach a debugger if you get stuck here.
+        // This is the also the default functionality used in cortex-m-rt.
+        loop {
+            crate::arch::nop();
+        }
     }
 }
 
