@@ -168,6 +168,7 @@ pub(crate) fn set_function<P: PinId>(pin: &P, function: DynFunction) {
         DynFunction::Pio1 => FUNCSEL_A::PIO1,
         DynFunction::Pio2 => FUNCSEL_A::PIO2,
         DynFunction::Clock => FUNCSEL_A::GPCK,
+        DynFunction::XipCs1 => FUNCSEL_A::GPCK,
         DynFunction::Usb => FUNCSEL_A::USB,
         DynFunction::UartAux => FUNCSEL_A::UART_AUX,
         DynFunction::Null => FUNCSEL_A::NULL,
