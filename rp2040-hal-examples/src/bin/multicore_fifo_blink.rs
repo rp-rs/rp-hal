@@ -53,7 +53,7 @@ const CORE1_TASK_COMPLETE: u32 = 0xEE;
 /// So instead, core1.spawn takes a [usize] which gets used for the stack.
 /// NOTE: We use the `Stack` struct here to ensure that it has 32-byte alignment, which allows
 /// the stack guard to take up the least amount of usable RAM.
-static mut CORE1_STACK: Stack<4096> = Stack::new();
+static CORE1_STACK: Stack<4096> = Stack::new();
 
 fn core1_task(sys_freq: u32) -> ! {
     let mut pac = unsafe { pac::Peripherals::steal() };
@@ -116,9 +116,7 @@ fn main() -> ! {
     let cores = mc.cores();
     let core1 = &mut cores[1];
     #[allow(static_mut_refs)]
-    let _test = core1.spawn(unsafe { &mut CORE1_STACK.mem }, move || {
-        core1_task(sys_freq)
-    });
+    let _test = core1.spawn(CORE1_STACK.take().unwrap(), move || core1_task(sys_freq));
 
     /// How much we adjust the LED period every cycle
     const LED_PERIOD_INCREMENT: i32 = 2;
