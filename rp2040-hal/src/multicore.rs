@@ -10,7 +10,7 @@
 //! ```no_run
 //! use rp2040_hal::{pac, gpio::Pins, sio::Sio, multicore::{Multicore, Stack}};
 //!
-//! static mut CORE1_STACK: Stack<4096> = Stack::new();
+//! static CORE1_STACK: Stack<4096> = Stack::new();
 //!
 //! fn core1_task() {
 //!     loop {}
@@ -23,7 +23,7 @@
 //!     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
 //!     let cores = mc.cores();
 //!     let core1 = &mut cores[1];
-//!     let _test = core1.spawn(unsafe { &mut CORE1_STACK.mem }, core1_task);
+//!     let _test = core1.spawn(CORE1_STACK.take().unwrap(), core1_task);
 //!     // The rest of your application below this line
 //!     # loop {}
 //! }
