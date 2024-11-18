@@ -145,7 +145,7 @@ pub enum BootRomApiErrorCode {
     /// A required lock is not owned. See Section 5.4.4.
     LockRequired = -19,
     /// An unknown error
-    Unknown = -1
+    Unknown = -1,
 }
 
 impl From<i32> for BootRomApiErrorCode {
@@ -153,7 +153,7 @@ impl From<i32> for BootRomApiErrorCode {
         match value {
             -4 => Self::NotPermitted,
             -5 => Self::InvalidArg,
-            -19..=-10 => unsafe { core::mem::transmute(value) },
+            -19..=-10 => unsafe { core::mem::transmute::<i32, BootRomApiErrorCode>(value) },
             _ => Self::Unknown,
         }
     }
@@ -180,7 +180,9 @@ mod sys_info_api {
         const fn buffer_length(&self) -> usize {
             match self {
                 GetSysInfoFlag::ChipInfo => 4,
-                GetSysInfoFlag::Critical | GetSysInfoFlag::CpuInfo | GetSysInfoFlag::FlashDevInfo  => 2,
+                GetSysInfoFlag::Critical
+                | GetSysInfoFlag::CpuInfo
+                | GetSysInfoFlag::FlashDevInfo => 2,
                 GetSysInfoFlag::BootRandom | GetSysInfoFlag::BootInfo => 5,
             }
         }
@@ -247,15 +249,14 @@ mod sys_info_api {
     #[repr(u32)]
     pub enum CpuInfo {
         Arm,
-        Risc
+        Risc,
     }
 
     impl From<[u32; 1]> for CpuInfo {
         fn from(value: [u32; 1]) -> CpuInfo {
             if value[0] == 0 {
                 CpuInfo::Arm
-            }
-            else {
+            } else {
                 CpuInfo::Risc
             }
         }
@@ -278,7 +279,7 @@ mod sys_info_api {
         M4,
         M8,
         M16,
-        Unknown
+        Unknown,
     }
 
     impl From<u32> for FlashDevInfoSize {
@@ -288,7 +289,7 @@ mod sys_info_api {
             }
 
             unsafe { core::mem::transmute::<u32, FlashDevInfoSize>(value) }
-        }        
+        }
     }
 
     impl FlashDevInfo {
@@ -297,7 +298,7 @@ mod sys_info_api {
         }
 
         pub fn d8h_erase_supported(&self) -> bool {
-            (self.0 & 0x80) == 1
+            (self.0 & 0x80) != 0
         }
 
         pub fn cs0_size(&self) -> FlashDevInfoSize {
@@ -322,7 +323,7 @@ mod sys_info_api {
             let mut result = 0;
             for word in value {
                 result = (result << 32) | u128::from(word);
-            };
+            }
             BootRandom(result)
         }
     }
@@ -336,7 +337,7 @@ mod sys_info_api {
         // could probably make a nicer api for tbyb, but documentation is eh so im holding off for now
         tbyb_update_info: u8,
         boot_diagnostic: u32,
-        boot_params: [u32; 2]
+        boot_params: [u32; 2],
     }
 
     pub enum PartitionIndex {
@@ -345,12 +346,12 @@ mod sys_info_api {
         Slot0,
         Slot1,
         Image,
-        Unknown
+        Unknown,
     }
 
     impl From<i8> for PartitionIndex {
         fn from(value: i8) -> Self {
-            if value < -4 || value > 15 {
+            if !(-4..=15).contains(&value) {
                 return Self::Unknown;
             }
 
@@ -359,7 +360,7 @@ mod sys_info_api {
                 -2 => Self::Slot0,
                 -3 => Self::Slot1,
                 -4 => Self::Image,
-                _ => Self::Partition(value as u8)
+                _ => Self::Partition(value as u8),
             }
         }
     }
@@ -370,7 +371,7 @@ mod sys_info_api {
         RamImage,
         FlashUpdate,
         PcSp,
-        Unknown
+        Unknown,
     }
 
     impl From<u8> for BootType {
@@ -381,7 +382,7 @@ mod sys_info_api {
                 3 => Self::RamImage,
                 4 => Self::FlashUpdate,
                 8..=15 => Self::PcSp,
-                _ => Self::Unknown
+                _ => Self::Unknown,
             }
         }
     }
@@ -408,7 +409,7 @@ mod sys_info_api {
         /// There was a choice of partition/slot and this one was considered. The first slot/partition
         /// is chosen based on a number of factors. If the first choice fails verification, then the
         /// other choice will be considered.
-        /// 
+        ///
         /// * the version of the PARTITION_TABLE/IMAGE_DEF present in the slot/partition respectively.
         /// * whether the slot/partition is the "update region" as per a FLASH_UPDATE reboot.
         /// * whether an IMAGE_DEF is marked as "explicit buy"
@@ -437,16 +438,16 @@ mod sys_info_api {
         /// whether an IMAGE_DEF from this region was launched
         ImageLaunched = 0x4000,
         /// whether the IMAGE_DEF failed final checks before launching; these checks include
-        /// 
+        ///
         /// * verification failed (if it hasn’t been verified earlier in the CONSIDERED phase).
         /// * a problem occurred setting up any rolling window.
         /// * the rollback version could not be set in OTP (if required in Secure mode)
         /// * the image was marked as Non-secure
         /// * the image was marked as "explicit buy", and this was a flash boot, but then region was
-        /// not the "flash update" region
+        ///   not the "flash update" region
         /// * the image has the wrong architecture, but architecture auto-switch is disabled (or the
-        /// correct architecture is disabled)
-        ImageConditionFailure = 0x8000
+        ///   correct architecture is disabled)
+        ImageConditionFailure = 0x8000,
     }
 
     impl From<[u32; 4]> for BootInfo {
@@ -467,7 +468,7 @@ mod sys_info_api {
 
     impl BootInfo {
         fn check_flag(diagnostics: u16, flag: BootDiagnosticFlags) -> bool {
-            (diagnostics & flag as u16) > 0
+            (diagnostics & flag as u16) != 0
         }
 
         pub fn check_section_a_flag(&self, flag: BootDiagnosticFlags) -> bool {
@@ -481,11 +482,11 @@ mod sys_info_api {
 
     #[macro_export]
     /// Generates a function with the following signature:
-    /// 
+    ///
     /// ```rs
     /// pub fn $function_name() -> Result<Option<$ok_ret_type>, BootRomApiErrorCode>
     /// ```
-    /// 
+    ///
     /// Which safely calls [`get_sys_info`](super::get_sys_info()) using the flag provided via
     /// the `flag` argument. `flag` is an expression that must resolve to a const variant of
     /// [`GetSysInfoFlag`]
@@ -495,9 +496,8 @@ mod sys_info_api {
                 const FLAG: GetSysInfoFlag = $flag;
                 const BUFFER_LEN: usize = FLAG.buffer_length();
                 let mut buffer = [0u32; FLAG.buffer_length()];
-                let result = unsafe{super::get_sys_info(
-                    buffer.as_mut_ptr(), buffer.len(), FLAG as u32
-                )};
+                let result =
+                    unsafe { super::get_sys_info(buffer.as_mut_ptr(), buffer.len(), FLAG as u32) };
 
                 if result < 0 {
                     return Err(BootRomApiErrorCode::from(result));
@@ -505,21 +505,25 @@ mod sys_info_api {
                 // The operation returned successfully but the flag wasn't supported
                 // for one reason or another
                 else if buffer[0] == 0 {
-                    return Ok(None)
+                    return Ok(None);
                 }
 
                 Ok(Some(<$ok_ret_type>::from(
-                    TryInto::<[u32; BUFFER_LEN-1]>::try_into(&buffer[1..]).unwrap()
+                    TryInto::<[u32; BUFFER_LEN - 1]>::try_into(&buffer[1..]).unwrap(),
                 )))
             }
-        }
+        };
     }
 
     /// Get the unique identifier for the chip
     declare_get_sys_info_function!(chip_info, ChipInfo, GetSysInfoFlag::ChipInfo);
 
     /// Get the value of the OTP critical register
-    declare_get_sys_info_function!(otp_critical_register, OtpCriticalReg, GetSysInfoFlag::Critical);
+    declare_get_sys_info_function!(
+        otp_critical_register,
+        OtpCriticalReg,
+        GetSysInfoFlag::Critical
+    );
 
     /// Get the current running CPU's info
     declare_get_sys_info_function!(cpu_info, CpuInfo, GetSysInfoFlag::CpuInfo);
