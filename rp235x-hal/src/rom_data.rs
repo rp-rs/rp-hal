@@ -116,8 +116,8 @@ pub enum BootRomApiErrorCode {
     /// The operation was disallowed by a security constraint
     NotPermitted = -4,
     /// One or more parameters passed to the function is outside the range of
-    /// supported values; BOOTROM_ERROR_INVALID_ADDRESS and
-    /// BOOTROM_ERROR_BAD_ALIGNMENT are more specific errors.
+    /// supported values; [`BootRomApiErrorCode::InvalidAddress`] and
+    /// [`BootRomApiErrorCode::BadAlignment`] are more specific errors.
     InvalidArg = -5,
     /// An address argument was out-of-bounds or was determined to be an address
     /// that the caller may not access
@@ -400,9 +400,10 @@ mod sys_info_api {
         /// be executable
         ValidImageDef = 0x0008,
         /// Whether a partition table is present. This partition table must have a correct structure
-        /// formed if VALID_BLOCK_LOOP is set. If the partition table turns out to be invalid, then
-        /// INVALID_BLOCK_LOOP is set too (thus both VALID_BLOCK_LOOP and INVALID_BLOCK_LOOP will
-        /// both be set)
+        /// formed if [`BootDiagnosticFlags::ValidBlockLoop`] is set. If the partition table turns
+        /// out to be invalid, then [`BootDiagnosticFlags::InvalidBlockLoop`] is set too (thus both
+        /// [`BootDiagnosticFlags::ValidBlockLoop`] and [`BootDiagnosticFlags::InvalidBlockLoop`]
+        /// will both be set)
         HasPartitionTable = 0x0010,
         /// There was a choice of partition/slot and this one was considered. The first slot/partition
         /// is chosen based on a number of factors. If the first choice fails verification, then the
@@ -418,7 +419,7 @@ mod sys_info_api {
         /// PARTITION_TABLE is signed with a key matching one of the four stored in OTP
         PartitionTableMatchingKeyForVerify = 0x0080,
         /// set if a hash value check could be performed. In the case a signature is required, this
-        /// value is identical to PARTITION_TABLE_MATCHING_KEY_FOR_VERIFY
+        /// value is identical to [`BootDiagnosticFlags::PartitionTableMatchingKeyForVerify`]
         PartitionTableHashForVerify = 0x0100,
         /// whether the PARTITION_TABLE passed verification (signature/hash if present/required)
         PartitionTableVerifiedOk = 0x0200,
@@ -426,7 +427,7 @@ mod sys_info_api {
         /// IMAGE_DEF is signed with a key matching one of the four stored in OTP
         ImageDefMatchingKeyForVerify = 0x0400,
         /// set if a hash value check could be performed. In the case a signature is required, this
-        /// value is identical to IMAGE_DEF_MATCHING_KEY_FOR_VERIFY
+        /// value is identical to [`BootDiagnosticFlags::ImageDefMatchingKeyForVerify`]
         ImageDefHashForVerify = 0x0800,
         /// whether the PARTITION_TABLE passed verification (signature/hash if present/required) and
         /// any LOAD_MAP is valid
