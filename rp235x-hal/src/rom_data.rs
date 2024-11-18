@@ -144,6 +144,8 @@ pub enum BootRomApiErrorCode {
     UnsupportedModification = -18,
     /// A required lock is not owned. See Section 5.4.4.
     LockRequired = -19,
+    /// An unknown error
+    Unknown = -1
 }
 
 impl From<i32> for BootRomApiErrorCode {
@@ -152,7 +154,7 @@ impl From<i32> for BootRomApiErrorCode {
             -4 => Self::NotPermitted,
             -5 => Self::InvalidArg,
             -19..=-10 => unsafe { core::mem::transmute(value) },
-            _ => panic!("Attempted to convert an i32 to BootRomApiErrorCode with an invalid value"),
+            _ => Self::Unknown,
         }
     }
 }
@@ -275,17 +277,18 @@ mod sys_info_api {
         M2,
         M4,
         M8,
-        M16
+        M16,
+        Unknown
     }
 
     impl From<u32> for FlashDevInfoSize {
         fn from(value: u32) -> Self {
             if value > 0xc {
-                panic!("FLASH_DEVINFO's cs0_size contained an unknown value greater than 0xc");
+                return Self::Unknown;
             }
 
             unsafe { core::mem::transmute::<u32, FlashDevInfoSize>(value) }
-        }
+        }        
     }
 
     impl FlashDevInfo {
@@ -324,13 +327,63 @@ mod sys_info_api {
         }
     }
 
+    // based on https://github.com/raspberrypi/pico-sdk/blob/master/src/rp2_common/pico_bootrom/include/pico/bootrom.h
     pub struct BootInfo {
-        partition_index: i8,
-        boot_type: u8,
+        diagnostic_partition: PartitionIndex,
+        boot_type: BootType,
+        chained: bool,
         partition: i8,
+        // could probably make a nicer api for tbyb, but documentation is eh so im holding off for now
         tbyb_update_info: u8,
         boot_diagnostic: u32,
         boot_params: [u32; 2]
+    }
+
+    pub enum PartitionIndex {
+        Partition(u8),
+        None,
+        Slot0,
+        Slot1,
+        Image,
+        Unknown
+    }
+
+    impl From<i8> for PartitionIndex {
+        fn from(value: i8) -> Self {
+            if value < -4 || value > 15 {
+                return Self::Unknown;
+            }
+
+            match value {
+                -1 => Self::None,
+                -2 => Self::Slot0,
+                -3 => Self::Slot1,
+                -4 => Self::Image,
+                _ => Self::Partition(value as u8)
+            }
+        }
+    }
+
+    pub enum BootType {
+        Normal,
+        BootSel,
+        RamImage,
+        FlashUpdate,
+        PcSp,
+        Unknown
+    }
+
+    impl From<u8> for BootType {
+        fn from(value: u8) -> Self {
+            match value {
+                0 => Self::Normal,
+                2 => Self::BootSel,
+                3 => Self::RamImage,
+                4 => Self::FlashUpdate,
+                8..=15 => Self::PcSp,
+                _ => Self::Unknown
+            }
+        }
     }
 
     #[repr(u16)]
@@ -400,8 +453,9 @@ mod sys_info_api {
             let word0 = value[0];
 
             BootInfo {
-                partition_index: word0 as _,
-                boot_type: (word0 >> 8) as _,
+                diagnostic_partition: PartitionIndex::from((word0 & 0xFF) as i8),
+                boot_type: BootType::from((word0 >> 8) as u8),
+                chained: (word0 >> 8) & 0x80 > 0,
                 partition: (word0 >> 16) as _,
                 tbyb_update_info: (word0 >> 24) as _,
                 boot_diagnostic: value[1],
