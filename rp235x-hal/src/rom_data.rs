@@ -109,6 +109,376 @@ pub fn rom_data_lookup(tag: RomFnTableCode, mask: u32) -> usize {
     }
 }
 
+/// bootrom API function return codes as defined by section 5.4.3 in the rp2350 data sheet
+/// See: https://datasheets.raspberrypi.com/rp2350/rp2350-datasheet.pdf
+#[repr(i32)]
+pub enum BootRomApiErrorCode {
+    /// The operation was disallowed by a security constraint
+    NotPermitted = -4,
+    /// One or more parameters passed to the function is outside the range of
+    /// supported values; BOOTROM_ERROR_INVALID_ADDRESS and
+    /// BOOTROM_ERROR_BAD_ALIGNMENT are more specific errors.
+    InvalidArg = -5,
+    /// An address argument was out-of-bounds or was determined to be an address
+    /// that the caller may not access
+    InvalidAddress = -10,
+    /// An address passed to the function was not correctly aligned
+    BadAlignment = -11,
+    /// Something happened or failed to happen in the past, and consequently the
+    /// request cannot currently be serviced.
+    InvalidState = -12,
+    /// A user-allocated buffer was too small to hold the result or working state
+    /// of the function
+    BufferTooSmall = -13,
+    /// The call failed because another bootrom function must be called first.
+    PreconditionNotMet = -14,
+    /// Cached data was determined to be inconsistent with the full version of
+    /// the data it was copied from
+    ModifiedData = -15,
+    /// The contents of a data structure are invalid
+    InvalidData = -16,
+    /// An attempt was made to access something that does not exist; or, a search failed
+    NotFound = -17,
+    /// Modification is impossible based on current state; e.g. attempted to clear
+    /// an OTP bit.
+    UnsupportedModification = -18,
+    /// A required lock is not owned. See Section 5.4.4.
+    LockRequired = -19,
+}
+
+impl From<i32> for BootRomApiErrorCode {
+    fn from(value: i32) -> Self {
+        match value {
+            -4 => Self::NotPermitted,
+            -5 => Self::InvalidArg,
+            -19..=-10 => unsafe { core::mem::transmute(value) },
+            _ => panic!("Attempted to convert an i32 to BootRomApiErrorCode with an invalid value"),
+        }
+    }
+}
+
+#[allow(unused)]
+mod sys_info_api {
+    use super::BootRomApiErrorCode;
+
+    /// Flags that the `get_sys_info`/ rom function can take
+    #[repr(u32)]
+    pub enum GetSysInfoFlag {
+        ChipInfo = 0x0001,
+        Critical = 0x0002,
+        CpuInfo = 0x0004,
+        FlashDevInfo = 0x0008,
+        BootRandom = 0x0010,
+        // Ignore nonce for now since it can't/shouldn't be called anyway?
+        // Nonce = 0x0020,
+        BootInfo = 0x0040,
+    }
+
+    impl GetSysInfoFlag {
+        const fn buffer_length(&self) -> usize {
+            match self {
+                GetSysInfoFlag::ChipInfo => 4,
+                GetSysInfoFlag::Critical | GetSysInfoFlag::CpuInfo | GetSysInfoFlag::FlashDevInfo  => 2,
+                GetSysInfoFlag::BootRandom | GetSysInfoFlag::BootInfo => 5,
+            }
+        }
+    }
+
+    pub struct ChipInfo {
+        package_sel: u32,
+        device_id: u32,
+        wafer_id: u32,
+    }
+
+    impl From<[u32; 3]> for ChipInfo {
+        fn from(value: [u32; 3]) -> Self {
+            ChipInfo {
+                package_sel: value[0],
+                device_id: value[1],
+                wafer_id: value[2],
+            }
+        }
+    }
+
+    pub struct OtpCriticalReg(u32);
+
+    impl OtpCriticalReg {
+        pub fn secure_boot_enabled(&self) -> bool {
+            (self.0 & 0x1) == 1
+        }
+
+        pub fn secure_debug_disabled(&self) -> bool {
+            (self.0 & 0x2) >> 1 == 1
+        }
+
+        pub fn debug_disabled(&self) -> bool {
+            (self.0 & 0x4) >> 2 == 1
+        }
+
+        pub fn default_arch_sel(&self) -> bool {
+            (self.0 & 0x8) >> 3 == 1
+        }
+
+        pub fn glitch_detector_enabled(&self) -> bool {
+            (self.0 & 0x10) >> 4 == 1
+        }
+
+        pub fn glitch_detector_sens(&self) -> u8 {
+            ((self.0 & 0x60) >> 5) as _
+        }
+
+        pub fn arm_disabled(&self) -> bool {
+            (self.0 & 0x10000) >> 16 == 1
+        }
+
+        pub fn risc_disabled(&self) -> bool {
+            (self.0 & 0x20000) >> 17 == 1
+        }
+    }
+
+    impl From<[u32; 1]> for OtpCriticalReg {
+        fn from(value: [u32; 1]) -> OtpCriticalReg {
+            OtpCriticalReg(value[0])
+        }
+    }
+
+    #[repr(u32)]
+    pub enum CpuInfo {
+        Arm,
+        Risc
+    }
+
+    impl From<[u32; 1]> for CpuInfo {
+        fn from(value: [u32; 1]) -> CpuInfo {
+            if value[0] == 0 {
+                CpuInfo::Arm
+            }
+            else {
+                CpuInfo::Risc
+            }
+        }
+    }
+
+    pub struct FlashDevInfo(u32);
+
+    #[repr(u32)]
+    pub enum FlashDevInfoSize {
+        None,
+        K8,
+        K16,
+        K32,
+        K64,
+        K128,
+        K256,
+        K512,
+        M1,
+        M2,
+        M4,
+        M8,
+        M16
+    }
+
+    impl From<u32> for FlashDevInfoSize {
+        fn from(value: u32) -> Self {
+            if value > 0xc {
+                panic!("FLASH_DEVINFO's cs0_size contained an unknown value greater than 0xc");
+            }
+
+            unsafe { core::mem::transmute::<u32, FlashDevInfoSize>(value) }
+        }
+    }
+
+    impl FlashDevInfo {
+        pub fn cs1_gpio(&self) -> u8 {
+            (self.0 & 0x1f) as _
+        }
+
+        pub fn d8h_erase_supported(&self) -> bool {
+            (self.0 & 0x80) == 1
+        }
+
+        pub fn cs0_size(&self) -> FlashDevInfoSize {
+            FlashDevInfoSize::from((self.0 & 0xf00) >> 8)
+        }
+
+        pub fn cs1_size(&self) -> FlashDevInfoSize {
+            FlashDevInfoSize::from((self.0 & 0xf000) >> 12)
+        }
+    }
+
+    impl From<[u32; 1]> for FlashDevInfo {
+        fn from(value: [u32; 1]) -> FlashDevInfo {
+            FlashDevInfo(value[0])
+        }
+    }
+
+    pub struct BootRandom(u128);
+
+    impl From<[u32; 4]> for BootRandom {
+        fn from(value: [u32; 4]) -> BootRandom {
+            let mut result = 0;
+            for word in value {
+                result = (result << 32) | u128::from(word);
+            };
+            BootRandom(result)
+        }
+    }
+
+    pub struct BootInfo {
+        partition_index: i8,
+        boot_type: u8,
+        partition: i8,
+        tbyb_update_info: u8,
+        boot_diagnostic: u32,
+        boot_params: [u32; 2]
+    }
+
+    #[repr(u16)]
+    pub enum BootDiagnosticFlags {
+        /// The region was searched for a block loop
+        RegionSearched = 0x0001,
+        /// A block loop was found but it was invalid
+        InvalidBlockLoop = 0x0002,
+        /// A valid block loop was found (Blocks from a loop wholly contained within the region, and
+        /// the blocks have the correct structure. Each block consists of items whose sizes sum to
+        /// the size of the block)
+        ValidBlockLoop = 0x0004,
+        /// A valid IMAGE_DEF was found in the region. A valid IMAGE_DEF must parse correctly and must
+        /// be executable
+        ValidImageDef = 0x0008,
+        /// Whether a partition table is present. This partition table must have a correct structure
+        /// formed if VALID_BLOCK_LOOP is set. If the partition table turns out to be invalid, then
+        /// INVALID_BLOCK_LOOP is set too (thus both VALID_BLOCK_LOOP and INVALID_BLOCK_LOOP will
+        /// both be set)
+        HasPartitionTable = 0x0010,
+        /// There was a choice of partition/slot and this one was considered. The first slot/partition
+        /// is chosen based on a number of factors. If the first choice fails verification, then the
+        /// other choice will be considered.
+        /// 
+        /// * the version of the PARTITION_TABLE/IMAGE_DEF present in the slot/partition respectively.
+        /// * whether the slot/partition is the "update region" as per a FLASH_UPDATE reboot.
+        /// * whether an IMAGE_DEF is marked as "explicit buy"
+        Considered = 0x0020,
+        /// This slot/partition was chosen (or was the only choice)
+        Chosen = 0x0040,
+        /// if a signature is required for the PARTITION_TABLE (via OTP setting), then whether the
+        /// PARTITION_TABLE is signed with a key matching one of the four stored in OTP
+        PartitionTableMatchingKeyForVerify = 0x0080,
+        /// set if a hash value check could be performed. In the case a signature is required, this
+        /// value is identical to PARTITION_TABLE_MATCHING_KEY_FOR_VERIFY
+        PartitionTableHashForVerify = 0x0100,
+        /// whether the PARTITION_TABLE passed verification (signature/hash if present/required)
+        PartitionTableVerifiedOk = 0x0200,
+        /// if a signature is required for the IMAGE_DEF due to secure boot, then whether the
+        /// IMAGE_DEF is signed with a key matching one of the four stored in OTP
+        ImageDefMatchingKeyForVerify = 0x0400,
+        /// set if a hash value check could be performed. In the case a signature is required, this
+        /// value is identical to IMAGE_DEF_MATCHING_KEY_FOR_VERIFY
+        ImageDefHashForVerify = 0x0800,
+        /// whether the PARTITION_TABLE passed verification (signature/hash if present/required) and
+        /// any LOAD_MAP is valid
+        ImageDefVerifiedOk = 0x1000,
+        /// whether any code was copied into RAM due to a LOAD_MAP
+        LoadMapEntriesLoaded = 0x2000,
+        /// whether an IMAGE_DEF from this region was launched
+        ImageLaunched = 0x4000,
+        /// whether the IMAGE_DEF failed final checks before launching; these checks include
+        /// 
+        /// * verification failed (if it hasn’t been verified earlier in the CONSIDERED phase).
+        /// * a problem occurred setting up any rolling window.
+        /// * the rollback version could not be set in OTP (if required in Secure mode)
+        /// * the image was marked as Non-secure
+        /// * the image was marked as "explicit buy", and this was a flash boot, but then region was
+        /// not the "flash update" region
+        /// * the image has the wrong architecture, but architecture auto-switch is disabled (or the
+        /// correct architecture is disabled)
+        ImageConditionFailure = 0x8000
+    }
+
+    impl From<[u32; 4]> for BootInfo {
+        fn from(value: [u32; 4]) -> Self {
+            let word0 = value[0];
+
+            BootInfo {
+                partition_index: word0 as _,
+                boot_type: (word0 >> 8) as _,
+                partition: (word0 >> 16) as _,
+                tbyb_update_info: (word0 >> 24) as _,
+                boot_diagnostic: value[1],
+                boot_params: [value[2], value[3]],
+            }
+        }
+    }
+
+    impl BootInfo {
+        fn check_flag(diagnostics: u16, flag: BootDiagnosticFlags) -> bool {
+            (diagnostics & flag as u16) > 0
+        }
+
+        pub fn check_section_a_flag(&self, flag: BootDiagnosticFlags) -> bool {
+            Self::check_flag(self.boot_diagnostic as u16, flag)
+        }
+
+        pub fn check_section_b_flag(&self, flag: BootDiagnosticFlags) -> bool {
+            Self::check_flag((self.boot_diagnostic >> 8) as u16, flag)
+        }
+    }
+
+    #[macro_export]
+    /// Generates a function with the following signature:
+    /// 
+    /// ```rs
+    /// pub fn $function_name() -> Result<Option<$ok_ret_type>, BootRomApiErrorCode>
+    /// ```
+    /// 
+    /// Which safely calls [`get_sys_info`](super::get_sys_info()) using the flag provided via
+    /// the `flag` argument. `flag` is an expression that must resolve to a const variant of
+    /// [`GetSysInfoFlag`]
+    macro_rules! declare_get_sys_info_function {
+        ($function_name:ident, $ok_ret_type:ty, $flag:expr) => {
+            pub fn $function_name() -> Result<Option<$ok_ret_type>, BootRomApiErrorCode> {
+                const FLAG: GetSysInfoFlag = $flag;
+                const BUFFER_LEN: usize = FLAG.buffer_length();
+                let mut buffer = [0u32; FLAG.buffer_length()];
+                let result = unsafe{super::get_sys_info(
+                    buffer.as_mut_ptr(), buffer.len(), FLAG as u32
+                )};
+
+                if result < 0 {
+                    return Err(BootRomApiErrorCode::from(result));
+                }
+                // The operation returned successfully but the flag wasn't supported
+                // for one reason or another
+                else if buffer[0] == 0 {
+                    return Ok(None)
+                }
+
+                Ok(Some(<$ok_ret_type>::from(
+                    TryInto::<[u32; BUFFER_LEN-1]>::try_into(&buffer[1..]).unwrap()
+                )))
+            }
+        }
+    }
+
+    /// Get the unique identifier for the chip
+    declare_get_sys_info_function!(chip_info, ChipInfo, GetSysInfoFlag::ChipInfo);
+
+    /// Get the value of the OTP critical register
+    declare_get_sys_info_function!(otp_critical_register, OtpCriticalReg, GetSysInfoFlag::Critical);
+
+    /// Get the current running CPU's info
+    declare_get_sys_info_function!(cpu_info, CpuInfo, GetSysInfoFlag::CpuInfo);
+
+    /// Get flash device info in the format of OTP FLASH_DEVINFO
+    declare_get_sys_info_function!(flash_dev_info, FlashDevInfo, GetSysInfoFlag::FlashDevInfo);
+
+    /// Get a 128-bit random number generated on each boot
+    declare_get_sys_info_function!(boot_random, BootRandom, GetSysInfoFlag::BootRandom);
+
+    // Get diagnostic boot info
+    declare_get_sys_info_function!(boot_info, BootInfo, GetSysInfoFlag::BootInfo);
+}
+
 macro_rules! declare_rom_function {
     (
         $(#[$outer:meta])*
