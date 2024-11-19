@@ -115,7 +115,6 @@ fn main() -> ! {
     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
     let cores = mc.cores();
     let core1 = &mut cores[1];
-    #[allow(static_mut_refs)]
     let _test = core1.spawn(CORE1_STACK.take().unwrap(), move || core1_task(sys_freq));
 
     /// How much we adjust the LED period every cycle
