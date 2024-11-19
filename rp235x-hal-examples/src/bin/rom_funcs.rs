@@ -237,13 +237,11 @@ where
 {
     let result = hal::rom_data::sys_info_api::chip_info();
     let result = match result {
-        Ok(result) => {
-            match result {
-                Some(result) => result,
-                None => {
-                    _ = writeln!(uart, "chip_info() not supported");
-                    return;
-                }
+        Ok(result) => match result {
+            Some(result) => result,
+            None => {
+                _ = writeln!(uart, "chip_info() not supported");
+                return;
             }
         },
         Err(e) => {
@@ -265,13 +263,11 @@ where
 {
     let result = hal::rom_data::sys_info_api::cpu_info();
     let result = match result {
-        Ok(result) => {
-            match result {
-                Some(result) => result,
-                None => {
-                    _ = writeln!(uart, "cpu_info() not supported");
-                    return;
-                }
+        Ok(result) => match result {
+            Some(result) => result,
+            None => {
+                _ = writeln!(uart, "cpu_info() not supported");
+                return;
             }
         },
         Err(e) => {
@@ -298,13 +294,11 @@ where
 {
     let result = hal::rom_data::sys_info_api::flash_dev_info();
     let result = match result {
-        Ok(result) => {
-            match result {
-                Some(result) => result,
-                None => {
-                    _ = writeln!(uart, "flash_dev_info() not supported");
-                    return;
-                }
+        Ok(result) => match result {
+            Some(result) => result,
+            None => {
+                _ = writeln!(uart, "flash_dev_info() not supported");
+                return;
             }
         },
         Err(e) => {
@@ -331,7 +325,11 @@ where
         FlashDevInfoSize::Unknown => "Unknown",
     };
     _ = writeln!(uart, "\tCS1 GPIO: {}", result.cs1_gpio());
-    _ = writeln!(uart, "\tD8H Erase Supported: {}", result.d8h_erase_supported());
+    _ = writeln!(
+        uart,
+        "\tD8H Erase Supported: {}",
+        result.d8h_erase_supported()
+    );
     _ = writeln!(uart, "\tCS0 Size: {}", size_lookup(result.cs0_size()));
     _ = writeln!(uart, "\tCS1 Size: {}", size_lookup(result.cs1_size()));
 }
@@ -343,13 +341,11 @@ where
 {
     let result = hal::rom_data::sys_info_api::boot_random();
     let result = match result {
-        Ok(result) => {
-            match result {
-                Some(result) => result,
-                None => {
-                    _ = writeln!(uart, "boot_random() not supported");
-                    return;
-                }
+        Ok(result) => match result {
+            Some(result) => result,
+            None => {
+                _ = writeln!(uart, "boot_random() not supported");
+                return;
             }
         },
         Err(e) => {
@@ -369,13 +365,11 @@ where
 {
     let result = hal::rom_data::sys_info_api::boot_info();
     let result = match result {
-        Ok(result) => {
-            match result {
-                Some(result) => result,
-                None => {
-                    _ = writeln!(uart, "boot_info() not supported");
-                    return;
-                }
+        Ok(result) => match result {
+            Some(result) => result,
+            None => {
+                _ = writeln!(uart, "boot_info() not supported");
+                return;
             }
         },
         Err(e) => {
@@ -385,27 +379,39 @@ where
     };
 
     _ = writeln!(uart, "get_sys_info(start_block/0x0040)");
-    _ = writeln!(uart, "\tDiagnostic Partition: {}", match result.diagnostic_partition {
-        PartitionIndex::Partition(_) => "Numbered partition",
-        PartitionIndex::None => "None",
-        PartitionIndex::Slot0 => "Slot 0",
-        PartitionIndex::Slot1 => "Slot 1",
-        PartitionIndex::Image => "Image",
-        PartitionIndex::Unknown => "Unknown",
-    });
-    _ = writeln!(uart, "\tBoot Type: {}", match result.boot_type {
-        BootType::Normal => "Normal",
-        BootType::BootSel => "bootsel",
-        BootType::RamImage => "RAM image",
-        BootType::FlashUpdate => "Flash update",
-        BootType::PcSp => "pc_sp",
-        BootType::Unknown => "Unknown",
-    });
+    _ = writeln!(
+        uart,
+        "\tDiagnostic Partition: {}",
+        match result.diagnostic_partition {
+            PartitionIndex::Partition(_) => "Numbered partition",
+            PartitionIndex::None => "None",
+            PartitionIndex::Slot0 => "Slot 0",
+            PartitionIndex::Slot1 => "Slot 1",
+            PartitionIndex::Image => "Image",
+            PartitionIndex::Unknown => "Unknown",
+        }
+    );
+    _ = writeln!(
+        uart,
+        "\tBoot Type: {}",
+        match result.boot_type {
+            BootType::Normal => "Normal",
+            BootType::BootSel => "bootsel",
+            BootType::RamImage => "RAM image",
+            BootType::FlashUpdate => "Flash update",
+            BootType::PcSp => "pc_sp",
+            BootType::Unknown => "Unknown",
+        }
+    );
     _ = writeln!(uart, "\tChained: {}", result.chained);
     _ = writeln!(uart, "\tPartition: {}", result.partition);
     _ = writeln!(uart, "\tTBYB Info: {:02x}", result.tbyb_update_info);
     _ = writeln!(uart, "\tBoot Diagnostic: {:04x}", result.boot_diagnostic);
-    _ = writeln!(uart, "\tBoot Params: {:04x}, {:04x}", result.boot_params[0], result.boot_params[1]);
+    _ = writeln!(
+        uart,
+        "\tBoot Params: {:04x}, {:04x}",
+        result.boot_params[0], result.boot_params[1]
+    );
 }
 
 /// Run get_partition_table_info
