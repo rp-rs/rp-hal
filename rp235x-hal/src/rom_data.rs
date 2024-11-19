@@ -112,6 +112,7 @@ pub fn rom_data_lookup(tag: RomFnTableCode, mask: u32) -> usize {
 /// bootrom API function return codes as defined by section 5.4.3 in the rp2350 data sheet
 /// See: https://datasheets.raspberrypi.com/rp2350/rp2350-datasheet.pdf
 #[repr(i32)]
+#[derive(Debug)]
 pub enum BootRomApiErrorCode {
     /// The operation was disallowed by a security constraint
     NotPermitted = -4,
@@ -153,26 +154,42 @@ impl From<i32> for BootRomApiErrorCode {
         match value {
             -4 => Self::NotPermitted,
             -5 => Self::InvalidArg,
-            -19..=-10 => unsafe { core::mem::transmute::<i32, BootRomApiErrorCode>(value) },
+            -10 => Self::InvalidAddress,
+            -11 => Self::BadAlignment,
+            -12 => Self::InvalidState,
+            -13 => Self::BufferTooSmall,
+            -14 => Self::PreconditionNotMet,
+            -15 => Self::ModifiedData,
+            -16 => Self::InvalidData,
+            -17 => Self::NotFound,
+            -18 => Self::UnsupportedModification,
+            -19 => Self::LockRequired,
             _ => Self::Unknown,
         }
     }
 }
 
+/// This module defines a safe api to access the `get_sys_info` bootrom function
 #[allow(unused)]
-mod sys_info_api {
+pub mod sys_info_api {
     use super::BootRomApiErrorCode;
 
     /// Flags that the `get_sys_info`/ rom function can take
     #[repr(u32)]
     pub enum GetSysInfoFlag {
+        /// The flag used to get a chip's unique identifier
         ChipInfo = 0x0001,
+        /// The flag used to get the critical register's value
         Critical = 0x0002,
+        /// The flag used to get the current running CPU Architecture
         CpuInfo = 0x0004,
+        /// The flag used to get flash device info
         FlashDevInfo = 0x0008,
+        /// The flag used to get the random 128 bit integer generated on boot
         BootRandom = 0x0010,
         // Ignore nonce for now since it can't/shouldn't be called anyway?
         // Nonce = 0x0020,
+        /// The flag used to get boot diagnostic info
         BootInfo = 0x0040,
     }
 
@@ -188,10 +205,14 @@ mod sys_info_api {
         }
     }
 
+    /// The unqiue identifier for each chip as reported by [`chip_info`]
     pub struct ChipInfo {
-        package_sel: u32,
-        device_id: u32,
-        wafer_id: u32,
+        /// The value of the `CHIP_INFO_PACKAGE_SEL` register
+        pub package_sel: u32,
+        /// The device's id
+        pub device_id: u32,
+        /// The wafer's id
+        pub wafer_id: u32,
     }
 
     impl From<[u32; 3]> for ChipInfo {
@@ -204,37 +225,46 @@ mod sys_info_api {
         }
     }
 
+    /// The value held within the critical register as reported by [`otp_critical_register`]
     pub struct OtpCriticalReg(u32);
 
     impl OtpCriticalReg {
+        /// Check if secure boot is enabled
         pub fn secure_boot_enabled(&self) -> bool {
             (self.0 & 0x1) == 1
         }
 
+        /// Check if secure debug is disabled
         pub fn secure_debug_disabled(&self) -> bool {
             (self.0 & 0x2) >> 1 == 1
         }
 
+        /// Check if debug is disabled
         pub fn debug_disabled(&self) -> bool {
             (self.0 & 0x4) >> 2 == 1
         }
 
+        /// Check the value of `DEFAULT_ARCHSEL`
         pub fn default_arch_sel(&self) -> bool {
             (self.0 & 0x8) >> 3 == 1
         }
 
+        /// Check if the glitch detector is enabled
         pub fn glitch_detector_enabled(&self) -> bool {
             (self.0 & 0x10) >> 4 == 1
         }
 
+        /// Value of `GLITCH_DETECTOR_SENS
         pub fn glitch_detector_sens(&self) -> u8 {
             ((self.0 & 0x60) >> 5) as _
         }
 
+        /// Check if ARM is disabled
         pub fn arm_disabled(&self) -> bool {
             (self.0 & 0x10000) >> 16 == 1
         }
 
+        /// Check if Risc-V is disabled
         pub fn risc_disabled(&self) -> bool {
             (self.0 & 0x20000) >> 17 == 1
         }
@@ -247,8 +277,11 @@ mod sys_info_api {
     }
 
     #[repr(u32)]
+    /// CPU architectures that might be running as reported by [`cpu_info`]
     pub enum CpuInfo {
+        /// Arm CPU
         Arm,
+        /// Risc-V CPU
         Risc,
     }
 
@@ -262,23 +295,39 @@ mod sys_info_api {
         }
     }
 
+    /// Flash device information as reported by [`flash_dev_info`]
     pub struct FlashDevInfo(u32);
 
+    /// A struct to represent possible byte sizes that may be reported in [`FlashDevInfo`]
     #[repr(u32)]
     pub enum FlashDevInfoSize {
+        /// 0 bytes
         None,
+        /// 8 KiB
         K8,
+        /// 16 KiB
         K16,
+        /// 32 KiB
         K32,
+        /// 64 KiB
         K64,
+        /// 128 KiB
         K128,
+        /// 256 KiB
         K256,
+        /// 512 KiB
         K512,
+        /// 1 MiB
         M1,
+        /// 2 MiB
         M2,
+        /// 4 Mib
         M4,
+        /// 8 MiB
         M8,
+        /// 16 MiB
         M16,
+        /// Unknown size
         Unknown,
     }
 
@@ -293,18 +342,23 @@ mod sys_info_api {
     }
 
     impl FlashDevInfo {
+        /// GPIO Number to be used for the secondary flash chip. See datasheet section 13.9
         pub fn cs1_gpio(&self) -> u8 {
             (self.0 & 0x1f) as _
         }
 
+        /// Check if all attached devices support a block erase command with a command prefix of
+        /// `D8h``
         pub fn d8h_erase_supported(&self) -> bool {
             (self.0 & 0x80) != 0
         }
 
+        /// Flash/PSRAM size on chip select 0
         pub fn cs0_size(&self) -> FlashDevInfoSize {
             FlashDevInfoSize::from((self.0 & 0xf00) >> 8)
         }
 
+        /// Flash/PSRAM size on chip select 1
         pub fn cs1_size(&self) -> FlashDevInfoSize {
             FlashDevInfoSize::from((self.0 & 0xf000) >> 12)
         }
@@ -316,7 +370,8 @@ mod sys_info_api {
         }
     }
 
-    pub struct BootRandom(u128);
+    /// 128 bit random integer generated per boot as reported by [`boot_random`]
+    pub struct BootRandom(pub u128);
 
     impl From<[u32; 4]> for BootRandom {
         fn from(value: [u32; 4]) -> BootRandom {
@@ -329,23 +384,38 @@ mod sys_info_api {
     }
 
     // based on https://github.com/raspberrypi/pico-sdk/blob/master/src/rp2_common/pico_bootrom/include/pico/bootrom.h
+    /// Boot diagnostic info as described in 5.4 under the `get_sys_info` function
     pub struct BootInfo {
-        diagnostic_partition: PartitionIndex,
-        boot_type: BootType,
-        chained: bool,
-        partition: i8,
+        /// Information about which partition is being diagnosed
+        pub diagnostic_partition: PartitionIndex,
+        /// Type of boot that occurred
+        pub boot_type: BootType,
+        /// Whether it was a chained boot
+        pub chained: bool,
+        /// What partition the boot came from
+        pub partition: i8,
         // could probably make a nicer api for tbyb, but documentation is eh so im holding off for now
-        tbyb_update_info: u8,
-        boot_diagnostic: u32,
-        boot_params: [u32; 2],
+        /// Try Before You Buy info
+        pub tbyb_update_info: u8,
+        /// boot diagnostic flags for section A and section B
+        pub boot_diagnostic: u32,
+        /// Boot parameters 0 and 1
+        pub boot_params: [u32; 2],
     }
 
+    /// Recen boot diagnostic partition
     pub enum PartitionIndex {
+        /// A partition along with its number
         Partition(u8),
+        /// None
         None,
+        /// Slot0
         Slot0,
+        /// Slot1
         Slot1,
+        /// Image
         Image,
+        /// Unknown
         Unknown,
     }
 
@@ -365,12 +435,19 @@ mod sys_info_api {
         }
     }
 
+    /// The type of boot that occurred
     pub enum BootType {
+        /// Normal
         Normal,
+        /// bootsel
         BootSel,
+        /// Ram image
         RamImage,
+        /// Flash update
         FlashUpdate,
+        /// pc_sp
         PcSp,
+        /// Unknown
         Unknown,
     }
 
@@ -388,6 +465,7 @@ mod sys_info_api {
     }
 
     #[repr(u16)]
+    /// Diagnostic flags reported by the upper and lower words in [`BootInfo::boot_diagnostic`]
     pub enum BootDiagnosticFlags {
         /// The region was searched for a block loop
         RegionSearched = 0x0001,
@@ -471,10 +549,12 @@ mod sys_info_api {
             (diagnostics & flag as u16) != 0
         }
 
+        /// Check if the diagnostic flag in section A (the lower word) is set
         pub fn check_section_a_flag(&self, flag: BootDiagnosticFlags) -> bool {
             Self::check_flag(self.boot_diagnostic as u16, flag)
         }
 
+        /// Check if the diagnostic flag in section B (the upper word) is set
         pub fn check_section_b_flag(&self, flag: BootDiagnosticFlags) -> bool {
             Self::check_flag((self.boot_diagnostic >> 8) as u16, flag)
         }
@@ -491,7 +571,8 @@ mod sys_info_api {
     /// the `flag` argument. `flag` is an expression that must resolve to a const variant of
     /// [`GetSysInfoFlag`]
     macro_rules! declare_get_sys_info_function {
-        ($function_name:ident, $ok_ret_type:ty, $flag:expr) => {
+        ($(#[$meta:meta])* $function_name:ident, $ok_ret_type:ty, $flag:expr) => {
+            $(#[$meta])*
             pub fn $function_name() -> Result<Option<$ok_ret_type>, BootRomApiErrorCode> {
                 const FLAG: GetSysInfoFlag = $flag;
                 const BUFFER_LEN: usize = FLAG.buffer_length();
@@ -515,27 +596,37 @@ mod sys_info_api {
         };
     }
 
-    /// Get the unique identifier for the chip
-    declare_get_sys_info_function!(chip_info, ChipInfo, GetSysInfoFlag::ChipInfo);
-
-    /// Get the value of the OTP critical register
     declare_get_sys_info_function!(
+        /// Get the unique identifier for the chip
+        chip_info, ChipInfo, GetSysInfoFlag::ChipInfo
+    );
+
+    declare_get_sys_info_function!(
+        /// Get the value of the OTP critical register
         otp_critical_register,
         OtpCriticalReg,
         GetSysInfoFlag::Critical
     );
 
-    /// Get the current running CPU's info
-    declare_get_sys_info_function!(cpu_info, CpuInfo, GetSysInfoFlag::CpuInfo);
+    declare_get_sys_info_function!(
+        /// Get the current running CPU's info
+        cpu_info, CpuInfo, GetSysInfoFlag::CpuInfo
+    );
 
-    /// Get flash device info in the format of OTP FLASH_DEVINFO
-    declare_get_sys_info_function!(flash_dev_info, FlashDevInfo, GetSysInfoFlag::FlashDevInfo);
+    declare_get_sys_info_function!(
+        /// Get flash device info in the format of OTP FLASH_DEVINFO
+        flash_dev_info, FlashDevInfo, GetSysInfoFlag::FlashDevInfo
+    );
 
-    /// Get a 128-bit random number generated on each boot
-    declare_get_sys_info_function!(boot_random, BootRandom, GetSysInfoFlag::BootRandom);
+    declare_get_sys_info_function!(
+        /// Get a 128-bit random number generated on each boot
+        boot_random, BootRandom, GetSysInfoFlag::BootRandom
+    );
 
-    // Get diagnostic boot info
-    declare_get_sys_info_function!(boot_info, BootInfo, GetSysInfoFlag::BootInfo);
+    declare_get_sys_info_function!(
+        /// Get diagnostic boot info
+        boot_info, BootInfo, GetSysInfoFlag::BootInfo
+    );
 }
 
 macro_rules! declare_rom_function {
