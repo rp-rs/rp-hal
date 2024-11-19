@@ -13,6 +13,7 @@
 // be linked)
 use panic_halt as _;
 
+use rp235x_hal::rom_data::sys_info_api::{BootType, CpuInfo, FlashDevInfoSize, PartitionIndex};
 // Alias for our HAL crate
 use rp235x_hal as hal;
 
@@ -234,13 +235,27 @@ fn get_sys_info_chip_info<T>(uart: &mut T)
 where
     T: core::fmt::Write,
 {
-    let mut buffer = [0u32; 16];
-    let result = unsafe { hal::rom_data::get_sys_info(buffer.as_mut_ptr(), buffer.len(), 0x0001) };
-    _ = writeln!(uart, "get_sys_info(CHIP_INFO/0x0001) -> {}", result);
-    _ = writeln!(uart, "\tSupported Flags: {:#06x}", buffer[0]);
-    _ = writeln!(uart, "\tRP2350 Package ID: {:#010x}", buffer[1]);
-    _ = writeln!(uart, "\tRP2350 Device ID : {:#010x}", buffer[2]);
-    _ = writeln!(uart, "\tRP2350 Wafer ID  : {:#010x}", buffer[3]);
+    let result = hal::rom_data::sys_info_api::chip_info();
+    let result = match result {
+        Ok(result) => {
+            match result {
+                Some(result) => result,
+                None => {
+                    _ = writeln!(uart, "chip_info() not supported");
+                    return;
+                }
+            }
+        },
+        Err(e) => {
+            _ = writeln!(uart, "Failed to get chip info : {:?}", e);
+            return;
+        }
+    };
+
+    _ = writeln!(uart, "get_sys_info(CHIP_INFO/0x0001)");
+    _ = writeln!(uart, "\tRP2350 Package ID: {:#010x}", result.package_sel);
+    _ = writeln!(uart, "\tRP2350 Device ID : {:#010x}", result.device_id);
+    _ = writeln!(uart, "\tRP2350 Wafer ID  : {:#010x}", result.wafer_id);
 }
 
 /// Run get_sys_info with 0x0004
@@ -248,17 +263,30 @@ fn get_sys_info_cpu_info<T>(uart: &mut T)
 where
     T: core::fmt::Write,
 {
-    let mut buffer = [0u32; 16];
-    let result = unsafe { hal::rom_data::get_sys_info(buffer.as_mut_ptr(), buffer.len(), 0x0004) };
-    _ = writeln!(uart, "get_sys_info(CPU_INFO/0x0004) -> {}", result);
-    _ = writeln!(uart, "\tSupported Flags: {:#06x}", buffer[0]);
+    let result = hal::rom_data::sys_info_api::cpu_info();
+    let result = match result {
+        Ok(result) => {
+            match result {
+                Some(result) => result,
+                None => {
+                    _ = writeln!(uart, "cpu_info() not supported");
+                    return;
+                }
+            }
+        },
+        Err(e) => {
+            _ = writeln!(uart, "Failed to get cpu info: {:?}", e);
+            return;
+        }
+    };
+
+    _ = writeln!(uart, "get_sys_info(CPU_INFO/0x0004)");
     _ = writeln!(
         uart,
         "\tCPU Architecture: {}",
-        match buffer[1] {
-            0 => "Arm",
-            1 => "RISC-V",
-            _ => "Unknown",
+        match result {
+            CpuInfo::Arm => "Arm",
+            CpuInfo::Risc => "RISC-V",
         }
     );
 }
@@ -268,28 +296,44 @@ fn get_sys_info_flash_dev_info<T>(uart: &mut T)
 where
     T: core::fmt::Write,
 {
-    let mut buffer = [0u32; 16];
-    let result = unsafe { hal::rom_data::get_sys_info(buffer.as_mut_ptr(), buffer.len(), 0x0008) };
-    _ = writeln!(uart, "get_sys_info(FLASH_DEV_INFO/0x0008) -> {}", result);
-    let size_lookup = |value| match value {
-        0 => "None",
-        1 => "8K",
-        2 => "16K",
-        3 => "32K",
-        4 => "64K",
-        5 => "128K",
-        6 => "256K",
-        7 => "512K",
-        8 => "1M",
-        9 => "2M",
-        10 => "4M",
-        11 => "8M",
-        12 => "16M",
-        _ => "Unknown",
+    let result = hal::rom_data::sys_info_api::flash_dev_info();
+    let result = match result {
+        Ok(result) => {
+            match result {
+                Some(result) => result,
+                None => {
+                    _ = writeln!(uart, "flash_dev_info() not supported");
+                    return;
+                }
+            }
+        },
+        Err(e) => {
+            _ = writeln!(uart, "Failed to get flash device info: {:?}", e);
+            return;
+        }
     };
-    _ = writeln!(uart, "\tSupported Flags: {:#06x}", buffer[0]);
-    _ = writeln!(uart, "\tCS0 Size: {}", size_lookup((buffer[1] >> 8) & 15));
-    _ = writeln!(uart, "\tCS1 Size: {}", size_lookup((buffer[1] >> 12) & 15));
+
+    _ = writeln!(uart, "get_sys_info(FLASH_DEV_INFO/0x0008)");
+    let size_lookup = |value| match value {
+        FlashDevInfoSize::None => "None",
+        FlashDevInfoSize::K8 => "8K",
+        FlashDevInfoSize::K16 => "16K",
+        FlashDevInfoSize::K32 => "32K",
+        FlashDevInfoSize::K64 => "64K",
+        FlashDevInfoSize::K128 => "128K",
+        FlashDevInfoSize::K256 => "256K",
+        FlashDevInfoSize::K512 => "512K",
+        FlashDevInfoSize::M1 => "1M",
+        FlashDevInfoSize::M2 => "2M",
+        FlashDevInfoSize::M4 => "4M",
+        FlashDevInfoSize::M8 => "8M",
+        FlashDevInfoSize::M16 => "16M",
+        FlashDevInfoSize::Unknown => "Unknown",
+    };
+    _ = writeln!(uart, "\tCS1 GPIO: {}", result.cs1_gpio());
+    _ = writeln!(uart, "\tD8H Erase Supported: {}", result.d8h_erase_supported());
+    _ = writeln!(uart, "\tCS0 Size: {}", size_lookup(result.cs0_size()));
+    _ = writeln!(uart, "\tCS1 Size: {}", size_lookup(result.cs1_size()));
 }
 
 /// Run get_sys_info with 0x0010
@@ -297,15 +341,25 @@ fn get_sys_info_boot_random<T>(uart: &mut T)
 where
     T: core::fmt::Write,
 {
-    let mut buffer = [0u32; 16];
-    let result = unsafe { hal::rom_data::get_sys_info(buffer.as_mut_ptr(), buffer.len(), 0x0010) };
-    _ = writeln!(uart, "get_sys_info(BOOT_RANDOM/0x0010) -> {}", result);
-    _ = writeln!(uart, "\tSupported Flags: {:#06x}", buffer[0]);
-    let a = buffer[1];
-    let b = buffer[2];
-    let c = buffer[3];
-    let d = buffer[4];
-    _ = writeln!(uart, "\tA random number: 0x{a:08x}{b:08x}{c:08x}{d:08x}");
+    let result = hal::rom_data::sys_info_api::boot_random();
+    let result = match result {
+        Ok(result) => {
+            match result {
+                Some(result) => result,
+                None => {
+                    _ = writeln!(uart, "boot_random() not supported");
+                    return;
+                }
+            }
+        },
+        Err(e) => {
+            _ = writeln!(uart, "Failed to get random boot integer: {:?}", e);
+            return;
+        }
+    };
+
+    _ = writeln!(uart, "get_sys_info(BOOT_RANDOM/0x0010)");
+    _ = writeln!(uart, "\tA random number: 0x{:32x}", result.0);
 }
 
 /// Run get_sys_info with 0x0040;
@@ -313,11 +367,45 @@ fn get_sys_info_start_block<T>(uart: &mut T)
 where
     T: core::fmt::Write,
 {
-    let mut buffer = [0u32; 16];
-    let result = unsafe { hal::rom_data::get_sys_info(buffer.as_mut_ptr(), buffer.len(), 0x0040) };
-    _ = writeln!(uart, "get_sys_info(start_block/0x0040) -> {}", result);
-    _ = writeln!(uart, "\tSupported Flags: {:#06x}", buffer[0]);
-    _ = writeln!(uart, "\tBoot Info: {:08x?}", &buffer[1..result as usize]);
+    let result = hal::rom_data::sys_info_api::boot_info();
+    let result = match result {
+        Ok(result) => {
+            match result {
+                Some(result) => result,
+                None => {
+                    _ = writeln!(uart, "boot_info() not supported");
+                    return;
+                }
+            }
+        },
+        Err(e) => {
+            _ = writeln!(uart, "Failed to get boot info: {:?}", e);
+            return;
+        }
+    };
+
+    _ = writeln!(uart, "get_sys_info(start_block/0x0040)");
+    _ = writeln!(uart, "\tDiagnostic Partition: {}", match result.diagnostic_partition {
+        PartitionIndex::Partition(_) => "Numbered partition",
+        PartitionIndex::None => "None",
+        PartitionIndex::Slot0 => "Slot 0",
+        PartitionIndex::Slot1 => "Slot 1",
+        PartitionIndex::Image => "Image",
+        PartitionIndex::Unknown => "Unknown",
+    });
+    _ = writeln!(uart, "\tBoot Type: {}", match result.boot_type {
+        BootType::Normal => "Normal",
+        BootType::BootSel => "bootsel",
+        BootType::RamImage => "RAM image",
+        BootType::FlashUpdate => "Flash update",
+        BootType::PcSp => "pc_sp",
+        BootType::Unknown => "Unknown",
+    });
+    _ = writeln!(uart, "\tChained: {}", result.chained);
+    _ = writeln!(uart, "\tPartition: {}", result.partition);
+    _ = writeln!(uart, "\tTBYB Info: {:02x}", result.tbyb_update_info);
+    _ = writeln!(uart, "\tBoot Diagnostic: {:04x}", result.boot_diagnostic);
+    _ = writeln!(uart, "\tBoot Params: {:04x}, {:04x}", result.boot_params[0], result.boot_params[1]);
 }
 
 /// Run get_partition_table_info
