@@ -235,14 +235,11 @@ fn get_sys_info_chip_info<T>(uart: &mut T)
 where
     T: core::fmt::Write,
 {
-    let result = hal::rom_data::sys_info_api::chip_info();
-    let result = match result {
-        Ok(result) => match result {
-            Some(result) => result,
-            None => {
-                _ = writeln!(uart, "chip_info() not supported");
-                return;
-            }
+    let result = match hal::rom_data::sys_info_api::chip_info() {
+        Ok(Some(result)) => result,
+        Ok(None) => {
+            _ = writeln!(uart, "chip_info() not supported");
+            return;
         },
         Err(e) => {
             _ = writeln!(uart, "Failed to get chip info : {:?}", e);
@@ -261,14 +258,11 @@ fn get_sys_info_cpu_info<T>(uart: &mut T)
 where
     T: core::fmt::Write,
 {
-    let result = hal::rom_data::sys_info_api::cpu_info();
-    let result = match result {
-        Ok(result) => match result {
-            Some(result) => result,
-            None => {
-                _ = writeln!(uart, "cpu_info() not supported");
-                return;
-            }
+    let result = match hal::rom_data::sys_info_api::cpu_info() {
+        Ok(Some(result)) => result,
+        Ok(None) => {
+            _ = writeln!(uart, "cpu_info() not supported");
+            return;
         },
         Err(e) => {
             _ = writeln!(uart, "Failed to get cpu info: {:?}", e);
@@ -292,14 +286,11 @@ fn get_sys_info_flash_dev_info<T>(uart: &mut T)
 where
     T: core::fmt::Write,
 {
-    let result = hal::rom_data::sys_info_api::flash_dev_info();
-    let result = match result {
-        Ok(result) => match result {
-            Some(result) => result,
-            None => {
-                _ = writeln!(uart, "flash_dev_info() not supported");
-                return;
-            }
+    let result = match hal::rom_data::sys_info_api::flash_dev_info() {
+        Ok(Some(result)) => result,
+        Ok(None) => {
+            _ = writeln!(uart, "flash_dev_info() not supported");
+            return;
         },
         Err(e) => {
             _ = writeln!(uart, "Failed to get flash device info: {:?}", e);
@@ -339,14 +330,11 @@ fn get_sys_info_boot_random<T>(uart: &mut T)
 where
     T: core::fmt::Write,
 {
-    let result = hal::rom_data::sys_info_api::boot_random();
-    let result = match result {
-        Ok(result) => match result {
-            Some(result) => result,
-            None => {
-                _ = writeln!(uart, "boot_random() not supported");
-                return;
-            }
+    let result = match hal::rom_data::sys_info_api::boot_random() {
+        Ok(Some(result)) => result,
+        Ok(None) => {
+            _ = writeln!(uart, "boot_random() not supported");
+            return;
         },
         Err(e) => {
             _ = writeln!(uart, "Failed to get random boot integer: {:?}", e);
@@ -363,14 +351,11 @@ fn get_sys_info_start_block<T>(uart: &mut T)
 where
     T: core::fmt::Write,
 {
-    let result = hal::rom_data::sys_info_api::boot_info();
-    let result = match result {
-        Ok(result) => match result {
-            Some(result) => result,
-            None => {
-                _ = writeln!(uart, "boot_info() not supported");
-                return;
-            }
+    let result = match hal::rom_data::sys_info_api::boot_info() {
+        Ok(Some(result)) => result,
+        Ok(None) => {
+            _ = writeln!(uart, "boot_info() not supported");
+            return;
         },
         Err(e) => {
             _ = writeln!(uart, "Failed to get boot info: {:?}", e);
