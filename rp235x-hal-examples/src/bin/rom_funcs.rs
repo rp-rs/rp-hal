@@ -240,7 +240,7 @@ where
         Ok(None) => {
             _ = writeln!(uart, "chip_info() not supported");
             return;
-        },
+        }
         Err(e) => {
             _ = writeln!(uart, "Failed to get chip info : {:?}", e);
             return;
@@ -263,7 +263,7 @@ where
         Ok(None) => {
             _ = writeln!(uart, "cpu_info() not supported");
             return;
-        },
+        }
         Err(e) => {
             _ = writeln!(uart, "Failed to get cpu info: {:?}", e);
             return;
@@ -291,7 +291,7 @@ where
         Ok(None) => {
             _ = writeln!(uart, "flash_dev_info() not supported");
             return;
-        },
+        }
         Err(e) => {
             _ = writeln!(uart, "Failed to get flash device info: {:?}", e);
             return;
@@ -335,7 +335,7 @@ where
         Ok(None) => {
             _ = writeln!(uart, "boot_random() not supported");
             return;
-        },
+        }
         Err(e) => {
             _ = writeln!(uart, "Failed to get random boot integer: {:?}", e);
             return;
@@ -356,7 +356,7 @@ where
         Ok(None) => {
             _ = writeln!(uart, "boot_info() not supported");
             return;
-        },
+        }
         Err(e) => {
             _ = writeln!(uart, "Failed to get boot info: {:?}", e);
             return;
