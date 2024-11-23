@@ -194,6 +194,10 @@ pub mod sys_info_api {
     }
 
     impl GetSysInfoFlag {
+        /// Returns the length of the buffer needed to hold the data for the related operation returned
+        /// by [`super::get_sys_info()`]. This includes the initial segment to indicate which flags
+        /// were supported. The underlying enum represent a bitmask and these masks can be OR'd
+        /// together, however the safe API only uses one at a time so adding sizes is not a concern.
         const fn buffer_length(&self) -> usize {
             match self {
                 GetSysInfoFlag::ChipInfo => 4,
