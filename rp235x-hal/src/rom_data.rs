@@ -587,9 +587,9 @@ pub mod sys_info_api {
                 if result < 0 {
                     return Err(BootRomApiErrorCode::from(result));
                 }
-                // The operation returned successfully but the flag wasn't supported
-                // for one reason or another
                 else if buffer[0] == 0 {
+                    // The operation returned successfully but the flag wasn't supported
+                    // for one reason or another
                     return Ok(None);
                 }
 
