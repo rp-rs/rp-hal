@@ -600,6 +600,43 @@ pub mod sys_info_api {
         };
     }
 
+    #[macro_export]
+    #[cfg(all(target_arch = "arm", target_os = "none"))]
+    /// Generates a function with the following signature:
+    ///
+    /// ```rs
+    /// pub fn $function_name() -> Result<Option<$ok_ret_type>, BootRomApiErrorCode>
+    /// ```
+    ///
+    /// Which safely calls [`get_sys_info_ns`](super::get_sys_info_ns()) using the flag provided via
+    /// the `flag` argument. `flag` is an expression that must resolve to a const variant of
+    /// [`GetSysInfoFlag`]
+    macro_rules! declare_get_sys_info_ns_function {
+        ($(#[$meta:meta])* $function_name:ident, $ok_ret_type:ty, $flag:expr) => {
+            $(#[$meta])*
+            pub fn $function_name() -> Result<Option<$ok_ret_type>, BootRomApiErrorCode> {
+                const FLAG: GetSysInfoFlag = $flag;
+                const BUFFER_LEN: usize = FLAG.buffer_length();
+                let mut buffer = [0u32; FLAG.buffer_length()];
+                let result =
+                    unsafe { super::get_sys_info_ns(buffer.as_mut_ptr(), buffer.len(), FLAG as u32) };
+
+                if result < 0 {
+                    return Err(BootRomApiErrorCode::from(result));
+                }
+                // The operation returned successfully but the flag wasn't supported
+                // for one reason or another
+                else if buffer[0] == 0 {
+                    return Ok(None);
+                }
+
+                Ok(Some(<$ok_ret_type>::from(
+                    TryInto::<[u32; BUFFER_LEN - 1]>::try_into(&buffer[1..]).unwrap(),
+                )))
+            }
+        };
+    }
+
     declare_get_sys_info_function!(
         /// Get the unique identifier for the chip
         chip_info, ChipInfo, GetSysInfoFlag::ChipInfo
@@ -630,6 +667,44 @@ pub mod sys_info_api {
     declare_get_sys_info_function!(
         /// Get diagnostic boot info
         boot_info, BootInfo, GetSysInfoFlag::BootInfo
+    );
+
+    #[cfg(all(target_arch = "arm", target_os = "none"))]
+    declare_get_sys_info_function!(
+        /// Get the unique identifier for the chip
+        chip_info_ns, ChipInfo, GetSysInfoFlag::ChipInfo
+    );
+
+    #[cfg(all(target_arch = "arm", target_os = "none"))]
+    declare_get_sys_info_function!(
+        /// Get the value of the OTP critical register
+        otp_critical_register_ns,
+        OtpCriticalReg,
+        GetSysInfoFlag::Critical
+    );
+
+    #[cfg(all(target_arch = "arm", target_os = "none"))]
+    declare_get_sys_info_function!(
+        /// Get the current running CPU's info
+        cpu_info_ns, CpuInfo, GetSysInfoFlag::CpuInfo
+    );
+
+    #[cfg(all(target_arch = "arm", target_os = "none"))]
+    declare_get_sys_info_function!(
+        /// Get flash device info in the format of OTP FLASH_DEVINFO
+        flash_dev_info_ns, FlashDevInfo, GetSysInfoFlag::FlashDevInfo
+    );
+
+    #[cfg(all(target_arch = "arm", target_os = "none"))]
+    declare_get_sys_info_function!(
+        /// Get a 128-bit random number generated on each boot
+        boot_random_ns, BootRandom, GetSysInfoFlag::BootRandom
+    );
+
+    #[cfg(all(target_arch = "arm", target_os = "none"))]
+    declare_get_sys_info_function!(
+        /// Get diagnostic boot info
+        boot_info_ns, BootInfo, GetSysInfoFlag::BootInfo
     );
 }
 
