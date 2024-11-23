@@ -9,16 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### MSRV
 
-The Minimum-Supported Rust Version (MSRV) for the next release is 1.77
+The Minimum-Supported Rust Version (MSRV) for the next release is 1.79
 
 ### Added
 
 - Support for *binary info*, which is metadata that `picotool` can read from your binary.
 - Bump MSRV to 1.77, because *binary info* examples need C-Strings.
+- Bump MSRV to 1.79 to enable inline\_const, used for static asserts.
 
 ### Fixed
 
 - Let UART embedded\_io::Write::write return some bytes were written.
+- Fix unsoundness in definition of stack for spawning core1.
 
 ## [0.10.0] - 2024-03-10
 

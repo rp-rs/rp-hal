@@ -28,17 +28,21 @@
 //!     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
 //!     let cores = mc.cores();
 //!     let core1 = &mut cores[1];
-//!     let _test = core1.spawn(unsafe { &mut CORE1_STACK.mem }, core1_task);
+//!     let _test = core1.spawn(CORE1_STACK.take().unwrap(), core1_task);
 //!     // The rest of your application below this line
 //!     # loop {}
 //! }
+//!
 //! ```
 //!
 //! For inter-processor communications, see [`crate::sio::SioFifo`] and [`crate::sio::Spinlock0`]
 //!
 //! For a detailed example, see [examples/multicore_fifo_blink.rs](https://github.com/rp-rs/rp-hal/tree/main/rp235x-hal-examples/src/bin/multicore_fifo_blink.rs)
 
+use core::cell::Cell;
+use core::cell::UnsafeCell;
 use core::mem::ManuallyDrop;
+use core::ops::Range;
 use core::sync::atomic::compiler_fence;
 use core::sync::atomic::Ordering;
 
@@ -76,7 +80,8 @@ pub struct Multicore<'p> {
 #[repr(C, align(32))]
 pub struct Stack<const SIZE: usize> {
     /// Memory to be used for the stack
-    pub mem: [usize; SIZE],
+    mem: UnsafeCell<[usize; SIZE]>,
+    taken: Cell<bool>,
 }
 
 impl<const SIZE: usize> Default for Stack<SIZE> {
@@ -85,10 +90,100 @@ impl<const SIZE: usize> Default for Stack<SIZE> {
     }
 }
 
+// Safety: Only one thread can `take` access to contents of the
+// struct, guarded by a critical section.
+unsafe impl<const SIZE: usize> Sync for Stack<SIZE> {}
+
 impl<const SIZE: usize> Stack<SIZE> {
     /// Construct a stack of length SIZE, initialized to 0
+    ///
+    /// The minimum allowed SIZE is 64 bytes, but most programs
+    /// will need a significantly larger stack.
     pub const fn new() -> Stack<SIZE> {
-        Stack { mem: [0; SIZE] }
+        const { assert!(SIZE >= 64, "Stack too small") };
+        Stack {
+            mem: UnsafeCell::new([0; SIZE]),
+            taken: Cell::new(false),
+        }
+    }
+
+    /// Take the StackAllocation out of this Stack.
+    ///
+    /// This returns None if the stack is already taken.
+    pub fn take(&self) -> Option<StackAllocation> {
+        let taken = critical_section::with(|_| self.taken.replace(true));
+        if taken {
+            None
+        } else {
+            // Safety: We know the size of this allocation
+            unsafe {
+                let start = self.mem.get() as *mut usize;
+                let end = start.add(SIZE);
+                Some(StackAllocation::from_raw_parts(start, end))
+            }
+        }
+    }
+
+    /// Reset the taken flag of the stack area
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the stack is no longer in use, eg. because
+    /// the core that used it was reset. This method doesn't do any synchronization
+    /// so it must not be called from multiple threads concurrently.
+    pub unsafe fn reset(&self) {
+        self.taken.replace(false);
+    }
+}
+
+/// This object represents a memory area which can be used for a stack.
+///
+/// It is essentially a range of pointers with these additional guarantees:
+/// The begin / end pointers must define a stack
+/// with proper alignment (at least 8 bytes, preferably 32 bytes)
+/// and sufficient size (64 bytes would be sound but much too little for
+/// most real-world workloads). The underlying memory must
+/// have a static lifetime and must be owned by the object exclusively.
+/// No mutable references to that memory must exist.
+/// Therefore, a function that gets passed such an object is free to write
+/// to arbitrary memory locations in the range.
+pub struct StackAllocation {
+    /// Start and end pointer of the StackAllocation as a Range
+    mem: Range<*mut usize>,
+}
+
+impl StackAllocation {
+    fn get(&self) -> Range<*mut usize> {
+        self.mem.clone()
+    }
+
+    /// Unsafely construct a stack allocation
+    ///
+    /// This is mainly useful to construct a stack allocation in some memory region
+    /// defined in a linker script, for example to place the stack in the SRAM4/5 regions.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the guarantees that a StackAllocation provides
+    /// are upheld.
+    pub unsafe fn from_raw_parts(start: *mut usize, end: *mut usize) -> Self {
+        StackAllocation { mem: start..end }
+    }
+}
+
+impl<const SIZE: usize> From<&Stack<SIZE>> for Option<StackAllocation> {
+    fn from(stack: &Stack<SIZE>) -> Self {
+        let taken = critical_section::with(|_| stack.taken.replace(true));
+        if taken {
+            None
+        } else {
+            // Safety: We know the size of this allocation
+            unsafe {
+                let start = stack.mem.get() as *mut usize;
+                let end = start.add(SIZE);
+                Some(StackAllocation::from_raw_parts(start, end))
+            }
+        }
     }
 }
 
@@ -124,7 +219,7 @@ pub struct Core<'p> {
     )>,
 }
 
-impl<'p> Core<'p> {
+impl Core<'_> {
     /// Get the id of this core.
     pub fn id(&self) -> u8 {
         match self.inner {
@@ -144,7 +239,7 @@ impl<'p> Core<'p> {
     /// likely if the core being reset happens to be inside a critical section.
     /// It may even break safety assumptions of some unsafe code. So, be careful when calling this method
     /// more than once.
-    pub fn spawn<F>(&mut self, stack: &'static mut [usize], entry: F) -> Result<(), Error>
+    pub fn spawn<F>(&mut self, stack: StackAllocation, entry: F) -> Result<(), Error>
     where
         F: FnOnce() + Send + 'static,
     {
@@ -195,7 +290,8 @@ impl<'p> Core<'p> {
             // array size to guaranty that the base of the stack (the end of the array) meets that requirement.
             // The start of the array does not need to be aligned.
 
-            let mut stack_ptr = stack.as_mut_ptr_range().end;
+            let stack = stack.get();
+            let mut stack_ptr = stack.end;
             // on rp235x, usize are 4 bytes, so align_offset(8) on a *mut usize returns either 0 or 1.
             let misalignment_offset = stack_ptr.align_offset(8);
 
@@ -208,7 +304,7 @@ impl<'p> Core<'p> {
 
                 // Push `stack_limit`.
                 stack_ptr = stack_ptr.sub(1);
-                stack_ptr.cast::<*mut usize>().write(stack.as_mut_ptr());
+                stack_ptr.cast::<*mut usize>().write(stack.start);
 
                 // Push `entry`.
                 stack_ptr = stack_ptr.sub(1);

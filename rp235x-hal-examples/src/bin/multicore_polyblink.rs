@@ -53,7 +53,7 @@ const CORE1_DELAY: u32 = 1_000_000 / CORE1_FREQ;
 /// NOTE: We use the `Stack` struct here to ensure that it has 32-byte
 /// alignment, which allows the stack guard to take up the least amount of
 /// usable RAM.
-static mut CORE1_STACK: Stack<4096> = Stack::new();
+static CORE1_STACK: Stack<4096> = Stack::new();
 
 /// Entry point to our bare-metal application.
 ///
@@ -99,9 +99,8 @@ fn main() -> ! {
     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
     let cores = mc.cores();
     let core1 = &mut cores[1];
-    #[allow(static_mut_refs)]
     core1
-        .spawn(unsafe { &mut CORE1_STACK.mem }, move || {
+        .spawn(CORE1_STACK.take().unwrap(), move || {
             // Get the second core's copy of the `CorePeripherals`, which are per-core.
             // Unfortunately, `cortex-m` doesn't support this properly right now,
             // so we have to use `steal`.
