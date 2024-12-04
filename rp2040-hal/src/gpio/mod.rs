@@ -28,7 +28,7 @@
 //! let button_pin = pins.gpio23.into_pull_down_input();
 //! let button2_pin = pins.gpio22.into_pull_up_input();
 //! ```
-//! See [examples/gpio_in_out.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/gpio_in_out.rs) for a more practical example
+//! See [examples/gpio_in_out.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal-examples/src/bin/gpio_in_out.rs) for a more practical example
 
 // Design Notes:
 //

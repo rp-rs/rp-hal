@@ -40,13 +40,13 @@
 //! i2c.write_read(0x2Cu8, &[1, 2, 3], &mut readbuf).unwrap();
 //! ```
 //!
-//! See [examples/i2c.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/i2c.rs)
+//! See [examples/i2c.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal-examples/src/bin/i2c.rs)
 //! for a complete example
 //!
 //! ## Async Usage
 //!
-//! See [examples/i2c_async.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/i2c_async.rs)
-//! and [examples/i2c_async_irq.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/i2c_async_irq.rs)
+//! See [examples/i2c_async.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal-examples/src/bin/i2c_async.rs)
+//! and [examples/i2c_async_irq.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal-examples/src/bin/i2c_async_irq.rs)
 //! for complete examples.
 
 use core::{marker::PhantomData, ops::Deref};

@@ -4,7 +4,7 @@
 //!
 //! ## Usage
 //!
-//! See [examples/uart.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/uart.rs) for a more complete example
+//! See [examples/uart.rs](https://github.com/rp-rs/rp-hal/blob/main/rp2040-hal-examples/src/bin/uart.rs) for a more complete example
 //! ```no_run
 //! use rp2040_hal::{Clock, clocks::init_clocks_and_plls, gpio::{Pins, FunctionUart}, pac, sio::Sio, uart::{self, DataBits, StopBits, UartConfig, UartPeripheral}, watchdog::Watchdog};
 //! use fugit::RateExtU32;
