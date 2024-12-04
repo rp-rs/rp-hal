@@ -38,7 +38,7 @@
 //! let temperature_adc_counts: u16 = adc.read(&mut temperature_sensor).unwrap();
 //! ```
 //!
-//! See [examples/adc.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/adc.rs) and
+//! See [examples/adc.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal-examples/src/bin/adc.rs) and
 //! [pimoroni_pico_explorer_showcase.rs](https://github.com/rp-rs/rp-hal-boards/tree/main/boards/pimoroni-pico-explorer/examples/pimoroni_pico_explorer_showcase.rs) for more complete examples
 //!
 //! ### Free running mode with FIFO
@@ -69,7 +69,7 @@
 //!   }
 //! }
 //! ```
-//! See [examples/adc_fifo_poll.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/adc_fifo_poll.rs) for a more complete example.
+//! See [examples/adc_fifo_poll.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal-examples/src/bin/adc_fifo_poll.rs) for a more complete example.
 //!
 //! ### Using DMA
 //!
@@ -117,7 +117,7 @@
 //! //...
 //!
 //! ```
-//! //! See [examples/adc_fifo_dma.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/adc_fifo_dma.rs) for a more complete example.
+//! //! See [examples/adc_fifo_dma.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal-examples/src/bin/adc_fifo_dma.rs) for a more complete example.
 //!
 //! ### Free running mode without FIFO
 //!
@@ -455,7 +455,7 @@ where
 
 /// Used to configure & build an [`AdcFifo`]
 ///
-/// See [`Adc::build_fifo`] for details, as well as the `adc_fifo_*` [examples](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples).
+/// See [`Adc::build_fifo`] for details, as well as the `adc_fifo_*` [examples](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal-examples).
 pub struct AdcFifoBuilder<'a, Word> {
     adc: &'a mut Adc,
     marker: PhantomData<Word>,

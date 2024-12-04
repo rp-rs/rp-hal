@@ -32,7 +32,7 @@
 //!
 //! For inter-processor communications, see [`crate::sio::SioFifo`] and [`crate::sio::Spinlock0`]
 //!
-//! For a detailed example, see [examples/multicore_fifo_blink.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples/multicore_fifo_blink.rs)
+//! For a detailed example, see [examples/multicore_fifo_blink.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal-examples/src/bin/multicore_fifo_blink.rs)
 
 use core::cell::Cell;
 use core::cell::UnsafeCell;
