@@ -23,7 +23,6 @@ use hal::{
     gpio::bank0::{Gpio20, Gpio21},
     gpio::{FunctionI2C, Pin, PullUp},
     i2c::Controller,
-    pac::interrupt,
     Clock, I2C,
 };
 
@@ -42,7 +41,8 @@ pub static IMAGE_DEF: hal::block::ImageDef = hal::block::ImageDef::secure_exe();
 const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
 /// Bind the interrupt handler with the peripheral
-#[interrupt]
+#[no_mangle]
+#[allow(non_snake_case)]
 unsafe fn I2C0_IRQ() {
     use hal::async_utils::AsyncPeripheral;
     I2C::<hal::pac::I2C0, (Gpio20, Gpio21), Controller>::on_interrupt();
@@ -97,14 +97,16 @@ async fn demo() {
         clocks.system_clock.freq(),
     );
 
-    // Unmask the interrupt in the NVIC to let the core wake up & enter the interrupt handler.
-    // Each core has its own NVIC so these needs to executed from the core where the IRQ are
-    // expected.
+    // Unmask the IRQ for I2C0. We do this after the driver init so that the
+    // interrupt can't go off while it is in the middle of being configured
     unsafe {
-        cortex_m::peripheral::NVIC::unpend(hal::pac::Interrupt::I2C0_IRQ);
-        cortex_m::peripheral::NVIC::unmask(hal::pac::Interrupt::I2C0_IRQ);
+        hal::arch::interrupt_unmask(hal::pac::Interrupt::I2C0_IRQ);
     }
 
+    // Enable interrupts on this core
+    unsafe {
+        hal::arch::interrupt_enable();
+    }
     // Asynchronously write three bytes to the I²C device with 7-bit address 0x2C
     i2c.write(0x76u8, &[1, 2, 3]).await.unwrap();
 
