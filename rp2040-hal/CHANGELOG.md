@@ -11,16 +11,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 The Minimum-Supported Rust Version (MSRV) for the next release is 1.79
 
-### Added
-
-- Support for *binary info*, which is metadata that `picotool` can read from your binary.
 - Bump MSRV to 1.77, because *binary info* examples need C-Strings.
 - Bump MSRV to 1.79 to enable inline\_const, used for static asserts.
 
+### Added
+
+- Support for *binary info*, which is metadata that `picotool` can read from your binary. - #824 @thejpster
+- Enable transfer size of PIO DMA to be specified - #788 @jsgf
+- Implement embedded\_io traits for Reader/Writer - #781 @jannic
+- Implement `send_break` support - #700 @ithinuel
+- Support for aborting DMA transfers - #803 @EliseZeroTwo
+- Gpio: add PinGroup::set\_u32 to allow setting each pin to a different state - #811 @ithinuel @jannic
+- Derive `defmt::Format` for `RtcError`, fix doc typo - #818 @hfly0
+- Implement `embedded_io` `ReadReady` and `WriteReady` traits for uart - #837 @antbern
+- Provide arch module on RP2040 - #845 @jannic
+- Implement Debug support for the GPIO structures - #861 @robamu
+
 ### Fixed
 
-- Let UART embedded\_io::Write::write return some bytes were written.
-- Fix unsoundness in definition of stack for spawning core1.
+- Let UART embedded\_io::Write::write return if some bytes were written. - #838 @jannic
+- Fix unsoundness in definition of stack for spawning core1. - #874 @jannic
+- Fix float\_to\_fix64 return value & docs for f32 trig functions - #787 @Text-Input
+- Fix debugging after halt() - #785 @jannic
+- Fix oneshot adc read waiting indefinitely - #799 @mjptree
+- Fix several broken `transmute` calls - #805 @jannic
+- Fix set\_low() and set\_high() implementation for OutputPin - #807 @martinsp
+- Fix some warnings and clippy lints - #802 #813 #849 #865 @jannic
+- Fix writing to pin groups - #812 @jannic
+- Fixed some UART driver bugs - #841 @thejpster
+- spi: remove undesired parameter to set\_format - #860 @ithinuel
+- Update RP2040-hal example urls - #878 @flinguenheld
+
+### Changed
+
+- Simplify ceiling division in delay calculation - #783 @jannic
+- Base CountDown on Timer instead of &Timer - #815 @jannic
+- UART: Avoid discarding already read bytes on error - #798 @jannic
+- Rationalise all the license files and copyright notices. - #829 @thejpster
+- spi: move set\_format to all states - #831 @ithinuel
+- Extract picotool binary info to a separate `rp-binary-info` crate. - #830 @Dirbaio
+- Restructure repository layout in preparation of RP2350 support - #828 #834 @thejpster
+- Update critical-section dependency to version 1.2.0 - #862 @jannic
 
 ## [0.10.0] - 2024-03-10
 
