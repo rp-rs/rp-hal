@@ -103,14 +103,14 @@ pub fn setup<T: ValidAddress>(xtal_freq_hz: u32, addr: T) -> State {
 
     critical_section::with(|cs| TARGET.replace(cs, Some(i2c_target)));
 
-    static mut STACK: rp2040_hal::multicore::Stack<10240> = rp2040_hal::multicore::Stack::new();
+    static STACK: rp2040_hal::multicore::Stack<10240> = rp2040_hal::multicore::Stack::new();
     unsafe {
         // delegate I2C1 irqs to core 1
         hal::multicore::Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo)
             .cores()
             .get_mut(1)
             .expect("core 1 is not available")
-            .spawn(&mut STACK.mem, || {
+            .spawn(STACK.take().unwrap(), || {
                 pac::NVIC::unpend(hal::pac::Interrupt::I2C1_IRQ);
                 pac::NVIC::unmask(hal::pac::Interrupt::I2C1_IRQ);
 
