@@ -37,7 +37,7 @@ pio-proc = "0.2.0"
 # Should be fixed in e-h-b 0.3 via https://github.com/rust-embedded/embedded-hal/pull/607
 portable-atomic = {version = "1.7.0", features = ["critical-section"]}
 rp2040-boot2 = "0.3.0"
-rp2040-hal = {path = "../rp2040-hal", version = "0.10.0", features = ["binary-info", "critical-section-impl", "rt", "defmt"]}
+rp2040-hal = {path = "../rp2040-hal", version = "0.11.0", features = ["binary-info", "critical-section-impl", "rt", "defmt"]}
 static_cell = "2.1.0"
 
 [target.'cfg( target_arch = "arm" )'.dependencies]
