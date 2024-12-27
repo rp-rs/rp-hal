@@ -2,10 +2,8 @@
 
 use super::*;
 use crate::{
-    gpio::{
-        bank0::{Gpio20, Gpio22},
-        FunctionClock, Pin, PullNone, PullType,
-    },
+    gpin,
+    gpio::{PullNone, PullType},
     rosc::{Enabled, RingOscillator},
 };
 
@@ -73,17 +71,17 @@ impl ClockSource for RingOscillator<Enabled> {
 }
 
 // GPIN0
-pub(crate) type GPin0<M = PullNone> = Pin<Gpio20, FunctionClock, M>;
-impl<M: PullType> ClockSource for GPin0<M> {
+pub(crate) type GpIn0<M = PullNone> = gpin::GpIn0<M>;
+impl<M: PullType> ClockSource for GpIn0<M> {
     fn get_freq(&self) -> HertzU32 {
-        todo!()
+        self.frequency()
     }
 }
 
 // GPIN1
-pub(crate) type GPin1<M = PullNone> = Pin<Gpio22, FunctionClock, M>;
-impl<M: PullType> ClockSource for Pin<Gpio22, FunctionClock, M> {
+pub(crate) type GpIn1<M = PullNone> = gpin::GpIn1<M>;
+impl<M: PullType> ClockSource for GpIn1<M> {
     fn get_freq(&self) -> HertzU32 {
-        todo!()
+        self.frequency()
     }
 }

@@ -61,6 +61,7 @@ pub mod clocks;
 mod critical_section_impl;
 pub mod dma;
 mod float;
+pub mod gpin;
 pub mod gpio;
 pub mod i2c;
 pub mod multicore;

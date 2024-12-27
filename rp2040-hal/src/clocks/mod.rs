@@ -81,7 +81,7 @@ mod clock_sources;
 
 use clock_sources::PllSys;
 
-use self::clock_sources::{GPin0, GPin1, PllUsb, Rosc, Xosc};
+use self::clock_sources::{GpIn0, GpIn1, PllUsb, Rosc, Xosc};
 
 bitfield::bitfield! {
     /// Bit field mapping clock enable bits.
@@ -341,64 +341,64 @@ clocks! {
     struct GpioOutput0Clock {
         init_freq: 0,
         reg: clk_gpout0,
-        auxsrc: {PllSys:CLKSRC_PLL_SYS, GPin0:CLKSRC_GPIN0, GPin1:CLKSRC_GPIN1, PllUsb:CLKSRC_PLL_USB, Rosc: ROSC_CLKSRC, Xosc: XOSC_CLKSRC, SystemClock: CLK_SYS, UsbClock: CLK_USB, AdcClock: CLK_ADC, RtcClock: CLK_RTC, ReferenceClock:CLK_REF}
+        auxsrc: {PllSys:CLKSRC_PLL_SYS, GpIn0:CLKSRC_GPIN0, GpIn1:CLKSRC_GPIN1, PllUsb:CLKSRC_PLL_USB, Rosc: ROSC_CLKSRC, Xosc: XOSC_CLKSRC, SystemClock: CLK_SYS, UsbClock: CLK_USB, AdcClock: CLK_ADC, RtcClock: CLK_RTC, ReferenceClock:CLK_REF}
     }
     /// GPIO Output 1 Clock
     struct GpioOutput1Clock {
         init_freq: 0,
         reg: clk_gpout1,
-        auxsrc: {PllSys:CLKSRC_PLL_SYS, GPin0:CLKSRC_GPIN0, GPin1:CLKSRC_GPIN1, PllUsb:CLKSRC_PLL_USB, Rosc: ROSC_CLKSRC, Xosc: XOSC_CLKSRC, SystemClock: CLK_SYS, UsbClock: CLK_USB, AdcClock: CLK_ADC, RtcClock: CLK_RTC, ReferenceClock:CLK_REF}
+        auxsrc: {PllSys:CLKSRC_PLL_SYS, GpIn0:CLKSRC_GPIN0, GpIn1:CLKSRC_GPIN1, PllUsb:CLKSRC_PLL_USB, Rosc: ROSC_CLKSRC, Xosc: XOSC_CLKSRC, SystemClock: CLK_SYS, UsbClock: CLK_USB, AdcClock: CLK_ADC, RtcClock: CLK_RTC, ReferenceClock:CLK_REF}
     }
     /// GPIO Output 2 Clock
     struct GpioOutput2Clock {
         init_freq: 0,
         reg: clk_gpout2,
-        auxsrc: {PllSys:CLKSRC_PLL_SYS, GPin0:CLKSRC_GPIN0, GPin1:CLKSRC_GPIN1, PllUsb:CLKSRC_PLL_USB, Rosc: ROSC_CLKSRC_PH, Xosc: XOSC_CLKSRC, SystemClock: CLK_SYS, UsbClock: CLK_USB, AdcClock: CLK_ADC, RtcClock: CLK_RTC, ReferenceClock:CLK_REF}
+        auxsrc: {PllSys:CLKSRC_PLL_SYS, GpIn0:CLKSRC_GPIN0, GpIn1:CLKSRC_GPIN1, PllUsb:CLKSRC_PLL_USB, Rosc: ROSC_CLKSRC_PH, Xosc: XOSC_CLKSRC, SystemClock: CLK_SYS, UsbClock: CLK_USB, AdcClock: CLK_ADC, RtcClock: CLK_RTC, ReferenceClock:CLK_REF}
     }
     /// GPIO Output 3 Clock
     struct GpioOutput3Clock {
         init_freq: 0,
         reg: clk_gpout3,
-        auxsrc: {PllSys:CLKSRC_PLL_SYS, GPin0:CLKSRC_GPIN0, GPin1:CLKSRC_GPIN1, PllUsb:CLKSRC_PLL_USB, Rosc: ROSC_CLKSRC_PH, Xosc: XOSC_CLKSRC, SystemClock: CLK_SYS, UsbClock: CLK_USB, AdcClock: CLK_ADC, RtcClock: CLK_RTC, ReferenceClock:CLK_REF}
+        auxsrc: {PllSys:CLKSRC_PLL_SYS, GpIn0:CLKSRC_GPIN0, GpIn1:CLKSRC_GPIN1, PllUsb:CLKSRC_PLL_USB, Rosc: ROSC_CLKSRC_PH, Xosc: XOSC_CLKSRC, SystemClock: CLK_SYS, UsbClock: CLK_USB, AdcClock: CLK_ADC, RtcClock: CLK_RTC, ReferenceClock:CLK_REF}
     }
     /// Reference Clock
     struct ReferenceClock {
         init_freq: 12_000_000,  // Starts from ROSC which actually varies with input voltage etc, but 12 MHz seems to be a good value
         reg: clk_ref,
         src: {Rosc: ROSC_CLKSRC_PH, Xosc:XOSC_CLKSRC},
-        auxsrc: {PllUsb:CLKSRC_PLL_USB, GPin0:CLKSRC_GPIN0, GPin1:CLKSRC_GPIN1}
+        auxsrc: {PllUsb:CLKSRC_PLL_USB, GpIn0:CLKSRC_GPIN0, GpIn1:CLKSRC_GPIN1}
     }
     /// System Clock
     struct SystemClock {
         init_freq: 12_000_000,  // ref_clk is 12 MHz
         reg: clk_sys,
         src: {ReferenceClock: CLK_REF},
-        auxsrc: {PllSys: CLKSRC_PLL_SYS, PllUsb:CLKSRC_PLL_USB, Rosc: ROSC_CLKSRC, Xosc: XOSC_CLKSRC,GPin0:CLKSRC_GPIN0, GPin1:CLKSRC_GPIN1}
+        auxsrc: {PllSys: CLKSRC_PLL_SYS, PllUsb:CLKSRC_PLL_USB, Rosc: ROSC_CLKSRC, Xosc: XOSC_CLKSRC,GpIn0:CLKSRC_GPIN0, GpIn1:CLKSRC_GPIN1}
     }
     /// Peripheral Clock
     struct PeripheralClock {
         init_freq: 12_000_000,  // sys_clk is 12 MHz
         reg: clk_peri,
-        auxsrc: {SystemClock: CLK_SYS, PllSys: CLKSRC_PLL_SYS, PllUsb:CLKSRC_PLL_USB, Rosc: ROSC_CLKSRC_PH, Xosc: XOSC_CLKSRC,GPin0:CLKSRC_GPIN0, GPin1:CLKSRC_GPIN1 },
+        auxsrc: {SystemClock: CLK_SYS, PllSys: CLKSRC_PLL_SYS, PllUsb:CLKSRC_PLL_USB, Rosc: ROSC_CLKSRC_PH, Xosc: XOSC_CLKSRC,GpIn0:CLKSRC_GPIN0, GpIn1:CLKSRC_GPIN1 },
         div: false
     }
     /// USB Clock
     struct UsbClock {
         init_freq: 0,
         reg: clk_usb,
-        auxsrc: {PllUsb:CLKSRC_PLL_USB,PllSys: CLKSRC_PLL_SYS,  Rosc: ROSC_CLKSRC_PH, Xosc: XOSC_CLKSRC,GPin0:CLKSRC_GPIN0, GPin1:CLKSRC_GPIN1}
+        auxsrc: {PllUsb:CLKSRC_PLL_USB,PllSys: CLKSRC_PLL_SYS,  Rosc: ROSC_CLKSRC_PH, Xosc: XOSC_CLKSRC,GpIn0:CLKSRC_GPIN0, GpIn1:CLKSRC_GPIN1}
     }
     /// Adc Clock
     struct AdcClock {
         init_freq: 0,
         reg: clk_adc,
-        auxsrc: {PllUsb:CLKSRC_PLL_USB,PllSys: CLKSRC_PLL_SYS,  Rosc: ROSC_CLKSRC_PH, Xosc: XOSC_CLKSRC,GPin0:CLKSRC_GPIN0, GPin1:CLKSRC_GPIN1}
+        auxsrc: {PllUsb:CLKSRC_PLL_USB,PllSys: CLKSRC_PLL_SYS,  Rosc: ROSC_CLKSRC_PH, Xosc: XOSC_CLKSRC,GpIn0:CLKSRC_GPIN0, GpIn1:CLKSRC_GPIN1}
     }
     /// RTC Clock
     struct RtcClock {
         init_freq: 0,
         reg: clk_rtc,
-        auxsrc: {PllUsb:CLKSRC_PLL_USB,PllSys: CLKSRC_PLL_SYS,  Rosc: ROSC_CLKSRC_PH, Xosc: XOSC_CLKSRC,GPin0:CLKSRC_GPIN0, GPin1:CLKSRC_GPIN1}
+        auxsrc: {PllUsb:CLKSRC_PLL_USB,PllSys: CLKSRC_PLL_SYS,  Rosc: ROSC_CLKSRC_PH, Xosc: XOSC_CLKSRC,GpIn0:CLKSRC_GPIN0, GpIn1:CLKSRC_GPIN1}
     }
 }
 
