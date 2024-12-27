@@ -26,11 +26,8 @@ macro_rules! gpin {
 
         impl<M: PullType> $id<M> {
             #[doc = concat!("Creates a new ", stringify!($id), " given the input pin.")]
-            pub fn new(pin: Pin<$pin, FunctionClock, M>) -> Self {
-                Self {
-                    pin,
-                    frequency: HertzU32::from_raw(0),
-                }
+            pub fn new(pin: Pin<$pin, FunctionClock, M>, frequency: HertzU32) -> Self {
+                Self { pin, frequency }
             }
 
             /// Set the frequency of the externally applied clock signal.

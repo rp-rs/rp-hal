@@ -64,7 +64,7 @@ fn main() -> ! {
     );
 
     let gpin0_pin = pins.gpio20.reconfigure();
-    let gpin0: GpIn0 = GpIn0::new(gpin0_pin).set_frequency(GPIN_EXTERNAL_CLOCK_FREQ_HZ.Hz());
+    let gpin0: GpIn0 = GpIn0::new(gpin0_pin, GPIN_EXTERNAL_CLOCK_FREQ_HZ.Hz());
 
     let mut clocks = ClocksManager::new(pac.CLOCKS);
 
