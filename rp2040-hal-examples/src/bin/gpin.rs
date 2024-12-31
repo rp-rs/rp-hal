@@ -22,7 +22,7 @@ use rp2040_hal::clocks::ClockSource;
 use rp2040_hal as hal;
 
 // Necessary HAL types
-use hal::{clocks::ClocksManager, gpin::GpIn0, gpio, xosc::setup_xosc_blocking, Clock, Sio};
+use hal::{clocks::ClocksManager, gpin::GpIn0, gpio, Clock, Sio};
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
@@ -38,8 +38,6 @@ pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
 
 // The external clock provided to GPIO pin 20.
 const GPIN_EXTERNAL_CLOCK_FREQ_HZ: u32 = 1_000_000u32;
-// Frequency of the external crystal on the board. This value works for an RPi Pico.
-const EXTERNAL_XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
 /// Entry point to our bare-metal application.
 ///
@@ -53,8 +51,6 @@ fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
 
     let sio = Sio::new(pac.SIO);
-
-    let _xosc = setup_xosc_blocking(pac.XOSC, EXTERNAL_XTAL_FREQ_HZ.Hz()).unwrap();
 
     let pins = gpio::Pins::new(
         pac.IO_BANK0,
