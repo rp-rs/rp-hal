@@ -16,7 +16,7 @@ jobs:
       - name: Install picotool
         run: |
           sudo apt-get install -y debian-archive-keyring
-          sudo sh -c "echo 'deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] http://deb.debian.org/debian testing main contrib non-free' >/etc/apt/sources.list.d/debian.list"
+          sudo sh -c "echo 'deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] http://deb.debian.org/debian unstable main contrib non-free' >/etc/apt/sources.list.d/debian.list"
           sudo apt-get update
           sudo apt-get install -y libxml2-utils picotool
       - name: Test picotool
