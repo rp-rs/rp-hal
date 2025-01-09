@@ -200,9 +200,9 @@ where
     T: core::fmt::Write,
 {
     _ = writeln!(uart, "Reading OTP_DATA");
-    let package_id = (otp_data.chipid1().read().chipid1().bits() as u32) << 16
+    let package_id = ((otp_data.chipid1().read().chipid1().bits() as u32) << 16)
         | otp_data.chipid0().read().chipid0().bits() as u32;
-    let device_id = (otp_data.chipid3().read().chipid3().bits() as u32) << 16
+    let device_id = ((otp_data.chipid3().read().chipid3().bits() as u32) << 16)
         | otp_data.chipid2().read().chipid2().bits() as u32;
     _ = writeln!(uart, "\tRP2350 Package ID: {:#010x}", package_id);
     _ = writeln!(uart, "\tRP2350 Device ID : {:#010x}", device_id);

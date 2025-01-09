@@ -127,7 +127,7 @@ intrinsics! {
                 // Preserve NaN or inf
                 ((f.repr() & f32::SIGNIFICAND_MASK) as u64) |
                 // Preserve sign
-                ((f.repr() & f32::SIGN_MASK) as u64) << (f64::BITS-f32::BITS)
+                (((f.repr() & f32::SIGN_MASK) as u64) << (f64::BITS-f32::BITS))
             );
         }
         rom_data::float_funcs::float_to_double(f)

@@ -77,7 +77,7 @@ impl FractionalFrequency {
 
     /// Construct a fractional frequency from the raw register contents
     const fn from_registers(i: u16, f: u16) -> FractionalFrequency {
-        let raw = (i as u32) << 16 | (f as u32);
+        let raw = ((i as u32) << 16) | (f as u32);
         FractionalFrequency(raw)
     }
 
@@ -397,7 +397,7 @@ impl Powman {
             let upper2 = self.device.read_time_upper().read().bits();
             if upper1 == upper2 {
                 // we did not cross a boundary
-                return u64::from(upper1) << 32 | u64::from(lower);
+                return (u64::from(upper1) << 32) | u64::from(lower);
             }
         }
     }
@@ -428,7 +428,7 @@ impl Powman {
             .read()
             .alarm_time_63to48()
             .bits() as u64;
-        alarm3 << 48 | alarm2 << 32 | alarm1 << 16 | alarm0
+        (alarm3 << 48) | (alarm2 << 32) | (alarm1 << 16) | alarm0
     }
 
     /// Clear the Always-On-Timer
