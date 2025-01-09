@@ -365,7 +365,7 @@ impl Partition {
         assert!(last_sector < 0x2000);
         assert!(first_sector <= last_sector);
         Self {
-            permissions_and_location: (last_sector as u32) << 13 | first_sector as u32,
+            permissions_and_location: ((last_sector as u32) << 13) | first_sector as u32,
             permissions_and_flags: 0,
             id: None,
             extra_families: [0; 4],
@@ -430,7 +430,7 @@ impl Partition {
             extra_families_len: extra_families.len(),
             permissions_and_flags: (self.permissions_and_flags
                 & !Self::FLAGS_HAS_EXTRA_FAMILIES_MASK)
-                | (extra_families.len() as u32) << Self::FLAGS_HAS_EXTRA_FAMILIES_SHIFT,
+                | ((extra_families.len() as u32) << Self::FLAGS_HAS_EXTRA_FAMILIES_SHIFT),
             ..self
         }
     }
@@ -708,7 +708,7 @@ impl PartitionTableBlock {
         // 1. add item
         new_table.contents[idx] = item_generic_2bs(0, 2, ITEM_1BS_VERSION);
         idx += 1;
-        new_table.contents[idx] = (major as u32) << 16 | minor as u32;
+        new_table.contents[idx] = ((major as u32) << 16) | minor as u32;
         idx += 1;
 
         // 2. New Footer

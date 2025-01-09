@@ -898,7 +898,7 @@ where
     B: AdcChannel,
 {
     fn from(pins: (&A, &B)) -> Self {
-        Self(1 << pins.0.channel() | 1 << pins.1.channel())
+        Self((1 << pins.0.channel()) | (1 << pins.1.channel()))
     }
 }
 
@@ -909,7 +909,7 @@ where
     C: AdcChannel,
 {
     fn from(pins: (&A, &B, &C)) -> Self {
-        Self(1 << pins.0.channel() | 1 << pins.1.channel() | 1 << pins.2.channel())
+        Self((1 << pins.0.channel()) | (1 << pins.1.channel()) | (1 << pins.2.channel()))
     }
 }
 
@@ -922,10 +922,10 @@ where
 {
     fn from(pins: (&A, &B, &C, &D)) -> Self {
         Self(
-            1 << pins.0.channel()
-                | 1 << pins.1.channel()
-                | 1 << pins.2.channel()
-                | 1 << pins.3.channel(),
+            (1 << pins.0.channel())
+                | (1 << pins.1.channel())
+                | (1 << pins.2.channel())
+                | (1 << pins.3.channel()),
         )
     }
 }
@@ -940,11 +940,11 @@ where
 {
     fn from(pins: (&A, &B, &C, &D, &E)) -> Self {
         Self(
-            1 << pins.0.channel()
-                | 1 << pins.1.channel()
-                | 1 << pins.2.channel()
-                | 1 << pins.3.channel()
-                | 1 << pins.4.channel(),
+            (1 << pins.0.channel())
+                | (1 << pins.1.channel())
+                | (1 << pins.2.channel())
+                | (1 << pins.3.channel())
+                | (1 << pins.4.channel()),
         )
     }
 }
