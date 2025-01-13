@@ -147,6 +147,8 @@ impl<const SIZE: usize> Stack<SIZE> {
 /// No mutable references to that memory must exist.
 /// Therefore, a function that gets passed such an object is free to write
 /// to arbitrary memory locations in the range.
+#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct StackAllocation {
     /// Start and end pointer of the StackAllocation as a Range
     mem: Range<*mut usize>,
