@@ -251,7 +251,7 @@ fn main() -> ! {
     // exclusive access to this bus (via `AtomicDevice` or
     // `CriticalSectionDevice`, for example).
     //
-    // See https://docs.rs/embedded-hal-bus/0.2.0/embedded_hal_bus/spi for a
+    // See https://docs.rs/embedded-hal-bus/0.3.0/embedded_hal_bus/spi for a
     // list of options.
     //
     // We can safely unwrap here, because the only possible failure is CS
