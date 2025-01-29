@@ -330,7 +330,7 @@ pub fn transactions_read_write<T: ValidAddress>(
     restart_count: RangeInclusive<u32>,
 ) {
     use embedded_hal::i2c::{I2c, Operation};
-    let controller = reset(state, addr, true);
+    let controller = reset(state, addr, false);
 
     let samples_seq: FIFOBuffer = Generator::seq().take(25).collect();
     let samples_fib: FIFOBuffer = Generator::fib().take(25).collect();
@@ -381,9 +381,9 @@ pub fn transaction<T: ValidAddress>(
     // does not "waste" bytes that would be discarded otherwise.
     //
     // One down side of this is that the Target implementation is unable to detect restarts
-    // between consicutive write operations
+    // between consecutive write operations
     use embedded_hal::i2c::{I2c, Operation};
-    let controller = reset(state, addr, true);
+    let controller = reset(state, addr, false);
 
     let mut v = ([0u8; 14], [0u8; 25], [0u8; 25], [0u8; 14], [0u8; 14]);
     let samples: FIFOBuffer = Generator::seq().take(25).collect();
@@ -391,15 +391,15 @@ pub fn transaction<T: ValidAddress>(
         .transaction(
             addr,
             &mut [
-                Operation::Write(&samples), // goes to v2
+                Operation::Write(&samples),
                 Operation::Read(&mut v.0),
                 Operation::Read(&mut v.1),
                 Operation::Read(&mut v.2),
-                Operation::Write(&samples), // goes to v3
+                Operation::Write(&samples),
                 Operation::Read(&mut v.3),
-                Operation::Write(&samples), // goes to v4
-                Operation::Write(&samples), // remains in buffer
-                Operation::Write(&samples), // remains in buffer
+                Operation::Write(&samples),
+                Operation::Write(&samples),
+                Operation::Write(&samples),
                 Operation::Read(&mut v.4),
             ],
         )
@@ -423,7 +423,12 @@ pub fn transaction<T: ValidAddress>(
     assert_vec_eq!(e);
 
     // assert reads
-    let g: FIFOBuffer = Generator::seq().take(92).collect();
+    let g: FIFOBuffer = itertools::chain!(
+        Generator::seq().take(14 + 25 + 25),
+        Generator::fib().take(14),
+        Generator::seq().take(14),
+    )
+    .collect();
     let h: FIFOBuffer = itertools::chain!(
         v.0.into_iter(),
         v.1.into_iter(),

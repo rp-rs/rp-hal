@@ -59,13 +59,13 @@ mod tests {
     #[test]
     fn write_iter_read(state: &mut State) {
         i2c_tests::blocking::write_iter_read(state, ADDR_7BIT, 1..=1);
-        i2c_tests::blocking::write_iter_read(state, ADDR_10BIT, 2..=2);
+        i2c_tests::blocking::write_iter_read(state, ADDR_10BIT, 1..=1);
     }
 
     #[test]
     fn write_read(state: &mut State) {
         i2c_tests::blocking::write_read(state, ADDR_7BIT, 1..=1);
-        i2c_tests::blocking::write_read(state, ADDR_10BIT, 2..=2);
+        i2c_tests::blocking::write_read(state, ADDR_10BIT, 1..=1);
     }
 
     #[test]
@@ -89,25 +89,26 @@ mod tests {
     #[test]
     fn transactions_read_write(state: &mut State) {
         i2c_tests::blocking::transactions_read_write(state, ADDR_7BIT, 1..=1);
+        // An initial read in 10 bit mode contains an implicit restart condition
         i2c_tests::blocking::transactions_read_write(state, ADDR_10BIT, 2..=2);
     }
 
     #[test]
     fn transactions_write_read(state: &mut State) {
         i2c_tests::blocking::transactions_write_read(state, ADDR_7BIT, 1..=1);
-        i2c_tests::blocking::transactions_write_read(state, ADDR_10BIT, 2..=2);
+        i2c_tests::blocking::transactions_write_read(state, ADDR_10BIT, 1..=1);
     }
 
     #[test]
     fn transaction(state: &mut State) {
-        i2c_tests::blocking::transaction(state, ADDR_7BIT, 7..=9);
-        i2c_tests::blocking::transaction(state, ADDR_10BIT, 7..=9);
+        i2c_tests::blocking::transaction(state, ADDR_7BIT, 5..=5);
+        i2c_tests::blocking::transaction(state, ADDR_10BIT, 5..=5);
     }
 
     #[test]
     fn transactions_iter(state: &mut State) {
         i2c_tests::blocking::transactions_iter(state, ADDR_7BIT, 1..=1);
-        i2c_tests::blocking::transactions_iter(state, ADDR_10BIT, 2..=2);
+        i2c_tests::blocking::transactions_iter(state, ADDR_10BIT, 1..=1);
     }
 
     #[test]
