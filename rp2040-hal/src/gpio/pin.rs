@@ -31,6 +31,7 @@ use crate::typelevel::Sealed;
 use super::{DynFunction, DynPullType};
 
 pub(crate) mod pin_sealed;
+pub(crate) mod non_blocking;
 
 /// Value-level `enum` for the pin's bank.
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -112,6 +113,12 @@ macro_rules! pin_ids {
                         Self(())
                     }
                 }
+                impl Wakeable for [<$prefix $name>] {
+                    fn waker() -> &'static IrqWaker {
+                       static WAKER: IrqWaker = IrqWaker::new();
+                       &WAKER
+                    }
+                }
             )*
         }
     };
@@ -119,11 +126,13 @@ macro_rules! pin_ids {
 /// Bank of all the GPIOs.
 pub mod bank0 {
     use super::{pin_sealed, BankBank0, DynBankId, DynPinId, PinId};
+    use crate::async_utils::sealed::{IrqWaker, Wakeable};
     pin_ids!(Bank0 as Gpio: 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29);
 }
 /// Bank of the QSPI related pins.
 pub mod qspi {
     use super::{pin_sealed, BankQspi, DynBankId, DynPinId, PinId};
+    use crate::async_utils::sealed::{IrqWaker, Wakeable};
     pin_ids!(Qspi: 0;Sclk, 1;Ss, 2;Sd0, 3;Sd1, 4;Sd2, 5;Sd3);
 }
 
