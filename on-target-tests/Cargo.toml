@@ -64,10 +64,12 @@ once_cell = { version = "1.19.0", default-features = false, features = ["critica
 panic-probe = {version = "0.3", features = ["print-defmt"]}
 rp2040-boot2 = { version = "0.3.0", optional = true }
 rp2040-hal = {path = "../rp2040-hal", features = ["critical-section-impl", "defmt", "rt", "i2c-write-iter"], optional = true}
+rp235x-hal = {path = "../rp235x-hal", features = ["critical-section-impl", "defmt", "rt", "i2c-write-iter"], optional = true}
 
 [features]
 
 rp2040 = ["dep:rp2040-boot2", "dep:rp2040-hal"]
+rp235x = ["dep:rp235x-hal"]
 
 [profile.dev]
 codegen-units = 1
