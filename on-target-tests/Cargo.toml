@@ -62,8 +62,12 @@ i2c-write-iter = {version = "1.0.0", features = ["async"]}
 itertools = {version = "0.12.0", default-features = false}
 once_cell = { version = "1.19.0", default-features = false, features = ["critical-section"] }
 panic-probe = {version = "0.3", features = ["print-defmt"]}
-rp2040-boot2 = "0.3.0"
-rp2040-hal = {path = "../rp2040-hal", features = ["critical-section-impl", "defmt", "rt", "i2c-write-iter"]}
+rp2040-boot2 = { version = "0.3.0", optional = true }
+rp2040-hal = {path = "../rp2040-hal", features = ["critical-section-impl", "defmt", "rt", "i2c-write-iter"], optional = true}
+
+[features]
+
+rp2040 = ["dep:rp2040-boot2", "dep:rp2040-hal"]
 
 [profile.dev]
 codegen-units = 1
