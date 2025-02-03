@@ -168,6 +168,34 @@ where
         }
     }
 
+    /// Set this set of pins to the state given in a single operation.
+    ///
+    /// The state passed in must be a mask where each bit corresponds to a gpio.
+    ///
+    /// For example, if the group contains Gpio1 and Gpio3, a read may yield:
+    /// ```text
+    /// 0b0000_0000__0000_0000__0000_0000__0000_1010
+    ///                          This is Gpio3  ↑↑↑
+    ///                      Gpio2 is not used   ||
+    ///                          This is Gpio1    |
+    /// ```
+    ///
+    /// State corresponding to bins not in this group are ignored.
+    pub fn set_u32(&mut self, state: u32) {
+        use super::pin::pin_sealed::PinIdOps;
+        let mask = self.0.write_mask();
+        let state_masked = mask & state;
+        let head_id = self.0.head.borrow().id();
+        // UNSAFE: this register is 32bit wide and all bits are valid.
+        // The value set is masked
+        head_id.sio_out().modify(|r, w| unsafe {
+            // clear all bit part of this group
+            let cleared = r.bits() & !mask;
+            // set bits according to state
+            w.bits(cleared | state_masked)
+        });
+    }
+
     /// Toggles this set of pins all at the same time.
     ///
     /// This only affects output pins. Input pins in the
