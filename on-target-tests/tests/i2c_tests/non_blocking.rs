@@ -9,8 +9,9 @@ use fugit::{HertzU32, RateExtU32};
 use futures::FutureExt;
 use heapless::Vec;
 
-use rp2040_hal::{
-    self as hal,
+#[cfg(feature = "rp2040")]
+use rp2040_hal as hal;
+use hal::{
     clocks::init_clocks_and_plls,
     gpio::{FunctionI2C, Pin, PullUp},
     i2c::{Error, ValidAddress},

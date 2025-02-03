@@ -8,15 +8,17 @@ use crate::hal::dma::Channels;
 use defmt_rtt as _; // defmt transport
 use defmt_test as _;
 use panic_probe as _;
+#[cfg(feature = "rp2040")]
 use rp2040_hal as hal; // memory layout // panic handler
-use rp2040_hal::gpio::{self, Pin};
-use rp2040_hal::pac::SPI0;
-use rp2040_hal::spi;
+use hal::gpio::{self, Pin};
+use hal::pac::SPI0;
+use hal::spi;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
 /// Note: This boot block is not necessary when using a rp-hal based BSP
 /// as the BSPs already perform this step.
+#[cfg(feature = "rp2040")]
 #[link_section = ".boot2"]
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
@@ -58,10 +60,11 @@ mod tests {
     use fugit::RateExtU32;
     use hal::{clocks::init_clocks_and_plls, pac, watchdog::Watchdog};
     use panic_probe as _;
+    #[cfg(feature = "rp2040")]
     use rp2040_hal as hal;
-    use rp2040_hal::dma::bidirectional;
-    use rp2040_hal::dma::DMAExt;
-    use rp2040_hal::Clock;
+    use hal::dma::bidirectional;
+    use hal::dma::DMAExt;
+    use hal::Clock;
 
     #[init]
     fn setup() -> State {

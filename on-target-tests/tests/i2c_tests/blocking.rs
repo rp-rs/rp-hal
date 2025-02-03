@@ -2,9 +2,9 @@ use core::{cell::RefCell, ops::RangeInclusive};
 
 use critical_section::Mutex;
 use fugit::{HertzU32, RateExtU32};
-
-use rp2040_hal::{
-    self as hal,
+#[cfg(feature = "rp2040")]
+use rp2040_hal as hal;
+use hal::{
     clocks::init_clocks_and_plls,
     gpio::{FunctionI2C, Pin, PullUp},
     i2c::{Error, ValidAddress},
@@ -103,7 +103,7 @@ pub fn setup<T: ValidAddress>(xtal_freq_hz: u32, addr: T) -> State {
 
     critical_section::with(|cs| TARGET.replace(cs, Some(i2c_target)));
 
-    static STACK: rp2040_hal::multicore::Stack<10240> = rp2040_hal::multicore::Stack::new();
+    static STACK: hal::multicore::Stack<10240> = hal::multicore::Stack::new();
     unsafe {
         // delegate I2C1 irqs to core 1
         hal::multicore::Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo)
