@@ -3,6 +3,8 @@ use core::cell::RefCell;
 use critical_section::Mutex;
 #[cfg(feature = "rp2040")]
 use rp2040_hal as hal;
+#[cfg(feature = "rp235x")]
+use rp235x_hal as hal;
 use hal::{
     gpio::{
         bank0::{Gpio0, Gpio1, Gpio2, Gpio3},

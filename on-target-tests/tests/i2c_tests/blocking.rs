@@ -4,6 +4,8 @@ use critical_section::Mutex;
 use fugit::{HertzU32, RateExtU32};
 #[cfg(feature = "rp2040")]
 use rp2040_hal as hal;
+#[cfg(feature = "rp235x")]
+use rp235x_hal as hal;
 use hal::{
     clocks::init_clocks_and_plls,
     gpio::{FunctionI2C, Pin, PullUp},
@@ -17,7 +19,10 @@ use super::{Controller, FIFOBuffer, Generator, MutexCell, Target, TargetState};
 
 pub struct State {
     controller: Option<Controller>,
-    timer: hal::Timer,
+    #[cfg(feature = "rp2040")]
+    timer: Timer,
+    #[cfg(feature = "rp235x")]
+    timer: Timer<hal::timer::CopyableTimer0>,
     resets: hal::pac::RESETS,
     ref_clock_freq: HertzU32,
 }
@@ -25,7 +30,10 @@ pub struct State {
 static TARGET: MutexCell<Option<Target>> = Mutex::new(RefCell::new(None));
 
 static PAYLOAD: MutexCell<TargetState> = MutexCell::new(RefCell::new(TargetState::new()));
+#[cfg(feature = "rp2040")]
 static TIMER: MutexCell<Option<Timer>> = MutexCell::new(RefCell::new(None));
+#[cfg(feature = "rp235x")]
+static TIMER: MutexCell<Option<Timer<hal::timer::CopyableTimer0>>> = MutexCell::new(RefCell::new(None));
 
 macro_rules! assert_vec_eq {
     ($e:expr) => {
@@ -67,7 +75,10 @@ pub fn setup<T: ValidAddress>(xtal_freq_hz: u32, addr: T) -> State {
     .ok()
     .unwrap();
 
+    #[cfg(feature = "rp2040")]
     let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
+    #[cfg(feature = "rp235x")]
+    let timer = hal::Timer::new_timer0(pac.TIMER0, &mut pac.RESETS, &clocks);
 
     // The single-cycle I/O block controls our GPIO pins
     let mut sio = hal::Sio::new(pac.SIO);
@@ -111,8 +122,8 @@ pub fn setup<T: ValidAddress>(xtal_freq_hz: u32, addr: T) -> State {
             .get_mut(1)
             .expect("core 1 is not available")
             .spawn(STACK.take().unwrap(), || {
-                pac::NVIC::unpend(hal::pac::Interrupt::I2C1_IRQ);
-                pac::NVIC::unmask(hal::pac::Interrupt::I2C1_IRQ);
+                cortex_m::peripheral::NVIC::unpend(hal::pac::Interrupt::I2C1_IRQ);
+                cortex_m::peripheral::NVIC::unmask(hal::pac::Interrupt::I2C1_IRQ);
 
                 loop {
                     cortex_m::asm::wfi()
