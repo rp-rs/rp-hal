@@ -8,13 +8,13 @@ use crate::hal::dma::Channels;
 use defmt_rtt as _; // defmt transport
 use defmt_test as _;
 use hal::gpio::{self, Pin};
+use hal::pac::SPI0;
+use hal::spi;
 use panic_probe as _;
 #[cfg(feature = "rp2040")]
 use rp2040_hal as hal; // memory layout // panic handler
 #[cfg(feature = "rp235x")]
 use rp235x_hal as hal;
-use hal::pac::SPI0;
-use hal::spi;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -66,14 +66,14 @@ mod tests {
     use defmt::assert_eq;
     use defmt_rtt as _;
     use fugit::RateExtU32;
+    use hal::dma::{bidirectional, DMAExt};
+    use hal::Clock;
     use hal::{clocks::init_clocks_and_plls, pac, watchdog::Watchdog};
     use panic_probe as _;
     #[cfg(feature = "rp2040")]
     use rp2040_hal as hal;
     #[cfg(feature = "rp235x")]
     use rp235x_hal as hal;
-    use hal::dma::{bidirectional, DMAExt};
-    use hal::Clock;
 
     #[init]
     fn setup() -> State {

@@ -35,8 +35,8 @@ mod tests {
     use crate::hal::clocks::init_clocks_and_plls;
     use crate::hal::pac;
     use crate::XTAL_FREQ_HZ;
-    use hal::watchdog::Watchdog;
     use hal::gpio::{PinGroup, PinState};
+    use hal::watchdog::Watchdog;
 
     #[init]
     fn setup() -> () {

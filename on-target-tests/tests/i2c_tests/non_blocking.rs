@@ -9,10 +9,6 @@ use fugit::{HertzU32, RateExtU32};
 use futures::FutureExt;
 use heapless::Vec;
 
-#[cfg(feature = "rp2040")]
-use rp2040_hal as hal;
-#[cfg(feature = "rp235x")]
-use rp235x_hal as hal;
 use hal::{
     clocks::init_clocks_and_plls,
     gpio::{FunctionI2C, Pin, PullUp},
@@ -21,6 +17,10 @@ use hal::{
     watchdog::Watchdog,
     Clock,
 };
+#[cfg(feature = "rp2040")]
+use rp2040_hal as hal;
+#[cfg(feature = "rp235x")]
+use rp235x_hal as hal;
 
 use super::{Controller, FIFOBuffer, Generator, Target, TargetState};
 

@@ -2,10 +2,6 @@ use core::{cell::RefCell, ops::RangeInclusive};
 
 use critical_section::Mutex;
 use fugit::{HertzU32, RateExtU32};
-#[cfg(feature = "rp2040")]
-use rp2040_hal as hal;
-#[cfg(feature = "rp235x")]
-use rp235x_hal as hal;
 use hal::{
     clocks::init_clocks_and_plls,
     gpio::{FunctionI2C, Pin, PullUp},
@@ -14,6 +10,10 @@ use hal::{
     watchdog::Watchdog,
     Clock, Timer,
 };
+#[cfg(feature = "rp2040")]
+use rp2040_hal as hal;
+#[cfg(feature = "rp235x")]
+use rp235x_hal as hal;
 
 use super::{Controller, FIFOBuffer, Generator, MutexCell, Target, TargetState};
 
@@ -33,7 +33,8 @@ static PAYLOAD: MutexCell<TargetState> = MutexCell::new(RefCell::new(TargetState
 #[cfg(feature = "rp2040")]
 static TIMER: MutexCell<Option<Timer>> = MutexCell::new(RefCell::new(None));
 #[cfg(feature = "rp235x")]
-static TIMER: MutexCell<Option<Timer<hal::timer::CopyableTimer0>>> = MutexCell::new(RefCell::new(None));
+static TIMER: MutexCell<Option<Timer<hal::timer::CopyableTimer0>>> =
+    MutexCell::new(RefCell::new(None));
 
 macro_rules! assert_vec_eq {
     ($e:expr) => {
