@@ -504,8 +504,8 @@ impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::ReadReady
 
 impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Write for UartPeripheral<Enabled, D, P> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
-        self.write_full_blocking(buf);
-        Ok(buf.len())
+        let remaining = nb::block!(super::writer::write_raw(&self.device, buf)).unwrap(); // Infallible
+        Ok(buf.len() - remaining.len())
     }
     fn flush(&mut self) -> Result<(), Self::Error> {
         nb::block!(super::writer::transmit_flushed(&self.device)).unwrap(); // Infallible
