@@ -200,12 +200,12 @@ where
     T: core::fmt::Write,
 {
     _ = writeln!(uart, "Reading OTP_DATA");
-    let package_id = ((otp_data.chipid1().read().chipid1().bits() as u32) << 16)
+    let device_id = ((otp_data.chipid1().read().chipid1().bits() as u32) << 16)
         | otp_data.chipid0().read().chipid0().bits() as u32;
-    let device_id = ((otp_data.chipid3().read().chipid3().bits() as u32) << 16)
+    let wafer_id = ((otp_data.chipid3().read().chipid3().bits() as u32) << 16)
         | otp_data.chipid2().read().chipid2().bits() as u32;
-    _ = writeln!(uart, "\tRP2350 Package ID: {:#010x}", package_id);
-    _ = writeln!(uart, "\tRP2350 Device ID : {:#010x}", device_id);
+    _ = writeln!(uart, "\tRP2350 Device ID: {:#010x}", device_id);
+    _ = writeln!(uart, "\tRP2350 Wafer ID : {:#010x}", wafer_id);
 }
 
 /// Read OTP in raw mode using the PAC
@@ -218,13 +218,13 @@ where
     _ = writeln!(uart, "Reading OTP_DATA_RAW");
     _ = writeln!(
         uart,
-        "\tRP2350 Package ID: {:#010x} {:#010x}",
+        "\tRP2350 Device ID: {:#010x} {:#010x}",
         otp_data_raw.chipid0().read().bits(),
         otp_data_raw.chipid1().read().bits()
     );
     _ = writeln!(
         uart,
-        "\tRP2350 Device ID : {:#010x} {:#010x}",
+        "\tRP2350 Wafer ID : {:#010x} {:#010x}",
         otp_data_raw.chipid2().read().bits(),
         otp_data_raw.chipid3().read().bits()
     );
@@ -248,9 +248,18 @@ where
     };
 
     _ = writeln!(uart, "get_sys_info(CHIP_INFO/0x0001)");
-    _ = writeln!(uart, "\tRP2350 Package ID: {:#010x}", result.package_sel);
-    _ = writeln!(uart, "\tRP2350 Device ID : {:#010x}", result.device_id);
-    _ = writeln!(uart, "\tRP2350 Wafer ID  : {:#010x}", result.wafer_id);
+    let package_type = match result.package_sel {
+        0 => "QFN80",
+        1 => "QFN60",
+        _ => "unknown",
+    };
+    _ = writeln!(
+        uart,
+        "\tRP2350 Package  : {:#010x} ({}, but wrong on A2 stepping)",
+        result.package_sel, package_type
+    );
+    _ = writeln!(uart, "\tRP2350 Device ID: {:#010x}", result.device_id);
+    _ = writeln!(uart, "\tRP2350 Wafer ID : {:#010x}", result.wafer_id);
 }
 
 /// Run get_sys_info with 0x0004
