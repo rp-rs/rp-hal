@@ -12,7 +12,10 @@
 use defmt_rtt as _; // defmt transport
 use defmt_test as _;
 use panic_probe as _;
+#[cfg(feature = "rp2040")]
 use rp2040_hal as hal; // memory layout // panic handler
+#[cfg(feature = "rp235x")]
+use rp235x_hal as hal;
 
 use hal::{async_utils::AsyncPeripheral, pac::interrupt};
 
@@ -20,9 +23,16 @@ use hal::{async_utils::AsyncPeripheral, pac::interrupt};
 /// need this to help the ROM bootloader get our code up and running.
 /// Note: This boot block is not necessary when using a rp-hal based BSP
 /// as the BSPs already perform this step.
+#[cfg(feature = "rp2040")]
 #[link_section = ".boot2"]
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
+
+/// Tell the Boot ROM about our application
+#[cfg(feature = "rp235x")]
+#[link_section = ".start_block"]
+#[used]
+pub static IMAGE_DEF: hal::block::ImageDef = hal::block::ImageDef::secure_exe();
 
 /// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz. Adjust
 /// if your board has a different frequency

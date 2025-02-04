@@ -1,14 +1,17 @@
 use core::cell::RefCell;
 
 use critical_section::Mutex;
-use rp2040_hal::{
-    self as hal,
+use hal::{
     gpio::{
         bank0::{Gpio0, Gpio1, Gpio2, Gpio3},
         FunctionI2C, Pin, PullUp,
     },
     i2c::peripheral::Event,
 };
+#[cfg(feature = "rp2040")]
+use rp2040_hal as hal;
+#[cfg(feature = "rp235x")]
+use rp235x_hal as hal;
 
 pub mod blocking;
 pub mod non_blocking;
@@ -88,7 +91,7 @@ impl Iterator for Generator {
 
 fn target_handler(
     target: &mut Target,
-    evt: rp2040_hal::i2c::peripheral::Event,
+    evt: hal::i2c::peripheral::Event,
     payload: &mut TargetState,
     throttle: bool,
 ) {
