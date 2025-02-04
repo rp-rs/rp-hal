@@ -214,6 +214,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::ErrorType for Writer<D, 
 
 impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::Write for Writer<D, P> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
+        // Blocks if and only if no bytes can be written.
         let remaining = nb::block!(write_raw(&self.device, buf)).unwrap(); // Infallible
         Ok(buf.len() - remaining.len())
     }
