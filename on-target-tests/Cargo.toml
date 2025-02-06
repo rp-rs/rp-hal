@@ -45,6 +45,10 @@ name = "i2c_loopback_async"
 harness = false
 name = "gpio"
 
+[[test]]
+harness = false
+name = "multicore"
+
 [dependencies]
 cortex-m = "0.7"
 cortex-m-rt = "0.7"
@@ -65,6 +69,7 @@ panic-probe = {version = "0.3", features = ["print-defmt"]}
 rp2040-boot2 = { version = "0.3.0", optional = true }
 rp2040-hal = {path = "../rp2040-hal", features = ["critical-section-impl", "defmt", "rt", "i2c-write-iter"], optional = true}
 rp235x-hal = {path = "../rp235x-hal", features = ["critical-section-impl", "defmt", "rt", "i2c-write-iter"], optional = true}
+portable-atomic = {version = "1.7.0", features = ["critical-section"]}
 
 [features]
 
