@@ -52,9 +52,6 @@ async fn wait_with(payload: &RefCell<TargetState>, mut f: impl FnMut(&TargetStat
 }
 
 pub fn setup<T: ValidAddress>(xtal_freq_hz: u32, addr: T) -> State {
-    unsafe {
-        hal::sio::spinlock_reset();
-    }
     let mut pac = pac::Peripherals::take().unwrap();
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
 

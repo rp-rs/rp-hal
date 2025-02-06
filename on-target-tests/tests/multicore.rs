@@ -36,6 +36,8 @@ static STATE: AtomicU8 = AtomicU8::new(0);
 static COUNTER: AtomicU32 = AtomicU32::new(0);
 const STEPS: u32 = 100000;
 
+mod init;
+
 #[defmt_test::tests]
 mod tests {
     use crate::hal;
@@ -53,7 +55,7 @@ mod tests {
     #[init]
     fn setup() -> () {
         unsafe {
-            hal::sio::spinlock_reset();
+            crate::init::reset_cleanup();
         }
         let mut pac = pac::Peripherals::take().unwrap();
         #[cfg(feature = "rp2040")]

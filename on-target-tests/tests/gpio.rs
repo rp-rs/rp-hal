@@ -29,6 +29,8 @@ pub static IMAGE_DEF: hal::block::ImageDef = hal::block::ImageDef::secure_exe();
 /// if your board has a different frequency
 const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
+mod init;
+
 #[defmt_test::tests]
 mod tests {
     use crate::hal;
@@ -41,7 +43,7 @@ mod tests {
     #[init]
     fn setup() -> () {
         unsafe {
-            hal::sio::spinlock_reset();
+            crate::init::reset_cleanup();
         }
         let mut pac = pac::Peripherals::take().unwrap();
         #[cfg(feature = "rp2040")]
