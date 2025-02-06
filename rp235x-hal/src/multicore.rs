@@ -85,7 +85,9 @@ fn core1_setup(stack_limit: *mut usize) {
 /// (Copied from https://github.com/embassy-rs/embassy/blob/9da04cc38ea5cc17740bd9921f9f5cbb1c689a31/embassy-rp/src/lib.rs)
 fn enable_actlr_extexclall() {
     unsafe {
-        (*cortex_m::peripheral::ICB::PTR).actlr.modify(|w| w | (1 << 29));
+        (*cortex_m::peripheral::ICB::PTR)
+            .actlr
+            .modify(|w| w | (1 << 29));
     }
 }
 

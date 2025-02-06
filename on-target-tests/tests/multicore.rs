@@ -11,7 +11,7 @@ use rp2040_hal as hal; // memory layout // panic handler
 use rp235x_hal as hal;
 
 use core::sync::atomic::Ordering;
-use portable_atomic::{AtomicU8, AtomicU32};
+use portable_atomic::{AtomicU32, AtomicU8};
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -46,9 +46,8 @@ mod tests {
     use crate::XTAL_FREQ_HZ;
     use hal::watchdog::Watchdog;
 
-    use hal::multicore::{Multicore, Stack};
     use core::sync::atomic::Ordering;
-
+    use hal::multicore::{Multicore, Stack};
 
     static CORE1_STACK: Stack<4096> = Stack::new();
 
@@ -73,7 +72,6 @@ mod tests {
         )
         .ok()
         .unwrap();
-
 
         let mut sio = hal::Sio::new(pac.SIO);
 
@@ -112,9 +110,8 @@ fn core1_task() {
                     COUNTER.fetch_add(1, Ordering::Relaxed);
                 }
                 STATE.store(2, Ordering::Release);
-            },
+            }
             _ => (),
         }
     }
 }
-

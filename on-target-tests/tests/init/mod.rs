@@ -13,12 +13,15 @@ use hal::pac;
 /// of the `#[init]` function.
 pub unsafe fn reset_cleanup() {
     unsafe {
-        (*pac::PSM::PTR).frce_off().modify(|_, w| w.proc1().set_bit());
+        (*pac::PSM::PTR)
+            .frce_off()
+            .modify(|_, w| w.proc1().set_bit());
         while !(*pac::PSM::PTR).frce_off().read().proc1().bit_is_set() {
             cortex_m::asm::nop();
         }
-        (*pac::PSM::PTR).frce_off().modify(|_, w| w.proc1().clear_bit());
+        (*pac::PSM::PTR)
+            .frce_off()
+            .modify(|_, w| w.proc1().clear_bit());
         hal::sio::spinlock_reset();
     }
 }
-
