@@ -31,6 +31,22 @@ mod inner {
         }
         t
     }
+
+    /// Enable co-processors.
+    ///
+    /// For core0, this is done by the `#[entry]` macro. Fore core1, this function is called
+    /// from `multicore::Core::spawn`.
+    ///
+    /// # Safety
+    ///
+    /// Must only be called immediately after starting up a core.
+    pub unsafe fn enable_coprocessors() {
+        unsafe {
+            (*cortex_m::peripheral::SCB::PTR)
+                .cpacr
+                .modify(|value| value | 3 | 3 << 8 | (3 << 20) | (3 << 22))
+        }
+    }
 }
 
 #[cfg(all(target_arch = "riscv32", target_os = "none"))]

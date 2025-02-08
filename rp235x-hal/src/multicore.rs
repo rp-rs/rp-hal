@@ -68,6 +68,10 @@ fn install_stack_guard(_stack_limit: *mut usize) {
 #[inline(always)]
 fn core1_setup(stack_limit: *mut usize) {
     install_stack_guard(stack_limit);
+    #[cfg(all(target_arch = "arm", target_os = "none"))]
+    unsafe {
+        crate::arch::enable_coprocessors()
+    };
     // TODO: irq priorities
 }
 
