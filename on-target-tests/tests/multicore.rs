@@ -100,18 +100,46 @@ mod tests {
         let counter = super::COUNTER.load(Ordering::Acquire);
         assert_eq!(2 * super::STEPS, counter);
     }
+
+    #[test]
+    fn check_floats() {
+        super::STATE.store(3, Ordering::Release);
+        super::calculations();
+        while super::STATE.load(Ordering::Acquire) != 4 {}
+
+        let counter = super::COUNTER.load(Ordering::Acquire);
+        assert_eq!(2 * super::STEPS, counter);
+    }
 }
 
 fn core1_task() {
     loop {
         match STATE.load(Ordering::Acquire) {
+            // check_atomics
             1 => {
                 for _ in 0..STEPS {
                     COUNTER.fetch_add(1, Ordering::Relaxed);
                 }
                 STATE.store(2, Ordering::Release);
             }
+            // response to check_atomics
+            2 => (),
+            // check_floats
+            3 => {
+                calculations();
+                STATE.store(4, Ordering::Release);
+            }
+            // response to check_floats
+            4 => (),
             _ => (),
         }
+    }
+}
+
+fn calculations() {
+    for i in 0..STEPS {
+        let m = core::hint::black_box(1.1) * (i as f32);
+        let n = core::hint::black_box(1.1) * (i as f64);
+        assert!((m as f64 - n).abs() < 0.01f64);
     }
 }
