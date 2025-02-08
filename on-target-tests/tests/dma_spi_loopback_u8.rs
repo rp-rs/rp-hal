@@ -43,6 +43,8 @@ struct State {
     spi: Option<spi::Spi<spi::Enabled, SPI0, (MOSI, MISO, SCLK), 8>>,
 }
 
+mod init;
+
 mod testdata {
     #[allow(dead_code)]
     pub const ARRAY_U8: [u8; 10] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -79,7 +81,7 @@ mod tests {
     #[init]
     fn setup() -> State {
         unsafe {
-            hal::sio::spinlock_reset();
+            crate::init::reset_cleanup();
         }
         let mut pac = pac::Peripherals::take().unwrap();
         #[cfg(feature = "rp2040")]

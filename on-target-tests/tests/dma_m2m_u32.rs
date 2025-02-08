@@ -49,6 +49,8 @@ mod testdata {
     ];
 }
 
+mod init;
+
 #[defmt_test::tests]
 mod tests {
     use crate::testdata;
@@ -69,7 +71,7 @@ mod tests {
     #[init]
     fn setup() -> State {
         unsafe {
-            hal::sio::spinlock_reset();
+            crate::init::reset_cleanup();
         }
         let mut pac = pac::Peripherals::take().unwrap();
         #[cfg(feature = "rp2040")]

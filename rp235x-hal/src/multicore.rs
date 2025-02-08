@@ -71,6 +71,26 @@ fn core1_setup(stack_limit: *mut usize) {
     // TODO: irq priorities
 }
 
+/// Set the EXTEXCLALL bit in ACTLR.
+///
+/// The default MPU memory map marks all memory as non-shareable, so atomics don't
+/// synchronize memory accesses between cores at all. This bit forces all memory to be
+/// considered shareable regardless of what the MPU says.
+///
+/// TODO: does this interfere somehow if the user wants to use a custom MPU configuration?
+/// maybe we need to add a way to disable this?
+///
+/// This must be done FOR EACH CORE.
+///
+/// (Copied from https://github.com/embassy-rs/embassy/blob/9da04cc38ea5cc17740bd9921f9f5cbb1c689a31/embassy-rp/src/lib.rs)
+fn enable_actlr_extexclall() {
+    unsafe {
+        (*cortex_m::peripheral::ICB::PTR)
+            .actlr
+            .modify(|w| w | (1 << 29));
+    }
+}
+
 /// Multicore execution management.
 pub struct Multicore<'p> {
     cores: [Core<'p>; 2],
@@ -245,6 +265,8 @@ impl Core<'_> {
     where
         F: FnOnce() + Send + 'static,
     {
+        // Needs to be enabled on both cores to make atomics work between cores.
+        enable_actlr_extexclall();
         if let Some((psm, ppb, fifo)) = self.inner.as_mut() {
             // The first two ignored `u64` parameters are there to take up all of the registers,
             // which means that the rest of the arguments are taken from the stack,
@@ -255,6 +277,8 @@ impl Core<'_> {
                 entry: *mut ManuallyDrop<F>,
                 stack_limit: *mut usize,
             ) -> ! {
+                // Needs to be enabled on both cores to make atomics work between cores.
+                enable_actlr_extexclall();
                 core1_setup(stack_limit);
 
                 let entry = unsafe { ManuallyDrop::take(&mut *entry) };
