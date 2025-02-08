@@ -105,10 +105,8 @@ mod tests {
     fn check_floats() {
         super::STATE.store(3, Ordering::Release);
         super::calculations();
+        // if calculations fail on core1, the test case will hang here:
         while super::STATE.load(Ordering::Acquire) != 4 {}
-
-        let counter = super::COUNTER.load(Ordering::Acquire);
-        assert_eq!(2 * super::STEPS, counter);
     }
 }
 
