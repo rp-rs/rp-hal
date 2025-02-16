@@ -18,6 +18,9 @@ The Minimum-Supported Rust Version (MSRV) for the next release is 1.79
 ### Changed
 
 - Enable co-processors when spawning on core1 - #900 @jannic
+- Set EXTEXCLALL when enabling multi-core operation, fixing atomics - #898 @jannic
+- Fix implementations of embedded\_io::Write for UartPeripheral - #895 @jannic
+- Copy implementation of PinGroup::set\_u32 from rp2040-hal - #893 @jannic
 - Derive Debug and defmt::Format for StackAllocation - #889 @jannic
 - Implement support for XipCS1 pin function - #873 @Altaflux
 - Add a nice wrapper for get\_sys\_info - #877 @nahla-nee
