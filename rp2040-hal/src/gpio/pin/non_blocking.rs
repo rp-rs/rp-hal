@@ -1,16 +1,17 @@
-use embedded_hal_async::digital::Wait;
-use core::task::Poll;
 use crate::{
-    async_utils::{sealed::{IrqWaker, Wakeable}, AsyncPeripheral, CancellablePollFn as CPFn},
+    async_utils::{
+        sealed::{IrqWaker, Wakeable},
+        AsyncPeripheral, CancellablePollFn as CPFn,
+    },
     gpio::{
-        Error,
-        func::{ FunctionSio, SioConfig },
-        Interrupt,
-        Pin, PinId, PullType,
-        pin::pin_sealed::TypeLevelPinId,
+        func::{FunctionSio, SioConfig},
         new_pin,
+        pin::pin_sealed::TypeLevelPinId,
+        Error, Interrupt, Pin, PinId, PullType,
     },
 };
+use core::task::Poll;
+use embedded_hal_async::digital::Wait;
 
 impl<I, P, S> AsyncPeripheral for Pin<I, FunctionSio<S>, P>
 where
@@ -114,7 +115,8 @@ where
             Self::poll_is_high,
             Self::enable_level_high_irq,
             Self::disable_level_high_irq,
-        ).await;
+        )
+        .await;
     }
 
     async fn _wait_for_low(&mut self) {
@@ -123,7 +125,8 @@ where
             Self::poll_is_low,
             Self::enable_level_low_irq,
             Self::disable_level_low_irq,
-        ).await;
+        )
+        .await;
     }
 
     async fn _wait_for_rising_edge(&mut self) {
@@ -136,7 +139,8 @@ where
             Self::poll_is_high,
             Self::enable_rising_edge_irq,
             Self::disable_rising_edge_irq,
-        ).await;
+        )
+        .await;
     }
 
     async fn _wait_for_falling_edge(&mut self) {
@@ -149,7 +153,8 @@ where
             Self::poll_is_high,
             Self::enable_falling_edge_irq,
             Self::disable_falling_edge_irq,
-        ).await;
+        )
+        .await;
     }
 
     async fn _wait_for_any_edge(&mut self) {
@@ -168,7 +173,6 @@ where
     S: SioConfig,
     Self: AsyncPeripheral,
 {
-
     async fn wait_for_high(&mut self) -> Result<(), Self::Error> {
         self._wait_for_high().await;
         Ok(())

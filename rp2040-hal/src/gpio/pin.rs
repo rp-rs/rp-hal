@@ -30,8 +30,8 @@ use crate::typelevel::Sealed;
 
 use super::{DynFunction, DynPullType};
 
-pub(crate) mod pin_sealed;
 pub(crate) mod non_blocking;
+pub(crate) mod pin_sealed;
 
 /// Value-level `enum` for the pin's bank.
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
