@@ -312,7 +312,7 @@ fn calculate_baudrate_dividers(
         .and_then(|r| r.checked_div(wanted_baudrate.to_Hz()))
         .ok_or(Error::BadArgument)?;
 
-    Ok(match (baudrate_div >> 7, ((baudrate_div & 0x7F) + 1) / 2) {
+    Ok(match (baudrate_div >> 7, (baudrate_div & 0x7F).div_ceil(2)) {
         (0, _) => (1, 0),
 
         (int_part, _) if int_part >= 65535 => (65535, 0),
