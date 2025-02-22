@@ -3,12 +3,13 @@ use crate::{
         sealed::{IrqWaker, Wakeable},
         AsyncPeripheral, CancellablePollFn as CPFn,
     },
+    atomic_register_access::write_bitmask_clear,
     gpio::{
         func::{FunctionSio, SioConfig},
-        new_pin,
-        pin::pin_sealed::TypeLevelPinId,
+        pin::pin_sealed::{PinIdOps, TypeLevelPinId},
         Error, Interrupt, Pin, PinId, PullType,
     },
+    sio::Sio,
 };
 use core::task::Poll;
 use embedded_hal_async::digital::Wait;
@@ -21,23 +22,30 @@ where
     Self: crate::async_utils::sealed::Wakeable,
 {
     fn on_interrupt() {
+        const INTERRUPTS_MASK: u32 = Interrupt::LevelLow.mask()
+            | Interrupt::LevelHigh.mask()
+            | Interrupt::EdgeLow.mask()
+            | Interrupt::EdgeHigh.mask();
+
+        // Level interrupts are not latched and can't be cleared
+        const CLEAR_INTERRUPTS_MASK: u32 = Interrupt::EdgeLow.mask() | Interrupt::EdgeHigh.mask();
+
         let pin_id = I::ID;
-        let mut pin = unsafe { new_pin(pin_id) };
 
-        if pin.interrupt_status(Interrupt::LevelLow)
-            || pin.interrupt_status(Interrupt::LevelHigh)
-            || pin.interrupt_status(Interrupt::EdgeLow)
-            || pin.interrupt_status(Interrupt::EdgeHigh)
-        {
-            pin.set_interrupt_enabled(Interrupt::LevelLow, false);
-            pin.set_interrupt_enabled(Interrupt::LevelHigh, false);
-            pin.set_interrupt_enabled(Interrupt::EdgeLow, false);
-            pin.set_interrupt_enabled(Interrupt::EdgeHigh, false);
+        let (ints_reg, ints_offset) = pin_id.proc_ints(Sio::core());
+        let ints_bits = ints_reg.read().bits() >> ints_offset;
 
-            pin.clear_interrupt(Interrupt::LevelLow);
-            pin.clear_interrupt(Interrupt::LevelHigh);
-            pin.clear_interrupt(Interrupt::EdgeLow);
-            pin.clear_interrupt(Interrupt::EdgeHigh);
+        // Check if any interrupt is active for Pin
+        if ints_bits & INTERRUPTS_MASK != 0 {
+            // Disable interrupts for Pin
+            let (inte_reg, inte_offset) = pin_id.proc_inte(Sio::core());
+            unsafe {
+                write_bitmask_clear(inte_reg.as_ptr(), INTERRUPTS_MASK << inte_offset);
+            }
+
+            // Clear interrupts for Pin
+            let (intr_reg, intr_offset) = pin_id.intr();
+            intr_reg.write(|w| unsafe { w.bits(CLEAR_INTERRUPTS_MASK << intr_offset) });
 
             Self::waker().wake();
         }
