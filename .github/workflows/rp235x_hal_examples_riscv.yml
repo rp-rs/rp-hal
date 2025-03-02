@@ -5,7 +5,7 @@ env:
   TARGET: riscv32imac-unknown-none-elf
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -20,7 +20,7 @@ jobs:
           done
   msrv:
     name: Verify build on MSRV
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -37,7 +37,7 @@ jobs:
             cargo build --target=${TARGET} --bin $example
           done
   fmt:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       RUSTFLAGS: "-D warnings"
     steps:
@@ -48,7 +48,7 @@ jobs:
       - name: Check format
         run: cd ${PACKAGE} && cargo fmt -- --check
   clippy:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       RUSTFLAGS: "-D warnings"
     steps:

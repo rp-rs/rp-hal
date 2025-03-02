@@ -4,7 +4,7 @@ env:
   PACKAGE: rp-binary-info
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -14,7 +14,7 @@ jobs:
       - name: Build
         run: cd ${PACKAGE} && cargo hack build --optional-deps --each-feature
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -26,7 +26,7 @@ jobs:
       - name: Test docs
         run: cd ${PACKAGE} && cargo hack test --optional-deps --each-feature --doc
   udeps:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -42,7 +42,7 @@ jobs:
         run: cd ${PACKAGE} && cargo hack udeps --optional-deps --each-feature
   msrv:
     name: Verify build on MSRV
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -54,7 +54,7 @@ jobs:
       - name: Build on MSRV
         run: cd ${PACKAGE} && cargo hack build --optional-deps --each-feature
   fmt:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       RUSTFLAGS: "-D warnings"
     steps:
@@ -65,7 +65,7 @@ jobs:
       - name: Check format
         run: cd ${PACKAGE} && cargo fmt -- --check
   clippy:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       RUSTFLAGS: "-D warnings"
     steps:

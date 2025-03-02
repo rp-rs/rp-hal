@@ -22,7 +22,7 @@ jobs:
       - name: Test picotool
         run: picotool info ${PACKAGE}/target/${TARGET}/debug/binary_info_demo -t elf -a | tee /dev/stderr | grep -q "rp2040-hal Binary Info Example"
   udeps:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -36,7 +36,7 @@ jobs:
         run: cd ${PACKAGE} && cargo udeps
   msrv:
     name: Verify build on MSRV
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -48,7 +48,7 @@ jobs:
       - name: Build on MSRV
         run: cd ${PACKAGE} && cargo build 
   fmt:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       RUSTFLAGS: "-D warnings"
     steps:
@@ -59,7 +59,7 @@ jobs:
       - name: Check format
         run: cd ${PACKAGE} && cargo fmt -- --check
   clippy:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       RUSTFLAGS: "-D warnings"
     steps:

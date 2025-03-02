@@ -5,7 +5,7 @@ env:
   TARGET: riscv32imac-unknown-none-elf
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -19,7 +19,7 @@ jobs:
       - name: Build rp235x-hal-macros
         run: cd ${PACKAGE}-macros && cargo hack build --optional-deps --each-feature
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -37,7 +37,7 @@ jobs:
       - name: Test rp235x-hal-macros docs
         run: cd ${PACKAGE}-macros && cargo hack test --optional-deps --doc --each-feature
   udeps:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -56,7 +56,7 @@ jobs:
         run: cd ${PACKAGE}-macros && cargo hack udeps --optional-deps --each-feature
   msrv:
     name: Verify build on MSRV
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -73,7 +73,7 @@ jobs:
       - name: Build rp235x-hal-macros (on MSRV)
         run: cd ${PACKAGE}-macros && cargo hack build --optional-deps --each-feature
   fmt:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       RUSTFLAGS: "-D warnings"
     steps:
@@ -86,7 +86,7 @@ jobs:
       - name: Check format of rp235x-hal-macros
         run: cd ${PACKAGE}-macros && cargo fmt -- --check
   clippy:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       RUSTFLAGS: "-D warnings"
     steps:
