@@ -5,7 +5,7 @@ env:
   TARGET: thumbv6m-none-eabi
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -19,7 +19,7 @@ jobs:
       - name: Build rp2040-hal-macros
         run: cd ${PACKAGE}-macros && cargo hack build --optional-deps --each-feature
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -37,26 +37,26 @@ jobs:
       - name: Test rp2040-hal-macros docs
         run: cd ${PACKAGE}-macros && cargo hack test --optional-deps --doc --each-feature
   udeps:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2024-11-14
+          toolchain: nightly-2025-02-28
           target: ${{ env.TARGET }}
       - name: Install cargo-hack
         run: |
           curl -sSL https://github.com/taiki-e/cargo-hack/releases/download/v0.6.17/cargo-hack-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - -C ~/.cargo/bin
       - name: Install cargo-udeps
         run: |
-          curl -sSL https://github.com/est31/cargo-udeps/releases/download/v0.1.45/cargo-udeps-v0.1.45-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - --strip-components=2 -C ~/.cargo/bin ./cargo-udeps-v0.1.45-x86_64-unknown-linux-gnu/cargo-udeps
+          curl -sSL https://github.com/est31/cargo-udeps/releases/download/v0.1.55/cargo-udeps-v0.1.55-x86_64-unknown-linux-gnu.tar.gz | tar xvzf - --strip-components=2 -C ~/.cargo/bin ./cargo-udeps-v0.1.55-x86_64-unknown-linux-gnu/cargo-udeps
       - name: Run cargo-udeps on rp2040-hal
         run: cd ${PACKAGE} && cargo hack udeps --optional-deps --each-feature --target=${TARGET}
       - name: Run cargo-udeps on rp2040-hal-macros
         run: cd ${PACKAGE}-macros && cargo hack udeps --optional-deps --each-feature
   msrv:
     name: Verify build on MSRV
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -73,7 +73,7 @@ jobs:
       - name: Build rp2040-hal-macros (on MSRV)
         run: cd ${PACKAGE}-macros && cargo hack build --optional-deps --each-feature
   fmt:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       RUSTFLAGS: "-D warnings"
     steps:
@@ -86,7 +86,7 @@ jobs:
       - name: Check format of rp2040-hal-macros
         run: cd ${PACKAGE}-macros && cargo fmt -- --check
   clippy:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       RUSTFLAGS: "-D warnings"
     steps:

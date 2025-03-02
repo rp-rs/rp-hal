@@ -44,7 +44,7 @@ mod inner {
         unsafe {
             (*cortex_m::peripheral::SCB::PTR)
                 .cpacr
-                .modify(|value| value | 3 | 3 << 8 | (3 << 20) | (3 << 22))
+                .modify(|value| value | 3 | (3 << 8) | (3 << 20) | (3 << 22))
         }
     }
 }
