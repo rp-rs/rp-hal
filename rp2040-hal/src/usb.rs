@@ -256,7 +256,7 @@ impl Inner {
             // size in 64bytes units.
             // NOTE: the compiler is smart enough to recognize /64 as a 6bit right shift so let's
             // keep the division here for the sake of clarity
-            let aligned_sized = (max_packet_size + 63) / 64;
+            let aligned_sized = max_packet_size.div_ceil(64);
             if (self.next_offset + aligned_sized) > (4096 / 64) {
                 return Err(UsbError::EndpointMemoryOverflow);
             }
