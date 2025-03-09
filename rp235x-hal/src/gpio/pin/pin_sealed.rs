@@ -52,6 +52,13 @@ pub trait PinIdOps {
     /// Get the raw interrupt register, and which bit in that register this GPIO
     /// corresponds to.
     fn intr(&self) -> (&pac::io_bank0::INTR, usize);
+
+    // These function signatures look as if they would return the PROC0 registers
+    // even on core 1, which would be wrong.
+    // But that's not true: If `proc` is `CoreId::Core1`, they return the
+    // PROC1_* registers transmuted to PROC0_*. This works, because both
+    // sets of registers are structured identically.
+
     /// Interrupt Status for the given Core.
     ///
     /// Get the interrupt status register, and which bit in that register this

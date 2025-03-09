@@ -27,6 +27,11 @@ pub trait PinIdOps {
     fn proc_in_by_pass(&self) -> &pac::syscfg::PROC_IN_SYNC_BYPASS;
 
     fn intr(&self) -> (&pac::io_bank0::INTR, usize);
+    // These function signatures look as if they would return the PROC0 registers
+    // even on core 1, which would be wrong.
+    // But that's not true: If `proc` is `CoreId::Core1`, they return the
+    // PROC1_* registers transmuted to PROC0_*. This works, because both
+    // sets of registers are structured identically.
     fn proc_ints(&self, proc: CoreId) -> (&pac::io_bank0::PROC0_INTS, usize);
     fn proc_inte(&self, proc: CoreId) -> (&pac::io_bank0::PROC0_INTE, usize);
     fn proc_intf(&self, proc: CoreId) -> (&pac::io_bank0::PROC0_INTF, usize);
