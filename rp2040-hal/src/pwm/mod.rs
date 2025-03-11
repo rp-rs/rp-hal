@@ -625,7 +625,7 @@ impl<S: AnySlice, C: ChannelId> Channel<S, C> {
 
 impl<S: AnySlice, C: ChannelId> Sealed for Channel<S, C> {}
 
-impl<S: AnySlice> embedded_hal_0_2::PwmPin for Channel<S, A> {
+impl<S: AnySlice, C: ChannelId> embedded_hal_0_2::PwmPin for Channel<S, C> {
     type Duty = u16;
 
     fn disable(&mut self) {
@@ -638,7 +638,7 @@ impl<S: AnySlice> embedded_hal_0_2::PwmPin for Channel<S, A> {
 
     fn get_duty(&self) -> Self::Duty {
         if self.enabled {
-            self.regs.read_cc_a()
+            self.read_cc()
         } else {
             self.duty_cycle
         }
@@ -653,39 +653,11 @@ impl<S: AnySlice> embedded_hal_0_2::PwmPin for Channel<S, A> {
     }
 }
 
-impl<S: AnySlice> embedded_hal_0_2::PwmPin for Channel<S, B> {
-    type Duty = u16;
-
-    fn disable(&mut self) {
-        self.set_enabled(false);
-    }
-
-    fn enable(&mut self) {
-        self.set_enabled(true);
-    }
-
-    fn get_duty(&self) -> Self::Duty {
-        if self.enabled {
-            self.regs.read_cc_b()
-        } else {
-            self.duty_cycle
-        }
-    }
-
-    fn get_max_duty(&self) -> Self::Duty {
-        SetDutyCycle::max_duty_cycle(self)
-    }
-
-    fn set_duty(&mut self, duty: Self::Duty) {
-        let _ = SetDutyCycle::set_duty_cycle(self, duty);
-    }
-}
-
-impl<S: AnySlice, T: ChannelId> ErrorType for Channel<S, T> {
+impl<S: AnySlice, C: ChannelId> ErrorType for Channel<S, C> {
     type Error = Infallible;
 }
 
-impl<S: AnySlice, T: ChannelId> SetDutyCycle for Channel<S, T> {
+impl<S: AnySlice, C: ChannelId> SetDutyCycle for Channel<S, C> {
     fn max_duty_cycle(&self) -> u16 {
         self.regs.read_top().saturating_add(1)
     }
@@ -693,32 +665,29 @@ impl<S: AnySlice, T: ChannelId> SetDutyCycle for Channel<S, T> {
     fn set_duty_cycle(&mut self, duty: u16) -> Result<(), Self::Error> {
         self.duty_cycle = duty;
         if self.enabled {
-            match T::DYN {
-                DynChannelId::A => self.regs.write_cc_a(duty),
-                DynChannelId::B => self.regs.write_cc_b(duty),
-            }
+            self.write_cc(duty);
         }
         Ok(())
     }
 }
 
-impl<S: AnySlice, T: ChannelId> Channel<S, T> {
+impl<S: AnySlice, C: ChannelId> Channel<S, C> {
     fn write_cc(&mut self, value: u16) {
-        match T::DYN {
+        match C::DYN {
             DynChannelId::A => self.regs.write_cc_a(value),
             DynChannelId::B => self.regs.write_cc_b(value),
         }
     }
 
-    fn read_cc(&mut self) -> u16 {
-        match T::DYN {
+    fn read_cc(&self) -> u16 {
+        match C::DYN {
             DynChannelId::A => self.regs.read_cc_a(),
             DynChannelId::B => self.regs.read_cc_b(),
         }
     }
 
     fn write_inv(&mut self, value: bool) {
-        match T::DYN {
+        match C::DYN {
             DynChannelId::A => self.regs.write_inv_a(value),
             DynChannelId::B => self.regs.write_inv_b(value),
         }
