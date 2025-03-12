@@ -1,6 +1,6 @@
 [package]
 name = "rp-binary-info"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["The rp-rs Developers"]
 homepage = "https://github.com/rp-rs/rp-hal"
