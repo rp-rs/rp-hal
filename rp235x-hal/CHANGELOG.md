@@ -13,6 +13,10 @@ The Minimum-Supported Rust Version (MSRV) for the next release is 1.81
 
 - Bump MSRV to 1.81 because the crate `home` (an indirect build-depencency) requires it.
 
+### Changed
+
+- Update to pio 0.3.0
+
 ## [0.3.0] - 2025-03-02
 
 ### MSRV

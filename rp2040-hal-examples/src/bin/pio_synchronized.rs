@@ -46,7 +46,7 @@ fn main() -> ! {
     let pin1 = gp1.id().num;
 
     // Define some simple PIO program.
-    let program = pio_proc::pio_asm!(
+    let program = pio::pio_asm!(
         "
 .wrap_target
     set pins, 1 [31]

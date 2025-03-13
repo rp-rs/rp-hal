@@ -31,8 +31,7 @@ hd44780-driver = "0.4.0"
 nb = "1.0"
 panic-halt = "0.2.0"
 panic-probe = {version = "0.3.1", features = ["print-defmt"]}
-pio = "0.2.0"
-pio-proc = "0.2.0"
+pio = "0.3.0"
 # We aren't using this, but embedded-hal-bus 0.2 unconditionally requires atomics.
 # Should be fixed in e-h-b 0.3 via https://github.com/rust-embedded/embedded-hal/pull/607
 portable-atomic = {version = "1.7.0", features = ["critical-section"]}

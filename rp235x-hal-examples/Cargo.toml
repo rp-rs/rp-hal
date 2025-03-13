@@ -30,8 +30,7 @@ hd44780-driver = "0.4.0"
 heapless = "0.8.0"
 nb = "1.0"
 panic-halt = "0.2.0"
-pio = "0.2.0"
-pio-proc = "0.2.0"
+pio = "0.3.0"
 rp235x-hal = {path = "../rp235x-hal", version = "0.3.0", features = ["binary-info", "critical-section-impl", "rt", "defmt"]}
 # The examples use features not yet available in rp-binary-info 0.1.0,
 # so the minimum version implied by the rp235x-hal 0.3.0 dependency is not sufficient.
