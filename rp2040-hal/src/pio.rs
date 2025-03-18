@@ -14,6 +14,8 @@ use crate::{
     typelevel::Sealed,
 };
 
+mod non_blocking;
+
 const PIO_INSTRUCTION_COUNT: usize = 32;
 
 impl Sealed for PIO0 {}
@@ -21,8 +23,17 @@ impl Sealed for PIO1 {}
 
 /// PIO Instance
 pub trait PIOExt: Deref<Target = RegisterBlock> + SubsystemReset + Sized + Send + Sealed {
+    /// RX FIFO depth
+    const RX_FIFO_DEPTH: usize;
+
+    /// TX FIFO depth
+    const TX_FIFO_DEPTH: usize;
+
     /// Associated Pin Function.
     type PinFunction: Function;
+
+    /// Returns a pointer to the PIO’s Register Block
+    fn ptr() -> *const RegisterBlock;
 
     /// Create a new PIO wrapper and split the state machines into individual objects.
     #[allow(clippy::type_complexity)] // Required for symmetry with PIO::free().
@@ -76,13 +87,23 @@ pub trait PIOExt: Deref<Target = RegisterBlock> + SubsystemReset + Sized + Send 
 }
 
 impl PIOExt for PIO0 {
+    const RX_FIFO_DEPTH: usize = 4;
+    const TX_FIFO_DEPTH: usize = 4;
     type PinFunction = FunctionPio0;
+    fn ptr() -> *const RegisterBlock {
+        PIO0::ptr()
+    }
     fn id() -> usize {
         0
     }
 }
 impl PIOExt for PIO1 {
+    const RX_FIFO_DEPTH: usize = 4;
+    const TX_FIFO_DEPTH: usize = 4;
     type PinFunction = FunctionPio1;
+    fn ptr() -> *const RegisterBlock {
+        PIO1::ptr()
+    }
     fn id() -> usize {
         1
     }
@@ -576,9 +597,9 @@ pub struct Running;
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum PioIRQ {
     #[allow(missing_docs)]
-    Irq0,
+    Irq0 = 0,
     #[allow(missing_docs)]
-    Irq1,
+    Irq1 = 1,
 }
 impl PioIRQ {
     const fn to_index(self) -> usize {
@@ -1380,6 +1401,32 @@ impl<SM: ValidStateMachine, RxSize: TransferSize> Rx<SM, RxSize> {
         unsafe { self.block().fstat().read().rxfull().bits() & (1 << SM::id()) != 0 }
     }
 
+    /// Reads the number of word in the fifo
+    pub fn fifo_level(&self) -> usize {
+        // Safety: read-only access without side-effect
+        let flevel = unsafe { self.block().flevel().read() };
+        (match SM::id() {
+            0 => flevel.rx0().bits(),
+            1 => flevel.rx1().bits(),
+            2 => flevel.rx2().bits(),
+            3 => flevel.rx3().bits(),
+            _ => unreachable!(),
+        }) as usize
+    }
+
+    /// Returns the FIFO depth.
+    pub fn fifo_depth(&self) -> usize {
+        // Safety: read-only access without side-effect
+        let block = unsafe { self.block() };
+        let join_rx = block.sm(SM::id()).sm_shiftctrl().read().fjoin_rx().bit();
+        let depth = block.dbg_cfginfo().read().fifo_depth().bits() as usize;
+        if join_rx {
+            depth * 2
+        } else {
+            depth
+        }
+    }
+
     /// Enable RX FIFO not empty interrupt.
     ///
     /// This interrupt is raised when the RX FIFO is not empty, i.e. one could read more data from it.
@@ -1498,7 +1545,7 @@ impl<SM: ValidStateMachine, TxSize: TransferSize> Tx<SM, TxSize> {
     /// This is a value between 0 and 39. Each FIFO on each state machine on
     /// each PIO has a unique value.
     pub fn dreq_value(&self) -> u8 {
-        if self.block as usize == 0x5020_0000usize {
+        if self.block == PIO0::ptr() {
             TREQ_SEL_A::PIO0_TX0 as u8 + (SM::id() as u8)
         } else {
             TREQ_SEL_A::PIO1_TX0 as u8 + (SM::id() as u8)
@@ -1586,6 +1633,32 @@ impl<SM: ValidStateMachine, TxSize: TransferSize> Tx<SM, TxSize> {
     pub fn is_full(&self) -> bool {
         // Safety: read-only access without side-effect
         unsafe { self.block().fstat().read().txfull().bits() & (1 << SM::id()) != 0 }
+    }
+
+    /// Reads the number of word in the FIFO
+    pub fn fifo_level(&self) -> usize {
+        // Safety: read-only access without side-effect
+        let flevel = unsafe { self.block().flevel().read() };
+        (match SM::id() {
+            0 => flevel.tx0().bits(),
+            1 => flevel.tx1().bits(),
+            2 => flevel.tx2().bits(),
+            3 => flevel.tx3().bits(),
+            _ => unreachable!(),
+        }) as usize
+    }
+
+    /// Returns the FIFO depth.
+    pub fn fifo_depth(&self) -> usize {
+        // Safety: read-only access without side-effect
+        let block = unsafe { self.block() };
+        let join_tx = block.sm(SM::id()).sm_shiftctrl().read().fjoin_tx().bit();
+        let depth = block.dbg_cfginfo().read().fifo_depth().bits() as usize;
+        if join_tx {
+            depth * 2
+        } else {
+            depth
+        }
     }
 
     /// Enable TX FIFO not full interrupt.
