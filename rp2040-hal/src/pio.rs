@@ -665,8 +665,8 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     pub fn clear_fifos(&mut self) {
         // Safety: all accesses to these registers are controlled by this instance
         unsafe {
-            let sm = &self.sm.sm();
-            let sm_shiftctrl = &sm.sm_shiftctrl();
+            let sm = self.sm.sm();
+            let sm_shiftctrl = sm.sm_shiftctrl();
             let mut current = false;
             // Toggling the FIFO join state clears the fifo
             sm_shiftctrl.modify(|r, w| {
@@ -700,10 +700,10 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
 
         // Safety: all accesses to these registers are controlled by this instance
         unsafe {
-            let sm = &self.sm.sm();
-            let sm_pinctrl = &sm.sm_pinctrl();
-            let sm_instr = &sm.sm_instr();
-            let fstat = &self.sm.pio().fstat();
+            let sm = self.sm.sm();
+            let sm_pinctrl = sm.sm_pinctrl();
+            let sm_instr = sm.sm_instr();
+            let fstat = self.sm.pio().fstat();
 
             let operands = if sm.sm_shiftctrl().read().autopull().bit_is_set() {
                 OUT
@@ -792,9 +792,9 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
         // Safety: all accesses to these registers are controlled by this instance
         unsafe {
             let sm = self.sm.sm();
-            let sm_pinctrl = &sm.sm_pinctrl();
-            let sm_execctrl = &sm.sm_execctrl();
-            let sm_instr = &sm.sm_instr();
+            let sm_pinctrl = sm.sm_pinctrl();
+            let sm_execctrl = sm.sm_execctrl();
+            let sm_instr = sm.sm_instr();
 
             // sideset_count is implicitly set to 0 when the set_base/set_count are written (rather
             // than modified)
@@ -1292,8 +1292,8 @@ impl<SM: ValidStateMachine> StateMachine<SM, Running> {
         // Safety: all accesses to these registers are controlled by this instance
         unsafe {
             let sm = self.sm.sm();
-            let sm_pinctrl = &sm.sm_pinctrl();
-            let sm_instr = &sm.sm_instr();
+            let sm_pinctrl = sm.sm_pinctrl();
+            let sm_instr = sm.sm_instr();
 
             // save exec_ctrl & make side_set optional
             let mut saved_sideset_count = 0;
