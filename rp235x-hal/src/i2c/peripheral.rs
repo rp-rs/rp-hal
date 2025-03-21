@@ -210,10 +210,10 @@ impl<T: Deref<Target = RegisterBlock>, PINS> Iterator for I2C<T, PINS, Periphera
     }
 }
 impl<T: Deref<Target = RegisterBlock>, PINS> I2C<T, PINS, Peripheral> {
-    /// Returns the next i2c event if any.
-    pub fn next_event(&mut self) -> Option<Event> {
-        let stat = self.i2c.ic_raw_intr_stat().read();
-
+    fn internal_next_event(
+        &mut self,
+        stat: rp235x_pac::i2c0::ic_raw_intr_stat::R,
+    ) -> Option<Event> {
         match self.mode.state {
             State::Idle if stat.start_det().bit_is_set() => {
                 self.i2c.ic_clr_start_det().read();
@@ -241,7 +241,7 @@ impl<T: Deref<Target = RegisterBlock>, PINS> I2C<T, PINS, Peripheral> {
             State::Read if stat.rd_req().bit_is_set() => Some(Event::TransferRead),
             State::Write if !self.rx_fifo_empty() => Some(Event::TransferWrite),
 
-            State::Read | State::Write if stat.restart_det().bit_is_set() => {
+            State::Read | State::Write | State::Active if stat.restart_det().bit_is_set() => {
                 self.i2c.ic_clr_restart_det().read();
                 self.i2c.ic_clr_start_det().read();
                 self.mode.state = State::Active;
@@ -257,6 +257,13 @@ impl<T: Deref<Target = RegisterBlock>, PINS> I2C<T, PINS, Peripheral> {
 
             _ => None,
         }
+    }
+
+    /// Returns the next i2c event if any.
+    pub fn next_event(&mut self) -> Option<Event> {
+        let stat = self.i2c.ic_raw_intr_stat().read();
+
+        self.internal_next_event(stat)
     }
 }
 
@@ -291,12 +298,13 @@ where
 {
     /// Asynchronously waits for an Event.
     pub async fn wait_next(&mut self) -> Event {
+        let mut stat = self.i2c.ic_raw_intr_stat().read();
         loop {
-            if let Some(evt) = self.next_event() {
+            if let Some(evt) = self.internal_next_event(stat) {
                 return evt;
             }
 
-            CancellablePollFn::new(
+            stat = CancellablePollFn::new(
                 self,
                 |me| {
                     let stat = me.i2c.ic_raw_intr_stat().read();
@@ -306,7 +314,7 @@ where
                         || stat.rd_req().bit_is_set()
                         || stat.rx_full().bit_is_set()
                     {
-                        Poll::Ready(())
+                        Poll::Ready(stat)
                     } else {
                         Poll::Pending
                     }
