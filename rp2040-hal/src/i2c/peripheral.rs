@@ -241,7 +241,7 @@ impl<T: Deref<Target = RegisterBlock>, PINS> I2C<T, PINS, Peripheral> {
             State::Read if stat.rd_req().bit_is_set() => Some(Event::TransferRead),
             State::Write if !self.rx_fifo_empty() => Some(Event::TransferWrite),
 
-            State::Read | State::Write if stat.restart_det().bit_is_set() => {
+            State::Read | State::Write | State::Active if stat.restart_det().bit_is_set() => {
                 self.i2c.ic_clr_restart_det().read();
                 self.i2c.ic_clr_start_det().read();
                 self.mode.state = State::Active;
