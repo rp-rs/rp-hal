@@ -34,7 +34,7 @@ itertools = {version = "0.14.0", default-features = false}
 nb = "1.0"
 paste = "1.0"
 pio = "0.3.0"
-rand_core = "0.6.3"
+rand_core = "0.9.3"
 rp-binary-info = { version = "0.1.0", path = "../rp-binary-info" }
 rp-hal-common = {version="0.1.0", path="../rp-hal-common"}
 rp2040-hal-macros = {version = "0.1.0", path = "../rp2040-hal-macros"}
@@ -51,7 +51,7 @@ rtic-monotonic = {version = "1.0.0", optional = true}
 
 [dev-dependencies]
 # Non-optional dependencies. Keep these sorted by name.
-rand = {version = "0.8.5", default-features = false}
+rand = {version = "0.9.0", default-features = false}
 
 # Optional dependencies. Keep these sorted by name.
 # None
