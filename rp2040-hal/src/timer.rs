@@ -9,7 +9,7 @@
 //! See [Chapter 4 Section 6](https://datasheets.raspberrypi.org/rp2040/rp2040-datasheet.pdf) of the datasheet for more details.
 
 use core::sync::atomic::{AtomicU8, Ordering};
-use fugit::{MicrosDurationU32, MicrosDurationU64, TimerInstantU64};
+use fugit::{MicrosDurationU32, TimerInstantU64};
 
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
@@ -88,10 +88,11 @@ impl Timer {
     }
 
     /// Initialized a Count Down instance without starting it.
+    #[cfg(feature = "embedded-hal-02")]
     pub fn count_down(&self) -> CountDown {
         CountDown {
             timer: *self,
-            period: MicrosDurationU64::nanos(0),
+            period: fugit::MicrosDurationU64::nanos(0),
             next_end: None,
         }
     }
@@ -140,6 +141,7 @@ impl Timer {
     }
 }
 
+#[cfg(feature = "embedded-hal-02")]
 macro_rules! impl_delay_traits {
     ($($t:ty),+) => {
         $(
@@ -164,6 +166,7 @@ macro_rules! impl_delay_traits {
 }
 
 // The implementation for i32 is a workaround to allow `delay_ms(42)` construction without specifying a type.
+#[cfg(feature = "embedded-hal-02")]
 impl_delay_traits!(u8, u16, u32, i32);
 
 impl embedded_hal::delay::DelayNs for Timer {
@@ -213,14 +216,16 @@ impl embedded_hal::delay::DelayNs for Timer {
 /// // Cancel it immediately
 /// count_down.cancel();
 /// ```
+#[cfg(feature = "embedded-hal-02")]
 pub struct CountDown {
     timer: Timer,
-    period: MicrosDurationU64,
+    period: fugit::MicrosDurationU64,
     next_end: Option<u64>,
 }
 
+#[cfg(feature = "embedded-hal-02")]
 impl embedded_hal_0_2::timer::CountDown for CountDown {
-    type Time = MicrosDurationU64;
+    type Time = fugit::MicrosDurationU64;
 
     fn start<T>(&mut self, count: T)
     where
@@ -250,8 +255,10 @@ impl embedded_hal_0_2::timer::CountDown for CountDown {
     }
 }
 
+#[cfg(feature = "embedded-hal-02")]
 impl embedded_hal_0_2::timer::Periodic for CountDown {}
 
+#[cfg(feature = "embedded-hal-02")]
 impl embedded_hal_0_2::timer::Cancel for CountDown {
     type Error = &'static str;
 

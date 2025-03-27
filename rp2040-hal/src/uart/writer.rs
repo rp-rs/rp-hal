@@ -7,7 +7,6 @@ use crate::dma::{EndlessWriteTarget, WriteTarget};
 use crate::pac::uart0::RegisterBlock;
 use core::fmt;
 use core::{convert::Infallible, marker::PhantomData};
-use embedded_hal_0_2::serial::Write as Write02;
 use embedded_hal_nb::serial::{ErrorType, Write};
 use nb::Error::*;
 
@@ -184,6 +183,8 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Writer<D, P> {
     /// # Example
     ///
     /// ```no_run
+    /// #[cfg(feature = "embedded-hal-02")]
+    /// {
     /// # use rp2040_hal::uart::{Pins, ValidUartPinout, Enabled, UartPeripheral};
     /// # use rp2040_hal::pac::UART0;
     /// # use rp2040_hal::typelevel::OptionTNone;
@@ -195,6 +196,7 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Writer<D, P> {
     /// // at 115_200Bps on 8N1 configuration, 20bits takes (20*10⁶)/115200 = 173.611…μs.
     /// timer.delay_us(175);
     /// serial.lowlevel_break_stop();
+    /// }
     /// ```
     pub fn lowlevel_break_start(&mut self) {
         self.device.uartlcr_h().modify(|_, w| w.brk().set_bit());
@@ -230,7 +232,8 @@ impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::WriteReady for Writer<D,
     }
 }
 
-impl<D: UartDevice, P: ValidUartPinout<D>> Write02<u8> for Writer<D, P> {
+#[cfg(feature = "embedded-hal-02")]
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_hal_0_2::serial::Write<u8> for Writer<D, P> {
     type Error = Infallible;
 
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {

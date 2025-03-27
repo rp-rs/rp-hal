@@ -5,7 +5,6 @@
 use super::{FifoWatermark, UartDevice, ValidUartPinout};
 use crate::dma::{EndlessReadTarget, ReadTarget};
 use crate::pac::uart0::RegisterBlock;
-use embedded_hal_0_2::serial::Read as Read02;
 use nb::Error::*;
 
 use embedded_hal_nb::serial::{Error, ErrorKind, ErrorType, Read};
@@ -277,7 +276,8 @@ impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::ReadReady for Reader<D, 
     }
 }
 
-impl<D: UartDevice, P: ValidUartPinout<D>> Read02<u8> for Reader<D, P> {
+#[cfg(feature = "embedded-hal-02")]
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_hal_0_2::serial::Read<u8> for Reader<D, P> {
     type Error = ReadErrorType;
 
     fn read(&mut self) -> nb::Result<u8, Self::Error> {

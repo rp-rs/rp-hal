@@ -7,6 +7,8 @@
 //! Capture ADC reading from a pin:
 
 //! ```no_run
+//! #[cfg(feature = "embedded-hal-02")]
+//! {
 //! // Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
 //! use embedded_hal_0_2::adc::OneShot;
 //! use rp2040_hal::{adc::Adc, adc::AdcPin, gpio::Pins, pac, Sio};
@@ -19,11 +21,14 @@
 //! let mut adc_pin_0 = AdcPin::new(pins.gpio26.into_floating_input()).unwrap();
 //! // Read the ADC counts from the ADC channel
 //! let pin_adc_counts: u16 = adc.read(&mut adc_pin_0).unwrap();
+//! }
 //! ```
 //!
 //! Capture ADC reading from temperature sensor. Note that this needs conversion to be a real-world temperature.
 //!
 //! ```no_run
+//! #[cfg(feature = "embedded-hal-02")]
+//! {
 //! // Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
 //! use embedded_hal_0_2::adc::OneShot;
 //! use rp2040_hal::{adc::Adc, gpio::Pins, pac, Sio};
@@ -36,6 +41,7 @@
 //! let mut temperature_sensor = adc.take_temp_sensor().unwrap();
 //! // Read the ADC counts from the ADC channel
 //! let temperature_adc_counts: u16 = adc.read(&mut temperature_sensor).unwrap();
+//! }
 //! ```
 //!
 //! See [examples/adc.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal-examples/src/bin/adc.rs) and
@@ -131,6 +137,8 @@
 //! always possible to read the latest value, without additional delay:
 //!
 //! ```no_run
+//! #[cfg(feature = "embedded-hal-02")]
+//! {
 //! use rp2040_hal::{adc::Adc, adc::AdcPin, gpio::Pins, pac, Sio};
 //! // Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
 //! use embedded_hal_0_2::adc::OneShot;
@@ -148,19 +156,15 @@
 //!    let pin_adc_counts: u16 = adc.read_single();
 //!    // Do time critical stuff
 //! }
+//! }
 //! ```
 
-use core::convert::Infallible;
 use core::marker::PhantomData;
 // Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
-use embedded_hal_0_2::adc::{Channel, OneShot};
 
 use crate::{
     dma,
-    gpio::{
-        bank0::{Gpio26, Gpio27, Gpio28, Gpio29},
-        AnyPin, DynBankId, DynPinId, Function, OutputEnableOverride, Pin, PullType, ValidFunction,
-    },
+    gpio::{AnyPin, DynBankId, OutputEnableOverride},
     pac::{dma::ch::ch_ctrl_trig::TREQ_SEL_A, ADC, RESETS},
     resets::SubsystemReset,
     typelevel::Sealed,
@@ -244,9 +248,11 @@ impl AdcChannel for TempSense {
     }
 }
 
+#[cfg(feature = "embedded-hal-02")]
 macro_rules! channel {
-    ($pin:ident, $channel:expr) => {
-        impl<F: Function, M: PullType> Channel<Adc> for AdcPin<Pin<$pin, F, M>>
+    ($pin:path, $channel:expr) => {
+        impl<F: crate::gpio::Function, M: crate::gpio::PullType> embedded_hal_0_2::adc::Channel<Adc>
+            for AdcPin<crate::gpio::Pin<$pin, F, M>>
         where
             $pin: crate::gpio::ValidFunction<F>,
         {
@@ -259,14 +265,20 @@ macro_rules! channel {
     };
 }
 
-channel!(Gpio26, 0);
-channel!(Gpio27, 1);
-channel!(Gpio28, 2);
-channel!(Gpio29, 3);
+#[cfg(feature = "embedded-hal-02")]
+channel!(crate::gpio::bank0::Gpio26, 0);
+#[cfg(feature = "embedded-hal-02")]
+channel!(crate::gpio::bank0::Gpio27, 1);
+#[cfg(feature = "embedded-hal-02")]
+channel!(crate::gpio::bank0::Gpio28, 2);
+#[cfg(feature = "embedded-hal-02")]
+channel!(crate::gpio::bank0::Gpio29, 3);
 
-impl<F: Function, M: PullType> Channel<Adc> for AdcPin<Pin<DynPinId, F, M>>
+#[cfg(feature = "embedded-hal-02")]
+impl<F: crate::gpio::Function, M: crate::gpio::PullType> embedded_hal_0_2::adc::Channel<Adc>
+    for AdcPin<crate::gpio::Pin<crate::gpio::DynPinId, F, M>>
 where
-    DynPinId: crate::gpio::ValidFunction<F>,
+    crate::gpio::DynPinId: crate::gpio::ValidFunction<F>,
 {
     type ID = (); // ADC channels are identified at run time
     fn channel() {}
@@ -277,7 +289,8 @@ pub struct TempSense {
     __private: (),
 }
 
-impl Channel<Adc> for TempSense {
+#[cfg(feature = "embedded-hal-02")]
+impl embedded_hal_0_2::adc::Channel<Adc> for TempSense {
     type ID = u8; // ADC channels are identified numerically
 
     fn channel() -> u8 {
@@ -388,6 +401,7 @@ impl Adc {
         self.device.cs().modify(|_, w| w.start_many().clear_bit());
     }
 
+    #[cfg(feature = "embedded-hal-02")]
     fn inner_read(&mut self, chan: u8) -> u16 {
         self.wait_ready();
 
@@ -423,12 +437,13 @@ impl Adc {
 }
 
 // Implementation for TempSense and type-checked pins
-impl<WORD, SRC> OneShot<Adc, WORD, SRC> for Adc
+#[cfg(feature = "embedded-hal-02")]
+impl<WORD, SRC> embedded_hal_0_2::adc::OneShot<Adc, WORD, SRC> for Adc
 where
     WORD: From<u16>,
-    SRC: Channel<Adc, ID = u8>,
+    SRC: embedded_hal_0_2::adc::Channel<Adc, ID = u8>,
 {
-    type Error = Infallible;
+    type Error = core::convert::Infallible;
 
     fn read(&mut self, _pin: &mut SRC) -> nb::Result<WORD, Self::Error> {
         let chan = SRC::channel();
@@ -438,17 +453,24 @@ where
 }
 
 // Implementation for dyn-pins
-impl<WORD, F, M> OneShot<Adc, WORD, AdcPin<Pin<DynPinId, F, M>>> for Adc
+#[cfg(feature = "embedded-hal-02")]
+impl<WORD, F, M>
+    embedded_hal_0_2::adc::OneShot<Adc, WORD, AdcPin<crate::gpio::Pin<crate::gpio::DynPinId, F, M>>>
+    for Adc
 where
     WORD: From<u16>,
-    F: Function,
-    M: PullType,
-    DynPinId: ValidFunction<F>,
-    AdcPin<Pin<DynPinId, F, M>>: Channel<Adc, ID = ()>,
+    F: crate::gpio::Function,
+    M: crate::gpio::PullType,
+    crate::gpio::DynPinId: crate::gpio::ValidFunction<F>,
+    AdcPin<crate::gpio::Pin<crate::gpio::DynPinId, F, M>>:
+        embedded_hal_0_2::adc::Channel<Adc, ID = ()>,
 {
-    type Error = Infallible;
+    type Error = core::convert::Infallible;
 
-    fn read(&mut self, pin: &mut AdcPin<Pin<DynPinId, F, M>>) -> nb::Result<WORD, Self::Error> {
+    fn read(
+        &mut self,
+        pin: &mut AdcPin<crate::gpio::Pin<crate::gpio::DynPinId, F, M>>,
+    ) -> nb::Result<WORD, Self::Error> {
         Ok(self.inner_read(pin.channel()).into())
     }
 }

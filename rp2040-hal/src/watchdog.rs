@@ -8,6 +8,8 @@
 //!
 //! ## Usage
 //! ```no_run
+//! #[cfg(feature = "embedded-hal-02")]
+//! {
 //! use cortex_m::prelude::{_embedded_hal_watchdog_Watchdog, _embedded_hal_watchdog_WatchdogEnable};
 //! use fugit::ExtU32;
 //! use rp2040_hal::{clocks::init_clocks_and_plls, pac, watchdog::Watchdog};
@@ -31,11 +33,10 @@
 //! }
 //! // Stop feeding, now we'll reset
 //! loop {}
+//! }
 //! ```
 //! See [examples/watchdog.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal-examples/src/bin/watchdog.rs) for a more complete example
 
-// Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
-use embedded_hal_0_2::watchdog;
 use fugit::MicrosDurationU32;
 
 use crate::pac::{self, WATCHDOG};
@@ -205,13 +206,15 @@ impl Watchdog {
     }
 }
 
-impl watchdog::Watchdog for Watchdog {
+#[cfg(feature = "embedded-hal-02")]
+impl embedded_hal_0_2::watchdog::Watchdog for Watchdog {
     fn feed(&mut self) {
         (*self).feed()
     }
 }
 
-impl watchdog::WatchdogEnable for Watchdog {
+#[cfg(feature = "embedded-hal-02")]
+impl embedded_hal_0_2::watchdog::WatchdogEnable for Watchdog {
     type Time = MicrosDurationU32;
 
     fn start<T: Into<Self::Time>>(&mut self, period: T) {
@@ -219,7 +222,8 @@ impl watchdog::WatchdogEnable for Watchdog {
     }
 }
 
-impl watchdog::WatchdogDisable for Watchdog {
+#[cfg(feature = "embedded-hal-02")]
+impl embedded_hal_0_2::watchdog::WatchdogDisable for Watchdog {
     fn disable(&mut self) {
         (*self).disable()
     }

@@ -912,6 +912,7 @@ pub struct AsInputPin<'a, I: PinId, F: func::Function, P: PullType>(&'a Pin<I, F
 /// GPIO error type.
 pub type Error = core::convert::Infallible;
 
+#[cfg(feature = "embedded-hal-02")]
 impl<I, P> embedded_hal_0_2::digital::v2::OutputPin for Pin<I, FunctionSio<SioOutput>, P>
 where
     I: PinId,
@@ -932,6 +933,7 @@ where
 
 /// Deprecated: Instead of implicitly implementing InputPin for function SioOutput,
 /// use `pin.as_input()` to get access to input values independent of the selected function.
+#[cfg(feature = "embedded-hal-02")]
 impl<I, P> embedded_hal_0_2::digital::v2::InputPin for Pin<I, FunctionSio<SioOutput>, P>
 where
     I: PinId,
@@ -948,6 +950,7 @@ where
     }
 }
 
+#[cfg(feature = "embedded-hal-02")]
 impl<I: PinId, F: func::Function, P: PullType> embedded_hal_0_2::digital::v2::InputPin
     for AsInputPin<'_, I, F, P>
 {
@@ -962,6 +965,7 @@ impl<I: PinId, F: func::Function, P: PullType> embedded_hal_0_2::digital::v2::In
     }
 }
 
+#[cfg(feature = "embedded-hal-02")]
 impl<I, P> embedded_hal_0_2::digital::v2::StatefulOutputPin for Pin<I, FunctionSio<SioOutput>, P>
 where
     I: PinId,
@@ -976,6 +980,7 @@ where
     }
 }
 
+#[cfg(feature = "embedded-hal-02")]
 impl<I, P> embedded_hal_0_2::digital::v2::ToggleableOutputPin for Pin<I, FunctionSio<SioOutput>, P>
 where
     I: PinId,
@@ -988,6 +993,7 @@ where
         Ok(())
     }
 }
+#[cfg(feature = "embedded-hal-02")]
 impl<I, P> embedded_hal_0_2::digital::v2::InputPin for Pin<I, FunctionSio<SioInput>, P>
 where
     I: PinId,
@@ -1434,6 +1440,7 @@ where
     }
 }
 
+#[cfg(feature = "embedded-hal-02")]
 impl<T: AnyPin> embedded_hal_0_2::digital::v2::InputPin for InOutPin<T> {
     type Error = Error;
     fn is_high(&self) -> Result<bool, Error> {
@@ -1445,6 +1452,7 @@ impl<T: AnyPin> embedded_hal_0_2::digital::v2::InputPin for InOutPin<T> {
     }
 }
 
+#[cfg(feature = "embedded-hal-02")]
 impl<T: AnyPin> embedded_hal_0_2::digital::v2::OutputPin for InOutPin<T> {
     type Error = Error;
     fn set_low(&mut self) -> Result<(), Error> {

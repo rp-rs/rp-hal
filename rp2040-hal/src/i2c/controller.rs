@@ -1,5 +1,4 @@
 use core::{ops::Deref, task::Poll};
-use embedded_hal_0_2::blocking::i2c::{Read, Write, WriteIter, WriteIterRead, WriteRead};
 use fugit::HertzU32;
 
 use embedded_hal::i2c as eh1;
@@ -414,7 +413,10 @@ impl<T: Deref<Target = Block>, PINS> I2C<T, PINS, Controller> {
     }
 }
 
-impl<A: ValidAddress, T: Deref<Target = Block>, PINS> Read<A> for I2C<T, PINS, Controller> {
+#[cfg(feature = "embedded-hal-02")]
+impl<A: ValidAddress, T: Deref<Target = Block>, PINS> embedded_hal_0_2::blocking::i2c::Read<A>
+    for I2C<T, PINS, Controller>
+{
     type Error = Error;
 
     fn read(&mut self, addr: A, buffer: &mut [u8]) -> Result<(), Error> {
@@ -422,7 +424,11 @@ impl<A: ValidAddress, T: Deref<Target = Block>, PINS> Read<A> for I2C<T, PINS, C
         self.read_internal(true, buffer, true)
     }
 }
-impl<A: ValidAddress, T: Deref<Target = Block>, PINS> WriteRead<A> for I2C<T, PINS, Controller> {
+
+#[cfg(feature = "embedded-hal-02")]
+impl<A: ValidAddress, T: Deref<Target = Block>, PINS> embedded_hal_0_2::blocking::i2c::WriteRead<A>
+    for I2C<T, PINS, Controller>
+{
     type Error = Error;
 
     fn write_read(&mut self, addr: A, tx: &[u8], rx: &mut [u8]) -> Result<(), Error> {
@@ -433,7 +439,10 @@ impl<A: ValidAddress, T: Deref<Target = Block>, PINS> WriteRead<A> for I2C<T, PI
     }
 }
 
-impl<A: ValidAddress, T: Deref<Target = Block>, PINS> Write<A> for I2C<T, PINS, Controller> {
+#[cfg(feature = "embedded-hal-02")]
+impl<A: ValidAddress, T: Deref<Target = Block>, PINS> embedded_hal_0_2::blocking::i2c::Write<A>
+    for I2C<T, PINS, Controller>
+{
     type Error = Error;
 
     fn write(&mut self, addr: A, tx: &[u8]) -> Result<(), Error> {
@@ -442,7 +451,10 @@ impl<A: ValidAddress, T: Deref<Target = Block>, PINS> Write<A> for I2C<T, PINS, 
     }
 }
 
-impl<A: ValidAddress, T: Deref<Target = Block>, PINS> WriteIter<A> for I2C<T, PINS, Controller> {
+#[cfg(feature = "embedded-hal-02")]
+impl<A: ValidAddress, T: Deref<Target = Block>, PINS> embedded_hal_0_2::blocking::i2c::WriteIter<A>
+    for I2C<T, PINS, Controller>
+{
     type Error = Error;
 
     fn write<B>(&mut self, address: A, bytes: B) -> Result<(), Self::Error>
@@ -453,8 +465,9 @@ impl<A: ValidAddress, T: Deref<Target = Block>, PINS> WriteIter<A> for I2C<T, PI
     }
 }
 
-impl<A: ValidAddress, T: Deref<Target = Block>, PINS> WriteIterRead<A>
-    for I2C<T, PINS, Controller>
+#[cfg(feature = "embedded-hal-02")]
+impl<A: ValidAddress, T: Deref<Target = Block>, PINS>
+    embedded_hal_0_2::blocking::i2c::WriteIterRead<A> for I2C<T, PINS, Controller>
 {
     type Error = Error;
 

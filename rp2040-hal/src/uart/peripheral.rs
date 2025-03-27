@@ -4,7 +4,6 @@
 //! UartPeripheral object that can both read and write.
 
 use core::{convert::Infallible, fmt};
-use embedded_hal_0_2::serial as eh0;
 use fugit::HertzU32;
 use nb::Error::{Other, WouldBlock};
 
@@ -219,6 +218,8 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
     /// # Example
     ///
     /// ```no_run
+    /// #[cfg(feature = "embedded-hal-02")]
+    /// {
     /// # use rp2040_hal::uart::{Pins, ValidUartPinout, Enabled, UartPeripheral};
     /// # use rp2040_hal::pac::UART0;
     /// # use rp2040_hal::timer::Timer;
@@ -226,11 +227,14 @@ impl<D: UartDevice, P: ValidUartPinout<D>> UartPeripheral<Enabled, D, P> {
     /// # use embedded_hal_0_2::blocking::delay::DelayUs;
     /// # type PINS = Pins<OptionTNone, OptionTNone, OptionTNone, OptionTNone>;
     /// # fn example(mut serial: UartPeripheral<Enabled, rp2040_hal::pac::UART0, PINS>, mut timer: Timer) {
-    /// serial.lowlevel_break_start();
-    /// // at 115_200Bps on 8N1 configuration, 20bits takes (20*10⁶)/115200 = 173.611…μs.
-    /// timer.delay_us(175);
-    /// serial.lowlevel_break_stop();
+    ///     serial.lowlevel_break_start();
+    ///     // at 115_200Bps on 8N1 configuration, 20bits takes (20*10⁶)/115200 = 173.611…μs.
+    ///     timer.delay_us(175);
+    ///     serial.lowlevel_break_stop();
+    ///   }
     /// }
+    ///
+    ///
     /// ```
     pub fn lowlevel_break_start(&mut self) {
         self.device.uartlcr_h().modify(|_, w| w.brk().set_bit());
@@ -391,7 +395,10 @@ fn set_format<'w>(
     w
 }
 
-impl<D: UartDevice, P: ValidUartPinout<D>> eh0::Read<u8> for UartPeripheral<Enabled, D, P> {
+#[cfg(feature = "embedded-hal-02")]
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_hal_0_2::serial::Read<u8>
+    for UartPeripheral<Enabled, D, P>
+{
     type Error = ReadErrorType;
 
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
@@ -425,7 +432,10 @@ impl<D: UartDevice, P: ValidUartPinout<D>> Read<u8> for UartPeripheral<Enabled, 
     }
 }
 
-impl<D: UartDevice, P: ValidUartPinout<D>> eh0::Write<u8> for UartPeripheral<Enabled, D, P> {
+#[cfg(feature = "embedded-hal-02")]
+impl<D: UartDevice, P: ValidUartPinout<D>> embedded_hal_0_2::serial::Write<u8>
+    for UartPeripheral<Enabled, D, P>
+{
     type Error = Infallible;
 
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {

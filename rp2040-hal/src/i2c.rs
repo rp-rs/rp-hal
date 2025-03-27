@@ -4,6 +4,8 @@
 //!
 //! ## Usage
 //! ```no_run
+//! #[cfg(feature = "embedded-hal-02")]
+//! {
 //! use fugit::RateExtU32;
 //! use rp2040_hal::{i2c::I2C, gpio::Pins, pac, Sio};
 //! let mut peripherals = pac::Peripherals::take().unwrap();
@@ -38,6 +40,8 @@
 //! use embedded_hal_0_2::prelude::_embedded_hal_blocking_i2c_WriteRead;
 //! let mut readbuf: [u8; 1] = [0; 1];
 //! i2c.write_read(0x2Cu8, &[1, 2, 3], &mut readbuf).unwrap();
+//!
+//! }
 //! ```
 //!
 //! See [examples/i2c.rs](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal-examples/src/bin/i2c.rs)
@@ -81,6 +85,7 @@ impl I2cDevice for I2C1 {
 }
 
 /// Marks valid/supported address types
+#[cfg(feature = "embedded-hal-02")]
 pub trait ValidAddress:
     Into<u16> + embedded_hal::i2c::AddressMode + embedded_hal_0_2::blocking::i2c::AddressMode + Copy
 {
@@ -92,6 +97,19 @@ pub trait ValidAddress:
     /// Validates the address against address ranges supported by the hardware.
     fn is_valid(self) -> Result<(), Error>;
 }
+
+/// Marks valid/supported address types
+#[cfg(not(feature = "embedded-hal-02"))]
+pub trait ValidAddress: Into<u16> + embedded_hal::i2c::AddressMode + Copy {
+    /// Variant for the IC_CON.10bitaddr_master field
+    const BIT_ADDR_M: IC_10BITADDR_MASTER_A;
+    /// Variant for the IC_CON.10bitaddr_slave field
+    const BIT_ADDR_S: IC_10BITADDR_SLAVE_A;
+
+    /// Validates the address against address ranges supported by the hardware.
+    fn is_valid(self) -> Result<(), Error>;
+}
+
 impl ValidAddress for u8 {
     const BIT_ADDR_M: IC_10BITADDR_MASTER_A = IC_10BITADDR_MASTER_A::ADDR_7BITS;
     const BIT_ADDR_S: IC_10BITADDR_SLAVE_A = IC_10BITADDR_SLAVE_A::ADDR_7BITS;

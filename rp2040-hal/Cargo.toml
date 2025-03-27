@@ -12,7 +12,7 @@ rust-version = "1.79"
 version = "0.11.0"
 
 [package.metadata.docs.rs]
-features = ["rt", "rom-v2-intrinsics", "defmt", "rtic-monotonic"]
+features = ["rt", "rom-v2-intrinsics", "defmt", "rtic-monotonic", "embedded-hal-02"]
 targets = ["thumbv6m-none-eabi"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -27,7 +27,7 @@ embedded-hal = "1.0.0"
 embedded-hal-async = "1.0.0"
 embedded-hal-nb = "1.0.0"
 embedded-io = "0.6.1"
-embedded_hal_0_2 = {package = "embedded-hal", version = "0.2.5", features = ["unproven"]}
+embedded_hal_0_2 = {package = "embedded-hal", version = "0.2.5", features = ["unproven"], optional = true }
 frunk = {version = "0.4.1", default-features = false}
 fugit = "0.3.6"
 itertools = {version = "0.14.0", default-features = false}
@@ -57,6 +57,7 @@ rand = {version = "0.9.0", default-features = false}
 # None
 
 [features]
+default = ["embedded-hal-02"]
 # Minimal startup / runtime for Cortex-M microcontrollers
 rt = ["rp2040-pac/rt"]
 
@@ -97,3 +98,5 @@ i2c-write-iter = ["dep:i2c-write-iter"]
 # Requires 'rt' so that the vector table is correctly sized and therefore the
 # header is within reach of picotool.
 binary-info = ["rt", "rp-binary-info/binary-info"]
+
+embedded-hal-02 = ["dep:embedded_hal_0_2"]
