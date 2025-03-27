@@ -19,7 +19,7 @@ targets = ["thumbv6m-none-eabi"]
 
 [dependencies]
 # Non-optional dependencies. Keep these sorted by name.
-bitfield = {version = "0.14.0"}
+bitfield = {version = "0.19.0"}
 cortex-m = "0.7.2"
 critical-section = {version = "1.2.0"}
 embedded-dma = "0.2.0"
@@ -30,7 +30,7 @@ embedded-io = "0.6.1"
 embedded_hal_0_2 = {package = "embedded-hal", version = "0.2.5", features = ["unproven"]}
 frunk = {version = "0.4.1", default-features = false}
 fugit = "0.3.6"
-itertools = {version = "0.10.1", default-features = false}
+itertools = {version = "0.14.0", default-features = false}
 nb = "1.0"
 paste = "1.0"
 pio = "0.3.0"
