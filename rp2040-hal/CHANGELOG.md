@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Updated `pio`
+- Updated `ring`
+- Updated `itertools`
+- Updated `bitfield`
+- Made `embedded_hal_0_2` an optional dependency that's on by default
+
 ## [0.11.0] - 2024-12-22
 
 ### MSRV
