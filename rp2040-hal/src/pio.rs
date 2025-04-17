@@ -666,15 +666,16 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
         // the 'PULL' has no effect, or the program will stall on the 'PULL' until data becomes
         // available in the FIFO.
 
-        // TODO: encode at compile time once pio 0.3.0 is out
-        const OUT: InstructionOperands = InstructionOperands::OUT {
+        const OUT: u16 = InstructionOperands::OUT {
             destination: pio::OutDestination::NULL,
             bit_count: 32,
-        };
-        const PULL: InstructionOperands = InstructionOperands::PULL {
+        }
+        .encode();
+        const PULL: u16 = InstructionOperands::PULL {
             if_empty: false,
             block: false,
-        };
+        }
+        .encode();
 
         // Safety: all accesses to these registers are controlled by this instance
         unsafe {
@@ -687,8 +688,7 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
                 OUT
             } else {
                 PULL
-            }
-            .encode();
+            };
 
             // Safety: sm0_instr may be accessed from SM::exec_instruction.
             let mut saved_sideset_count = 0;
@@ -757,13 +757,12 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
     ///
     /// The iterator's item are pairs of `(pin_number, pin_state)`.
     pub fn set_pins(&mut self, pins: impl IntoIterator<Item = (u8, PinState)>) {
-        // TODO: turn those three into const once pio 0.3.0 is released
-        let set_high_instr = InstructionOperands::SET {
+        const SET_HIGH_INSTR: u16 = InstructionOperands::SET {
             destination: pio::SetDestination::PINS,
             data: 1,
         }
         .encode();
-        let set_low_instr = InstructionOperands::SET {
+        const SET_LOW_INSTR: u16 = InstructionOperands::SET {
             destination: pio::SetDestination::PINS,
             data: 0,
         }
@@ -789,9 +788,9 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
             for (pin_num, pin_state) in pins {
                 sm_pinctrl.write(|w| w.set_base().bits(pin_num).set_count().bits(1));
                 let instruction = if pin_state == PinState::High {
-                    set_high_instr
+                    SET_HIGH_INSTR
                 } else {
-                    set_low_instr
+                    SET_LOW_INSTR
                 };
 
                 sm_instr.write(|w| w.sm0_instr().bits(instruction))
@@ -809,13 +808,12 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
     ///
     /// The iterator's item are pairs of `(pin_number, pin_dir)`.
     pub fn set_pindirs(&mut self, pindirs: impl IntoIterator<Item = (u8, PinDir)>) {
-        // TODO: turn those three into const once pio 0.3.0 is released
-        let set_output_instr = InstructionOperands::SET {
+        const SET_OUTPUT_INSTR: u16 = InstructionOperands::SET {
             destination: pio::SetDestination::PINDIRS,
             data: 1,
         }
         .encode();
-        let set_input_instr = InstructionOperands::SET {
+        const SET_INPUT_INSTR: u16 = InstructionOperands::SET {
             destination: pio::SetDestination::PINDIRS,
             data: 0,
         }
@@ -841,9 +839,9 @@ impl<SM: ValidStateMachine> StateMachine<SM, Stopped> {
             for (pin_num, pin_dir) in pindirs {
                 sm_pinctrl.write(|w| w.set_base().bits(pin_num).set_count().bits(1));
                 let instruction = if pin_dir == PinDir::Output {
-                    set_output_instr
+                    SET_OUTPUT_INSTR
                 } else {
-                    set_input_instr
+                    SET_INPUT_INSTR
                 };
 
                 sm_instr.write(|w| w.sm0_instr().bits(instruction))
