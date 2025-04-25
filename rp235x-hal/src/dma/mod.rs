@@ -134,6 +134,10 @@ channels! {
     CH9: (ch9, 9),
     CH10:(ch10, 10),
     CH11:(ch11, 11),
+    CH12:(ch12, 12),
+    CH13:(ch13, 13),
+    CH14:(ch14, 14),
+    CH15:(ch15, 15),
 }
 
 trait ChannelRegs {
