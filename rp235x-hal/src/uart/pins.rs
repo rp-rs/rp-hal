@@ -66,6 +66,7 @@ impl<P> ValidPinTx<UART0> for crate::gpio::Pin<Gpio14, FunctionUartAux, P> where
 impl<P> ValidPinTx<UART0> for crate::gpio::Pin<Gpio16, FunctionUart, P> where P: PullType {}
 impl<P> ValidPinTx<UART0> for crate::gpio::Pin<Gpio18, FunctionUartAux, P> where P: PullType {}
 impl<P> ValidPinTx<UART0> for crate::gpio::Pin<Gpio28, FunctionUart, P> where P: PullType {}
+impl<P> ValidPinTx<UART0> for crate::gpio::Pin<Gpio32, FunctionUart, P> where P: PullType {}
 
 impl<P> ValidPinTx<UART1> for crate::gpio::Pin<Gpio4, FunctionUart, P> where P: PullType {}
 impl<P> ValidPinTx<UART1> for crate::gpio::Pin<Gpio6, FunctionUartAux, P> where P: PullType {}
@@ -90,6 +91,7 @@ impl<P> ValidPinRx<UART0> for crate::gpio::Pin<Gpio15, FunctionUartAux, P> where
 impl<P> ValidPinRx<UART0> for crate::gpio::Pin<Gpio17, FunctionUart, P> where P: PullType {}
 impl<P> ValidPinRx<UART0> for crate::gpio::Pin<Gpio19, FunctionUartAux, P> where P: PullType {}
 impl<P> ValidPinRx<UART0> for crate::gpio::Pin<Gpio29, FunctionUart, P> where P: PullType {}
+impl<P> ValidPinRx<UART0> for crate::gpio::Pin<Gpio33, FunctionUart, P> where P: PullType {}
 
 impl<P> ValidPinRx<UART1> for crate::gpio::Pin<Gpio5, FunctionUart, P> where P: PullType {}
 impl<P> ValidPinRx<UART1> for crate::gpio::Pin<Gpio7, FunctionUartAux, P> where P: PullType {}
@@ -154,6 +156,7 @@ const TX: &[(u8, usize, DynFunction)] = &[
     (Gpio10::ID.num, UART1::ID, DynFunction::UartAux),
     (Gpio22::ID.num, UART1::ID, DynFunction::UartAux),
     (Gpio26::ID.num, UART1::ID, DynFunction::UartAux),
+    (Gpio32::ID.num, UART0::ID, DynFunction::Uart),
 ];
 
 const RX: &[(u8, usize, DynFunction)] = &[
@@ -172,6 +175,7 @@ const RX: &[(u8, usize, DynFunction)] = &[
     (Gpio11::ID.num, UART1::ID, DynFunction::UartAux),
     (Gpio23::ID.num, UART1::ID, DynFunction::UartAux),
     (Gpio27::ID.num, UART1::ID, DynFunction::UartAux),
+    (Gpio33::ID.num, UART0::ID, DynFunction::Uart),
 ];
 
 const CTS: &[(u8, usize, DynFunction)] = &[
