@@ -41,7 +41,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.79
+          toolchain: 1.81
           target: ${{ env.TARGET }}
       - name: Use older version of regex
         run: cd ${PACKAGE} && cargo update -p regex --precise 1.9.3
