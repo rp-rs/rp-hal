@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### MSRV
+
+The Minimum-Supported Rust Version (MSRV) for the next release is 1.81
+
+- Bump MSRV to 1.81 because the crate `home` (an indirect build-depencency) requires it.
+
 ## [0.11.0] - 2024-12-22
 
 ### MSRV

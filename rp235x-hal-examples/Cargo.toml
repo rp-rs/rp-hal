@@ -8,7 +8,7 @@ keywords = ["embedded", "hal", "raspberry-pi", "rp235x", "rp2350", "embedded-hal
 license = "MIT OR Apache-2.0"
 name = "rp235x-hal-examples"
 repository = "https://github.com/rp-rs/rp-hal"
-rust-version = "1.79"
+rust-version = "1.81"
 version = "0.1.0"
 
 [dependencies]
