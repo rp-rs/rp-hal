@@ -1,4 +1,4 @@
-//! This example toggles the GPIO25 pin, using a PIO program compiled via pio_proc::pio!().
+//! This example toggles the GPIO25 pin, using a PIO program compiled via pio::pio_asm!().
 //!
 //! If a LED is connected to that pin, like on a Pico board, the LED should blink.
 #![no_std]
@@ -41,7 +41,7 @@ fn main() -> ! {
     let led_pin_id = led.id().num;
 
     // Define some simple PIO program.
-    let program = pio_proc::pio_asm!(
+    let program = pio::pio_asm!(
         ".wrap_target",
         "set pins, 1 [31]",
         "set pins, 0 [31]",

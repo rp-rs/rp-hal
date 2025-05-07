@@ -55,7 +55,7 @@ fn main() -> ! {
 
     // Define a PIO program which reads data from the TX FIFO bit by bit, configures the LED
     // according to the data, and then writes the data back to the RX FIFO.
-    let program = pio_proc::pio_asm!(
+    let program = pio::pio_asm!(
         ".wrap_target",
         "    out x, 1",
         "    mov pins, x",
