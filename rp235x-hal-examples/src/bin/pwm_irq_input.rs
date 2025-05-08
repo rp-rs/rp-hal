@@ -19,19 +19,14 @@ use panic_halt as _;
 // Alias for our HAL crate
 use rp235x_hal as hal;
 
-// Some things we need
+// Some traits we need
 use embedded_hal::digital::OutputPin;
 
-// Our interrupt macro
-use hal::pac::interrupt;
-
-// Shorter alias for gpio and pwm modules
-use hal::gpio;
-use hal::pwm;
-
-// Some short-cuts to useful types for sharing data with the interrupt handlers
+// Some more helpful aliases
 use core::cell::RefCell;
 use critical_section::Mutex;
+use hal::gpio;
+use hal::pwm;
 
 /// Tell the Boot ROM about our application
 #[link_section = ".start_block"]
@@ -71,7 +66,7 @@ type LedInputAndPwm = (LedPin, InputPwmPin, PwmSlice);
 /// This how we transfer our LED pin, input pin and PWM slice into the Interrupt Handler.
 /// We'll have the option hold both using the LedAndInput type.
 /// This will make it a bit easier to unpack them later.
-static GLOBAL_PINS: Mutex<RefCell<Option<LedInputAndPwm>>> = Mutex::new(RefCell::new(None));
+static GLOBAL_STATE: Mutex<RefCell<Option<LedInputAndPwm>>> = Mutex::new(RefCell::new(None));
 
 /// Entry point to our bare-metal application.
 ///
@@ -140,15 +135,20 @@ fn main() -> ! {
     // Give away our pins by moving them into the `GLOBAL_PINS` variable.
     // We won't need to access them in the main thread again
     critical_section::with(|cs| {
-        GLOBAL_PINS.borrow(cs).replace(Some((led, input_pin, pwm)));
+        GLOBAL_STATE.borrow(cs).replace(Some((led, input_pin, pwm)));
     });
 
-    // Unmask the IO_BANK0 IRQ so that the NVIC interrupt controller
-    // will jump to the interrupt function when the interrupt occurs.
-    // We do this last so that the interrupt can't go off while
-    // it is in the middle of being configured
+    // Unmask the IRQ for I/O Bank 0 so that the RP2350's interrupt controller
+    // (NVIC in Arm mode, or Xh3irq in RISC-V mode) will jump to the interrupt
+    // function when the interrupt occurs. We do this last so that the interrupt
+    // can't go off while it is in the middle of being configured
     unsafe {
-        cortex_m::peripheral::NVIC::unmask(hal::pac::Interrupt::IO_IRQ_BANK0);
+        hal::arch::interrupt_unmask(hal::pac::Interrupt::IO_IRQ_BANK0);
+    }
+
+    // Enable interrupts on this core
+    unsafe {
+        hal::arch::interrupt_enable();
     }
 
     loop {
@@ -157,56 +157,59 @@ fn main() -> ! {
     }
 }
 
-#[allow(static_mut_refs)] // See https://github.com/rust-embedded/cortex-m/pull/561
-#[interrupt]
+/// This is the interrupt handler that fires when GPIO Bank 0 detects an event
+/// (like an edge).
+///
+/// We give it an unmangled name so that it replaces the default (empty)
+/// handler. These handlers are referred to by name from the Interrupt Vector
+/// Table created by cortex-m-rt.
+#[allow(non_snake_case)]
+#[no_mangle]
 fn IO_IRQ_BANK0() {
-    // The `#[interrupt]` attribute covertly converts this to `&'static mut Option<LedAndInput>`
-    static mut LED_INPUT_AND_PWM: Option<LedInputAndPwm> = None;
+    // Enter a critical section to ensure this code cannot be concurrently
+    // executed on the other core. This also protects us if the main thread
+    // decides to execute this function (which it shouldn't, but we can't stop
+    // them if they wanted to).
+    critical_section::with(|cs| {
+        // Grab a mutable reference to the global state, using the CS token as
+        // proof we have turned off interrupts. Performs a run-time borrow check
+        // of the RefCell to ensure no-one else is currently borrowing it (and
+        // they shouldn't, because we're in a critical section right now).
+        let mut maybe_state = GLOBAL_STATE.borrow_ref_mut(cs);
+        // Need to check if our Option<LedInputAndPwm> contains our pins and pwm slice
+        if let Some((led, input, pwm)) = maybe_state.as_mut() {
+            // Check if the interrupt source is from the input pin going from high-to-low.
+            // Note: this will always be true in this example, as that is the only enabled GPIO interrupt source
+            if input.interrupt_status(gpio::Interrupt::EdgeLow) {
+                // Read the width of the last pulse from the PWM Slice counter
+                let pulse_width_us = pwm.get_counter();
 
-    // This is one-time lazy initialisation. We steal the variables given to us
-    // via `GLOBAL_PINS`.
-    if LED_INPUT_AND_PWM.is_none() {
-        critical_section::with(|cs| {
-            *LED_INPUT_AND_PWM = GLOBAL_PINS.borrow(cs).take();
-        });
-    }
+                // if the PWM signal indicates low, turn off the LED
+                if pulse_width_us < LOW_US {
+                    // set_low can't fail, but the embedded-hal traits always allow for it
+                    // we can discard the Result
+                    let _ = led.set_low();
+                }
+                // if the PWM signal indicates high, turn on the LED
+                else if pulse_width_us > HIGH_US {
+                    // set_high can't fail, but the embedded-hal traits always allow for it
+                    // we can discard the Result
+                    let _ = led.set_high();
+                }
 
-    // Need to check if our Option<LedInputAndPwm> contains our pins and pwm slice
-    // borrow led, input and pwm by *destructuring* the tuple
-    // these will be of type `&mut LedPin`, `&mut InputPwmPin` and `&mut PwmSlice`, so we
-    // don't have to move them back into the static after we use them
-    if let Some((led, input, pwm)) = LED_INPUT_AND_PWM {
-        // Check if the interrupt source is from the input pin going from high-to-low.
-        // Note: this will always be true in this example, as that is the only enabled GPIO interrupt source
-        if input.interrupt_status(gpio::Interrupt::EdgeLow) {
-            // Read the width of the last pulse from the PWM Slice counter
-            let pulse_width_us = pwm.get_counter();
+                // If the PWM signal was in the dead-zone between LOW and HIGH, don't change the LED's
+                // state. The dead-zone avoids the LED flickering rapidly when receiving a signal close
+                // to the mid-point, 1500 us in this case.
 
-            // if the PWM signal indicates low, turn off the LED
-            if pulse_width_us < LOW_US {
-                // set_low can't fail, but the embedded-hal traits always allow for it
-                // we can discard the Result
-                let _ = led.set_low();
+                // Reset the pwm counter back to 0, ready for the next pulse
+                pwm.set_counter(0);
+
+                // Our interrupt doesn't clear itself.
+                // Do that now so we don't immediately jump back to this interrupt handler.
+                input.clear_interrupt(gpio::Interrupt::EdgeLow);
             }
-            // if the PWM signal indicates high, turn on the LED
-            else if pulse_width_us > HIGH_US {
-                // set_high can't fail, but the embedded-hal traits always allow for it
-                // we can discard the Result
-                let _ = led.set_high();
-            }
-
-            // If the PWM signal was in the dead-zone between LOW and HIGH, don't change the LED's
-            // state. The dead-zone avoids the LED flickering rapidly when receiving a signal close
-            // to the mid-point, 1500 us in this case.
-
-            // Reset the pwm counter back to 0, ready for the next pulse
-            pwm.set_counter(0);
-
-            // Our interrupt doesn't clear itself.
-            // Do that now so we don't immediately jump back to this interrupt handler.
-            input.clear_interrupt(gpio::Interrupt::EdgeLow);
         }
-    }
+    });
 }
 
 /// Program metadata for `picotool info`
