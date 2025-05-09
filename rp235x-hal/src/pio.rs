@@ -1966,6 +1966,12 @@ pub enum Buffers {
     OnlyTx,
     /// The memory of the TX FIFO is given to the RX FIFO to double its depth.
     OnlyRx,
+    /// The memory of the RX FIFO is available for random write access by the state machine.
+    RxPut,
+    // The memory of RX FIFO is available for random read access by the state machine.
+    RxGet,
+    // The memory of RXFIFO is available for random read and write access by the state machine.
+    RxPutGet,
 }
 
 /// Errors that occurred during `PIO::install`.
@@ -2261,13 +2267,18 @@ impl<P: PIOExt> PIOBuilder<P> {
             });
 
             sm.sm().sm_shiftctrl().write(|w| {
-                let (fjoin_rx, fjoin_tx) = match self.fifo_join {
-                    Buffers::RxTx => (false, false),
-                    Buffers::OnlyTx => (false, true),
-                    Buffers::OnlyRx => (true, false),
+                let (fjoin_rx, fjoin_tx, fjoin_rx_put, fjoin_rx_get) = match self.fifo_join {
+                    Buffers::RxTx => (false, false, false, false),
+                    Buffers::OnlyTx => (false, true, false, false),
+                    Buffers::OnlyRx => (true, false, false, false),
+                    Buffers::RxPut => (false, false, true, false),
+                    Buffers::RxGet => (false, false, false, true),
+                    Buffers::RxPutGet => (false, false, true, true),
                 };
                 w.fjoin_rx().bit(fjoin_rx);
                 w.fjoin_tx().bit(fjoin_tx);
+                w.fjoin_rx_put().bit(fjoin_rx_put);
+                w.fjoin_rx_get().bit(fjoin_rx_get);
 
                 // TODO: Encode 32 as zero, and error on 0
                 w.pull_thresh().bits(self.pull_threshold);
