@@ -8,9 +8,9 @@
 use rp235x_hal as hal;
 
 use hal::gpio::{FunctionPio0, Pin};
+use hal::pio::Buffers;
 use hal::pio::PIOExt;
 use hal::Sio;
-use hal::pio::Buffers;
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
