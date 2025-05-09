@@ -54,7 +54,7 @@ pub struct Channel<CH: ChannelIndex> {
 
 /// DMA channel identifier.
 pub trait ChannelIndex: Sealed {
-    /// Numerical index of the DMA channel (0..11).
+    /// Numerical index of the DMA channel (0..15).
     fn id() -> u8;
 }
 
