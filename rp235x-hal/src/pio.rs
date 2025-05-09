@@ -1968,9 +1968,9 @@ pub enum Buffers {
     OnlyRx,
     /// The memory of the RX FIFO is available for random write access by the state machine.
     RxPut,
-    // The memory of RX FIFO is available for random read access by the state machine.
+    /// The memory of RX FIFO is available for random read access by the state machine.
     RxGet,
-    // The memory of RXFIFO is available for random read and write access by the state machine.
+    /// The memory of RXFIFO is available for random read and write access by the state machine.
     RxPutGet,
 }
 
