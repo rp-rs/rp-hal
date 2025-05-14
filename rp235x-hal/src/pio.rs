@@ -1966,11 +1966,11 @@ pub enum Buffers {
     OnlyTx,
     /// The memory of the TX FIFO is given to the RX FIFO to double its depth.
     OnlyRx,
-    /// The memory of the RX FIFO is available for random write access by the state machine.
+    /// The memory of the RX FIFO is available for random write access by the state machine, but the system can only read from it.
     RxPut,
-    /// The memory of RX FIFO is available for random read access by the state machine.
+    /// The memory of RX FIFO is available for random read access by the state machine, but the system can only write to it.
     RxGet,
-    /// The memory of RXFIFO is available for random read and write access by the state machine.
+    /// The memory of RXFIFO is available for random read and write access by the state machine, but the system can no longer read or write to it.
     RxPutGet,
 }
 
