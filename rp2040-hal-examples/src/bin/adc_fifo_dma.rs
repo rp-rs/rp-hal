@@ -177,7 +177,7 @@ fn main() -> ! {
         .unwrap();
     }
 
-    writeln!(uart, "Sampling took: {}\r", time_taken).unwrap();
+    writeln!(uart, "Sampling took: {time_taken}\r").unwrap();
 
     loop {
         delay.delay_ms(1000);

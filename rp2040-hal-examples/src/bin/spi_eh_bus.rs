@@ -281,7 +281,7 @@ fn main() -> ! {
         }
         Err(e) => {
             // Do something on failure
-            _ = writeln!(uart, "Device write error: {:?}", e);
+            _ = writeln!(uart, "Device write error: {e:?}");
         }
     }
 
@@ -289,11 +289,11 @@ fn main() -> ! {
     match driver.get_value() {
         Ok(value) => {
             // Do something on success
-            _ = writeln!(uart, "Read value: {}", value);
+            _ = writeln!(uart, "Read value: {value}");
         }
         Err(e) => {
             // Do something on failure
-            _ = writeln!(uart, "Device write error: {:?}", e);
+            _ = writeln!(uart, "Device write error: {e:?}");
         }
     }
 

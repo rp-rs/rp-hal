@@ -160,13 +160,13 @@ impl core::fmt::Display for AotClockSource {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             AotClockSource::Xosc(frac) => {
-                write!(f, "Crystal @ {}", frac)
+                write!(f, "Crystal @ {frac}")
             }
             AotClockSource::Lposc(frac) => {
-                write!(f, "On-Chip LowPower @ {}", frac)
+                write!(f, "On-Chip LowPower @ {frac}")
             }
             AotClockSource::GpioLpOsc(frac) => {
-                write!(f, "GPIO LowPower @ {}", frac)
+                write!(f, "GPIO LowPower @ {frac}")
             }
             AotClockSource::Gpio1kHz => write!(f, "GPIO 1kHz"),
             AotClockSource::Gpio1Hz => write!(f, "GPIO 1 Hz"),

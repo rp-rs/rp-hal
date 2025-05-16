@@ -147,8 +147,8 @@ impl core::fmt::Debug for Error {
         match self {
             Error::InvalidReadBufferLength => write!(fmt, "InvalidReadBufferLength"),
             Error::InvalidWriteBufferLength => write!(fmt, "InvalidWriteBufferLength"),
-            Error::AddressOutOfRange(addr) => write!(fmt, "AddressOutOfRange({:x})", addr),
-            Error::AddressReserved(addr) => write!(fmt, "AddressReserved({:x})", addr),
+            Error::AddressOutOfRange(addr) => write!(fmt, "AddressOutOfRange({addr:x})"),
+            Error::AddressReserved(addr) => write!(fmt, "AddressReserved({addr:x})"),
             Error::Abort(_) => {
                 write!(fmt, "{:?}", self.kind())
             }

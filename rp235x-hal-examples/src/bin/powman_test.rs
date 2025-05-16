@@ -146,13 +146,13 @@ fn main() -> ! {
     alarm_test(&mut powman);
 
     let source = AotClockSource::Xosc(FractionalFrequency::from_hz(12_000_000));
-    _ = writeln!(&GLOBAL_UART, "Switching AOT to {}", source);
+    _ = writeln!(&GLOBAL_UART, "Switching AOT to {source}");
     powman.aot_set_clock(source).expect("selecting XOSC");
     print_aot_status(&mut powman);
     loop_test(&mut powman, &mtimer);
 
     let source = AotClockSource::Lposc(FractionalFrequency::from_hz(32768));
-    _ = writeln!(&GLOBAL_UART, "Switching AOT to {}", source);
+    _ = writeln!(&GLOBAL_UART, "Switching AOT to {source}");
     powman.aot_set_clock(source).expect("selecting LPOSC");
     print_aot_status(&mut powman);
     loop_test(&mut powman, &mtimer);
@@ -180,8 +180,7 @@ fn rollover_test(powman: &mut Powman) {
     let end_loop = 0x0000_0001_0000_00FFu64;
     _ = writeln!(
         &GLOBAL_UART,
-        "Setting AOT to 0x{:016x} and waiting for rollover...",
-        start_loop
+        "Setting AOT to 0x{start_loop:016x} and waiting for rollover..."
     );
     powman.aot_stop();
     powman.aot_set_time(start_loop);
@@ -209,8 +208,7 @@ fn loop_test(powman: &mut Powman, mtimer: &hal::sio::MachineTimer) {
     let end_loop = 2_000; // 2 seconds
     _ = writeln!(
         &GLOBAL_UART,
-        "Setting AOT to 0x{:016x} and benchmarking...",
-        start_loop
+        "Setting AOT to 0x{start_loop:016x} and benchmarking..."
     );
     powman.aot_stop();
     powman.aot_set_time(start_loop);
@@ -291,7 +289,7 @@ fn POWMAN_IRQ_TIMER() {
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    let _ = writeln!(&GLOBAL_UART, "PANIC:\n{:?}", info);
+    let _ = writeln!(&GLOBAL_UART, "PANIC:\n{info:?}");
 
     hal::reboot::reboot(
         hal::reboot::RebootKind::BootSel {
