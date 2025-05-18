@@ -29,19 +29,13 @@ use panic_halt as _;
 // Alias for our HAL crate
 use rp235x_hal as hal;
 
-// Some things we need
+// Some traits we need
 use embedded_hal::digital::StatefulOutputPin;
 
-// Our interrupt macro
-use hal::pac::interrupt;
-
-// Some short-cuts to useful types
+// Some more helpful aliases
 use core::cell::RefCell;
 use critical_section::Mutex;
 use hal::gpio;
-
-// The GPIO interrupt type we're going to generate
-use gpio::Interrupt::EdgeLow;
 
 /// Tell the Boot ROM about our application
 #[link_section = ".start_block"]
@@ -70,7 +64,7 @@ type LedAndButton = (LedPin, ButtonPin);
 /// This how we transfer our Led and Button pins into the Interrupt Handler.
 /// We'll have the option hold both using the LedAndButton type.
 /// This will make it a bit easier to unpack them later.
-static GLOBAL_PINS: Mutex<RefCell<Option<LedAndButton>>> = Mutex::new(RefCell::new(None));
+static GLOBAL_STATE: Mutex<RefCell<Option<LedAndButton>>> = Mutex::new(RefCell::new(None));
 
 /// Entry point to our bare-metal application.
 ///
@@ -120,20 +114,25 @@ fn main() -> ! {
 
     // Trigger on the 'falling edge' of the input pin.
     // This will happen as the button is being pressed
-    in_pin.set_interrupt_enabled(EdgeLow, true);
+    in_pin.set_interrupt_enabled(gpio::Interrupt::EdgeLow, true);
 
     // Give away our pins by moving them into the `GLOBAL_PINS` variable.
     // We won't need to access them in the main thread again
     critical_section::with(|cs| {
-        GLOBAL_PINS.borrow(cs).replace(Some((led, in_pin)));
+        GLOBAL_STATE.borrow(cs).replace(Some((led, in_pin)));
     });
 
-    // Unmask the IO_BANK0 IRQ so that the NVIC interrupt controller
-    // will jump to the interrupt function when the interrupt occurs.
-    // We do this last so that the interrupt can't go off while
-    // it is in the middle of being configured
+    // Unmask the IRQ for I/O Bank 0 so that the RP2350's interrupt controller
+    // (NVIC in Arm mode, or Xh3irq in RISC-V mode) will jump to the interrupt
+    // function when the interrupt occurs. We do this last so that the interrupt
+    // can't go off while it is in the middle of being configured
     unsafe {
-        cortex_m::peripheral::NVIC::unmask(hal::pac::Interrupt::IO_IRQ_BANK0);
+        hal::arch::interrupt_unmask(hal::pac::Interrupt::IO_IRQ_BANK0);
+    }
+
+    // Enable interrupts on this core
+    unsafe {
+        hal::arch::interrupt_enable();
     }
 
     loop {
@@ -142,38 +141,39 @@ fn main() -> ! {
     }
 }
 
-#[allow(static_mut_refs)] // See https://github.com/rust-embedded/cortex-m/pull/561
-#[interrupt]
+/// This is the interrupt handler that fires when GPIO Bank 0 detects an event
+/// (like an edge).
+///
+/// We give it an unmangled name so that it replaces the default (empty)
+/// handler. These handlers are referred to by name from the Interrupt Vector
+/// Table created by cortex-m-rt.
+#[allow(non_snake_case)]
+#[no_mangle]
 fn IO_IRQ_BANK0() {
-    // The `#[interrupt]` attribute covertly converts this to `&'static mut Option<LedAndButton>`
-    static mut LED_AND_BUTTON: Option<LedAndButton> = None;
-
-    // This is one-time lazy initialisation. We steal the variables given to us
-    // via `GLOBAL_PINS`.
-    if LED_AND_BUTTON.is_none() {
-        critical_section::with(|cs| {
-            *LED_AND_BUTTON = GLOBAL_PINS.borrow(cs).take();
-        });
-    }
-
-    // Need to check if our Option<LedAndButtonPins> contains our pins
-    if let Some(gpios) = LED_AND_BUTTON {
-        // borrow led and button by *destructuring* the tuple
-        // these will be of type `&mut LedPin` and `&mut ButtonPin`, so we don't have
-        // to move them back into the static after we use them
-        let (led, button) = gpios;
-        // Check if the interrupt source is from the pushbutton going from high-to-low.
-        // Note: this will always be true in this example, as that is the only enabled GPIO interrupt source
-        if button.interrupt_status(EdgeLow) {
-            // toggle can't fail, but the embedded-hal traits always allow for it
-            // we can discard the return value by assigning it to an unnamed variable
-            let _ = led.toggle();
-
-            // Our interrupt doesn't clear itself.
-            // Do that now so we don't immediately jump back to this interrupt handler.
-            button.clear_interrupt(EdgeLow);
+    // Enter a critical section to ensure this code cannot be concurrently
+    // executed on the other core. This also protects us if the main thread
+    // decides to execute this function (which it shouldn't, but we can't stop
+    // them if they wanted to).
+    critical_section::with(|cs| {
+        // Grab a mutable reference to the global state, using the CS token as
+        // proof we have turned off interrupts. Performs a run-time borrow check
+        // of the RefCell to ensure no-one else is currently borrowing it (and
+        // they shouldn't, because we're in a critical section right now).
+        let mut maybe_state = GLOBAL_STATE.borrow_ref_mut(cs);
+        // Need to check if our Option<LedAndButtonPins> contains our pins
+        if let Some((led, button)) = maybe_state.as_mut() {
+            // Check if the interrupt source is from the pushbutton going from high-to-low.
+            // Note: this will always be true in this example, as that is the only enabled GPIO interrupt source
+            if button.interrupt_status(gpio::Interrupt::EdgeLow) {
+                // toggle can't fail, but the embedded-hal traits always allow for it
+                // we can discard the return value by assigning it to an unnamed variable
+                let _ = led.toggle();
+                // Our interrupt doesn't clear itself.
+                // Do that now so we don't immediately jump back to this interrupt handler.
+                button.clear_interrupt(gpio::Interrupt::EdgeLow);
+            }
         }
-    }
+    });
 }
 
 /// Program metadata for `picotool info`

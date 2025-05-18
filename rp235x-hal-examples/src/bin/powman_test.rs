@@ -13,9 +13,6 @@ use rp235x_hal::{
     uart::{DataBits, StopBits, UartConfig, UartPeripheral},
 };
 
-use cortex_m_rt::exception;
-use pac::interrupt;
-
 // Some traits we need
 use core::fmt::Write;
 use hal::fugit::RateExtU32;
@@ -67,7 +64,7 @@ impl GlobalUart {
 
 /// Entry point to our bare-metal application.
 ///
-/// The `#[hal::entry]` macro ensures the Cortex-M start-up code calls this function
+/// The `#[hal::entry]` macro ensures the start-up code calls this function
 /// as soon as all global variables and the spinlock are initialised.
 ///
 /// The function configures the rp235x peripherals, then writes to the UART in
@@ -76,11 +73,6 @@ impl GlobalUart {
 fn main() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
-    let mut cp = cortex_m::Peripherals::take().unwrap();
-
-    // Enable the cycle counter
-    cp.DCB.enable_trace();
-    cp.DWT.enable_cycle_counter();
 
     // Set up the watchdog driver - needed by the clock setup code
     let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
@@ -99,6 +91,8 @@ fn main() -> ! {
 
     // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);
+    let mut mtimer = sio.machine_timer;
+    mtimer.set_enabled(true);
 
     // Set the pins to their default state
     let pins = gpio::Pins::new(
@@ -130,30 +124,38 @@ fn main() -> ! {
     print_aot_status(&mut powman);
     _ = writeln!(&GLOBAL_UART, "AOT time: 0x{:016x}", powman.aot_get_time());
 
+    // Unmask the IRQ for POWMAN's Timer. We do this after the driver init so
+    // that the interrupt can't go off while it is in the middle of being
+    // configured
     unsafe {
-        cortex_m::peripheral::NVIC::unmask(pac::Interrupt::POWMAN_IRQ_TIMER);
+        hal::arch::interrupt_unmask(hal::pac::Interrupt::POWMAN_IRQ_TIMER);
+    }
+
+    // Enable interrupts on this core
+    unsafe {
+        hal::arch::interrupt_enable();
     }
 
     _ = writeln!(&GLOBAL_UART, "Starting AOT...");
     powman.aot_start();
     // we don't know what oscillator we're on, so give it time to start whatever it is
-    cortex_m::asm::delay(150_000);
+    hal::arch::delay(150_000);
     print_aot_status(&mut powman);
     rollover_test(&mut powman);
-    loop_test(&mut powman);
+    loop_test(&mut powman, &mtimer);
     alarm_test(&mut powman);
 
     let source = AotClockSource::Xosc(FractionalFrequency::from_hz(12_000_000));
     _ = writeln!(&GLOBAL_UART, "Switching AOT to {}", source);
     powman.aot_set_clock(source).expect("selecting XOSC");
     print_aot_status(&mut powman);
-    loop_test(&mut powman);
+    loop_test(&mut powman, &mtimer);
 
     let source = AotClockSource::Lposc(FractionalFrequency::from_hz(32768));
     _ = writeln!(&GLOBAL_UART, "Switching AOT to {}", source);
     powman.aot_set_clock(source).expect("selecting LPOSC");
     print_aot_status(&mut powman);
-    loop_test(&mut powman);
+    loop_test(&mut powman, &mtimer);
 
     _ = writeln!(&GLOBAL_UART, "Rebooting now");
 
@@ -202,7 +204,7 @@ fn rollover_test(powman: &mut Powman) {
 }
 
 /// In this function, we see how long it takes to pass a certain number of ticks.
-fn loop_test(powman: &mut Powman) {
+fn loop_test(powman: &mut Powman, mtimer: &hal::sio::MachineTimer) {
     let start_loop = 0;
     let end_loop = 2_000; // 2 seconds
     _ = writeln!(
@@ -214,24 +216,24 @@ fn loop_test(powman: &mut Powman) {
     powman.aot_set_time(start_loop);
     powman.aot_start();
 
-    let start_clocks = cortex_m::peripheral::DWT::cycle_count();
+    let start_clocks = mtimer.read();
     loop {
         let now = powman.aot_get_time();
         if now == end_loop {
             break;
         }
     }
-    let end_clocks = cortex_m::peripheral::DWT::cycle_count();
-    // Compare our AOT against our CPU clock speed
-    let delta_clocks = end_clocks.wrapping_sub(start_clocks) as u64;
+    let end_clocks = mtimer.read();
+    // Compare our AOT against our Machine Timer
+    let delta_clocks = end_clocks.wrapping_sub(start_clocks);
     let delta_ticks = end_loop - start_loop;
     let cycles_per_tick = delta_clocks / delta_ticks;
-    // Assume we're running at 150 MHz
-    let ms_per_tick = (cycles_per_tick as f32 * 1000.0) / 150_000_000.0;
+    // Assume we're running at 1 MHz MTimer
+    let ms_per_tick = (cycles_per_tick as f32 * 1000.0) / 1_000_000.0;
     let percent = ((ms_per_tick - 1.0) / 1.0) * 100.0;
     _ = writeln!(
         &GLOBAL_UART,
-        "Loop complete ... {delta_ticks} ticks in {delta_clocks} CPU clock cycles = {cycles_per_tick} cycles/tick ~= {ms_per_tick} ms/tick ({percent:.3}%)",
+        "Loop complete ... {delta_ticks} ticks in {delta_clocks} MTimer cycles = {cycles_per_tick} cycles/tick ~= {ms_per_tick} ms/tick ({percent:.3}%)",
     )
     ;
 }
@@ -258,8 +260,9 @@ fn alarm_test(powman: &mut Powman) {
         &GLOBAL_UART,
         "Sleeping until alarm (* = wakeup, ! = POWMAN interrupt)...",
     );
+
     while !powman.aot_alarm_ringing() {
-        cortex_m::asm::wfe();
+        hal::arch::wfe();
         _ = write!(&GLOBAL_UART, "*",);
     }
 
@@ -278,25 +281,12 @@ fn alarm_test(powman: &mut Powman) {
     _ = writeln!(&GLOBAL_UART, "Alarm cleared OK");
 }
 
-#[interrupt]
+#[no_mangle]
 #[allow(non_snake_case)]
 fn POWMAN_IRQ_TIMER() {
     Powman::static_aot_alarm_interrupt_disable();
     _ = write!(&GLOBAL_UART, "!");
-    cortex_m::asm::sev();
-}
-
-#[exception]
-unsafe fn HardFault(ef: &cortex_m_rt::ExceptionFrame) -> ! {
-    let _ = writeln!(&GLOBAL_UART, "HARD FAULT:\n{:#?}", ef);
-
-    hal::reboot::reboot(
-        hal::reboot::RebootKind::BootSel {
-            msd_disabled: false,
-            picoboot_disabled: false,
-        },
-        hal::reboot::RebootArch::Normal,
-    );
+    hal::arch::sev();
 }
 
 #[panic_handler]

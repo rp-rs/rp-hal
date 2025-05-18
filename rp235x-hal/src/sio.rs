@@ -57,6 +57,11 @@ pub struct SioGpioQspi {
     _private: (),
 }
 
+/// Marker struct for ownership of SIO Machine Timer
+pub struct MachineTimer {
+    _private: (),
+}
+
 /// Struct containing ownership markers for managing ownership of the SIO registers.
 pub struct Sio {
     _sio: pac::SIO,
@@ -70,6 +75,8 @@ pub struct Sio {
     pub interp0: Interp0,
     /// Interpolator 1
     pub interp1: Interp1,
+    /// RISC-V Machine Timer
+    pub machine_timer: MachineTimer,
 }
 
 impl Sio {
@@ -88,6 +95,7 @@ impl Sio {
                 lane0: Interp1Lane0 { _private: () },
                 lane1: Interp1Lane1 { _private: () },
             },
+            machine_timer: MachineTimer { _private: () },
         }
     }
 
@@ -191,6 +199,33 @@ impl SioFifo {
                 crate::arch::wfe();
             }
         }
+    }
+}
+
+impl MachineTimer {
+    /// Read the SIO's Machine Timer
+    pub fn read(&self) -> u64 {
+        let sio = unsafe { &(*pac::SIO::ptr()) };
+        loop {
+            let mtimeh = sio.mtimeh().read().mtimeh().bits();
+            let mtime = sio.mtime().read().mtime().bits();
+            let mtimeh2 = sio.mtimeh().read().mtimeh().bits();
+            if mtimeh == mtimeh2 {
+                return u64::from(mtimeh) << 32 | u64::from(mtime);
+            }
+        }
+    }
+
+    /// Set whether the timer is enabled
+    pub fn set_enabled(&mut self, enabled: bool) {
+        let sio = unsafe { &(*pac::SIO::ptr()) };
+        sio.mtime_ctrl().write(|w| w.en().variant(enabled));
+    }
+
+    /// Set the speed the clock runs at
+    pub fn set_fullspeed(&mut self, fullspeed: bool) {
+        let sio = unsafe { &(*pac::SIO::ptr()) };
+        sio.mtime_ctrl().write(|w| w.fullspeed().variant(fullspeed));
     }
 }
 
