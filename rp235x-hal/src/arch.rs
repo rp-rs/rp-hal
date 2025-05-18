@@ -563,8 +563,9 @@ mod inner {
 
 #[doc(inline)]
 pub use inner::{
-    delay, dsb, interrrupt_is_pending, interrupt_disable, interrupt_enable, interrupt_is_enabled,
-    interrupt_mask, interrupt_pend, interrupt_unmask, interrupts_enabled, nop, sev, wfe, wfi,
+    delay, dsb, enable_coprocessors, interrrupt_is_pending, interrupt_disable, interrupt_enable,
+    interrupt_is_enabled, interrupt_mask, interrupt_pend, interrupt_unmask, interrupts_enabled,
+    nop, sev, wfe, wfi,
 };
 
 /// Run the closure without interrupts
