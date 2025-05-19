@@ -47,7 +47,7 @@ mod inner {
 
     /// Enable co-processors.
     ///
-    /// For core0, this is done by the `#[entry]` macro. Fore core1, this function is called
+    /// For core0, this is done by the `#[entry]` macro. For core1, this function is called
     /// from `multicore::Core::spawn`.
     ///
     /// # Safety
@@ -122,6 +122,18 @@ mod inner {
     pub fn interrupts_enabled() -> bool {
         riscv::register::mstatus::read().mie()
     }
+
+    /// Enable co-processors.
+    ///
+    /// The riscv core in rp2350 does not have any co-processors.
+    /// As such, this function does nothing, and only exists to
+    /// provide compatibility between arm and riscv targets.
+    ///
+    /// # Safety
+    ///
+    /// For thumbv8m.main-none-eabihf targets this must only be called
+    /// immediately after starting up a core.
+    pub unsafe fn enable_coprocessors() {}
 
     #[no_mangle]
     #[allow(non_snake_case)]
@@ -559,12 +571,21 @@ mod inner {
 
     /// Placeholder function to mark an IRQ as pending
     pub fn interrupt_pend(_irq: rp235x_pac::Interrupt) {}
+
+    /// Placeholder function to enable co-processors.
+    ///
+    /// # Safety
+    ///
+    /// For thumbv8m.main-none-eabihf targets this must only be called
+    /// immediately after starting up a core.
+    pub unsafe fn enable_coprocessors() {}
 }
 
 #[doc(inline)]
 pub use inner::{
-    delay, dsb, interrrupt_is_pending, interrupt_disable, interrupt_enable, interrupt_is_enabled,
-    interrupt_mask, interrupt_pend, interrupt_unmask, interrupts_enabled, nop, sev, wfe, wfi,
+    delay, dsb, enable_coprocessors, interrrupt_is_pending, interrupt_disable, interrupt_enable,
+    interrupt_is_enabled, interrupt_mask, interrupt_pend, interrupt_unmask, interrupts_enabled,
+    nop, sev, wfe, wfi,
 };
 
 /// Run the closure without interrupts
