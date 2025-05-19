@@ -47,7 +47,7 @@ mod inner {
 
     /// Enable co-processors.
     ///
-    /// For core0, this is done by the `#[entry]` macro. Fore core1, this function is called
+    /// For core0, this is done by the `#[entry]` macro. For core1, this function is called
     /// from `multicore::Core::spawn`.
     ///
     /// # Safety
@@ -131,7 +131,8 @@ mod inner {
     ///
     /// # Safety
     ///
-    /// No safety requirements for riscv targets, as this function does nothing.
+    /// For thumbv8m.main-none-eabihf targets this must only be called
+    /// immediately after starting up a core.
     pub unsafe fn enable_coprocessors() {}
 
     #[no_mangle]
@@ -570,6 +571,14 @@ mod inner {
 
     /// Placeholder function to mark an IRQ as pending
     pub fn interrupt_pend(_irq: rp235x_pac::Interrupt) {}
+
+    /// Placeholder function to enable co-processors.
+    ///
+    /// # Safety
+    ///
+    /// For thumbv8m.main-none-eabihf targets this must only be called
+    /// immediately after starting up a core.
+    pub unsafe fn enable_coprocessors() {}
 }
 
 #[doc(inline)]
