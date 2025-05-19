@@ -595,7 +595,11 @@ pwm! {
         Pwm4: (4, [Gpio8, Gpio9, Gpio24, Gpio25], 4),
         Pwm5: (5, [Gpio10, Gpio11, Gpio26, Gpio27], 5),
         Pwm6: (6, [Gpio12, Gpio13, Gpio28, Gpio29], 6),
-        Pwm7: (7, [Gpio14, Gpio15], 7)
+        Pwm7: (7, [Gpio14, Gpio15, Gpio30, Gpio31], 7),
+        Pwm8: (8, [Gpio32, Gpio33, Gpio40, Gpio41], 8),
+        Pwm9: (9, [Gpio34, Gpio35, Gpio42, Gpio43], 9),
+        Pwm10: (10, [Gpio36, Gpio37, Gpio44, Gpio45], 10),
+        Pwm11: (11, [Gpio38, Gpio39, Gpio46, Gpio47], 11)
     ]
 }
 
