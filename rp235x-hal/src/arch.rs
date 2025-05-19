@@ -123,6 +123,17 @@ mod inner {
         riscv::register::mstatus::read().mie()
     }
 
+    /// Enable co-processors.
+    ///
+    /// The riscv core in rp2350 does not have any co-processors.
+    /// As such, this function does nothing, and only exists to
+    /// provide compatibility between arm and riscv targets.
+    ///
+    /// # Safety
+    ///
+    /// No safety requirements for riscv targets, as this function does nothing.
+    pub unsafe fn enable_coprocessors() {}
+
     #[no_mangle]
     #[allow(non_snake_case)]
     fn MachineExternal() {
