@@ -123,23 +123,23 @@ fn main() -> ! {
     _ = writeln!(uart, "Reading OTP:");
     _ = write!(uart, "Page Adr: ");
     for col in 0..WORDS_PER_SCREEN_LINE {
-        _ = write!(uart, " {:04x}", col);
+        _ = write!(uart, " {col:04x}");
     }
     // These are the factory programmed pages
     for page in [0, 1, 62, 63] {
         for row in 0..hal::otp::NUM_ROWS_PER_PAGE {
             let index = page * hal::otp::NUM_ROWS_PER_PAGE + row;
             if row == 0 {
-                _ = write!(uart, "\nP{:02} {:04x}: ", page, index);
+                _ = write!(uart, "\nP{page:02} {index:04x}: ");
             } else if (index % WORDS_PER_SCREEN_LINE) == 0 {
-                _ = write!(uart, "\n    {:04x}: ", index);
+                _ = write!(uart, "\n    {index:04x}: ");
             }
             match hal::otp::read_ecc_word(index) {
                 Ok(0) => {
                     _ = write!(uart, " ----");
                 }
                 Ok(word) => {
-                    _ = write!(uart, " {:04x}", word);
+                    _ = write!(uart, " {word:04x}");
                 }
                 Err(hal::otp::Error::InvalidPermissions) => {
                     _ = write!(uart, " xxxx");
@@ -155,23 +155,23 @@ fn main() -> ! {
     _ = writeln!(uart, "Reading raw OTP:");
     _ = write!(uart, "Page Adr: ");
     for col in 0..WORDS_PER_SCREEN_LINE {
-        _ = write!(uart, " {:06x}", col);
+        _ = write!(uart, " {col:06x}");
     }
     // These are the factory programmed pages
     for page in [0, 1, 62, 63] {
         for row in 0..hal::otp::NUM_ROWS_PER_PAGE {
             let index = page * hal::otp::NUM_ROWS_PER_PAGE + row;
             if row == 0 {
-                _ = write!(uart, "\nP{:02} {:04x}: ", page, index);
+                _ = write!(uart, "\nP{page:02} {index:04x}: ");
             } else if (index % WORDS_PER_SCREEN_LINE) == 0 {
-                _ = write!(uart, "\n    {:04x}: ", index);
+                _ = write!(uart, "\n    {index:04x}: ");
             }
             match hal::otp::read_raw_word(index) {
                 Ok(0) => {
                     _ = write!(uart, " ------");
                 }
                 Ok(word) => {
-                    _ = write!(uart, " {:06x}", word);
+                    _ = write!(uart, " {word:06x}");
                 }
                 Err(hal::otp::Error::InvalidPermissions) => {
                     _ = write!(uart, " xxxxxx");
@@ -204,8 +204,8 @@ where
         | otp_data.chipid0().read().chipid0().bits() as u32;
     let wafer_id = ((otp_data.chipid3().read().chipid3().bits() as u32) << 16)
         | otp_data.chipid2().read().chipid2().bits() as u32;
-    _ = writeln!(uart, "\tRP2350 Device ID: {:#010x}", device_id);
-    _ = writeln!(uart, "\tRP2350 Wafer ID : {:#010x}", wafer_id);
+    _ = writeln!(uart, "\tRP2350 Device ID: {device_id:#010x}");
+    _ = writeln!(uart, "\tRP2350 Wafer ID : {wafer_id:#010x}");
 }
 
 /// Read OTP in raw mode using the PAC
@@ -242,7 +242,7 @@ where
             return;
         }
         Err(e) => {
-            _ = writeln!(uart, "Failed to get chip info : {:?}", e);
+            _ = writeln!(uart, "Failed to get chip info : {e:?}");
             return;
         }
     };
@@ -274,7 +274,7 @@ where
             return;
         }
         Err(e) => {
-            _ = writeln!(uart, "Failed to get cpu info: {:?}", e);
+            _ = writeln!(uart, "Failed to get cpu info: {e:?}");
             return;
         }
     };
@@ -302,7 +302,7 @@ where
             return;
         }
         Err(e) => {
-            _ = writeln!(uart, "Failed to get flash device info: {:?}", e);
+            _ = writeln!(uart, "Failed to get flash device info: {e:?}");
             return;
         }
     };
@@ -346,7 +346,7 @@ where
             return;
         }
         Err(e) => {
-            _ = writeln!(uart, "Failed to get random boot integer: {:?}", e);
+            _ = writeln!(uart, "Failed to get random boot integer: {e:?}");
             return;
         }
     };
@@ -367,7 +367,7 @@ where
             return;
         }
         Err(e) => {
-            _ = writeln!(uart, "Failed to get boot info: {:?}", e);
+            _ = writeln!(uart, "Failed to get boot info: {e:?}");
             return;
         }
     };
@@ -417,21 +417,16 @@ where
     let result = unsafe {
         hal::rom_data::get_partition_table_info(buffer.as_mut_ptr(), buffer.len(), 0x0001)
     };
-    _ = writeln!(
-        uart,
-        "get_partition_table_info(PT_INFO/0x0001) -> {}",
-        result
-    );
+    _ = writeln!(uart, "get_partition_table_info(PT_INFO/0x0001) -> {result}");
     _ = writeln!(uart, "\tSupported Flags: {:#06x}", buffer[0]);
     let partition_count = buffer[1] & 0xFF;
     let has_partition_table = (buffer[1] & (1 << 8)) != 0;
     let unpart = hal::block::UnpartitionedSpace::from_raw(buffer[2], buffer[3]);
     _ = writeln!(
         uart,
-        "\tNum Partitions: {} (Has Partition Table? {})",
-        partition_count, has_partition_table
+        "\tNum Partitions: {partition_count} (Has Partition Table? {has_partition_table})"
     );
-    _ = writeln!(uart, "\tUnpartitioned Space: {}", unpart);
+    _ = writeln!(uart, "\tUnpartitioned Space: {unpart}");
     for part_idx in 0..partition_count {
         let result = unsafe {
             hal::rom_data::get_partition_table_info(
@@ -442,12 +437,11 @@ where
         };
         _ = writeln!(
             uart,
-            "get_partition_table_info(PARTITION_LOCATION_AND_FLAGS|SINGLE_PARTITION/0x8010) -> {}",
-            result
+            "get_partition_table_info(PARTITION_LOCATION_AND_FLAGS|SINGLE_PARTITION/0x8010) -> {result}"
         );
         _ = writeln!(uart, "\tSupported Flags: {:#06x}", buffer[0]);
         let part = hal::block::Partition::from_raw(buffer[1], buffer[2]);
-        _ = writeln!(uart, "\tPartition {}: {}", part_idx, part);
+        _ = writeln!(uart, "\tPartition {part_idx}: {part}");
     }
 }
 

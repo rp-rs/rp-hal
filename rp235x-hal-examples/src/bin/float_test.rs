@@ -267,7 +267,7 @@ where
     )
     .unwrap();
     let mut acc: T = acc;
-    writeln!(&GLOBAL_UART, "Start: acc={}, arg={}", acc, arg).unwrap();
+    writeln!(&GLOBAL_UART, "Start: acc={acc}, arg={arg}").unwrap();
 
     let start_count = dwt.cyccnt.read();
     for _ in 0..LOOPS {
@@ -286,7 +286,7 @@ where
 
 #[exception]
 unsafe fn HardFault(ef: &cortex_m_rt::ExceptionFrame) -> ! {
-    let _ = writeln!(&GLOBAL_UART, "HARD FAULT:\n{:#?}", ef);
+    let _ = writeln!(&GLOBAL_UART, "HARD FAULT:\n{ef:#?}");
 
     hal::reboot::reboot(
         hal::reboot::RebootKind::BootSel {
@@ -299,7 +299,7 @@ unsafe fn HardFault(ef: &cortex_m_rt::ExceptionFrame) -> ! {
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    let _ = writeln!(&GLOBAL_UART, "PANIC:\n{:?}", info);
+    let _ = writeln!(&GLOBAL_UART, "PANIC:\n{info:?}");
 
     hal::reboot::reboot(
         hal::reboot::RebootKind::BootSel {

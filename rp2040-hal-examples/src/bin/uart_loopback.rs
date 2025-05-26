@@ -263,7 +263,7 @@ fn main() -> ! {
             _ = writeln!(uart0, "RX: {:?}", &buffer[0..n]);
         }
         Err(e) => {
-            _ = writeln!(uart0, "RXE: {:?}", e);
+            _ = writeln!(uart0, "RXE: {e:?}");
         }
     }
     _ = writeln!(uart0, "I want to see RX: [4, 5, 6]");
@@ -272,7 +272,7 @@ fn main() -> ! {
             _ = writeln!(uart0, "RX: {:?}", &buffer[0..n]);
         }
         Err(e) => {
-            _ = writeln!(uart0, "RXE: {:?}", e);
+            _ = writeln!(uart0, "RXE: {e:?}");
         }
     }
     _ = writeln!(uart0, "I want to see WouldBlock");
@@ -281,7 +281,7 @@ fn main() -> ! {
             _ = writeln!(uart0, "RX: {:?}", &buffer[0..n]);
         }
         Err(e) => {
-            _ = writeln!(uart0, "RXE: {:?}", e);
+            _ = writeln!(uart0, "RXE: {e:?}");
         }
     }
 
@@ -352,7 +352,7 @@ fn main() -> ! {
             _ = writeln!(uart0, "RX: {:?}", &buffer[0..n]);
         }
         Err(e) => {
-            _ = writeln!(uart0, "RXE: {:?}", e);
+            _ = writeln!(uart0, "RXE: {e:?}");
         }
     }
     _ = writeln!(uart0, "I want to see ParityError");
@@ -361,7 +361,7 @@ fn main() -> ! {
             _ = writeln!(uart0, "RX: {:?}", &buffer[0..n]);
         }
         Err(e) => {
-            _ = writeln!(uart0, "RXE: {:?}", e);
+            _ = writeln!(uart0, "RXE: {e:?}");
         }
     }
 
@@ -371,17 +371,17 @@ fn main() -> ! {
             _ = writeln!(uart0, "RX: {:?}", &buffer[0..n]);
         }
         Err(e) => {
-            _ = writeln!(uart0, "RXE: {:?}", e);
+            _ = writeln!(uart0, "RXE: {e:?}");
         }
     }
 
     _ = writeln!(uart0, "I want to see RX ready: false");
     match embedded_io::ReadReady::read_ready(&mut uart0) {
         Ok(ready) => {
-            _ = writeln!(uart0, "RX ready: {}", ready);
+            _ = writeln!(uart0, "RX ready: {ready}");
         }
         Err(e) => {
-            _ = writeln!(uart0, "RXE: {:?}", e);
+            _ = writeln!(uart0, "RXE: {e:?}");
         }
     }
 

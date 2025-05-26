@@ -146,7 +146,7 @@ mod app {
                 |done, buf, uart| {
                     if *done {
                         for sample in buf {
-                            writeln!(uart, "Sample: {}\r", sample).unwrap();
+                            writeln!(uart, "Sample: {sample}\r").unwrap();
                         }
                         writeln!(uart, "All done, going to sleep 😴\r").unwrap();
                         true
