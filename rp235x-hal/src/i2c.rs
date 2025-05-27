@@ -260,12 +260,12 @@ macro_rules! valid_pins {
 }
 valid_pins! {
     I2C0: {
-        sda: [Gpio0, Gpio4, Gpio8, Gpio12, Gpio16, Gpio20, Gpio24, Gpio28],
-        scl: [Gpio1, Gpio5, Gpio9, Gpio13, Gpio17, Gpio21, Gpio25, Gpio29]
+        sda: [Gpio0, Gpio4, Gpio8, Gpio12, Gpio16, Gpio20, Gpio24, Gpio28, Gpio32, Gpio36, Gpio40, Gpio44],
+        scl: [Gpio1, Gpio5, Gpio9, Gpio13, Gpio17, Gpio21, Gpio25, Gpio29, Gpio33, Gpio37, Gpio41, Gpio45]
     },
     I2C1: {
-        sda: [Gpio2, Gpio6, Gpio10, Gpio14, Gpio18, Gpio22, Gpio26],
-        scl: [Gpio3, Gpio7, Gpio11, Gpio15, Gpio19, Gpio23, Gpio27]
+        sda: [Gpio2, Gpio6, Gpio10, Gpio14, Gpio18, Gpio22, Gpio26, Gpio30, Gpio34, Gpio38, Gpio42, Gpio46],
+        scl: [Gpio3, Gpio7, Gpio11, Gpio15, Gpio19, Gpio23, Gpio27, Gpio31, Gpio35, Gpio39, Gpio43, Gpio47]
     }
 }
 
