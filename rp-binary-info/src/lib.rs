@@ -174,8 +174,8 @@ pub const fn rp_program_build_date_string(value: &'static core::ffi::CStr) -> St
 ///
 /// * Tag: [`consts::TAG_RASPBERRY_PI`]
 /// * Id: [`consts::ID_RP_BINARY_END`]
-pub const fn rp_binary_end(value: u32) -> IntegerEntry {
-    IntegerEntry::new(consts::TAG_RASPBERRY_PI, consts::ID_RP_BINARY_END, value)
+pub const fn rp_binary_end(value: *const ()) -> AddrEntry {
+    AddrEntry::new(consts::TAG_RASPBERRY_PI, consts::ID_RP_BINARY_END, value)
 }
 
 /// Create a 'Binary Info' with a description of the program

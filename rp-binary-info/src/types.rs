@@ -189,4 +189,37 @@ impl IntegerEntry {
     }
 }
 
+/// An alias for IntegerEntry, taking an address instead of an integer
+#[repr(C)]
+pub struct AddrEntry {
+    header: EntryCommon,
+    id: u32,
+    value: *const (),
+}
+
+impl AddrEntry {
+    /// Create a new `StringEntry`
+    pub const fn new(tag: u16, id: u32, value: *const ()) -> AddrEntry {
+        AddrEntry {
+            header: EntryCommon {
+                data_type: DataType::IdAndInt,
+                tag,
+            },
+            id,
+            value,
+        }
+    }
+
+    /// Get this entry's address
+    pub const fn addr(&self) -> EntryAddr {
+        EntryAddr(self as *const Self as *const u32)
+    }
+}
+
+// We need this as rustc complains that is is unsafe to share `*const u32`
+// pointers between threads. We only allow these to be created with static
+// data, so this is OK.
+unsafe impl Sync for AddrEntry {}
+
+
 // End of file
