@@ -40,6 +40,7 @@ generate_reset!(HSTX_CTRL, hstx);
 generate_reset!(PWM, pwm);
 generate_reset!(PLL_USB, pll_usb);
 generate_reset!(PLL_SYS, pll_sys);
+generate_reset!(PIO2, pio2);
 generate_reset!(PIO1, pio1);
 generate_reset!(PIO0, pio0);
 generate_reset!(PADS_QSPI, pads_qspi);
