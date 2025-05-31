@@ -9,8 +9,8 @@ use pio::{Instruction, InstructionOperands, Program, SideSet, Wrap};
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
     dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, TransferSize, Word, WriteTarget},
-    gpio::{Function, FunctionPio0, FunctionPio1},
-    pac::{self, dma::ch::ch_ctrl_trig::TREQ_SEL_A, pio0::RegisterBlock, PIO0, PIO1},
+    gpio::{Function, FunctionPio0, FunctionPio1, FunctionPio2},
+    pac::{self, dma::ch::ch_ctrl_trig::TREQ_SEL_A, pio0::RegisterBlock, PIO0, PIO1, PIO2},
     resets::SubsystemReset,
     typelevel::Sealed,
 };
@@ -19,6 +19,7 @@ const PIO_INSTRUCTION_COUNT: usize = 32;
 
 impl Sealed for PIO0 {}
 impl Sealed for PIO1 {}
+impl Sealed for PIO2 {}
 
 /// PIO Instance
 pub trait PIOExt: Deref<Target = RegisterBlock> + SubsystemReset + Sized + Send + Sealed {
@@ -86,6 +87,12 @@ impl PIOExt for PIO1 {
     type PinFunction = FunctionPio1;
     fn id() -> usize {
         1
+    }
+}
+impl PIOExt for PIO2 {
+    type PinFunction = FunctionPio2;
+    fn id() -> usize {
+        2
     }
 }
 
