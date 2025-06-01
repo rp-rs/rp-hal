@@ -30,7 +30,7 @@ macro_rules! str {
     }};
 }
 
-/// Generate a static item containing the given string, and return its
+/// Generate a static item containing the given integer, and return its
 /// [`EntryAddr`](super::EntryAddr).
 ///
 /// You must pass a numeric tag, a numeric ID, and `&CStr` (which is always
@@ -39,6 +39,18 @@ macro_rules! str {
 macro_rules! int {
     ($tag:expr, $id:expr, $int:expr) => {{
         static ENTRY: $crate::IntegerEntry = $crate::IntegerEntry::new($tag, $id, $int);
+        ENTRY.addr()
+    }};
+}
+
+/// Generate a static item containing the given pointer, and return its
+/// [`EntryAddr`](super::EntryAddr).
+///
+/// You must pass a numeric tag, a numeric ID, and a pointer
+#[macro_export]
+macro_rules! pointer {
+    ($tag:expr, $id:expr, $ptr:expr) => {{
+        static ENTRY: $crate::PointerEntry = $crate::PointerEntry::new($tag, $id, $ptr);
         ENTRY.addr()
     }};
 }
@@ -164,6 +176,20 @@ macro_rules! rp_pico_board {
             $board
         )
     };
+}
+
+/// Generate a static item containing the binary end address, and return its
+/// [`EntryAddr`](super::EntryAddr). The argument should be a symbol provided
+/// by the linker script that is located at the end of the binary.
+#[macro_export]
+macro_rules! rp_binary_end {
+    ($ptr:ident) => {{
+        $crate::pointer!(
+            $crate::consts::TAG_RASPBERRY_PI,
+            $crate::consts::ID_RP_BINARY_END,
+            core::ptr::addr_of!($ptr).cast()
+        )
+    }};
 }
 
 // End of file

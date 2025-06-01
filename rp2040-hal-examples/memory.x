@@ -85,7 +85,5 @@ SECTIONS {
 SECTIONS {
     .flash_end : {
         __flash_binary_end = .;
-        KEEP(*(.embedded_end_block*))
     } > FLASH
 } INSERT AFTER .uninit;
-

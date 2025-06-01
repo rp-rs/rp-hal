@@ -221,6 +221,7 @@ SECTIONS
   {
       __end_block_addr = .;
       KEEP(*(.end_block));
+      __flash_binary_end = .;
   } > FLASH
 
   /* fictitious region that represents the memory available for the heap */

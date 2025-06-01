@@ -41,6 +41,12 @@
 //!         __bi_entries_end = .;
 //!     } > FLASH
 //! } INSERT AFTER .text;
+//!
+//! SECTIONS {
+//!     .flash_end : {
+//!         __flash_binary_end = .;
+//!     } > FLASH
+//! } INSERT AFTER .uninit;
 //! ```
 //!
 //! Then, add this to your Rust code:
@@ -48,15 +54,20 @@
 //! ```
 //! #[link_section = ".bi_entries"]
 //! #[used]
-//! pub static PICOTOOL_ENTRIES: [rp_binary_info::EntryAddr; 3] = [
+//! pub static PICOTOOL_ENTRIES: [rp_binary_info::EntryAddr; 4] = [
 //!     rp_binary_info::rp_program_name!(c"Program Name Here"),
 //!     rp_binary_info::rp_cargo_version!(),
+//!     rp_binary_info::rp_binary_end!(__flash_binary_end),
 //!     rp_binary_info::int!(
 //!         rp_binary_info::make_tag(b"JP"),
 //!         0x0000_0001,
 //!         0x12345678
 //!     ),
 //! ];
+//!
+//! unsafe extern "C" {
+//!     static __flash_binary_end: u32;
+//! }
 //! ```
 //!
 //! ## Cargo features
@@ -174,8 +185,8 @@ pub const fn rp_program_build_date_string(value: &'static core::ffi::CStr) -> St
 ///
 /// * Tag: [`consts::TAG_RASPBERRY_PI`]
 /// * Id: [`consts::ID_RP_BINARY_END`]
-pub const fn rp_binary_end(value: *const ()) -> AddrEntry {
-    AddrEntry::new(consts::TAG_RASPBERRY_PI, consts::ID_RP_BINARY_END, value)
+pub const fn rp_binary_end(value: *const ()) -> PointerEntry {
+    PointerEntry::new(consts::TAG_RASPBERRY_PI, consts::ID_RP_BINARY_END, value)
 }
 
 /// Create a 'Binary Info' with a description of the program

@@ -102,15 +102,10 @@ pub static PICOTOOL_ENTRIES: [binary_info::EntryAddr; 8] = [
     binary_info::rp_program_url!(c"https://github.com/rp-rs/rp-hal"),
     binary_info::rp_program_build_attribute!(),
     binary_info::rp_pico_board!(c"pico"),
-    binary_end(),
+    binary_info::rp_binary_end!(__flash_binary_end),
     // An example with a non-Raspberry-Pi tag
     binary_info::int!(binary_info::make_tag(b"JP"), 0x0000_0001, 0x12345678),
 ];
-
-const fn binary_end() -> binary_info::EntryAddr {
-    static ENTRY: binary_info::AddrEntry = binary_info::rp_binary_end(core::ptr::addr_of!(__flash_binary_end).cast());
-    ENTRY.addr()
-}
 
 unsafe extern "C" {
     static __flash_binary_end: u32;

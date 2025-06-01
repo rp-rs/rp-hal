@@ -189,18 +189,18 @@ impl IntegerEntry {
     }
 }
 
-/// An alias for IntegerEntry, taking an address instead of an integer
+/// An alias for IntegerEntry, taking a pointerinstead of an integer
 #[repr(C)]
-pub struct AddrEntry {
+pub struct PointerEntry {
     header: EntryCommon,
     id: u32,
     value: *const (),
 }
 
-impl AddrEntry {
+impl PointerEntry {
     /// Create a new `StringEntry`
-    pub const fn new(tag: u16, id: u32, value: *const ()) -> AddrEntry {
-        AddrEntry {
+    pub const fn new(tag: u16, id: u32, value: *const ()) -> PointerEntry {
+        PointerEntry {
             header: EntryCommon {
                 data_type: DataType::IdAndInt,
                 tag,
@@ -219,7 +219,6 @@ impl AddrEntry {
 // We need this as rustc complains that is is unsafe to share `*const u32`
 // pointers between threads. We only allow these to be created with static
 // data, so this is OK.
-unsafe impl Sync for AddrEntry {}
-
+unsafe impl Sync for PointerEntry {}
 
 // End of file
