@@ -187,7 +187,9 @@ macro_rules! rp_binary_end {
         $crate::pointer!(
             $crate::consts::TAG_RASPBERRY_PI,
             $crate::consts::ID_RP_BINARY_END,
-            core::ptr::addr_of!($ptr).cast()
+            // `unsafe` only needed because MSRV does not yet
+            // contain https://github.com/rust-lang/rust/pull/125834
+            unsafe { core::ptr::addr_of!($ptr).cast() }
         )
     }};
 }
