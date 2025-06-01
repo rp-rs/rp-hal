@@ -65,7 +65,7 @@
 //!     ),
 //! ];
 //!
-//! unsafe extern "C" {
+//! extern "C" {
 //!     static __flash_binary_end: u32;
 //! }
 //! ```

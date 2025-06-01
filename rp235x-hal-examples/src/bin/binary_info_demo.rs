@@ -100,7 +100,7 @@ pub static PICOTOOL_ENTRIES: [hal::binary_info::EntryAddr; 8] = [
     hal::binary_info::int!(binary_info::make_tag(b"JP"), 0x0000_0001, 0x12345678),
 ];
 
-unsafe extern "C" {
+extern "C" {
     static __flash_binary_end: u32;
 }
 
