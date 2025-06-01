@@ -35,7 +35,7 @@ nb = "1.0"
 paste = "1.0"
 pio = "0.3.0"
 rand_core = "0.6.3"
-rp-binary-info = { version = "0.1.0", path = "../rp-binary-info" }
+rp-binary-info = { version = "0.2.0", path = "../rp-binary-info" }
 rp-hal-common = {version="0.1.0", path="../rp-hal-common"}
 rp2040-hal-macros = {version = "0.1.0", path = "../rp2040-hal-macros"}
 rp2040-pac = {version = "0.6.0", features = ["critical-section"]}
