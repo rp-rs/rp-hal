@@ -171,7 +171,7 @@ pub struct IntegerEntry {
 }
 
 impl IntegerEntry {
-    /// Create a new `StringEntry`
+    /// Create a new `IntegerEntry`
     pub const fn new(tag: u16, id: u32, value: u32) -> IntegerEntry {
         IntegerEntry {
             header: EntryCommon {
@@ -189,7 +189,7 @@ impl IntegerEntry {
     }
 }
 
-/// An alias for IntegerEntry, taking a pointerinstead of an integer
+/// An alias for IntegerEntry, taking a pointer instead of an integer
 #[repr(C)]
 pub struct PointerEntry {
     header: EntryCommon,
@@ -198,7 +198,13 @@ pub struct PointerEntry {
 }
 
 impl PointerEntry {
-    /// Create a new `StringEntry`
+    /// Create a new `PointerEntry`
+    ///
+    /// Pointers will be marked as 32-bit integers in the binary information
+    /// structure, as there is no separate data type tag for pointers. This
+    /// assumes that pointers are 32 bit wide, which is obviously true for
+    /// rp2040/rp2350. On 64 bit architectures, it will create a binary
+    /// structure that likely can't be parsed by picotool.
     pub const fn new(tag: u16, id: u32, value: *const ()) -> PointerEntry {
         PointerEntry {
             header: EntryCommon {
