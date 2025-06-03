@@ -171,7 +171,7 @@ pub struct IntegerEntry {
 }
 
 impl IntegerEntry {
-    /// Create a new `StringEntry`
+    /// Create a new `IntegerEntry`
     pub const fn new(tag: u16, id: u32, value: u32) -> IntegerEntry {
         IntegerEntry {
             header: EntryCommon {
@@ -188,5 +188,43 @@ impl IntegerEntry {
         EntryAddr(self as *const Self as *const u32)
     }
 }
+
+/// An alias for IntegerEntry, taking a pointer instead of an integer
+#[repr(C)]
+pub struct PointerEntry {
+    header: EntryCommon,
+    id: u32,
+    value: *const (),
+}
+
+impl PointerEntry {
+    /// Create a new `PointerEntry`
+    ///
+    /// Pointers will be marked as 32-bit integers in the binary information
+    /// structure, as there is no separate data type tag for pointers. This
+    /// assumes that pointers are 32 bit wide, which is obviously true for
+    /// rp2040/rp2350. On 64 bit architectures, it will create a binary
+    /// structure that likely can't be parsed by picotool.
+    pub const fn new(tag: u16, id: u32, value: *const ()) -> PointerEntry {
+        PointerEntry {
+            header: EntryCommon {
+                data_type: DataType::IdAndInt,
+                tag,
+            },
+            id,
+            value,
+        }
+    }
+
+    /// Get this entry's address
+    pub const fn addr(&self) -> EntryAddr {
+        EntryAddr(self as *const Self as *const u32)
+    }
+}
+
+// We need this as rustc complains that is is unsafe to share `*const u32`
+// pointers between threads. We only allow these to be created with static
+// data, so this is OK.
+unsafe impl Sync for PointerEntry {}
 
 // End of file

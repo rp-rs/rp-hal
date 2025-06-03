@@ -67,6 +67,7 @@ SECTIONS {
     {
         __end_block_addr = .;
         KEEP(*(.end_block));
+        __flash_binary_end = .;
     } > FLASH
 
 } INSERT AFTER .uninit;

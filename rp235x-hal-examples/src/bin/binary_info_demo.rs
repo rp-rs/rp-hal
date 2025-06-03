@@ -88,15 +88,20 @@ fn main() -> ! {
 /// end addresses of that section.
 #[link_section = ".bi_entries"]
 #[used]
-pub static PICOTOOL_ENTRIES: [hal::binary_info::EntryAddr; 7] = [
+pub static PICOTOOL_ENTRIES: [hal::binary_info::EntryAddr; 8] = [
     hal::binary_info::rp_cargo_bin_name!(),
     hal::binary_info::rp_cargo_version!(),
     hal::binary_info::rp_program_description!(c"A GPIO blinky with extra metadata."),
     hal::binary_info::rp_cargo_homepage_url!(),
     hal::binary_info::rp_program_build_attribute!(),
     hal::binary_info::rp_pico_board!(c"pico2"),
+    hal::binary_info::rp_binary_end!(__flash_binary_end),
     // An example with a non-Raspberry-Pi tag
     hal::binary_info::int!(binary_info::make_tag(b"JP"), 0x0000_0001, 0x12345678),
 ];
+
+extern "C" {
+    static __flash_binary_end: u32;
+}
 
 // End of file

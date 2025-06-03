@@ -81,3 +81,9 @@ SECTIONS {
         __bi_entries_end = .;
     } > FLASH
 } INSERT AFTER .text;
+
+SECTIONS {
+    .flash_end : {
+        __flash_binary_end = .;
+    } > FLASH
+} INSERT AFTER .uninit;
