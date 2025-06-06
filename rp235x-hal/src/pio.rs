@@ -73,7 +73,7 @@ pub trait PIOExt: Deref<Target = RegisterBlock> + SubsystemReset + Sized + Send 
         )
     }
 
-    /// Number of this PIO (0..1).
+    /// Number of this PIO (0..2).
     fn id() -> usize;
 }
 
@@ -470,6 +470,14 @@ pub type PIO1SM1 = (PIO1, SM1);
 pub type PIO1SM2 = (PIO1, SM2);
 /// Fourth state machine of the second PIO block.
 pub type PIO1SM3 = (PIO1, SM3);
+/// First state machine of the third PIO block.
+pub type PIO2SM0 = (PIO2, SM0);
+/// Second state machine of the third PIO block.
+pub type PIO2SM1 = (PIO2, SM1);
+/// Third state machine of the third PIO block.
+pub type PIO2SM2 = (PIO2, SM2);
+/// Fourth state machine of the third PIO block.
+pub type PIO2SM3 = (PIO2, SM3);
 
 impl<P: PIOExt, SM: StateMachineIndex> ValidStateMachine for (P, SM) {
     type PIO = P;
@@ -1355,8 +1363,11 @@ impl<SM: ValidStateMachine, RxSize: TransferSize> Rx<SM, RxSize> {
     pub fn dreq_value(&self) -> u8 {
         if self.block as usize == 0x5020_0000usize {
             TREQ_SEL_A::PIO0_RX0 as u8 + (SM::id() as u8)
-        } else {
+        } else if self.block as usize == 0x5030_0000usize {
             TREQ_SEL_A::PIO1_RX0 as u8 + (SM::id() as u8)
+        } else {
+            // self.block must be 0x5040_0000!
+            TREQ_SEL_A::PIO2_RX0 as u8 + (SM::id() as u8)
         }
     }
 
@@ -1517,8 +1528,11 @@ impl<SM: ValidStateMachine, TxSize: TransferSize> Tx<SM, TxSize> {
     pub fn dreq_value(&self) -> u8 {
         if self.block as usize == 0x5020_0000usize {
             TREQ_SEL_A::PIO0_TX0 as u8 + (SM::id() as u8)
-        } else {
+        } else if self.block as usize == 0x5030_0000usize {
             TREQ_SEL_A::PIO1_TX0 as u8 + (SM::id() as u8)
+        } else {
+            // self.block must be 0x5040_0000!
+            TREQ_SEL_A::PIO2_TX0 as u8 + (SM::id() as u8)
         }
     }
 
