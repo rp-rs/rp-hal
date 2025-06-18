@@ -140,9 +140,4 @@ impl rand_core::RngCore for RingOscillator<Enabled> {
             }
         }
     }
-
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core::Error> {
-        self.fill_bytes(dest);
-        Ok(())
-    }
 }

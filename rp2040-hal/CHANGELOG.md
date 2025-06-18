@@ -16,6 +16,7 @@ The Minimum-Supported Rust Version (MSRV) for the next release is 1.81
 ### Changed
 
 - Update to pio 0.3.0
+- Update rand\_core to 0.9.3
 
 ## [0.11.0] - 2024-12-22
 
