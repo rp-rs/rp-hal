@@ -86,6 +86,8 @@ fn main() -> ! {
             .product("Serial port")
             .serial_number("TEST")])
         .unwrap()
+        .max_packet_size_0(64)
+        .unwrap()
         .device_class(2) // from: https://www.usb.org/defined-class-codes
         .build();
 
