@@ -48,6 +48,7 @@ mod critical_section_impl;
 pub mod dcp;
 pub mod dma;
 pub mod gpio;
+pub mod hstx;
 pub mod i2c;
 pub mod lposc;
 #[cfg(all(target_arch = "arm", target_os = "none"))]
