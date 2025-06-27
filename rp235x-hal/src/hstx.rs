@@ -193,6 +193,196 @@ impl<
     type Bit7 = Opt7;
 }
 
+impl HstxPins<OptionTNone,
+              OptionTNone,
+              OptionTNone,
+              OptionTNone,
+              OptionTNone,
+              OptionTNone,
+              OptionTNone,
+              OptionTNone> {
+    /// Create an empty set of HstxPins
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> HstxPins<OptionTNone, OptionTNone, OptionTNone, OptionTNone, OptionTNone, OptionTNone, OptionTNone, OptionTNone,> {
+        HstxPins {bit0: OptionTNone{},
+                  bit1: OptionTNone{},
+                  bit2: OptionTNone{},
+                  bit3: OptionTNone{},
+                  bit4: OptionTNone{},
+                  bit5: OptionTNone{},
+                  bit6: OptionTNone{},
+                  bit7: OptionTNone{}}
+    }
+}
+
+impl<Opt1: ValidOptionHstxBit1,
+     Opt2: ValidOptionHstxBit2,
+     Opt3: ValidOptionHstxBit3,
+     Opt4: ValidOptionHstxBit4,
+     Opt5: ValidOptionHstxBit5,
+     Opt6: ValidOptionHstxBit6,
+     Opt7: ValidOptionHstxBit7> HstxPins<OptionTNone, Opt1, Opt2, Opt3, Opt4, Opt5, Opt6, Opt7> {
+    /// Add bit0 pin to HSTX pin set
+    pub fn add_bit0_pin<Bit0: ValidHstxBit0Pin>(self, bit0: Bit0) -> HstxPins<OptionTSome<Bit0>, Opt1, Opt2, Opt3, Opt4, Opt5, Opt6, Opt7> {
+        HstxPins {bit0: OptionTSome(bit0),
+                  bit1: self.bit1,
+                  bit2: self.bit2,
+                  bit3: self.bit3,
+                  bit4: self.bit4,
+                  bit5: self.bit5,
+                  bit6: self.bit6,
+                  bit7: self.bit7,
+        }
+    }
+}
+
+impl<Opt0: ValidOptionHstxBit0,
+     Opt2: ValidOptionHstxBit2,
+     Opt3: ValidOptionHstxBit3,
+     Opt4: ValidOptionHstxBit4,
+     Opt5: ValidOptionHstxBit5,
+     Opt6: ValidOptionHstxBit6,
+     Opt7: ValidOptionHstxBit7> HstxPins<Opt0, OptionTNone, Opt2, Opt3, Opt4, Opt5, Opt6, Opt7> {
+    /// Add bit1 pin to HSTX pin set
+    pub fn add_bit1_pin<Bit1: ValidHstxBit1Pin>(self, bit1: Bit1) -> HstxPins<Opt0, OptionTSome<Bit1>, Opt2, Opt3, Opt4, Opt5, Opt6, Opt7> {
+        HstxPins {bit0: self.bit0,
+                  bit1: OptionTSome(bit1),
+                  bit2: self.bit2,
+                  bit3: self.bit3,
+                  bit4: self.bit4,
+                  bit5: self.bit5,
+                  bit6: self.bit6,
+                  bit7: self.bit7,
+        }
+    }
+}
+
+impl<Opt0: ValidOptionHstxBit0,
+     Opt1: ValidOptionHstxBit1,
+     Opt3: ValidOptionHstxBit3,
+     Opt4: ValidOptionHstxBit4,
+     Opt5: ValidOptionHstxBit5,
+     Opt6: ValidOptionHstxBit6,
+     Opt7: ValidOptionHstxBit7> HstxPins<Opt0, Opt1, OptionTNone, Opt3, Opt4, Opt5, Opt6, Opt7> {
+    /// Add bit2 pin to HSTX pin set
+    pub fn add_bit2_pin<Bit2: ValidHstxBit2Pin>(self, bit2: Bit2) -> HstxPins<Opt0, Opt1, OptionTSome<Bit2>, Opt3, Opt4, Opt5, Opt6, Opt7> {
+        HstxPins {bit0: self.bit0,
+                  bit1: self.bit1,
+                  bit2: OptionTSome(bit2),
+                  bit3: self.bit3,
+                  bit4: self.bit4,
+                  bit5: self.bit5,
+                  bit6: self.bit6,
+                  bit7: self.bit7,
+        }
+    }
+}
+
+impl<Opt0: ValidOptionHstxBit0,
+     Opt1: ValidOptionHstxBit1,
+     Opt2: ValidOptionHstxBit2,
+     Opt4: ValidOptionHstxBit4,
+     Opt5: ValidOptionHstxBit5,
+     Opt6: ValidOptionHstxBit6,
+     Opt7: ValidOptionHstxBit7> HstxPins<Opt0, Opt1, Opt2, OptionTNone, Opt4, Opt5, Opt6, Opt7> {
+    /// Add bit3 pin to HSTX pin set
+    pub fn add_bit3_pin<Bit3: ValidHstxBit3Pin>(self, bit3: Bit3) -> HstxPins<Opt0, Opt1, Opt2, OptionTSome<Bit3>, Opt4, Opt5, Opt6, Opt7> {
+        HstxPins {bit0: self.bit0,
+                  bit1: self.bit1,
+                  bit2: self.bit2,
+                  bit3: OptionTSome(bit3),
+                  bit4: self.bit4,
+                  bit5: self.bit5,
+                  bit6: self.bit6,
+                  bit7: self.bit7,
+        }
+    }
+}
+
+impl<Opt0: ValidOptionHstxBit0,
+     Opt1: ValidOptionHstxBit1,
+     Opt2: ValidOptionHstxBit2,
+     Opt3: ValidOptionHstxBit3,
+     Opt5: ValidOptionHstxBit5,
+     Opt6: ValidOptionHstxBit6,
+     Opt7: ValidOptionHstxBit7> HstxPins<Opt0, Opt1, Opt2, Opt3, OptionTNone, Opt5, Opt6, Opt7> {
+    /// Add bit4 pin to HSTX pin set
+    pub fn add_bit4_pin<Bit4: ValidHstxBit4Pin>(self, bit4: Bit4) -> HstxPins<Opt0, Opt1, Opt2, Opt3, OptionTSome<Bit4>, Opt5, Opt6, Opt7> {
+        HstxPins {bit0: self.bit0,
+                  bit1: self.bit1,
+                  bit2: self.bit2,
+                  bit3: self.bit3,
+                  bit4: OptionTSome(bit4),
+                  bit5: self.bit5,
+                  bit6: self.bit6,
+                  bit7: self.bit7,
+        }
+    }
+}
+
+impl<Opt0: ValidOptionHstxBit0,
+     Opt1: ValidOptionHstxBit1,
+     Opt2: ValidOptionHstxBit2,
+     Opt3: ValidOptionHstxBit3,
+     Opt4: ValidOptionHstxBit4,
+     Opt6: ValidOptionHstxBit6,
+     Opt7: ValidOptionHstxBit7> HstxPins<Opt0, Opt1, Opt2, Opt3, Opt4, OptionTNone, Opt6, Opt7> {
+    /// Add bit5 pin to HSTX pin set
+    pub fn add_bit5_pin<Bit5: ValidHstxBit5Pin>(self, bit5: Bit5) -> HstxPins<Opt0, Opt1, Opt2, Opt3, Opt4, OptionTSome<Bit5>, Opt6, Opt7> {
+        HstxPins {bit0: self.bit0,
+                  bit1: self.bit1,
+                  bit2: self.bit2,
+                  bit3: self.bit3,
+                  bit4: self.bit4,
+                  bit5: OptionTSome(bit5),
+                  bit6: self.bit6,
+                  bit7: self.bit7,
+        }
+    }
+}
+
+impl<Opt0: ValidOptionHstxBit0,
+     Opt1: ValidOptionHstxBit1,
+     Opt2: ValidOptionHstxBit2,
+     Opt3: ValidOptionHstxBit3,
+     Opt4: ValidOptionHstxBit4,
+     Opt5: ValidOptionHstxBit5,
+     Opt7: ValidOptionHstxBit7> HstxPins<Opt0, Opt1, Opt2, Opt3, Opt4, Opt5, OptionTNone, Opt7> {
+    /// Add bit6 pin to HSTX pin set
+    pub fn add_bit6_pin<Bit6: ValidHstxBit6Pin>(self, bit6: Bit6) -> HstxPins<Opt0, Opt1, Opt2, Opt3, Opt4, Opt5, OptionTSome<Bit6>, Opt7> {
+        HstxPins {bit0: self.bit0,
+                  bit1: self.bit1,
+                  bit2: self.bit2,
+                  bit3: self.bit3,
+                  bit4: self.bit4,
+                  bit5: self.bit5,
+                  bit6: OptionTSome(bit6),
+                  bit7: self.bit7,
+        }
+    }
+}
+
+impl<Opt0: ValidOptionHstxBit0,
+     Opt1: ValidOptionHstxBit1,
+     Opt2: ValidOptionHstxBit2,
+     Opt3: ValidOptionHstxBit3,
+     Opt4: ValidOptionHstxBit4,
+     Opt5: ValidOptionHstxBit5,
+     Opt6: ValidOptionHstxBit6> HstxPins<Opt0, Opt1, Opt2, Opt3, Opt4, Opt5, Opt6, OptionTNone> {
+    /// Add bit7 pin to HSTX pin set
+    pub fn add_bit7_pin<Bit7: ValidHstxBit7Pin>(self, bit7: Bit7) -> HstxPins<Opt0, Opt1, Opt2, Opt3, Opt4, Opt5, Opt6, OptionTSome<Bit7>> {
+        HstxPins {bit0: self.bit0,
+                  bit1: self.bit1,
+                  bit2: self.bit2,
+                  bit3: self.bit3,
+                  bit4: self.bit4,
+                  bit5: self.bit5,
+                  bit6: self.bit6,
+                  bit7: OptionTSome(bit7),
+        }
+    }
+}
+
 /// HSTX peripheral
 pub struct Hstx<S: State, P: ValidHstxPinout> {
     ctrl: HSTX_CTRL,
