@@ -307,3 +307,18 @@ macro_rules! configure_bits_hstx {
 }
 
 configure_bits_hstx!(0, 1, 2, 3, 4, 5, 6, 7);
+
+/// "RAW" opcode for expander, OR with length argument to use
+pub const EXPANDER_CMD_RAW: u32 = 0;
+
+/// "RAW_REPEAT" opcode for expander shifted to appropriate position, OR with length argument to use
+pub const EXPANDER_CMD_RAW_REPEAT: u32 = 1 << 12;
+
+/// "TMDS" opcode for expander shifted to appropriate position, OR with length argument to use
+pub const EXPANDER_CMD_TMDS: u32 = 2 << 12;
+
+/// "TMDS_REPEAT" opcode for expander shifted to appropriate position, OR with length argument to use
+pub const EXPANDER_CMD_TMDS_REPEAT: u32 = 3 << 12;
+
+/// "NOP" opcode for expander
+pub const EXPANDER_CMD_NOP: u32 = 0xf << 12;
