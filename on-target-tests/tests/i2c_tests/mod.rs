@@ -104,7 +104,10 @@ fn target_handler(
     } = payload;
     match evt {
         Event::Start => *first = true,
-        Event::Restart => *restart_cnt += 1,
+        Event::Restart => {
+            *first = true;
+            *restart_cnt += 1;
+        }
         Event::TransferRead => {
             let n = throttle.then_some(1).unwrap_or(target.tx_fifo_available());
             let v: FIFOBuffer = gen.take(n.into()).collect();

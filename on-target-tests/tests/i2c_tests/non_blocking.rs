@@ -341,11 +341,9 @@ pub async fn transaction<A: ValidAddress>(
     assert_eq!(e, state.payload.borrow().vec);
     // assert reads
     let g: FIFOBuffer = itertools::chain!(
-        Generator::fib().take(25),
-        Generator::fib().skip(32).take(25),
-        Generator::fib().skip(64).take(25),
-        Generator::fib().skip(96).take(14),
-        Generator::fib().skip(112).take(14),
+        Generator::fib().take(25 * 3),
+        Generator::seq().take(14),
+        Generator::fib().take(14),
     )
     .collect();
     let h: FIFOBuffer = itertools::chain!(

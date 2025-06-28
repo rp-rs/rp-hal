@@ -120,7 +120,6 @@ where
         )?;
 
         let lastindex = buffer.len() - 1;
-        let mut first_byte = true;
         for (i, byte) in buffer.iter_mut().enumerate() {
             let last_byte = i == lastindex;
 
@@ -135,13 +134,6 @@ where
             .await;
 
             self.i2c.ic_data_cmd().write(|w| {
-                if first_byte {
-                    if !first_transaction {
-                        w.restart().enable();
-                    }
-                    first_byte = false;
-                }
-
                 w.stop().bit(do_stop && last_byte);
                 w.cmd().read()
             });
@@ -174,7 +166,6 @@ where
         )?;
 
         let mut abort_reason = Ok(());
-        let mut first_byte = true;
         while let Some(byte) = peekable.next() {
             if self.tx_fifo_full() {
                 // wait for more room in the fifo
@@ -193,12 +184,6 @@ where
             // else enqueue
             let last = peekable.peek().is_none();
             self.i2c.ic_data_cmd().write(|w| {
-                if first_byte {
-                    if !first_transaction {
-                        w.restart().enable();
-                    }
-                    first_byte = false;
-                }
                 w.stop().bit(do_stop && last);
                 unsafe { w.dat().bits(byte) }
             });
