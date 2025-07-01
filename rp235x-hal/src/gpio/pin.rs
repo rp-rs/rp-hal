@@ -147,6 +147,7 @@ pub(crate) fn set_function<P: PinId>(pin: &P, function: DynFunction) {
     let funcsel = match function {
         // The XIP function has a value of 0, which on bank0 is called JTAG.
         DynFunction::Xip => FUNCSEL_A::JTAG,
+        DynFunction::Hstx => FUNCSEL_A::JTAG,
         DynFunction::Spi => FUNCSEL_A::SPI,
         DynFunction::Uart => FUNCSEL_A::UART,
         DynFunction::I2c => FUNCSEL_A::I2C,

@@ -27,6 +27,8 @@ pub trait Function: func_sealed::Function {}
 pub enum DynFunction {
     /// The 'XIP' (or Execute-in-place) function, which means talking to the QSPI Flash.
     Xip,
+    /// The 'HSTX' function.
+    Hstx,
     /// The 'SPI' (or serial-peripheral-interface) function.
     Spi,
     /// The 'UART' (or serial-port) function.
@@ -107,7 +109,9 @@ macro_rules! pin_func {
         })*
     };
 }
-pin_func!(Xip, Spi, Uart, I2c as I2C, Pwm, Pio0, Pio1, Pio2, Clock, XipCs1, Usb, UartAux, Null);
+pin_func!(
+    Xip, Hstx, Spi, Uart, I2c as I2C, Pwm, Pio0, Pio1, Pio2, Clock, XipCs1, Usb, UartAux, Null
+);
 
 //==============================================================================
 // SIO sub-types
@@ -207,6 +211,9 @@ pin_valid_func!(
     [UartAux],
     [2, 3, 6, 7, 10, 11, 14, 15, 18, 19, 22, 23, 26, 27]
 );
+
+pin_valid_func!(bank0 as Gpio, [Hstx], [12, 13, 14, 15, 16, 17, 18, 19]);
+
 pin_valid_func!(bank0 as Gpio, [Clock], [20, 21, 22, 23, 24, 25]);
 pin_valid_func!(bank0 as Gpio, [XipCs1], [0, 8, 19, 47]);
 pin_valid_func!(qspi as Qspi, [Xip, Null], [Sclk, Sd0, Sd1, Sd2, Sd3, Ss]);
