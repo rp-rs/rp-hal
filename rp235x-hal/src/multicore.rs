@@ -231,7 +231,7 @@ impl<'p> Multicore<'p> {
     }
 
     /// Get the available |Core| instances.
-    pub fn cores(&mut self) -> &'p mut [Core] {
+    pub fn cores(&mut self) -> &mut [Core<'p>] {
         &mut self.cores
     }
 }
