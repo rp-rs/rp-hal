@@ -647,6 +647,10 @@ impl ClocksManager {
         self.adc_clock
             .configure_clock(pll_usb, pll_usb.get_freq())?;
 
+        // CLK HSTX = PLL SYS (150MHz) / 1 = 150MHz
+        self.hstx_clock
+            .configure_clock(pll_sys, pll_sys.get_freq())?;
+
         // CLK PERI = clk_sys. Used as reference clock for Peripherals. No dividers so just select and enable
         // Normally choose clk_sys or clk_usb
         self.peripheral_clock

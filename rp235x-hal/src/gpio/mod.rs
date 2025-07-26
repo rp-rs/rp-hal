@@ -198,7 +198,13 @@ pub unsafe fn new_pin(id: DynPinId) -> Pin<DynPinId, DynFunction, DynPullType> {
         .variant()
         .expect("Invalid funcsel read from register.");
     let function = match funcsel {
-        FUNCSEL_A::JTAG => DynFunction::Xip,
+        FUNCSEL_A::JTAG => {
+            if id.bank == DynBankId::Qspi {
+                DynFunction::Xip
+            } else {
+                DynFunction::Hstx
+            }
+        }
         FUNCSEL_A::SPI => DynFunction::Spi,
         FUNCSEL_A::UART => DynFunction::Uart,
         FUNCSEL_A::I2C => DynFunction::I2c,
