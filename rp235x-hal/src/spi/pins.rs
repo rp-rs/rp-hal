@@ -89,16 +89,16 @@ macro_rules! impl_valid_spi {
 
 impl_valid_spi!(
     SPI0: {
-        rx: [Gpio0, Gpio4, Gpio16, Gpio20],
-        cs: [Gpio1, Gpio5, Gpio17, Gpio21],
-        sck: [Gpio2, Gpio6, Gpio18, Gpio22],
-        tx: [Gpio3, Gpio7, Gpio19, Gpio23],
+        rx: [Gpio0, Gpio4, Gpio16, Gpio20, Gpio32, Gpio36],
+        cs: [Gpio1, Gpio5, Gpio17, Gpio21, Gpio33, Gpio37],
+        sck: [Gpio2, Gpio6, Gpio18, Gpio22, Gpio34, Gpio38],
+        tx: [Gpio3, Gpio7, Gpio19, Gpio23, Gpio35, Gpio39],
     },
     SPI1: {
-        rx: [Gpio8, Gpio12, Gpio24, Gpio28],
-        cs: [Gpio9, Gpio13, Gpio25, Gpio29],
-        sck: [Gpio10, Gpio14, Gpio26],
-        tx: [Gpio11, Gpio15, Gpio27],
+        rx: [Gpio8, Gpio12, Gpio24, Gpio28, Gpio40, Gpio44],
+        cs: [Gpio9, Gpio13, Gpio25, Gpio29, Gpio41, Gpio45],
+        sck: [Gpio10, Gpio14, Gpio26, Gpio30, Gpio42, Gpio46],
+        tx: [Gpio11, Gpio15, Gpio27, Gpio31, Gpio43, Gpio47],
     }
 );
 
