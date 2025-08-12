@@ -115,7 +115,7 @@ extern "C" {
 /// The data here tells picotool the start and end flash addresses of our
 /// metadata.
 #[link_section = ".boot_info"]
-#[cfg(feature = "binary-info")]
+#[cfg(all(feature = "binary-info", target_os = "none"))]
 #[used]
 #[allow(unused_unsafe)] // addr_of! is safe since rust 1.82.0
 pub static PICOTOOL_HEADER: Header = unsafe {
