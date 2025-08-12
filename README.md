@@ -193,7 +193,7 @@ RPI-RP2 mass storage device, use the `picotool uf2 convert` command on your
 compiled program with the `-t elf` argument.
 
 ```console
-$ picotool uf2 convert target/thumbv6m-none-eabi/release/pwm_blink -t elf
+$ picotool uf2 convert -t elf target/thumbv6m-none-eabi/release/pwm_blink
 pwm_blink.uf2
 ```
 
