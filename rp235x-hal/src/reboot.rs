@@ -1,7 +1,7 @@
 //! Functions for rebooting the chip using the ROM.
 
-#[allow(unpredictable_function_pointer_comparisons)]
 /// Types of reboot we support
+#[allow(unpredictable_function_pointer_comparisons)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RebootKind {
     /// A normal reboot
