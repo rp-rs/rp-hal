@@ -252,7 +252,7 @@ The `thumbv6m-none-eabi` target may be replaced by the all-Arm wildcard
 whilst holding some kind of "Boot Select" button. On Linux, you will also need
 to 'mount' the device, like you would a USB Thumb Drive.
 
-*Step 4* - Use `cargo run`, which will compile the code and started the
+*Step 4* - Use `cargo run`, which will compile the code and start the
 specified 'runner'. As the 'runner' is picotool, it will flash your compiled
 binary over USB.
 
@@ -276,10 +276,10 @@ Picotool can also read "Binary Info" from a device with `picotool info`. To
 enable this in your firmware, see the [rp-binary-info] crate and the
 corresponding [binary info example].
 
-[rp-binary-info]: https://github.com/rp-rs/rp-hal/tree/main/rp-binary-info
 [binary info example]: https://github.com/rp-rs/rp-hal/blob/main/rp2040-hal-examples/src/bin/binary_info_demo.rs
 
 ### Loading with probe-rs
+
 [probe-rs](https://github.com/probe-rs/probe-rs) is a library and a
 command-line tool which can flash a wide variety of microcontrollers
 using a wide variety of debug/JTAG probes. Unlike using, say, OpenOCD,
