@@ -67,14 +67,19 @@ rustup update stable
 rustup target add thumbv6m-none-eabi
 ```
 
-You may also want to install these helpful tools:
+You may also want to install probe-rs, to flash your device over the SWD pins
+with a debug probe:
 
 ```sh
-# Useful to creating UF2 images for the RP2040 USB Bootloader
-cargo install elf2uf2-rs --locked
-# Useful for flashing over the SWD pins using a supported JTAG probe
 cargo install --locked probe-rs-tools
 ```
+
+And also [picotool], if you are not using a debug probe or wish to create UF2
+images for the USB bootloader. You can download a [pre-built picotool
+binary][picotool-releases] for your system.
+
+[picotool]: https://github.com/raspberrypi/picotool
+[picotool-releases]: https://github.com/raspberrypi/pico-sdk-tools/releases
 
 ## Packages
 
@@ -125,11 +130,8 @@ a [separate repository][BSPs].
 Rust generates standard Arm ELF files, which you can load onto your Raspberry Pi
 Silicon device with your favourite Arm flashing/debugging tool. In addition, the
 RP2040 contains a ROM bootloader which appears as a Mass Storage Device over USB
-that accepts UF2 format images. You can use the `elf2uf2-rs` package to convert
-the Arm ELF file to a UF2 format image.
-
-For boards with USB Device support like the Raspberry Pi Pico, we recommend you
-use the UF2 process.
+that accepts UF2 format images. You can use picotool to flash your device over
+USB, or convert the Arm ELF file to a UF2 format image.
 
 The RP2040 contains two Cortex-M0+ processors, which execute Thumb-2 encoded
 ARMv6-M instructions. There are no operating-specific features in the binaries
@@ -156,20 +158,16 @@ More detailed information on how the linker flags work can be found in
 In most cases, it should be sufficient to use the example files from the
 [Project Template].
 
-### Loading a UF2 over USB
+### Loading over USB with picotool
 
-*Step 1* - Install [`elf2uf2-rs`](https://github.com/JoNil/elf2uf2-rs):
-
-```console
-$ cargo install elf2uf2-rs --locked
-```
+*Step 1* - Install a [picotool binary][picotool-releases] for your system.
 
 *Step 2* - Make sure your .cargo/config contains the following (it should by
 default if you are working in this repository):
 
 ```toml
 [target.thumbv6m-none-eabi]
-runner = "elf2uf2-rs -d"
+runner = "picotool load --update --verify --execute -t elf"
 ```
 
 The `thumbv6m-none-eabi` target may be replaced by the all-Arm wildcard
@@ -180,8 +178,8 @@ whilst holding some kind of "Boot Select" button. On Linux, you will also need
 to 'mount' the device, like you would a USB Thumb Drive.
 
 *Step 4* - Use `cargo run`, which will compile the code and started the
-specified 'runner'. As the 'runner' is the elf2uf2-rs tool, it will build a UF2
-file and copy it to your RP2040.
+specified 'runner'. As the 'runner' is picotool, it will flash your compiled
+binary over USB.
 
 ```console
 $ cargo run --release --features "critical-section-impl,rt,defmt" --example pwm_blink
@@ -189,6 +187,22 @@ $ cargo run --release --features "critical-section-impl,rt,defmt" --example pwm_
 
 (The `pwm_blink` example doesn't need all these feature flags. They are listed here
 so you can use the same command for all examples.)
+
+If you want to create a UF2 file, which is loaded by copying it over to the
+RPI-RP2 mass storage device, use the `picotool uf2 convert` command on your
+compiled program with the `-t elf` argument.
+
+```console
+$ picotool uf2 convert target/thumbv6m-none-eabi/release/pwm_blink -t elf
+pwm_blink.uf2
+```
+
+Picotool can also read "Binary Info" from a device with `picotool info`. To
+enable this in your firmware, see the [rp-binary-info] crate and the
+corresponding [binary info example].
+
+[rp-binary-info]: https://github.com/rp-rs/rp-hal/tree/main/rp-binary-info
+[binary info example]: https://github.com/rp-rs/rp-hal/blob/main/rp2040-hal-examples/src/bin/binary_info_demo.rs
 
 ### Loading with probe-rs
 [probe-rs](https://github.com/probe-rs/probe-rs) is a library and a
@@ -233,20 +247,6 @@ connected to the RP2040.
 ```console
 $ cargo run --release --example pwm_blink
 ```
-
-### Loading with picotool
-
-As ELF files produced by compiling Rust code are completely compatible with ELF
-files produced by compiling C or C++ code, you can also use the Raspberry Pi
-tool [picotool](https://github.com/raspberrypi/picotool). The only thing to be
-aware of is that picotool expects your ELF files to have a `.elf` extension, and
-by default Rust does not give the ELF files any extension. You can fix this by
-simply renaming the file.
-
-Also of note is that the special
-[pico-sdk](https://github.com/raspberrypi/pico-sdk) macros which hide
-information in the ELF file in a way that `picotool info` can read it out, are
-not supported in Rust. An alternative is TBC.
 
 [Project Template]: https://github.com/rp-rs/rp2040-project-template
 

@@ -78,28 +78,30 @@ $ cargo build
 $ cargo build --bin dormant_sleep
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.06s
 $ file ./target/thumbv6m-none-eabi/debug/dormant_sleep
-./target/thumbv6m-none-eabi/debug/dormant_sleep: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), statically linked, with debug_info, not stripped
+./target/thumbv6m-none-eabi/debug/dormant_sleep: ELF 32-bit LSB executable, ARM, EABI5 version 1 (GNU/Linux), statically linked, with debug_info, not stripped
 ```
 
-You can also 'run' an example, which will invoke [`elf2uf2-rs`] to copy it to an
-RP2040's virtual USB Mass Storage Device (which it puts over the USB port when
-in its ROM bootloader). You should install that if you don't have it already:
+You can also 'run' an example, which will invoke [picotool] to flash the RP2040
+over USB. You should install that if you don't have it already; [pre-built
+binaries][picotool-releases] are available for Windows, Linux, and macOS.
 
 ```console
-$ cargo install elf2uf2-rs --locked
 $ cd rp2040-hal-examples
 $ cargo run --bin dormant_sleep
-   Compiling rp2040-hal v0.10.0 (/home/user/rp-hal/rp2040-hal)
+   Compiling rp2040-hal v0.11.0 (/home/user/rp-hal/rp2040-hal)
    Compiling rp2040-hal-examples v0.1.0 (/home/user/rp-hal/rp2040-hal-examples)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.62s
-     Running `elf2uf2-rs -d target/thumbv6m-none-eabi/debug/dormant_sleep`
-Found pico uf2 disk /media/user/RP2040
-Transfering program to pico
-88.50 KB / 88.50 KB [=====================================] 100.00 % 430.77 KB/s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.47s
+     Running `picotool load --update --verify --execute -t elf target/thumbv6m-none-eabi/debug/dormant_sleep`
+Loading into Flash:   [==============================]  100%
+Verifying Flash:      [==============================]  100%
+  OK
+
+The device was rebooted to start the application.
 $
 ```
 
-[`elf2uf2-rs`]: https://github.com/JoNil/elf2uf2-rs
+[picotool]: https://github.com/raspberrypi/picotool
+[picotool-releases]: https://github.com/raspberrypi/pico-sdk-tools/releases
 
 <!-- ROADMAP -->
 ## Roadmap

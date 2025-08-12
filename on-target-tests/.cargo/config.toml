@@ -18,7 +18,7 @@ target = "thumbv6m-none-eabi"
 # * linker argument -Tlink.x tells the linker to use link.x as the linker
 #   script. This is usually provided by the cortex-m-rt crate, and by default
 #   the version in that crate will include a file called `memory.x` which
-#   describes the particular memory layout for your specific chip. 
+#   describes the particular memory layout for your specific chip.
 # * no-vectorize-loops turns off the loop vectorizer (seeing as the M0+ doesn't
 #   have SIMD)
 rustflags = [
@@ -28,9 +28,8 @@ rustflags = [
     "-C", "no-vectorize-loops",
 ]
 
-# This runner will make a UF2 file and then copy it to a mounted RP2040 in USB
-# Bootloader mode:
-runner = "elf2uf2-rs -d"
+# This runner will flash a mounted RP2040 in USB Bootloader mode:
+runner = "picotool load --update --verify --execute -t elf"
 
 # This runner will find a supported SWD debug probe and flash your RP2040 over
 # SWD:
