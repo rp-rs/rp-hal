@@ -22,20 +22,16 @@ use crate::{
 /// Instant type used by the Timer & Alarm methods.
 pub type Instant = TimerInstantU64<1_000_000>;
 
-static ALARMS_TIMER0: AtomicU8 = AtomicU8::new(0x0F);
-static ALARMS_TIMER1: AtomicU8 = AtomicU8::new(0x0F);
+static ALARMS_TIMER0: AtomicU8 = AtomicU8::new(0x00);
+static ALARMS_TIMER1: AtomicU8 = AtomicU8::new(0x00);
+
 fn take_alarm(mask: u8, alarms: &'static AtomicU8) -> bool {
-    critical_section::with(|_| {
-        let current_alarms = alarms.load(Ordering::Relaxed);
-        alarms.store(current_alarms & !mask, Ordering::Relaxed);
-        (current_alarms & mask) != 0
-    })
+    let current_alarms = alarms.fetch_or(mask, Ordering::Relaxed);
+    (current_alarms & mask) == 0
 }
+
 fn release_alarm(mask: u8, alarms: &'static AtomicU8) {
-    critical_section::with(|_| {
-        let current_alarms = alarms.load(Ordering::Relaxed);
-        alarms.store(current_alarms | mask, Ordering::Relaxed);
-    });
+    alarms.fetch_and(!mask, Ordering::Relaxed);
 }
 
 /// Represents Timer0
