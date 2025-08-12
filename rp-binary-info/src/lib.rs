@@ -53,6 +53,7 @@
 //!
 //! ```
 //! #[link_section = ".bi_entries"]
+//! #[cfg(all(feature = "binary-info", target_os = "none"))]
 //! #[used]
 //! pub static PICOTOOL_ENTRIES: [rp_binary_info::EntryAddr; 4] = [
 //!     rp_binary_info::rp_program_name!(c"Program Name Here"),
