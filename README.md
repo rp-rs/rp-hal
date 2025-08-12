@@ -256,8 +256,8 @@ to 'mount' the device, like you would a USB Thumb Drive.
 specified 'runner'. As the 'runner' is picotool, it will flash your compiled
 binary over USB.
 
-```console
-$ cargo run --release --features "critical-section-impl,rt,defmt" --example pwm_blink
+```sh
+cargo run --release --features "critical-section-impl,rt,defmt" --example pwm_blink
 ```
 
 (The `pwm_blink` example doesn't need all these feature flags. They are listed here
@@ -267,9 +267,8 @@ If you want to create a UF2 file, which is loaded by copying it over to the
 RPI-RP2 mass storage device, use the `picotool uf2 convert` command on your
 compiled program with the `-t elf` argument.
 
-```console
-$ picotool uf2 convert -t elf target/thumbv6m-none-eabi/release/pwm_blink
-pwm_blink.uf2
+```sh
+picotool uf2 convert -t elf target/thumbv6m-none-eabi/release/pwm_blink pwm_blink.uf2
 ```
 
 Picotool can also read "Binary Info" from a device with `picotool info`. To
@@ -287,8 +286,8 @@ probe-rs can autodetect your debug probe, which can make it easier to use.
 
 *Step 1* - Install `probe-rs`:
 
-```console
-$ cargo install --locked probe-rs-tools
+```sh
+cargo install --locked probe-rs-tools
 ```
 
 Alternatively, follow the installation instructions on https://probe.rs/.
@@ -319,8 +318,8 @@ will reflect the probe you have connected.
 RP2040 via the first probe it finds, and install your firmware into the Flash
 connected to the RP2040.
 
-```console
-$ cargo run --release --example pwm_blink
+```sh
+cargo run --release --example pwm_blink
 ```
 [RP2040 Project Template]: https://github.com/rp-rs/rp2040-project-template
 [RP2350 Project Template]: https://github.com/rp-rs/rp235x-project-template
