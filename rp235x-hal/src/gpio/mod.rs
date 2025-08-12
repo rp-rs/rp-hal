@@ -819,7 +819,7 @@ impl<I: PinId, F: func::Function, P: PullType> Pin<I, F, P> {
     /// meaningful result.
     ///
     /// Calling this function does not set the pad's input enable bit.
-    pub fn as_input(&self) -> AsInputPin<I, F, P> {
+    pub fn as_input(&self) -> AsInputPin<'_, I, F, P> {
         AsInputPin(self)
     }
 }
