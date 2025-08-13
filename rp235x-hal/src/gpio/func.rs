@@ -239,7 +239,11 @@ pin_valid_func!(
 
 pin_valid_func!(bank0 as Gpio, [Hstx], [12, 13, 14, 15, 16, 17, 18, 19]);
 
-pin_valid_func!(bank0 as Gpio, [Clock], [20, 21, 22, 23, 24, 25]);
+pin_valid_func!(
+    bank0 as Gpio,
+    [Clock],
+    [12, 13, 14, 15, 20, 21, 22, 23, 24, 25]
+);
 
 pin_valid_func!(bank0 as Gpio, [XipCs1], [0, 8, 19, 47]);
 
