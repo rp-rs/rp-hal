@@ -160,6 +160,8 @@ impl SioConfig for SioOutput {
 //==============================================================================
 
 /// Error type for invalid function conversion.
+#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct InvalidFunction;
 
 /// Marker of valid pin -> function combination.
@@ -173,20 +175,31 @@ impl DynFunction {
         use DynFunction::*;
 
         let dyn_pin = id.as_dyn();
-        match (self, dyn_pin.bank, dyn_pin.num) {
-            (Xip, Bank0, _) => false,
-            (XipCs1, Bank0, 0 | 8 | 19 | 47) => true,
-            (Clock, _, 0..=19 | 26..=29) => false,
-            (UartAux, _, n) if (n & 0x02) == 0 => false,
-            (_, Bank0, 0..=29) => true,
-
-            (Xip | Sio(_), Qspi, 0..=5) => true,
-            (_, Qspi, 0..=5) => false,
-
-            _ => unreachable!(),
+        match (dyn_pin.bank, dyn_pin.num, self) {
+            // XIP CS0 not on Bank0
+            (Bank0, _, Xip) => false,
+            // XIP CS1 only on Bank0 on these pins
+            (Bank0, 0 | 8 | 19 | 47, XipCs1) => true,
+            (Bank0, _, XipCs1) => false,
+            // Clock only on these pins
+            (Bank0, 12..=15 | 20..=25, Clock) => true,
+            (Bank0, _, Clock) => false,
+            // UART Aux only works on 0b010, 0b011, 0b110, 0b111, etc
+            (Bank0, n, UartAux) if (n & 0b10) != 0 => true,
+            (Bank0, _, UartAux) => false,
+            // HSTX only on these pins
+            (Bank0, 12..=19, Hstx) => true,
+            (Bank0, _, Hstx) => false,
+            // All the other functions work on any pin
+            (Bank0, 0..=47, _) => true,
+            // The QSPI bank only supports XIP and GPIO
+            (Qspi, 0..=5, Xip | Sio(_)) => true,
+            // Nothing else is acceptable
+            _ => false,
         }
     }
 }
+
 impl<P: super::pin::PinId> ValidFunction<DynFunction> for P {}
 macro_rules! pin_valid_func {
     ($bank:ident as $prefix:ident, [$head:ident $(, $func:ident)*], [$($name:tt),+]) => {
@@ -197,6 +210,7 @@ macro_rules! pin_valid_func {
     };
     ($bank:ident as $prefix:ident, [], [$($name:tt),+]) => {};
 }
+
 pin_valid_func!(
     bank0 as Gpio,
     [Spi, Uart, I2c, Pwm, Pio0, Pio1, Pio2, Usb, Null],
@@ -215,7 +229,9 @@ pin_valid_func!(
 pin_valid_func!(bank0 as Gpio, [Hstx], [12, 13, 14, 15, 16, 17, 18, 19]);
 
 pin_valid_func!(bank0 as Gpio, [Clock], [20, 21, 22, 23, 24, 25]);
+
 pin_valid_func!(bank0 as Gpio, [XipCs1], [0, 8, 19, 47]);
+
 pin_valid_func!(qspi as Qspi, [Xip, Null], [Sclk, Sd0, Sd1, Sd2, Sd3, Ss]);
 
 macro_rules! pin_valid_func_sio {
