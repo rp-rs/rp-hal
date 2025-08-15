@@ -1,0 +1,31 @@
+[package]
+authors = ["The rp-rs Developers"]
+categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
+description = "Examples for the rp-hal crate"
+edition = "2021"
+homepage = "https://github.com/rp-rs/rp-hal"
+keywords = ["embedded", "hal", "raspberry-pi", "rp2040", "rp235x", "rp2350", "embedded-hal"]
+license = "MIT OR Apache-2.0"
+name = "rp-hal-examples"
+repository = "https://github.com/rp-rs/rp-hal"
+rust-version = "1.81"
+version = "0.1.0"
+
+[dependencies]
+cortex-m = "0.7.2"
+cortex-m-rt = "0.7"
+critical-section = "1.2.0"
+defmt = "1.0"
+defmt-rtt = "1.0"
+panic-halt = "1.0.0"
+rp-binary-info = { path = "../rp-binary-info", version = "0.1.2", features = ["binary-info"] }
+rp-hal = { path = "../rp-hal", features = ["critical-section-impl"] }
+rp2040-boot2 = { version = "0.3.0", optional = true }
+
+[features]
+rp2040 = [ "rp-hal/rp2040", "dep:rp2040-boot2" ]
+rp235x = [ "rp-hal/rp235x" ]
+
+[profile.release]
+opt-level = "z"
+lto = "fat"

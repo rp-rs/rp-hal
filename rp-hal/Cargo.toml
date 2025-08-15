@@ -1,0 +1,31 @@
+[package]
+name = "rp-hal"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+critical-section = "1.2.0"
+defmt = { version = "1.0", optional = true }
+frunk = { version = "0.4.1", default-features = false }
+nb = "1.1.0"
+paste = "1.0"
+rp2040-pac = { version = "0.6", optional = true, features = ["critical-section", "rt"] }
+rp235x-pac = { version = "0.1", optional = true, features = ["critical-section", "rt"] }
+
+[features]
+rp2040 = ["dep:rp2040-pac"]
+rp235x = ["dep:rp235x-pac"]
+critical-section-impl = ["critical-section/restore-state-u8"]
+defmt = ["dep:defmt"]
+
+[target.'thumbv8m.main-none-eabihf'.dependencies]
+cortex-m = "0.7.2"
+cortex-m-rt = "0.7"
+
+[target.'thumbv6m-none-eabi'.dependencies]
+cortex-m = "0.7.2"
+cortex-m-rt = "0.7"
+
+[target.riscv32imac-unknown-none-elf.dependencies]
+riscv = "0.11"
+riscv-rt = "0.12"
