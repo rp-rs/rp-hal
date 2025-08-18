@@ -186,7 +186,7 @@ impl StackAllocation {
     /// Unsafely construct a stack allocation
     ///
     /// This is mainly useful to construct a stack allocation in some memory region
-    /// defined in a linker script, for example to place the stack in the SRAM4/5 regions.
+    /// defined in a linker script, for example to place the stack in the SRAM8/9 regions.
     ///
     /// # Safety
     ///
