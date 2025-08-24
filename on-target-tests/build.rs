@@ -15,6 +15,9 @@ fn main() {
     let memory_x = include_bytes!("memory_rp2040.x");
     #[cfg(feature = "rp235x")]
     let memory_x = include_bytes!("memory_rp235x.x");
+    #[cfg(not(any(feature = "rp2040", feature = "rp235x")))]
+    compile_error!("No target feature enabled");
+
     let mut f = File::create(out.join("memory.x")).unwrap();
     f.write_all(memory_x).unwrap();
     println!("cargo:rerun-if-changed=memory.x");
