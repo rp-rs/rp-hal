@@ -40,7 +40,7 @@ impl<'a, T> SliceWrapper<'a, T> {
 
     pub fn feed_pointer(&mut self, pointer: SliceWrapperPointer<T>) {
         if pointer.pointer != self.inner.as_ptr() {
-            panic!("Attempted to feed SliceWrapper a pointer with an invalid ID");
+            panic!("Attempted to feed SliceWrapper an invalid pointer");
         }
 
         self.pointer_alive = false;
@@ -102,7 +102,7 @@ impl<'a, T> SliceWrapperMut<'a, T> {
 
     pub fn feed_pointer(&mut self, pointer: SliceWrapperPointerMut<T>) {
         if pointer.pointer != self.inner.as_mut_ptr() {
-            panic!("Attempted to feed SliceWrapper a pointer with an invalid ID");
+            panic!("Attempted to feed SliceWrapper an invalid pointer");
         }
 
         self.pointer_alive = false;
