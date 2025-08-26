@@ -11,6 +11,5 @@ version = "0.1.0"
 
 # DO NOT LIST ANY PAC CRATES OR ARCHITECTURE CRATES HERE
 [dependencies]
-const-random = "0.1.18"
 embedded-dma = "0.2.0"
 fugit = "0.3.7"

@@ -1,10 +1,8 @@
-use const_random::const_random;
 use embedded_dma::{ReadBuffer, WriteBuffer};
 
 pub struct SliceWrapperPointer<T> {
     pointer: *const T,
     length: usize,
-    id: u32,
 }
 
 unsafe impl<T> ReadBuffer for SliceWrapperPointer<T> {
@@ -18,7 +16,6 @@ unsafe impl<T> ReadBuffer for SliceWrapperPointer<T> {
 pub struct SliceWrapper<'a, T> {
     inner: &'a [T],
     pointer_alive: bool,
-    id: u32,
 }
 
 impl<'a, T> SliceWrapper<'a, T> {
@@ -26,7 +23,6 @@ impl<'a, T> SliceWrapper<'a, T> {
         Self {
             inner,
             pointer_alive: false,
-            id: const_random!(u32),
         }
     }
 
@@ -39,12 +35,11 @@ impl<'a, T> SliceWrapper<'a, T> {
         SliceWrapperPointer {
             pointer: self.inner.as_ptr(),
             length: self.inner.len(),
-            id: self.id,
         }
     }
 
     pub fn feed_pointer(&mut self, pointer: SliceWrapperPointer<T>) {
-        if pointer.id != self.id {
+        if pointer.pointer != self.inner.as_ptr() {
             panic!("Attempted to feed SliceWrapper a pointer with an invalid ID");
         }
 
@@ -63,7 +58,6 @@ impl<'a, T> Drop for SliceWrapper<'a, T> {
 pub struct SliceWrapperPointerMut<T> {
     pointer: *mut T,
     length: usize,
-    id: u32,
 }
 
 unsafe impl<T> ReadBuffer for SliceWrapperPointerMut<T> {
@@ -84,7 +78,6 @@ unsafe impl<T> WriteBuffer for SliceWrapperPointerMut<T> {
 pub struct SliceWrapperMut<'a, T> {
     inner: &'a mut [T],
     pointer_alive: bool,
-    id: u32,
 }
 
 impl<'a, T> SliceWrapperMut<'a, T> {
@@ -92,7 +85,6 @@ impl<'a, T> SliceWrapperMut<'a, T> {
         Self {
             inner,
             pointer_alive: false,
-            id: const_random!(u32),
         }
     }
 
@@ -105,12 +97,11 @@ impl<'a, T> SliceWrapperMut<'a, T> {
         SliceWrapperPointerMut {
             pointer: self.inner.as_mut_ptr(),
             length: self.inner.len(),
-            id: self.id,
         }
     }
 
     pub fn feed_pointer(&mut self, pointer: SliceWrapperPointerMut<T>) {
-        if pointer.id != self.id {
+        if pointer.pointer != self.inner.as_mut_ptr() {
             panic!("Attempted to feed SliceWrapper a pointer with an invalid ID");
         }
 
