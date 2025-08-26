@@ -39,7 +39,7 @@ impl<'a, T> SliceWrapper<'a, T> {
         SliceWrapperPointer {
             pointer: self.inner.as_ptr(),
             length: self.inner.len(),
-            id: self.id
+            id: self.id,
         }
     }
 
@@ -105,7 +105,7 @@ impl<'a, T> SliceWrapperMut<'a, T> {
         SliceWrapperPointerMut {
             pointer: self.inner.as_mut_ptr(),
             length: self.inner.len(),
-            id: self.id
+            id: self.id,
         }
     }
 
