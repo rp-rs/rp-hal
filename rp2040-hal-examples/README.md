@@ -8,7 +8,7 @@
    <h3 align="center">rp-hal</h3>
 
   <p align="center">
-    Rust Examples for the Raspberry Silicon RP2040 Microcontroller
+    Rust Examples for the Raspberry Pi RP2040 Microcontroller
     <br />
     <a href="https://docs.rs/rp2040-hal"><strong>Explore the API docs »</strong></a>
     <br />
@@ -41,7 +41,7 @@
 ## Introduction
 
 The `rp2040-hal` package is a library crate of high-level Rust drivers for the
-Raspberry Silicon RP2040 microcontroller. This folder contains a collection of
+Raspberry Pi RP2040 microcontroller. This folder contains a collection of
 non-board specific example programs for you to study.
 
 We also provide a series of [*Board Support Package* (BSP) crates][BSPs], which

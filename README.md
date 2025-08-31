@@ -51,7 +51,7 @@ Project Template](https://github.com/rp-rs/rp2040-project-template). If you
 want to use the RP2350 family, check out the [RP2350 Project
 Template](https://github.com/rp-rs/rp235x-project-template) instead.
 
-If you want to write code that uses the Raspberry Silicon PIO State Machines,
+If you want to write code that uses the Raspberry Pi PIO State Machines,
 check out [pio-rs](https://github.com/rp-rs/pio-rs). You can even compile PIO
 programs at run-time, on the MCU itself!
 
@@ -187,11 +187,11 @@ because there were so many of them.
 <!-- PROGRAMMING -->
 ## Programming
 
-Rust generates standard Arm ELF files, which you can load onto your Raspberry Pi
-Silicon device with your favourite Arm flashing/debugging tool. In addition, the
-RP2040 contains a ROM bootloader which appears as a Mass Storage Device over USB
-that accepts UF2 format images. You can use picotool to flash your device over
-USB, or convert the Arm ELF file to a UF2 format image.
+Rust generates standard Arm ELF files, which you can load onto your Raspberry
+Pi microcontroller device with your favourite Arm flashing/debugging tool. In
+addition, the RP2040 contains a ROM bootloader which appears as a Mass Storage
+Device over USB that accepts UF2 format images. You can use picotool to flash
+your device over USB, or convert the Arm ELF file to a UF2 format image.
 
 The RP2040 contains two Cortex-M0+ processors, which execute Thumb-2 encoded
 Armv6-M instructions. There are no operating-specific features in the binaries
