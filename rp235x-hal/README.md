@@ -8,7 +8,7 @@
    <h3 align="center">rp-hal</h3>
 
   <p align="center">
-    High-level Rust drivers for the Raspberry Pi RP2350 Microcontroller
+    High-level Rust drivers for the Raspberry Pi RP235x Microcontroller Family
     <br />
     <a href="https://docs.rs/rp235x-hal"><strong>Explore the API docs »</strong></a>
     <br />
@@ -41,10 +41,11 @@
 ## Introduction
 
 This is the `rp235x-hal` package - a library crate of high-level Rust drivers
-for the Raspberry Pi RP2350 microcontroller, along with a collection of
-non-board specific example programs for you to study. You should use this crate
-in your application if you want to write code for the RP2350 microcontroller.
-The *HAL* in the name standards for *Hardware Abstraction Layer*, and comes from
+for the Raspberry Pi RP235x microcontroller family, along with a collection of
+non-board specific example programs for you to study. You should use this
+crate in your application if you want to write code for an RP235x
+microcontroller (including the RP2350A, RP2350B, RP2354A and RP2354B). The
+*HAL* in the name standards for *Hardware Abstraction Layer*, and comes from
 the fact that many of the drivers included implement the generic
 hardware-abstraction interfaces defined in the Rust Embedded Working Group's
 [embedded-hal](https://github.com/rust-embedded/embedded-hal) crate.
