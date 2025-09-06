@@ -17,6 +17,7 @@ The Minimum-Supported Rust Version (MSRV) for the next release is 1.81
 
 - Update to pio 0.3.0
 - Update rand\_core to 0.9.3
+- Fix handling of flags in `RebootKind::BootSel` reboot.
 
 ## [0.3.0] - 2025-03-02
 
