@@ -10,7 +10,7 @@
   <p align="center">
     Rust support for the Raspberry Pi family of microcontrollers
     <br />
-    <strong>Explore the API docs for <a href="https://docs.rs/rp2040-hal">RP2040</a> or <a href="https://docs.rs/rp2350-hal">RP2350</a></strong>
+    <strong>Explore the API docs for <a href="https://docs.rs/rp2040-hal">RP2040</a> or <a href="https://docs.rs/rp235x-hal">RP2350</a></strong>
     <br />
     <br />
     <a href="https://github.com/rp-rs/rp-hal-boards/tree/main/boards/rp-pico/examples">View Demos</a>
