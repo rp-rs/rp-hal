@@ -8,7 +8,7 @@
    <h3 align="center">rp-hal</h3>
 
   <p align="center">
-    Rust Examples for the Raspberry Silicon RP235x family Microcontrollers
+    Rust Examples for the Raspberry Pi RP235x family Microcontrollers
     <br />
     <a href="https://github.com/rp-rs/rp-hal/tree/main/rp235x-hal-examples"><strong>View the examples  »</strong></a>
     <br />
@@ -41,7 +41,7 @@
 ## Introduction
 
 The `rp235x-hal` package is a library crate of high-level Rust drivers for the
-Raspberry Silicon RP235x family of microcontrollers. This folder contains a
+Raspberry Pi RP235x family of microcontrollers. This folder contains a
 collection of non-board specific example programs for you to study.
 
 We also provide a series of [*Board Support Package* (BSP) crates][BSPs], which

@@ -1,7 +1,7 @@
 [package]
 authors = ["The rp-rs Developers"]
 categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
-description = "A Rust Embeded-HAL impl for the RP2350 microcontroller"
+description = "A Rust Embedded-HAL impl for the RP235x microcontroller family"
 edition = "2021"
 homepage = "https://github.com/rp-rs/rp-hal"
 keywords = ["embedded", "hal", "raspberry-pi", "rp2350", "embedded-hal"]

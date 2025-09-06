@@ -10,7 +10,7 @@
   <p align="center">
     Rust support for the Raspberry Pi family of microcontrollers
     <br />
-    <strong>Explore the API docs for <a href="https://docs.rs/rp2040-hal">RP2040</a> or <a href="https://docs.rs/rp2350-hal">RP2350</a></strong>
+    <strong>Explore the API docs for <a href="https://docs.rs/rp2040-hal">RP2040</a> or <a href="https://docs.rs/rp235x-hal">RP235x</a></strong>
     <br />
     <br />
     <a href="https://github.com/rp-rs/rp-hal-boards/tree/main/boards/rp-pico/examples">View Demos</a>
@@ -44,14 +44,14 @@ So, you want to program your new Raspberry Pi microcontroller, using the
 Rust programming language. You've come to the right place!
 
 This repository is `rp-hal` - a collection of high-level drivers for the
-Raspberry Pi RP2040 and RP2350 microcontrollers.
+Raspberry Pi RP2040 and RP235x microcontrollers.
 
 If you want to write an application for the RP2040, check out our [RP2040
 Project Template](https://github.com/rp-rs/rp2040-project-template). If you
-want to use the RP2350 family, check out the [RP2350 Project
+want to use the RP235x family, check out the [RP235x Project
 Template](https://github.com/rp-rs/rp235x-project-template) instead.
 
-If you want to write code that uses the Raspberry Silicon PIO State Machines,
+If you want to write code that uses the Raspberry Pi PIO State Machines,
 check out [pio-rs](https://github.com/rp-rs/pio-rs). You can even compile PIO
 programs at run-time, on the MCU itself!
 
@@ -89,7 +89,7 @@ binary][picotool-releases] for your system.
 ## Packages
 
 There is one _Hardware Abstraction Layer_ (or HAL) crate for the RP2040, and
-another for the RP2350. We also have a common HAL, and various examples.
+another for the RP235x. We also have a common HAL, and various examples.
 
 ### [rp2040-hal] - The HAL for the [Raspberry Pi RP2040]
 
@@ -120,15 +120,15 @@ RP2040. We have examples for the following (plus many more):
 * Using PIO
 * Sleeping and waiting on the RTC
 
-### [rp235x-hal] - The HAL for the [Raspberry Pi RP2350]
+### [rp235x-hal] - The HAL for the [Raspberry Pi RP235x]
 
 You should include this crate in your project if you want to write a driver or
-library that runs on the [Raspberry Pi RP2350], or if you are writing a Board
+library that runs on the [Raspberry Pi RP235x], or if you are writing a Board
 Support Package (see later on). We call it the 'rp235x-hal' because it
-supports the RP2350A, the RP2350B and variants which include on-board Flash
+supports the RP2350A, the RP2350B, and variants which include on-board Flash
 such as the RP2354A and RP2354B.
 
-The crate provides high-level drivers for the RP2350's internal peripherals,
+The crate provides high-level drivers for the RP235x's internal peripherals,
 such as the SPI Controller and the I²C Controller. It doesn't know anything
 about how your particular board is wired up (such as what each IO pin of the
 RP2350 is connected to).
@@ -138,7 +138,10 @@ There are examples in this crate to show how to use various peripherals
 particular board.
 
 This HAL fully supports the RP2350A, and has partial support for the extra
-pins on the RP2350B.
+pins on the RP2350B. The versions with on-board flash (like the RP2354A)
+are programmatically exactly the same as the ones without flash - the flash
+is in-package, but electrically connected just like an external QSPI flash
+chip - and so no additional support is required.
 
 ### [rp235x-hal-examples] - Examples for using [rp235x-hal]
 
@@ -181,17 +184,17 @@ because there were so many of them.
 [rp-binary-info]: https://github.com/rp-rs/rp-hal/tree/main/rp-binary-info
 [rp-hal-common]: https://github.com/rp-rs/rp-hal/tree/main/rp-hal-common
 [Raspberry Pi RP2040]: https://www.raspberrypi.org/products/rp2040/
-[Raspberry Pi RP2350]: https://www.raspberrypi.org/products/rp2350/
+[Raspberry Pi RP235x]: https://www.raspberrypi.org/products/rp2350/
 [BSPs]: https://github.com/rp-rs/rp-hal-boards/
 
 <!-- PROGRAMMING -->
 ## Programming
 
-Rust generates standard Arm ELF files, which you can load onto your Raspberry Pi
-Silicon device with your favourite Arm flashing/debugging tool. In addition, the
-RP2040 contains a ROM bootloader which appears as a Mass Storage Device over USB
-that accepts UF2 format images. You can use picotool to flash your device over
-USB, or convert the Arm ELF file to a UF2 format image.
+Rust generates standard Arm ELF files, which you can load onto your Raspberry
+Pi microcontroller device with your favourite Arm flashing/debugging tool. In
+addition, the RP2040 contains a ROM bootloader which appears as a Mass Storage
+Device over USB that accepts UF2 format images. You can use picotool to flash
+your device over USB, or convert the Arm ELF file to a UF2 format image.
 
 The RP2040 contains two Cortex-M0+ processors, which execute Thumb-2 encoded
 Armv6-M instructions. There are no operating-specific features in the binaries
@@ -212,7 +215,7 @@ Each core in the RP2350 can optionally be swapped out at run-time for a RISC-V
 Hazard3 processor core. Any Rust code for the RP2350 in RISC-V mode should be
 compiled with the target *`riscv32imac-unknown-none-elf`*.
 
-More details can be found in the [RP2040 Project Template] and the [RP2350
+More details can be found in the [RP2040 Project Template] and the [RP235x
 Project Template].
 
 ### Linker flags
@@ -231,7 +234,7 @@ More detailed information on how the linker flags work can be found in
 [the `cortex-m-rt` docs](https://docs.rs/cortex-m-rt/latest/cortex_m_rt/).
 
 In most cases, it should be sufficient to use the example files from the
-[RP2040 Project Template] or [RP2350 Project Template].
+[RP2040 Project Template] or [RP235x Project Template].
 
 ### Loading over USB with picotool
 
@@ -322,7 +325,7 @@ connected to the RP2040.
 cargo run --release --example pwm_blink
 ```
 [RP2040 Project Template]: https://github.com/rp-rs/rp2040-project-template
-[RP2350 Project Template]: https://github.com/rp-rs/rp235x-project-template
+[RP235x Project Template]: https://github.com/rp-rs/rp235x-project-template
 
 <!-- ROADMAP -->
 ## Roadmap

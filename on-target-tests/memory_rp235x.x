@@ -1,6 +1,6 @@
 MEMORY {
     /*
-     * The RP2350 has either external or internal flash.
+     * The RP235x has either external or internal flash.
      *
      * 2 MiB is a safe default here, although a Pico 2 has 4 MiB.
      */

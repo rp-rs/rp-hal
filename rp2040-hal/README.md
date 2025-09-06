@@ -8,7 +8,7 @@
    <h3 align="center">rp-hal</h3>
 
   <p align="center">
-    High-level Rust drivers for the Raspberry Silicon RP2040 Microcontroller
+    High-level Rust drivers for the Raspberry Pi RP2040 Microcontroller
     <br />
     <a href="https://docs.rs/rp2040-hal"><strong>Explore the API docs »</strong></a>
     <br />
@@ -41,7 +41,7 @@
 ## Introduction
 
 This is the `rp2040-hal` package - a library crate of high-level Rust drivers
-for the Raspberry Silicon RP2040 microcontroller, along with a collection of
+for the Raspberry Pi RP2040 microcontroller, along with a collection of
 non-board specific example programs for you to study. You should use this crate
 in your application if you want to write code for the RP2040 microcontroller.
 The *HAL* in the name standards for *Hardware Abstraction Layer*, and comes from
