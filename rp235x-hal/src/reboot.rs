@@ -69,7 +69,7 @@ pub fn reboot(kind: RebootKind, arch: RebootArch) -> ! {
             if msd_disabled {
                 flags |= 1;
             }
-            crate::rom_data::reboot(0x0002 | options, 500, 0, flags);
+            crate::rom_data::reboot(0x0002 | options, 500, flags, 0);
         }
         RebootKind::Ram { start_addr, size } => {
             crate::rom_data::reboot(0x0003 | options, 500, start_addr as u32, size as u32);
