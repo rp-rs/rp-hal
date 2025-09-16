@@ -43,6 +43,25 @@ macro_rules! int {
     }};
 }
 
+/// Equivalent to the pico-sdk bi_2pins_with_func(p0, p1, func)
+#[macro_export]
+macro_rules! pins_with_function {
+    ($pin_0:expr, $pin_1:expr, $func:expr) => {{
+        static ENTRY: $crate::PinsWithFunctionEntry = $crate::PinsWithFunctionEntry::new($pin_0, $pin_1, $func);
+        ENTRY.addr()
+    }};
+}
+
+/// Equivalent to the pico-sdk bi_1pin_with_name(p0, name)
+#[macro_export]
+macro_rules! pin_with_name {
+    ($pin:expr, $name:expr) => {{
+        static ENTRY: $crate::PinWithNameEntry = $crate::PinWithNameEntry::new($pin, $name);
+        ENTRY.addr()
+    }};
+}
+
+
 /// Generate a static item containing the given pointer, and return its
 /// [`EntryAddr`](super::EntryAddr).
 ///
