@@ -22,19 +22,16 @@ use crate::{
 /// Instant type used by the Timer & Alarm methods.
 pub type Instant = TimerInstantU64<1_000_000>;
 
-static ALARMS: AtomicU8 = AtomicU8::new(0x0F);
-fn take_alarm(mask: u8) -> bool {
-    critical_section::with(|_| {
-        let alarms = ALARMS.load(Ordering::Relaxed);
-        ALARMS.store(alarms & !mask, Ordering::Relaxed);
-        (alarms & mask) != 0
-    })
+static ALARMS_TIMER0: AtomicU8 = AtomicU8::new(0x00);
+static ALARMS_TIMER1: AtomicU8 = AtomicU8::new(0x00);
+
+fn take_alarm(mask: u8, alarms: &'static AtomicU8) -> bool {
+    let current_alarms = alarms.fetch_or(mask, Ordering::Relaxed);
+    (current_alarms & mask) == 0
 }
-fn release_alarm(mask: u8) {
-    critical_section::with(|_| {
-        let alarms = ALARMS.load(Ordering::Relaxed);
-        ALARMS.store(alarms | mask, Ordering::Relaxed);
-    });
+
+fn release_alarm(mask: u8, alarms: &'static AtomicU8) {
+    alarms.fetch_and(!mask, Ordering::Relaxed);
 }
 
 /// Represents Timer0
@@ -64,6 +61,15 @@ pub trait TimerDevice: Sealed + Clone + Copy + 'static {
             unsafe { &*pac::TIMER0::ptr() }
         } else {
             unsafe { &*pac::TIMER1::ptr() }
+        }
+    }
+
+    /// Get the static AtomicU8 for managing alarms.
+    fn get_alarms_tracker() -> &'static AtomicU8 {
+        if Self::ID == 0 {
+            &ALARMS_TIMER0
+        } else {
+            &ALARMS_TIMER1
         }
     }
 }
@@ -168,22 +174,22 @@ where
     }
     /// Retrieve a reference to alarm 0. Will only return a value the first time this is called
     pub fn alarm_0(&mut self) -> Option<Alarm0<D>> {
-        take_alarm(1 << 0).then_some(Alarm0(*self))
+        take_alarm(1 << 0, <D>::get_alarms_tracker()).then_some(Alarm0(*self))
     }
 
     /// Retrieve a reference to alarm 1. Will only return a value the first time this is called
     pub fn alarm_1(&mut self) -> Option<Alarm1<D>> {
-        take_alarm(1 << 1).then_some(Alarm1(*self))
+        take_alarm(1 << 1, <D>::get_alarms_tracker()).then_some(Alarm1(*self))
     }
 
     /// Retrieve a reference to alarm 2. Will only return a value the first time this is called
     pub fn alarm_2(&mut self) -> Option<Alarm2<D>> {
-        take_alarm(1 << 2).then_some(Alarm2(*self))
+        take_alarm(1 << 2, <D>::get_alarms_tracker()).then_some(Alarm2(*self))
     }
 
     /// Retrieve a reference to alarm 3. Will only return a value the first time this is called
     pub fn alarm_3(&mut self) -> Option<Alarm3<D>> {
-        take_alarm(1 << 3).then_some(Alarm3(*self))
+        take_alarm(1 << 3, <D>::get_alarms_tracker()).then_some(Alarm3(*self))
     }
 
     /// Pauses execution for at minimum `us` microseconds.
@@ -549,7 +555,7 @@ macro_rules! impl_alarm {
         {
             fn drop(&mut self) {
                 self.disable_interrupt();
-                release_alarm($armed_bit_mask)
+                release_alarm($armed_bit_mask, D::get_alarms_tracker());
             }
         }
     };
