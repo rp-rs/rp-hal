@@ -59,10 +59,18 @@ pub enum Error {
     Unresponsive,
 }
 
+#[cfg(all(target_arch = "arm", target_os = "none"))]
+fn install_stack_guard(stack_limit: *mut usize) {
+    // Cortex-M33 has dedicated stack checking functionality via msplim
+    unsafe {
+        cortex_m::register::msplim::write(stack_limit as u32);
+    }
+}
+
+#[cfg(not(all(target_arch = "arm", target_os = "none")))]
 #[inline(always)]
 fn install_stack_guard(_stack_limit: *mut usize) {
-    // TBD Cortex-M33 MPU stack guard stuff.
-    // See the RP2040 code.
+    // TBD riscv stack guard
 }
 
 #[inline(always)]
