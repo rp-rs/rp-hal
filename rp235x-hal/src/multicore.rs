@@ -63,7 +63,7 @@ pub enum Error {
 fn install_stack_guard(stack_limit: *mut usize) {
     // Cortex-M33 has dedicated stack checking functionality via msplim
     unsafe {
-        cortex_m::register::msplim::write(stack_limit.addr() as u32);
+        cortex_m::register::msplim::write(stack_limit as u32);
     }
 }
 
