@@ -25,7 +25,7 @@ embedded-dma = "0.2.0"
 embedded-hal = "1.0.0"
 embedded-hal-async = "1.0.0"
 embedded-hal-nb = "1.0.0"
-embedded-io = "0.6.1"
+embedded-io = "0.7.1"
 embedded_hal_0_2 = {package = "embedded-hal", version = "0.2.5", features = ["unproven"]}
 frunk = {version = "0.4.1", default-features = false}
 fugit = "0.3.6"
