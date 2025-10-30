@@ -466,11 +466,20 @@ impl<D: UartDevice, P: ValidUartPinout<D>> fmt::Write for UartPeripheral<Enabled
     }
 }
 
+impl core::fmt::Display for ReadErrorType {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl core::error::Error for ReadErrorType {}
+
 impl embedded_io::Error for ReadErrorType {
     fn kind(&self) -> embedded_io::ErrorKind {
         embedded_io::ErrorKind::Other
     }
 }
+
 impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::ErrorType
     for UartPeripheral<Enabled, D, P>
 {

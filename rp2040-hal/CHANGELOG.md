@@ -13,10 +13,14 @@ The Minimum-Supported Rust Version (MSRV) for the next release is 1.81
 
 - Bump MSRV to 1.81 because the crate `home` (an indirect build-depencency) requires it.
 
+### Added
+- Implement core::fmt::Display and core::err:Error for ReadErrorType per the requirements of embedded-io 0.7.1
+
 ### Changed
 
 - Update to pio 0.3.0
 - Update rand\_core to 0.9.3
+- Update embedded-io to 0.7.1
 
 ## [0.11.0] - 2024-12-22
 
