@@ -8,7 +8,7 @@ keywords = ["embedded", "hal", "raspberry-pi", "rp2040", "embedded-hal"]
 license = "MIT OR Apache-2.0"
 name = "rp2040-hal-examples"
 repository = "https://github.com/rp-rs/rp-hal"
-rust-version = "1.81"
+rust-version = "1.82"
 version = "0.1.0"
 
 [dependencies]

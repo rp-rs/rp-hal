@@ -6,7 +6,7 @@ homepage = "https://github.com/rp-rs/rp-hal"
 license = "MIT OR Apache-2.0"
 name = "rp-hal-common"
 repository = "https://github.com/rp-rs/rp-hal"
-rust-version = "1.81"
+rust-version = "1.82"
 version = "0.1.0"
 
 # DO NOT LIST ANY PAC CRATES OR ARCHITECTURE CRATES HERE
