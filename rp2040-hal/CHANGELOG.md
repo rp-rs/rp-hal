@@ -9,9 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### MSRV
 
-The Minimum-Supported Rust Version (MSRV) for the next release is 1.81
+The Minimum-Supported Rust Version (MSRV) for the next release is 1.82
 
-- Bump MSRV to 1.81 because the crate `home` (an indirect build-depencency) requires it.
+- Bump MSRV to 1.82 because the crate `indexmap` (an indirect build-dependency) requires it.
 
 ### Added
 - Implement core::fmt::Display and core::err:Error for ReadErrorType per the requirements of embedded-io 0.7.1
