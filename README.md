@@ -264,9 +264,6 @@ cd rp2040-hal-examples  # Or: cd rp235x-hal-examples
 cargo run --release --bin pwm_blink
 ```
 
-Note that some examples require additional feature flags enabled:
-e.g., `--features "critical-section-impl,rt,defmt"`.
-
 If you want to create a UF2 file, which is loaded by copying it over to the
 RPI-RP2 mass storage device, use the `picotool uf2 convert` command on your
 compiled program with the `-t elf` argument.
