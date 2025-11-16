@@ -260,11 +260,12 @@ specified 'runner'. As the 'runner' is picotool, it will flash your compiled
 binary over USB.
 
 ```sh
-cargo run --release --features "critical-section-impl,rt,defmt" --example pwm_blink
+cd rp2040-hal-examples  # Or: cd rp235x-hal-examples
+cargo run --release --bin pwm_blink
 ```
 
-(The `pwm_blink` example doesn't need all these feature flags. They are listed here
-so you can use the same command for all examples.)
+Note that some examples require additional feature flags enabled:
+e.g., `--features "critical-section-impl,rt,defmt"`.
 
 If you want to create a UF2 file, which is loaded by copying it over to the
 RPI-RP2 mass storage device, use the `picotool uf2 convert` command on your
@@ -322,7 +323,8 @@ RP2040 via the first probe it finds, and install your firmware into the Flash
 connected to the RP2040.
 
 ```sh
-cargo run --release --example pwm_blink
+cd rp2040-hal-examples  # Or: cd rp235x-hal-examples
+cargo run --release --bin pwm_blink
 ```
 [RP2040 Project Template]: https://github.com/rp-rs/rp2040-project-template
 [RP235x Project Template]: https://github.com/rp-rs/rp235x-project-template
