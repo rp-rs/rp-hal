@@ -25,7 +25,6 @@ use hal::pac;
 
 // Some traits we need
 use embedded_hal::digital::OutputPin;
-use hal::Clock;
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
@@ -39,7 +38,7 @@ pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
 /// if your board has a different frequency
 const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
-use dht_sensor::{dht11, DhtReading};
+use dht_sensor::dht11;
 
 /// Entry point to our bare-metal application.
 ///
@@ -52,7 +51,6 @@ use dht_sensor::{dht11, DhtReading};
 fn main() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
-    let core = pac::CorePeripherals::take().unwrap();
 
     // Set up the watchdog driver - needed by the clock setup code
     let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
@@ -80,14 +78,14 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+    let mut timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
 
     // Use GPIO 28 as an InOutPin
     let mut pin = hal::gpio::InOutPin::new(pins.gpio28);
     let _ = pin.set_high();
 
     // Perform a sensor reading
-    let _measurement = dht11::Reading::read(&mut delay, &mut pin);
+    let _measurement = dht11::blocking::read(&mut timer, &mut pin);
 
     // In this case, we just ignore the result. A real application
     // would do something with the measurement.

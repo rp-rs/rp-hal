@@ -17,7 +17,7 @@ use panic_halt as _;
 use rp2040_hal as hal;
 
 // Some traits we need
-use embedded_hal_0_2::blocking::i2c::Write;
+use embedded_hal::i2c::I2c;
 use hal::fugit::RateExtU32;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
