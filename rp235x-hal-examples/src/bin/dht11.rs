@@ -31,7 +31,7 @@ pub static IMAGE_DEF: hal::block::ImageDef = hal::block::ImageDef::secure_exe();
 /// Adjust if your board has a different frequency
 const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
-use dht_sensor::{dht11, DhtReading};
+use dht_sensor::dht11;
 
 /// Entry point to our bare-metal application.
 ///
@@ -71,14 +71,14 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    let mut delay = hal::Timer::new_timer0(pac.TIMER0, &mut pac.RESETS, &clocks);
+    let mut timer = hal::Timer::new_timer0(pac.TIMER0, &mut pac.RESETS, &clocks);
 
     // Use GPIO 28 as an InOutPin
     let mut pin = hal::gpio::InOutPin::new(pins.gpio28);
     let _ = pin.set_high();
 
     // Perform a sensor reading
-    let _measurement = dht11::Reading::read(&mut delay, &mut pin);
+    let _measurement = dht11::blocking::read(&mut timer, &mut pin);
 
     // In this case, we just ignore the result. A real application
     // would do something with the measurement.

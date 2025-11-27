@@ -9,7 +9,7 @@
 #![no_std]
 #![no_main]
 
-use embedded_hal_0_2::digital::v2::ToggleableOutputPin;
+use embedded_hal::digital::StatefulOutputPin;
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;

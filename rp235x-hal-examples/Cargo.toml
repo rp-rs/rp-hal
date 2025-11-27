@@ -18,15 +18,16 @@ cortex-m-rtic = "1.1.4"
 critical-section = {version = "1.2.0"}
 defmt = "0.3"
 defmt-rtt = "0.4.0"
-dht-sensor = "0.2.1"
+dht-sensor = { version = "0.2.1", git = "https://github.com/michaelbeaumont/dht-sensor", rev = "10319bdeae9ace3bb0fc79a15da2869c5bf50f52" }
 embedded-alloc = "0.5.1"
 embedded-hal = "1.0.0"
 embedded-hal-async = "1.0.0"
+embedded-hal-bus = {version = "0.3.0", features = ["defmt-03"]}
 embedded-io = "0.7.1"
 embedded_hal_0_2 = {package = "embedded-hal", version = "0.2.5", features = ["unproven"]}
 fugit = "0.3.6"
 futures = {version = "0.3.30", default-features = false, features = ["async-await"]}
-hd44780-driver = "0.4.0"
+hd44780-driver = { version = "0.4.0", git = "https://github.com/JohnDoneth/hd44780-driver", rev = "9009f2c24771ba0a20f8f7534471c9869188f76c" }
 heapless = "0.8.0"
 nb = "1.0"
 panic-halt = "0.2.0"

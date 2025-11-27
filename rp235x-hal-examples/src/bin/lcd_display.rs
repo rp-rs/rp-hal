@@ -20,7 +20,9 @@ use panic_halt as _;
 use rp235x_hal as hal;
 
 // Our LCD driver
-use hd44780_driver as hd44780;
+use hd44780_driver::{
+    self as hd44780, bus::FourBitBusPins, memory_map::MemoryMap1602, setup::DisplayOptions4Bit,
+};
 
 /// Tell the Boot ROM about our application
 #[link_section = ".start_block"]
@@ -74,16 +76,15 @@ fn main() -> ! {
     );
 
     // Create the LCD driver from some GPIO pins
-    let mut lcd = hd44780::HD44780::new_4bit(
-        pins.gpio16.into_push_pull_output(), // Register Select
-        pins.gpio17.into_push_pull_output(), // Enable
-        pins.gpio18.into_push_pull_output(), // d4
-        pins.gpio19.into_push_pull_output(), // d5
-        pins.gpio20.into_push_pull_output(), // d6
-        pins.gpio21.into_push_pull_output(), // d7
-        &mut delay,
-    )
-    .unwrap();
+    let options = DisplayOptions4Bit::new(MemoryMap1602::new()).with_pins(FourBitBusPins {
+        rs: pins.gpio16.into_push_pull_output(), // Register Select
+        en: pins.gpio17.into_push_pull_output(), // Enable
+        d4: pins.gpio18.into_push_pull_output(), // d4
+        d5: pins.gpio19.into_push_pull_output(), // d5
+        d6: pins.gpio20.into_push_pull_output(), // d6
+        d7: pins.gpio21.into_push_pull_output(), // d7
+    });
+    let mut lcd = hd44780::HD44780::new(options, &mut delay).unwrap();
 
     // Clear the screen
     lcd.reset(&mut delay).unwrap();
