@@ -27,7 +27,7 @@ embedded-io = "0.7.1"
 embedded_hal_0_2 = {package = "embedded-hal", version = "0.2.5", features = ["unproven"]}
 fugit = "0.3.6"
 futures = {version = "0.3.30", default-features = false, features = ["async-await"]}
-hd44780-driver = "0.4.0"
+hd44780-driver = {version = "0.4.0", git = "https://github.com/JohnDoneth/hd44780-driver", rev = "9009f2c24771ba0a20f8f7534471c9869188f76c"}
 nb = "1.0"
 panic-halt = "0.2.0"
 panic-probe = {version = "0.3.1", features = ["print-defmt"]}

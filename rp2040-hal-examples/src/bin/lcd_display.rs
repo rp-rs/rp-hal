@@ -20,10 +20,9 @@ use panic_halt as _;
 use rp2040_hal as hal;
 
 // Our LCD driver
-use hd44780_driver as hd44780;
-
-// Some traits we need
-use rp2040_hal::clocks::Clock;
+use hd44780_driver::{
+    self as hd44780, bus::FourBitBusPins, memory_map::MemoryMap1602, setup::DisplayOptions4Bit,
+};
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
@@ -52,7 +51,6 @@ const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 fn main() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
-    let core = pac::CorePeripherals::take().unwrap();
 
     // Set up the watchdog driver - needed by the clock setup code
     let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
@@ -69,9 +67,7 @@ fn main() -> ! {
     )
     .unwrap();
 
-    // The delay object lets us wait for specified amounts of time (in
-    // milliseconds)
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+    let mut timer = rp2040_hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
 
     // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);
@@ -85,29 +81,28 @@ fn main() -> ! {
     );
 
     // Create the LCD driver from some GPIO pins
-    let mut lcd = hd44780::HD44780::new_4bit(
-        pins.gpio16.into_push_pull_output(), // Register Select
-        pins.gpio17.into_push_pull_output(), // Enable
-        pins.gpio18.into_push_pull_output(), // d4
-        pins.gpio19.into_push_pull_output(), // d5
-        pins.gpio20.into_push_pull_output(), // d6
-        pins.gpio21.into_push_pull_output(), // d7
-        &mut delay,
-    )
-    .unwrap();
+    let options = DisplayOptions4Bit::new(MemoryMap1602::new()).with_pins(FourBitBusPins {
+        rs: pins.gpio16.into_push_pull_output(), // Register Select
+        en: pins.gpio17.into_push_pull_output(), // Enable
+        d4: pins.gpio18.into_push_pull_output(), // d4
+        d5: pins.gpio19.into_push_pull_output(), // d5
+        d6: pins.gpio20.into_push_pull_output(), // d6
+        d7: pins.gpio21.into_push_pull_output(), // d7
+    });
+    let mut lcd = hd44780::HD44780::new(options, &mut timer).unwrap();
 
     // Clear the screen
-    lcd.reset(&mut delay).unwrap();
-    lcd.clear(&mut delay).unwrap();
+    lcd.reset(&mut timer).unwrap();
+    lcd.clear(&mut timer).unwrap();
 
     // Write to the top line
-    lcd.write_str("rp-hal on", &mut delay).unwrap();
+    lcd.write_str("rp-hal on", &mut timer).unwrap();
 
     // Move the cursor
-    lcd.set_cursor_pos(40, &mut delay).unwrap();
+    lcd.set_cursor_pos(40, &mut timer).unwrap();
 
     // Write more more text
-    lcd.write_str("HD44780!", &mut delay).unwrap();
+    lcd.write_str("HD44780!", &mut timer).unwrap();
 
     // Do nothing - we're finished
     loop {
