@@ -165,8 +165,6 @@ mod tests {
 
     #[test]
     fn read_adc() {
-        use embedded_hal_0_2::adc::OneShot;
-
         // Safety: Test cases do not run in parallel
         let mut pac = unsafe { pac::Peripherals::steal() };
         let mut adc = hal::Adc::new(pac.ADC, &mut pac.RESETS);
