@@ -173,14 +173,17 @@ mod app {
         local = [adc_fifo, counter: usize = 0]
     )]
     fn adc_irq_fifo(mut c: adc_irq_fifo::Context) {
-        let sample = c.local.adc_fifo.as_mut().unwrap().read();
-        let i = *c.local.counter;
-        c.shared.buf.lock(|buf| buf[i] = sample);
-        *c.local.counter += 1;
+        // We are silently skipping errors. Production code should
+        // do better error handling.
+        if let Ok(sample) = c.local.adc_fifo.as_mut().unwrap().read() {
+            let i = *c.local.counter;
+            c.shared.buf.lock(|buf| buf[i] = sample);
+            *c.local.counter += 1;
 
-        if *c.local.counter == SAMPLE_COUNT {
-            c.local.adc_fifo.take().unwrap().stop();
-            c.shared.done.lock(|done| *done = true);
+            if *c.local.counter == SAMPLE_COUNT {
+                c.local.adc_fifo.take().unwrap().stop();
+                c.shared.done.lock(|done| *done = true);
+            }
         }
     }
 }

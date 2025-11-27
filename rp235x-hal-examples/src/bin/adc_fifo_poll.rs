@@ -146,9 +146,15 @@ fn main() -> ! {
             // we tried to read samples more quickly than they were pushed into the fifo
             uart.write_full_blocking(b"FIFO underrun!\r\n");
         }
+        if temp_result.is_err() {
+            uart.write_full_blocking(b"Conversion error on temperature!\r\n");
+        }
+        if pin_result.is_err() {
+            uart.write_full_blocking(b"Conversion error on pin!\r\n");
+        }
 
-        temp_samples[i] = temp_result;
-        pin_samples[i] = pin_result;
+        temp_samples[i] = temp_result.unwrap_or_default();
+        pin_samples[i] = pin_result.unwrap_or_default();
 
         i += 1;
 

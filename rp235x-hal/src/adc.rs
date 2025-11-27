@@ -169,7 +169,6 @@
 //! }
 //! ```
 
-use core::convert::Infallible;
 use core::marker::PhantomData;
 // Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
 use embedded_hal_0_2::adc::{Channel, OneShot};
@@ -304,6 +303,14 @@ impl Channel<Adc> for TempSense {
     }
 }
 
+/// ADC error.
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum Error {
+    /// Error converting value.
+    ConversionFailed,
+}
+
 /// Analog to Digital Convertor (ADC).
 ///
 /// Represents an ADC within the RP2350. Each ADC has multiple channels, and each
@@ -345,8 +352,14 @@ impl Adc {
     /// previous one.
     ///
     /// It also doesn't trigger a new conversion.
-    pub fn read_single(&self) -> u16 {
-        self.device.result().read().result().bits()
+    pub fn read_single(&self) -> Result<u16, Error> {
+        let result = self.device.result().read().result().bits();
+        let is_err = self.device.cs().read().err().bit_is_set();
+        if is_err {
+            Err(Error::ConversionFailed)
+        } else {
+            Ok(result)
+        }
     }
 
     /// Enable temperature sensor, returns a channel to use.
@@ -411,7 +424,7 @@ impl Adc {
         self.device.cs().modify(|_, w| w.start_many().clear_bit());
     }
 
-    fn inner_read(&mut self, chan: u8) -> u16 {
+    fn inner_read(&mut self, chan: u8) -> Result<u16, Error> {
         self.wait_ready();
 
         self.device
@@ -443,6 +456,15 @@ impl Adc {
     pub fn is_ready(&self) -> bool {
         self.device.cs().read().ready().bit_is_set()
     }
+
+    /// Perform a blocking conversion on the specified channel.
+    pub fn read<SRC>(&mut self, pin: &mut SRC) -> Result<u16, Error>
+    where
+        SRC: AdcChannel,
+    {
+        let chan = pin.channel();
+        self.inner_read(chan)
+    }
 }
 
 // Implementation for TempSense and type-checked pins
@@ -451,12 +473,12 @@ where
     WORD: From<u16>,
     SRC: Channel<Adc, ID = u8>,
 {
-    type Error = Infallible;
+    type Error = Error;
 
     fn read(&mut self, _pin: &mut SRC) -> nb::Result<WORD, Self::Error> {
         let chan = SRC::channel();
 
-        Ok(self.inner_read(chan).into())
+        Ok(self.inner_read(chan)?.into())
     }
 }
 
@@ -469,10 +491,10 @@ where
     DynPinId: ValidFunction<F>,
     AdcPin<Pin<DynPinId, F, M>>: Channel<Adc, ID = ()>,
 {
-    type Error = Infallible;
+    type Error = Error;
 
     fn read(&mut self, pin: &mut AdcPin<Pin<DynPinId, F, M>>) -> nb::Result<WORD, Self::Error> {
-        Ok(self.inner_read(pin.channel()).into())
+        Ok(self.inner_read(pin.channel())?.into())
     }
 }
 
@@ -610,9 +632,12 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     ///
     /// To stop capturing, call [`AdcFifo::stop`].
     ///
-    /// Note: if you plan to use the FIFO for DMA transfers, [`AdcFifoBuilder::prepare`] instead.
+    /// Note: if you plan to use the FIFO for DMA transfers, [`AdcFifoBuilder::start_paused`] instead.
     pub fn start(self) -> AdcFifo<'a, Word> {
-        self.adc.device.fcs().modify(|_, w| w.en().set_bit());
+        self.adc
+            .device
+            .fcs()
+            .modify(|_, w| w.en().set_bit().err().set_bit());
         self.adc.device.cs().modify(|_, w| w.start_many().set_bit());
         AdcFifo {
             adc: self.adc,
@@ -626,7 +651,10 @@ impl<'a, Word> AdcFifoBuilder<'a, Word> {
     ///
     /// Use [`AdcFifo::resume`] to start conversion.
     pub fn start_paused(self) -> AdcFifo<'a, Word> {
-        self.adc.device.fcs().modify(|_, w| w.en().set_bit());
+        self.adc
+            .device
+            .fcs()
+            .modify(|_, w| w.en().set_bit().err().set_bit());
         self.adc
             .device
             .cs()
@@ -720,7 +748,7 @@ impl<'a, Word> AdcFifo<'a, Word> {
     ///
     /// Note that when round-robin sampling is used, there is no way
     /// to tell from which channel this sample came.
-    pub fn read_single(&mut self) -> u16 {
+    pub fn read_single(&mut self) -> Result<u16, Error> {
         self.adc.read_single()
     }
 
@@ -766,7 +794,7 @@ impl<'a, Word> AdcFifo<'a, Word> {
     /// This only makes sense to use while the FIFO is paused (see [`AdcFifo::pause`]).
     pub fn clear(&mut self) {
         while self.len() > 0 {
-            self.read_from_fifo();
+            let _ = self.read_from_fifo();
         }
     }
 
@@ -812,8 +840,13 @@ impl<'a, Word> AdcFifo<'a, Word> {
         while self.adc.device.intr().read().fifo().bit_is_clear() {}
     }
 
-    fn read_from_fifo(&mut self) -> u16 {
-        self.adc.device.fifo().read().val().bits()
+    fn read_from_fifo(&mut self) -> Result<u16, Error> {
+        let read = self.adc.device.fifo().read();
+        if read.err().bit_is_set() {
+            Err(Error::ConversionFailed)
+        } else {
+            Ok(read.val().bits())
+        }
     }
 
     /// Returns a read-target for initiating DMA transfers
@@ -841,7 +874,7 @@ impl<'a, Word> AdcFifo<'a, Word> {
 
 impl AdcFifo<'_, u16> {
     /// Read a single value from the fifo (u16 version, not shifted)
-    pub fn read(&mut self) -> u16 {
+    pub fn read(&mut self) -> Result<u16, Error> {
         self.read_from_fifo()
     }
 }
@@ -850,8 +883,8 @@ impl AdcFifo<'_, u8> {
     /// Read a single value from the fifo (u8 version, shifted)
     ///
     /// Also see [`AdcFifoBuilder::shift_8bit`].
-    pub fn read(&mut self) -> u8 {
-        self.read_from_fifo() as u8
+    pub fn read(&mut self) -> Result<u8, Error> {
+        Ok(self.read_from_fifo()? as u8)
     }
 }
 
