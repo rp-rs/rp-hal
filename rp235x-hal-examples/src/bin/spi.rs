@@ -12,6 +12,8 @@
 #![no_std]
 #![no_main]
 
+use embedded_hal::spi::SpiDevice;
+use embedded_hal_bus::spi::ExclusiveDevice;
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
 use panic_halt as _;
@@ -20,7 +22,6 @@ use panic_halt as _;
 use rp235x_hal as hal;
 
 // Some things we need
-use embedded_hal_0_2::prelude::*;
 use hal::clocks::Clock;
 use hal::fugit::RateExtU32;
 
@@ -60,6 +61,8 @@ fn main() -> ! {
     )
     .unwrap();
 
+    let mut timer = hal::Timer::new_timer0(pac.TIMER0, &mut pac.RESETS, &clocks);
+
     // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);
 
@@ -78,34 +81,25 @@ fn main() -> ! {
     let spi_bus = hal::spi::Spi::<_, _, _, 8>::new(pac.SPI0, (spi_mosi, spi_miso, spi_sclk));
 
     // Exchange the uninitialised SPI driver for an initialised one
-    let mut spi_bus = spi_bus.init(
+    let spi_bus = spi_bus.init(
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
         16.MHz(),
         embedded_hal::spi::MODE_0,
     );
 
+    let spi_cs = pins.gpio8.into_function::<hal::gpio::FunctionSioOutput>();
+    let mut spi = ExclusiveDevice::new(spi_bus, spi_cs, &mut timer).unwrap();
+
     // Write out 0, ignore return value
-    if spi_bus.write(&[0]).is_ok() {
+    if spi.write(&[0]).is_ok() {
         // SPI write was successful
     };
-
-    // write 50, then check the return
-    let send_success = spi_bus.send(50);
-    match send_success {
-        Ok(_) => {
-            // We succeeded, check the read value
-            if let Ok(_x) = spi_bus.read() {
-                // We got back `x` in exchange for the 0x50 we sent.
-            };
-        }
-        Err(_) => todo!(),
-    }
 
     // Do a read+write at the same time. Data in `buffer` will be replaced with
     // the data read from the SPI device.
     let mut buffer: [u8; 4] = [1, 2, 3, 4];
-    let transfer_success = spi_bus.transfer(&mut buffer);
+    let transfer_success = spi.transfer_in_place(&mut buffer);
     #[allow(clippy::single_match)]
     match transfer_success {
         Ok(_) => {}  // Handle success

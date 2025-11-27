@@ -17,7 +17,7 @@ use panic_halt as _;
 use rp235x_hal as hal;
 
 // Some things we need
-use embedded_hal_0_2::blocking::i2c::Write;
+use embedded_hal::i2c::I2c;
 use hal::fugit::RateExtU32;
 use hal::gpio::{FunctionI2C, Pin};
 
