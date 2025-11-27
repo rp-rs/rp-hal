@@ -14,6 +14,7 @@ The Minimum-Supported Rust Version (MSRV) for the next release is 1.82
 - Bump MSRV to 1.82 because the crate `indexmap` (an indirect build-dependency) requires it.
 
 ### Added
+
 - Implement core::fmt::Display and core::err:Error for ReadErrorType per the requirements of embedded-io 0.7.1
 
 ### Changed
@@ -21,6 +22,7 @@ The Minimum-Supported Rust Version (MSRV) for the next release is 1.82
 - Update to pio 0.3.0
 - Update rand\_core to 0.9.3
 - Update embedded-io to 0.7.1
+- Breaking change: ADC now reports conversion errors - #740 @jannic
 
 ## [0.11.0] - 2024-12-22
 
