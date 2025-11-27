@@ -138,3 +138,17 @@ where
     type Sck = OptionTSome<Sck>;
     type Tx = OptionTSome<Tx>;
 }
+
+impl<Spi, Tx, Rx, Sck, Cs> ValidSpiPinout<Spi> for (Tx, Rx, Sck, Cs)
+where
+    Spi: SpiDevice,
+    Tx: ValidPinTx<Spi>,
+    Sck: ValidPinSck<Spi>,
+    Rx: ValidPinRx<Spi>,
+    Cs: ValidPinCs<Spi>,
+{
+    type Rx = OptionTSome<Rx>;
+    type Cs = OptionTSome<Cs>;
+    type Sck = OptionTSome<Sck>;
+    type Tx = OptionTSome<Tx>;
+}
