@@ -81,7 +81,7 @@
 //! loop {
 //!     if fifo.len() > 0 {
 //!         // Read one captured ADC sample from the FIFO:
-//!         let temperature_adc_counts: u16 = fifo.read();
+//!         let temperature_adc_counts: Result<u16, _> = fifo.read();
 //!     }
 //! }
 //! ```
@@ -164,7 +164,7 @@
 //! adc.free_running(&adc_pin_0);
 //! // Read the ADC counts from the ADC channel whenever necessary
 //! loop {
-//!     let pin_adc_counts: u16 = adc.read_single();
+//!     let pin_adc_counts: Result<u16, _> = adc.read_single();
 //!     // Do time critical stuff
 //! }
 //! ```
