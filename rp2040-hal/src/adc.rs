@@ -8,7 +8,6 @@
 
 //! ```no_run
 //! // Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
-//! use embedded_hal_0_2::adc::OneShot;
 //! use rp2040_hal::{adc::Adc, adc::AdcPin, gpio::Pins, pac, Sio};
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
@@ -25,7 +24,6 @@
 //!
 //! ```no_run
 //! // Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
-//! use embedded_hal_0_2::adc::OneShot;
 //! use rp2040_hal::{adc::Adc, gpio::Pins, pac, Sio};
 //! let mut peripherals = pac::Peripherals::take().unwrap();
 //! let sio = Sio::new(peripherals.SIO);
