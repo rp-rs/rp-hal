@@ -22,6 +22,7 @@ The Minimum-Supported Rust Version (MSRV) for the next release is 1.82
 - Update rand\_core to 0.9.3
 - Update embedded-io to 0.7.1
 - Fix handling of flags in `RebootKind::BootSel` reboot.
+- Breaking change: ADC now reports conversion errors - #740 @jannic
 
 ## [0.3.0] - 2025-03-02
 
