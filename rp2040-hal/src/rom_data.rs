@@ -224,7 +224,7 @@ rom_functions! {
     ///    * 0 To enable both interfaces (as per cold boot).
     ///    * 1 To disable the USB Mass Storage Interface.
     ///    * 2 to Disable the USB PICOBOOT Interface.
-    b"UB" fn reset_to_usb_boot(gpio_activity_pin_mask: u32, disable_interface_mask: u32) -> ();
+    b"UB" fn reset_to_usb_boot(gpio_activity_pin_mask: u32, disable_interface_mask: u32) -> !;
 
     /// Sets n bytes start at ptr to the value c and returns ptr
     b"MS" unsafe fn memset(ptr: *mut u8, c: u8, n: u32) -> *mut u8;

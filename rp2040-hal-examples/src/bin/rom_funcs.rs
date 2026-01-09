@@ -165,11 +165,6 @@ fn main() -> ! {
 
     // Reboot back into USB mode (no activity, both interfaces enabled)
     rp2040_hal::rom_data::reset_to_usb_boot(0, 0);
-
-    // In case the reboot fails
-    loop {
-        cortex_m::asm::wfi();
-    }
 }
 
 /// Calculate the number of systicks elapsed between two counter readings.
