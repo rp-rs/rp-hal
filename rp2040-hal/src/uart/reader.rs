@@ -23,7 +23,7 @@ pub struct ReadError<'err> {
 
 /// Possible types of read errors. See Chapter 4, Section 2 §8 - Table 436: "UARTDR Register"
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReadErrorType {
     /// Triggered when the FIFO (or shift-register) is overflowed.
     Overrun,
