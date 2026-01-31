@@ -124,6 +124,12 @@ PROVIDE(PLL_SYS_IRQ = DefaultIrqHandler);
 PROVIDE(PLL_USB_IRQ = DefaultIrqHandler);
 PROVIDE(POWMAN_IRQ_POW = DefaultIrqHandler);
 PROVIDE(POWMAN_IRQ_TIMER = DefaultIrqHandler);
+PROVIDE(SW0_IRQ = DefaultIrqHandler);
+PROVIDE(SW1_IRQ = DefaultIrqHandler);
+PROVIDE(SW2_IRQ = DefaultIrqHandler);
+PROVIDE(SW3_IRQ = DefaultIrqHandler);
+PROVIDE(SW4_IRQ = DefaultIrqHandler);
+PROVIDE(SW5_IRQ = DefaultIrqHandler);
 
 /* # Multi-processing hook function
    fn _mp_hook() -> bool;

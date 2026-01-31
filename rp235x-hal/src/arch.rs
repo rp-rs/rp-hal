@@ -495,6 +495,54 @@ mod inner {
                         POWMAN_IRQ_TIMER();
                     }
                 }
+                rp235x_pac::Interrupt::SW0_IRQ => {
+                    extern "Rust" {
+                        fn SW0_IRQ();
+                    }
+                    unsafe {
+                        SW0_IRQ();
+                    }
+                }
+                rp235x_pac::Interrupt::SW1_IRQ => {
+                    extern "Rust" {
+                        fn SW1_IRQ();
+                    }
+                    unsafe {
+                        SW1_IRQ();
+                    }
+                }
+                rp235x_pac::Interrupt::SW2_IRQ => {
+                    extern "Rust" {
+                        fn SW2_IRQ();
+                    }
+                    unsafe {
+                        SW2_IRQ();
+                    }
+                }
+                rp235x_pac::Interrupt::SW3_IRQ => {
+                    extern "Rust" {
+                        fn SW3_IRQ();
+                    }
+                    unsafe {
+                        SW3_IRQ();
+                    }
+                }
+                rp235x_pac::Interrupt::SW4_IRQ => {
+                    extern "Rust" {
+                        fn SW4_IRQ();
+                    }
+                    unsafe {
+                        SW4_IRQ();
+                    }
+                }
+                rp235x_pac::Interrupt::SW5_IRQ => {
+                    extern "Rust" {
+                        fn SW5_IRQ();
+                    }
+                    unsafe {
+                        SW5_IRQ();
+                    }
+                }
             }
         }
     }
