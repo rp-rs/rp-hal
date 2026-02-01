@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-02-01
+
 ### MSRV
 
 The Minimum-Supported Rust Version (MSRV) for the next release is 1.82
@@ -67,5 +69,6 @@ The Minimum-Supported Rust Version (MSRV) for the next release is 1.79
 This was the initial public release of rp235x-hal. The port from
 rp2040-hal was done by Jonathan Pallant (@thejpster).
 
-[Unreleased]: https://github.com/rp-rs/rp-hal/compare/rp235x-hal-0.3.0...HEAD
+[Unreleased]: https://github.com/rp-rs/rp-hal/compare/rp235x-hal-0.4.0...HEAD
+[0.4.0]: https://github.com/rp-rs/rp-hal/compare/rp235x-hal-0.3.0...rp235x-hal-0.4.0
 [0.3.0]: https://github.com/rp-rs/rp-hal/compare/rp235x-hal-0.2.0...rp235x-hal-0.3.0
