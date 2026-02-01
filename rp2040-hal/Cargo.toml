@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 name = "rp2040-hal"
 repository = "https://github.com/rp-rs/rp-hal"
 rust-version = "1.82"
-version = "0.11.0"
+version = "0.12.0"
 
 [package.metadata.docs.rs]
 features = ["rt", "rom-v2-intrinsics", "defmt", "rtic-monotonic"]
