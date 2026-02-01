@@ -88,7 +88,7 @@ binaries][picotool-releases] are available for Windows, Linux, and macOS.
 ```console
 $ cd rp2040-hal-examples
 $ cargo run --bin dormant_sleep
-   Compiling rp2040-hal v0.11.0 (/home/user/rp-hal/rp2040-hal)
+   Compiling rp2040-hal v0.12.0 (/home/user/rp-hal/rp2040-hal)
    Compiling rp2040-hal-examples v0.1.0 (/home/user/rp-hal/rp2040-hal-examples)
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.47s
      Running `picotool load --update --verify --execute -t elf target/thumbv6m-none-eabi/debug/dormant_sleep`

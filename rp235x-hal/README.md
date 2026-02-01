@@ -74,7 +74,7 @@ rp235x-hal = "*"
 Or to include this version specifically:
 
 ```toml
-rp235x-hal = "0.3.0"
+rp235x-hal = "0.4.0"
 ```
 
 To obtain a copy of the source code (e.g. if you want to propose a bug-fix or
