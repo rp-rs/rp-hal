@@ -32,8 +32,7 @@ nb = "1.0"
 panic-halt = "0.2.0"
 panic-probe = {version = "0.3.1", features = ["print-defmt"]}
 pio = "0.3.0"
-# We aren't using this, but embedded-hal-bus 0.2 unconditionally requires atomics.
-# Should be fixed in e-h-b 0.3 via https://github.com/rust-embedded/embedded-hal/pull/607
+# We aren't using portable-atomic directly in the examples, but some of our dependencies (like static_cell) require atomic CAS so this is needed.
 portable-atomic = {version = "1.7.0", features = ["critical-section"]}
 rp2040-boot2 = "0.3.0"
 rp2040-hal = {path = "../rp2040-hal", version = "0.12.0", features = ["binary-info", "critical-section-impl", "rt", "defmt"]}
