@@ -37,9 +37,6 @@ pio = "0.3.0"
 portable-atomic = {version = "1.7.0", features = ["critical-section"]}
 rp2040-boot2 = "0.3.0"
 rp2040-hal = {path = "../rp2040-hal", version = "0.12.0", features = ["binary-info", "critical-section-impl", "rt", "defmt"]}
-# The examples use features not yet available in rp-binary-info 0.1.0,
-# so the minimum version implied by the rp2040-hal 0.12.0 dependency is not sufficient.
-rp-binary-info = {path = "../rp-binary-info", version ="0.1.2"}
 static_cell = "2.1.0"
 
 [target.'cfg( target_arch = "arm" )'.dependencies]
