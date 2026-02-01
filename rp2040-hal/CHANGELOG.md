@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-02-01
+
 ### MSRV
 
 The Minimum-Supported Rust Version (MSRV) for the next release is 1.82
@@ -463,7 +465,8 @@ The Minimum-Supported Rust Version (MSRV) for this release is 1.54.
 
 - Initial release
 
-[Unreleased]: https://github.com/rp-rs/rp-hal/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/rp-rs/rp-hal/compare/rp2040-hal-0.12.0...HEAD
+[0.12.0]: https://github.com/rp-rs/rp-hal/compare/v0.11.0...rp2040-hal-0.12.0
 [0.11.0]: https://github.com/rp-rs/rp-hal/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/rp-rs/rp-hal/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/rp-rs/rp-hal/compare/v0.9.0...v0.9.1
