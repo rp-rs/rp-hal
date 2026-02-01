@@ -18,11 +18,26 @@ The Minimum-Supported Rust Version (MSRV) for the next release is 1.82
 
 ### Changed
 
-- Update to pio 0.3.0
-- Update rand\_core to 0.9.3
-- Update embedded-io to 0.7.1
-- Fix handling of flags in `RebootKind::BootSel` reboot.
+- Update `pio` to 0.3.0 - #923 #918 @jannic
+- Update `rand_core` to 0.9.3 - #941 @jannic
+- Update `embedded-io` to 0.7.1 - #967 @Gip-Gip
+- Update `rp235x-pac` to 0.2.0 - #982 @9names
+- Update `rp-binary-info` to 0.1.1 - #911 @jannic
 - Breaking change: ADC now reports conversion errors - #740 @jannic
+- Add additional pins for RP2350B - #920 @cantudo
+- Add interrupt support to RP235x riscv - #847 @thejpster
+- Add support for PIO2 on RP235x - #931 #933 @horazont @KewlKris
+- Add support for PIO PUT and GET FIFO modes - #926 @KewlKris
+- Fix `embedded-hal::i2c::transaction` support by removing automatic generation of i2c restart between transactions - #827 @jannic
+- Fix handling of flags in `RebootKind::BootSel` reboot -  #957 @iwanders
+- Fix `rp_binary_end` - #932 @jannic
+- Fix new clippy warnings - #930 @jannic 
+- Fix `manual_div_ceil` clippy lints - #902 @jannic
+- Allow 4 alarms per timer - #925 @McBandaska and @thejpster
+- Implement `SetDutyCycle` generically on PWM ChannelId  - #909 @jannic
+- Update number of DMA channels to 16 on RP235x - #919 #927 @KewlKris
+- Improve docs by replacing use of "Raspberry Silicon" with "Raspberry Pi", and "RP2350" with "RP235x" - #956 @thejpster
+- Improve docs around GPIO proc_int[sef] functions - #908 @jannic
 
 ## [0.3.0] - 2025-03-02
 

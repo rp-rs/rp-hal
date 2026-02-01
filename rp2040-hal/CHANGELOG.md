@@ -15,14 +15,21 @@ The Minimum-Supported Rust Version (MSRV) for the next release is 1.82
 
 ### Added
 
-- Implement core::fmt::Display and core::err:Error for ReadErrorType per the requirements of embedded-io 0.7.1
+- Implement core::fmt::Display and core::err:Error for ReadErrorType per the requirements of embedded-io 0.7.1 - #967 @Gip-Gip
 
 ### Changed
 
-- Update to pio 0.3.0
-- Update rand\_core to 0.9.3
-- Update embedded-io to 0.7.1
+- Update `pio` to 0.3.0 - #923 #918 @jannic
+- Update `rand_core` to 0.9.3 - #941 @jannic
+- Update `embedded-io` to 0.7.1 - #967 @Gip-Gip
 - Breaking change: ADC now reports conversion errors - #740 @jannic
+- Fix `rp-binary-end` - #932 @jannic
+- Fix new clippy warnings - #930 @jannic
+- Fix `manual_div_ceil` clippy lints - #902 @jannic
+- Fix implementations of `embedded_io::Write` for `UartPeripheral` - #895 @jannic
+- Fix `embedded-hal::i2c::transaction` support by removing automatic generation of i2c restart between transactions - #827 @jannic
+- Implement `SetDutyCycle` generically on PWM ChannelId - #909 @jannic
+- Improve docs around GPIO proc_int[sef] functions - #908 @jannic
 
 ## [0.11.0] - 2024-12-22
 
