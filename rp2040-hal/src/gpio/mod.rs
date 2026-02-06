@@ -94,7 +94,7 @@ pub enum Interrupt {
     EdgeHigh,
 }
 impl Interrupt {
-    fn mask(&self) -> u32 {
+    const fn mask(&self) -> u32 {
         match self {
             Interrupt::LevelLow => 0b0001,
             Interrupt::LevelHigh => 0b0010,
