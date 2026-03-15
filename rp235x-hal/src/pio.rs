@@ -4,7 +4,7 @@
 //! datasheet for more details.
 
 use core::ops::Deref;
-use pio::{Instruction, InstructionOperands, Program, SideSet, Wrap};
+use pio_core::{self as pio, Instruction, InstructionOperands, Program, SideSet, Wrap};
 
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
