@@ -55,7 +55,7 @@ mod pull;
 
 pub use func::*;
 pub use pin::{DynBankId, DynPinId, PinId};
-pub use pin_group::PinGroup;
+pub use pin_group::{PinGroup, ReadPinHList, WritePinHList};
 pub use pull::*;
 
 /// The amount of current that a pin can drive when used as an output.
