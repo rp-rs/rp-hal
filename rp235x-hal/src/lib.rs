@@ -70,6 +70,7 @@ pub mod typelevel;
 pub mod uart;
 pub mod usb;
 pub mod vector_table;
+pub mod vreg;
 pub mod watchdog;
 pub mod xh3irq;
 pub mod xosc;

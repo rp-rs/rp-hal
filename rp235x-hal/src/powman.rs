@@ -3,7 +3,7 @@
 //! The POWMAN peripheral contains a mixture of functionality, including:
 //!
 //! * [x] An always-on timer (AOT) with alarm
-//! * [ ] Voltage Regulator Control
+//! * [x] Voltage Regulator Control
 //! * [ ] Brown-out detection
 //! * [ ] Low-power oscillator control
 //! * [ ] Using as GPIO as a time reference or wake-up signal
@@ -18,6 +18,7 @@ use crate::{
         DynPullType, FunctionSioInput, Pin,
     },
     pac,
+    vreg::{InvalidVRegVoltageError, VRegVoltage},
 };
 
 /// A frequency in kHz, represented as a fixed point 16.16 value
@@ -203,6 +204,14 @@ pub enum ClockPin {
     Pin20(Pin<Gpio20, FunctionSioInput, DynPullType>),
     /// Using GPIO 22 as clock input
     Pin22(Pin<Gpio22, FunctionSioInput, DynPullType>),
+}
+
+/// The ways in which setting the regulator voltage can fail
+pub enum VRegError {
+    /// The voltage value read back from POWMAN did not match the value written
+    VRegReadbackMismatchError,
+    /// The voltage value read back from POWMAN could not be converted to a VRegVoltage
+    VRegVoltageConversionError,
 }
 
 /// The Power Management device
@@ -604,6 +613,61 @@ impl Powman {
         unsafe {
             Self::powman_set_bits(reg, bit as u16);
         }
+    }
+
+    /// Set the VREG voltage.
+    pub fn set_vreg_voltage(&mut self, voltage: VRegVoltage) -> Result<(), VRegError> {
+        // Unlock VREG_CTRL and release reset
+        self.device.vreg_ctrl().modify(|_r, w| {
+            unsafe {
+                w.bits(Self::KEY_VALUE);
+                w.unlock().set_bit();
+                w.rst_n().set_bit();
+            }
+            w
+        });
+
+        // Wait for update to complete
+        while self.device.vreg().read().update_in_progress().bit_is_set() {
+            core::hint::spin_loop();
+        }
+
+        // Set the voltage
+        self.device.vreg().modify(|_r, w| {
+            unsafe {
+                w.bits(Self::KEY_VALUE);
+                w.vsel().bits(voltage as u8);
+            }
+            w
+        });
+
+        // Wait for update to complete
+        while self.device.vreg().read().update_in_progress().bit_is_set() {
+            core::hint::spin_loop();
+        }
+
+        // Wait for voltage to stabilize
+        while self.device.vreg_sts().read().vout_ok().bit_is_clear() {
+            core::hint::spin_loop();
+        }
+
+        // Read back the voltage and return an Err if the requested voltage
+        // was not successfully read back as having been properly set.
+        match VRegVoltage::try_from(self.device.vreg().read().vsel().bits()) {
+            Ok(set_voltage) => {
+                if set_voltage != voltage {
+                    Err(VRegError::VRegReadbackMismatchError)
+                } else {
+                    Ok(())
+                }
+            }
+            Err(InvalidVRegVoltageError) => Err(VRegError::VRegVoltageConversionError),
+        }
+    }
+
+    /// Get the current VREG voltage.
+    pub fn get_vreg_voltage(&self) -> Result<VRegVoltage, InvalidVRegVoltageError> {
+        VRegVoltage::try_from(self.device.vreg().read().vsel().bits())
     }
 
     /// Write to a POWMAN protected register, using the key
