@@ -135,6 +135,17 @@ where
             !self.ch.0.ch().ch_ctrl_trig().read().busy().bit_is_set()
         }
     }
+
+
+    /// Count the number of transfers remaining in the active channel
+    pub fn trans_count(&self) -> usize {
+        if self.second_ch {
+            self.ch.1.ch().ch_trans_count().read().bits() as usize
+        } else {
+            self.ch.0.ch().ch_trans_count().read().bits() as usize
+        }
+    }
+
 }
 
 impl<CH1, CH2, FROM, TO, WORD> Transfer<CH1, CH2, FROM, TO, ()>
