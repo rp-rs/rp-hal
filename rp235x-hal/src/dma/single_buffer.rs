@@ -113,6 +113,11 @@ where
         (self.ch, self.from, self.to)
     }
 
+    /// Count the number of transfers remaining.
+    pub fn trans_count(&self) -> usize {
+        self.ch.ch().ch_trans_count().read().bits() as usize
+    }
+
     /// Aborts the current transfer, returning the channel and targets
     pub fn abort(mut self) -> (CH, FROM, TO) {
         let irq0_was_enabled = self.ch.is_enabled_irq0();

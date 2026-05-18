@@ -157,4 +157,12 @@ where
         // TODO: Use a tuple type?
         ((self.ch.0, self.ch.1), self.from, self.bidi, self.to)
     }
+
+    /// Count the number of transfers remaining.
+    pub fn trans_count(&self) -> (usize, usize) {
+        (
+            self.ch.0.ch().ch_trans_count().read().bits() as usize,
+            self.ch.1.ch().ch_trans_count().read().bits() as usize,
+        )
+    }
 }

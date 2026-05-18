@@ -159,8 +159,10 @@ where
     }
 
     /// Count the number of transfers remaining.
-    pub fn trans_count(&self) -> (usize,usize) {
-        (self.ch.0.ch().ch_trans_count().read().bits() as usize,
-         self.ch.1.ch().ch_trans_count().read().bits() as usize)
+    pub fn trans_count(&self) -> (usize, usize) {
+        (
+            self.ch.0.ch().ch_trans_count().read().bits() as usize,
+            self.ch.1.ch().ch_trans_count().read().bits() as usize,
+        )
     }
 }
