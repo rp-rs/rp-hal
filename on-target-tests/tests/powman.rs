@@ -34,8 +34,6 @@ mod tests {
             crate::init::reset_cleanup();
         }
         let mut pac = pac::Peripherals::take().unwrap();
-        #[cfg(feature = "rp2040")]
-        let _core = pac::CorePeripherals::take().unwrap();
         let mut watchdog = Watchdog::new(pac.WATCHDOG);
 
         let _clocks = init_clocks_and_plls(
