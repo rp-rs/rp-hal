@@ -207,6 +207,7 @@ pub enum ClockPin {
 }
 
 /// The ways in which setting the regulator voltage can fail
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum VRegError {
     /// The voltage value read back from POWMAN did not match the value written
     VRegReadbackMismatchError,

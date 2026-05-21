@@ -50,6 +50,11 @@ name = "gpio"
 harness = false
 name = "multicore"
 
+[[test]]
+harness = false
+name = "powman"
+required-features = ["rp235x"]
+
 [dependencies]
 cortex-m = "0.7"
 cortex-m-rt = "0.7"

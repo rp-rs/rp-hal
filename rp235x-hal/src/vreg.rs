@@ -71,6 +71,7 @@ pub enum VRegVoltage {
 
 /// Only binary values representable in five bits or less correspond
 /// to possible voltage settings of VSEL on RP235x.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct InvalidVRegVoltageError;
 
 impl TryFrom<u8> for VRegVoltage {
