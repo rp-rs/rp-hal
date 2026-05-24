@@ -25,6 +25,7 @@ critical-section = {version = "1.2.0"}
 embedded-dma = "0.2.0"
 embedded-hal = "1.0.0"
 embedded-hal-async = "1.0.0"
+embedded-hal-timer = "0.1.0"
 embedded-hal-nb = "1.0.0"
 embedded-io = "0.7.1"
 embedded_hal_0_2 = {package = "embedded-hal", version = "0.2.5", features = ["unproven"]}
