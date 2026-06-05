@@ -173,10 +173,15 @@ use core::marker::PhantomData;
 // Embedded HAL 1.0.0 doesn't have an ADC trait, so use the one from 0.2
 use embedded_hal_0_2::adc::{Channel, OneShot};
 
+#[cfg(not(feature = "qfn80"))]
+use crate::gpio::bank0::{Gpio26, Gpio27, Gpio28, Gpio29};
+
+#[cfg(feature = "qfn80")]
+use crate::gpio::bank0::{Gpio40, Gpio41, Gpio42, Gpio43, Gpio44, Gpio45, Gpio46, Gpio47};
+
 use crate::{
     dma,
     gpio::{
-        bank0::{Gpio26, Gpio27, Gpio28, Gpio29},
         AnyPin, DynBankId, DynPinId, Function, OutputEnableOverride, Pin, PullType, ValidFunction,
     },
     pac::{dma::ch::ch_ctrl_trig::TREQ_SEL_A, ADC, RESETS},
@@ -201,6 +206,16 @@ where
     saved_input_enable: bool,
 }
 
+#[cfg(not(feature = "qfn80"))]
+const ADC_PIN_NUM_LOWER: u8 = 26;
+#[cfg(not(feature = "qfn80"))]
+const ADC_PIN_NUM_UPPER: u8 = 29;
+
+#[cfg(feature = "qfn80")]
+const ADC_PIN_NUM_LOWER: u8 = 40;
+#[cfg(feature = "qfn80")]
+const ADC_PIN_NUM_UPPER: u8 = 47;
+
 impl<P> AdcPin<P>
 where
     P: AnyPin,
@@ -208,7 +223,9 @@ where
     /// Captures the pin to be used with an ADC and disables its digital circuitry.
     pub fn new(pin: P) -> Result<Self, InvalidPinError> {
         let pin_id = pin.borrow().id();
-        if (26..=29).contains(&pin_id.num) && pin_id.bank == DynBankId::Bank0 {
+        if (ADC_PIN_NUM_LOWER..=ADC_PIN_NUM_UPPER).contains(&pin_id.num)
+            && pin_id.bank == DynBankId::Bank0
+        {
             let mut p = pin.into();
             let (od, ie) = (p.get_output_disable(), p.get_input_enable());
             p.set_output_enable_override(OutputEnableOverride::Disable);
@@ -235,7 +252,7 @@ where
     pub fn channel(&self) -> u8 {
         let pin_id = self.pin.borrow().id();
         // Self::new() makes sure that this is a valid channel number
-        pin_id.num - 26
+        pin_id.num - ADC_PIN_NUM_LOWER
     }
 }
 
@@ -277,10 +294,31 @@ macro_rules! channel {
     };
 }
 
+#[cfg(not(feature = "qfn80"))]
 channel!(Gpio26, 0);
+#[cfg(not(feature = "qfn80"))]
 channel!(Gpio27, 1);
+#[cfg(not(feature = "qfn80"))]
 channel!(Gpio28, 2);
+#[cfg(not(feature = "qfn80"))]
 channel!(Gpio29, 3);
+
+#[cfg(feature = "qfn80")]
+channel!(Gpio40, 0);
+#[cfg(feature = "qfn80")]
+channel!(Gpio41, 1);
+#[cfg(feature = "qfn80")]
+channel!(Gpio42, 2);
+#[cfg(feature = "qfn80")]
+channel!(Gpio43, 3);
+#[cfg(feature = "qfn80")]
+channel!(Gpio44, 4);
+#[cfg(feature = "qfn80")]
+channel!(Gpio45, 5);
+#[cfg(feature = "qfn80")]
+channel!(Gpio46, 6);
+#[cfg(feature = "qfn80")]
+channel!(Gpio47, 7);
 
 impl<F: Function, M: PullType> Channel<Adc> for AdcPin<Pin<DynPinId, F, M>>
 where

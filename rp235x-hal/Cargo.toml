@@ -99,3 +99,6 @@ dcp-fast-f64 = []
 # Requires 'rt' so that the vector table is correctly sized and therefore the
 # header is within reach of picotool.
 binary-info = ["rt", "rp-binary-info/binary-info"]
+
+# Changes pin definitions for ADC safety checks to support QFN 80 package pin numbers
+qfn80 = []
