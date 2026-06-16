@@ -47,6 +47,14 @@ pub struct Watchdog {
     load_value: u32, // decremented by 2 per tick (µs)
 }
 
+/// Watchdog reset reason
+pub enum ResetReason {
+    /// A manual watchdog trigger caused the reset.
+    Force,
+    /// A watchdog timeout caused the reset.
+    Timeout,
+}
+
 #[derive(Debug)]
 #[allow(missing_docs)]
 /// Scratch registers of the watchdog peripheral
@@ -112,6 +120,18 @@ impl Watchdog {
 
     fn enable(&self, bit: bool) {
         self.watchdog.ctrl().write(|w| w.enable().bit(bit))
+    }
+
+    /// Get the watchdog reset reason.
+    pub fn reason(&self) -> Option<ResetReason> {
+        let bits = self.watchdog.reason().read().bits();
+        if bits & 0b10 != 0 {
+            Some(ResetReason::Force)
+        } else if bits & 0b01 != 0 {
+            Some(ResetReason::Timeout)
+        } else {
+            None
+        }
     }
 
     /// Read a scratch register
