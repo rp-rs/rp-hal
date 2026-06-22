@@ -8,7 +8,6 @@
 use rp235x_hal as hal;
 
 use hal::gpio::{FunctionPio0, Pin};
-use hal::pio::Buffers;
 use hal::pio::PIOExt;
 use hal::Sio;
 
@@ -75,7 +74,7 @@ fn main() -> ! {
     let installed = pio.install(&program.program).unwrap();
     let (mut sm, _, _) = hal::pio::PIOBuilder::from_installed_program(installed)
         .set_pins(led_pin_id, 1)
-        .buffers(Buffers::RxPutGet)
+        .with_rx_putget()
         .build(sm0);
     sm.set_pindirs([(led_pin_id, hal::pio::PinDir::Output)]);
     sm.start();
