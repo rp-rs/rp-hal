@@ -146,8 +146,8 @@ impl<D: PhaseLockedLoopDevice> PhaseLockedLoop<Disabled, D> {
         config: PLLConfig,
     ) -> Result<PhaseLockedLoop<Disabled, D>, Error> {
         const VCO_FREQ_RANGE: RangeInclusive<HertzU32> = HertzU32::MHz(400)..=HertzU32::MHz(1_600);
-        const POSTDIV_RANGE: Range<u8> = 1..7;
-        const FBDIV_RANGE: Range<u16> = 16..320;
+        const POSTDIV_RANGE: RangeInclusive<u8> = 1..=7;
+        const FBDIV_RANGE: RangeInclusive<u16> = 16..=320;
 
         let vco_freq = config.vco_freq;
 
