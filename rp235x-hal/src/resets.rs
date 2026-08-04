@@ -29,6 +29,7 @@ macro_rules! generate_reset {
 generate_reset!(USB, usbctrl);
 generate_reset!(UART1, uart1);
 generate_reset!(UART0, uart0);
+generate_reset!(TRNG, trng);
 generate_reset!(TIMER0, timer0);
 generate_reset!(TIMER1, timer1);
 generate_reset!(TBMAN, tbman);
