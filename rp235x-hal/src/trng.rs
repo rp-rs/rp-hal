@@ -115,19 +115,20 @@ impl Trng {
 
 impl Sealed for Trng {}
 
-impl rand_core::RngCore for Trng {
+impl rand_core::TryRng for Trng {
+    type Error = rand_core::Infallible;
     /// Generate 32 bits of random data.
     ///
     /// Uses `next_u32_via_fill` which fills a 4-byte buffer.
-    fn next_u32(&mut self) -> u32 {
-        rand_core::impls::next_u32_via_fill(self)
+    fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+        rand_core::utils::next_word_via_fill(self)
     }
 
     /// Generate 64 bits of random data.
     ///
     /// Uses `next_u64_via_fill` which fills an 8-byte buffer.
-    fn next_u64(&mut self) -> u64 {
-        rand_core::impls::next_u64_via_fill(self)
+    fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+        rand_core::utils::next_word_via_fill(self)
     }
 
     /// Fill a buffer with random bytes.
@@ -135,7 +136,7 @@ impl rand_core::RngCore for Trng {
     /// This reads 192-bit chunks from the TRNG until the buffer is filled.
     /// Each 192-bit read is guaranteed to be fresh data since reading the
     /// last register clears all EHR_DATA registers.
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Self::Error> {
         let mut offset = 0;
         while offset < dest.len() {
             let chunk = self.read_192();
@@ -144,7 +145,8 @@ impl rand_core::RngCore for Trng {
             dest[offset..offset + to_copy].copy_from_slice(&chunk[..to_copy]);
             offset += to_copy;
         }
+        Ok(())
     }
 }
 
-impl rand_core::CryptoRng for Trng {}
+impl rand_core::TryCryptoRng for Trng {}

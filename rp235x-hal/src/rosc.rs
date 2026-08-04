@@ -126,22 +126,25 @@ impl RingOscillator<Enabled> {
     }
 }
 
-impl rand_core::RngCore for RingOscillator<Enabled> {
-    fn next_u32(&mut self) -> u32 {
-        rand_core::impls::next_u32_via_fill(self)
+impl rand_core::TryRng for RingOscillator<Enabled> {
+    type Error = rand_core::Infallible;
+
+    fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+        rand_core::utils::next_word_via_fill(self)
     }
 
-    fn next_u64(&mut self) -> u64 {
-        rand_core::impls::next_u64_via_fill(self)
+    fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+        rand_core::utils::next_u64_via_u32(self)
     }
 
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
-        for chunk in dest.iter_mut() {
+    fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Self::Error> {
+        for chunk in dst.iter_mut() {
             *chunk = 0_u8;
             for _ in 0..8 {
                 *chunk <<= 1;
                 *chunk ^= self.get_random_bit() as u8;
             }
         }
+        Ok(())
     }
 }
