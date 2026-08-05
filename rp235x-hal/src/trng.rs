@@ -82,21 +82,21 @@ impl Trng {
     /// ensuring data is not reused.
     pub fn read_192(&self) -> [u8; 24] {
         self.wait_for_valid();
-        let data = [
-            self.trng.ehr_data0().read().ehr_data0().bits(),
-            self.trng.ehr_data1().read().ehr_data1().bits(),
-            self.trng.ehr_data2().read().ehr_data2().bits(),
-            self.trng.ehr_data3().read().ehr_data3().bits(),
-            self.trng.ehr_data4().read().ehr_data4().bits(),
-            self.trng.ehr_data5().read().ehr_data5().bits(),
-        ];
-
-        // Convert 6 u32 values to 24 bytes (192 bits)
         let mut out = [0u8; 24];
-        for (i, &word) in data.iter().enumerate() {
-            let bytes = word.to_le_bytes();
-            out[i * 4..(i + 1) * 4].copy_from_slice(&bytes);
-        }
+
+        out.chunks_mut(4).enumerate().for_each(|(i, dst)| {
+            let bits = match i {
+                0 => self.trng.ehr_data0().read().ehr_data0().bits(),
+                1 => self.trng.ehr_data1().read().ehr_data1().bits(),
+                2 => self.trng.ehr_data2().read().ehr_data2().bits(),
+                3 => self.trng.ehr_data3().read().ehr_data3().bits(),
+                4 => self.trng.ehr_data4().read().ehr_data4().bits(),
+                5 => self.trng.ehr_data5().read().ehr_data5().bits(),
+                _ => unreachable!(),
+            };
+            dst.copy_from_slice(&bits.to_le_bytes());
+        });
+
         out
     }
 
@@ -115,6 +115,8 @@ impl Trng {
 
 impl Sealed for Trng {}
 
+// `rand_core` automatically implements the `Rng` trait because we implement
+// `TryRng` with error type `Infallible`.
 impl rand_core::TryRng for Trng {
     type Error = rand_core::Infallible;
     /// Generate 32 bits of random data.
@@ -136,14 +138,13 @@ impl rand_core::TryRng for Trng {
     /// This reads 192-bit chunks from the TRNG until the buffer is filled.
     /// Each 192-bit read is guaranteed to be fresh data since reading the
     /// last register clears all EHR_DATA registers.
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Self::Error> {
-        let mut offset = 0;
-        while offset < dest.len() {
-            let chunk = self.read_192();
-            let remaining = dest.len() - offset;
-            let to_copy = chunk.len().min(remaining);
-            dest[offset..offset + to_copy].copy_from_slice(&chunk[..to_copy]);
-            offset += to_copy;
+    fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Self::Error> {
+        for (i, byte) in core::iter::repeat_with(|| self.read_192())
+            .flatten()
+            .take(dst.len())
+            .enumerate()
+        {
+            dst[i] = byte;
         }
         Ok(())
     }
