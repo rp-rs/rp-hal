@@ -7,10 +7,10 @@
 //!
 //! ```no_run
 //! # let mut pac = rp235x_pac::Peripherals::take().unwrap();
-//! use rand::Rng;
+//! use rand_core::Rng;
 //! use rp235x_hal::rosc::RingOscillator;
 //! let mut rnd = RingOscillator::new(pac.ROSC).initialize();
-//! let random_value: u32 = rnd.gen();
+//! let random_value: u32 = rnd.next_u32();
 //! ```
 //! [`rand`]: https://docs.rs/rand
 use fugit::HertzU32;

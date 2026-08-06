@@ -8,7 +8,7 @@
 //!
 //! ```no_run
 //! use rp235x_hal::{self as hal, trng::Trng};
-//! use rand_core::RngCore;
+//! use rand_core::Rng;
 //!
 //! let mut pac = hal::pac::Peripherals::take().unwrap();
 //!
