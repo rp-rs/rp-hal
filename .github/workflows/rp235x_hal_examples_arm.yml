@@ -47,7 +47,7 @@ jobs:
         run: cd ${PACKAGE} && CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS=fallback cargo update
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.82
+          toolchain: 1.85
           target: ${{ env.TARGET }}
       - name: Build on MSRV
         run: cd ${PACKAGE} && cargo build --target=${TARGET}
