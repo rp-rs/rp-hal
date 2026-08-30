@@ -10,7 +10,13 @@ use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
     dma::{EndlessReadTarget, EndlessWriteTarget, ReadTarget, TransferSize, Word, WriteTarget},
     gpio::{Function, FunctionPio0, FunctionPio1, FunctionPio2},
-    pac::{self, dma::ch::ch_ctrl_trig::TREQ_SEL_A, pio0::RegisterBlock, PIO0, PIO1, PIO2},
+    pac::{
+        self,
+        dma::ch::ch_ctrl_trig::TREQ_SEL_A,
+        generic::W,
+        pio0::{sm::sm_shiftctrl::SM_SHIFTCTRL_SPEC, RegisterBlock},
+        PIO0, PIO1, PIO2,
+    },
     resets::SubsystemReset,
     typelevel::Sealed,
 };
@@ -619,9 +625,9 @@ impl<SM: ValidStateMachine, State> StateMachine<SM, State> {
     ///
     /// The program can be uninstalled to free space once it is no longer used by any state
     /// machine.
-    pub fn uninit<RxSize, TxSize>(
+    pub fn uninit<RxSize, RxCfg, TxSize>(
         mut self,
-        _rx: Rx<SM, RxSize>,
+        _rx: Rx<SM, RxCfg, RxSize>,
         _tx: Tx<SM, TxSize>,
     ) -> (UninitStateMachine<SM>, InstalledProgram<SM::PIO>) {
         self.sm.set_enabled(false);
@@ -1328,22 +1334,36 @@ impl<SM: ValidStateMachine> StateMachine<SM, Running> {
     }
 }
 
-/// PIO RX FIFO handle.
-pub struct Rx<SM: ValidStateMachine, RxSize = Word> {
+/// # PIO RX buffer handle
+///
+/// Depending on the `Cfg` type variant, this handle allows different access
+/// to the RX buffer:
+///
+/// - `RxFifo` allows FIFO access through [`read()`][`Self::read`] and can be
+///   used as DMA source.
+/// - `RxPut` allows **read** access from the system (and write access by the
+///   PIO program) through [`read_from()`][`Self::read_from`].
+/// - `RxGet` allows **write** access from the system (and read access by the
+///   PIO program) through [`write_at()`][`Self::write_at`].
+/// - `RxPutGet` allows no access at all, since both read and write port of
+///   the buffer are owned by the PIO statemachine.
+pub struct Rx<SM: ValidStateMachine, Cfg, RxSize = Word> {
     block: *const RegisterBlock,
-    _phantom: core::marker::PhantomData<(SM, RxSize)>,
+    _phantom: core::marker::PhantomData<(SM, Cfg, RxSize)>,
 }
 
 // Safety: All shared register accesses are atomic.
-unsafe impl<SM: ValidStateMachine + Send, RxSize> Send for Rx<SM, RxSize> {}
+unsafe impl<SM: ValidStateMachine + Send, Cfg: RxFifoConfig, RxSize> Send for Rx<SM, Cfg, RxSize> {}
 
 // Safety: `Rx` is marked Send so ensure all accesses remain atomic and no new concurrent accesses
 // are added.
-impl<SM: ValidStateMachine, RxSize: TransferSize> Rx<SM, RxSize> {
+impl<SM: ValidStateMachine, Cfg: RxFifoConfig, RxSize: TransferSize> Rx<SM, Cfg, RxSize> {
     unsafe fn block(&self) -> &pac::pio0::RegisterBlock {
         &*self.block
     }
+}
 
+impl<SM: ValidStateMachine, RxSize: TransferSize> Rx<SM, RxFifo, RxSize> {
     /// Gets the FIFO's address.
     ///
     /// This is useful if you want to DMA from this peripheral.
@@ -1449,7 +1469,7 @@ impl<SM: ValidStateMachine, RxSize: TransferSize> Rx<SM, RxSize> {
     }
 
     /// Set the transfer size used in DMA transfers.
-    pub fn transfer_size<RSZ: TransferSize>(self, size: RSZ) -> Rx<SM, RSZ> {
+    pub fn transfer_size<RSZ: TransferSize>(self, size: RSZ) -> Rx<SM, RxFifo, RSZ> {
         let _ = size;
         Rx {
             block: self.block,
@@ -1458,9 +1478,39 @@ impl<SM: ValidStateMachine, RxSize: TransferSize> Rx<SM, RxSize> {
     }
 }
 
+impl<SM: ValidStateMachine> Rx<SM, RxGet, Word> {
+    /// Write `value` to the RX buffer at index `index`.
+    ///
+    /// # Panics
+    ///
+    /// If `at` is greater than or equal to four.
+    pub fn write_at(&mut self, at: usize, value: u32) {
+        assert!(at < 4);
+        unsafe {
+            // SAFETY: we have ownership over the RX buffer.
+            (*self.block).rxf0_putget(at).write(|w| w.bits(value));
+        }
+    }
+}
+
+impl<SM: ValidStateMachine> Rx<SM, RxPut, Word> {
+    /// Read a value from the RX buffer at index `index`.
+    ///
+    /// # Panics
+    ///
+    /// If `at` is greater than or equal to four.
+    pub fn read_from(&mut self, at: usize) -> u32 {
+        assert!(at < 4);
+        unsafe {
+            // SAFETY: we have ownership over the RX buffer.
+            (*self.block).rxf0_putget(at).read().bits()
+        }
+    }
+}
+
 // Safety: This only reads from the state machine fifo, so it doesn't
 // interact with rust-managed memory.
-unsafe impl<SM: ValidStateMachine, RxSize: TransferSize> ReadTarget for Rx<SM, RxSize> {
+unsafe impl<SM: ValidStateMachine, RxSize: TransferSize> ReadTarget for Rx<SM, RxFifo, RxSize> {
     type ReceivedWord = RxSize::Type;
 
     fn rx_treq() -> Option<u8> {
@@ -1479,7 +1529,7 @@ unsafe impl<SM: ValidStateMachine, RxSize: TransferSize> ReadTarget for Rx<SM, R
     }
 }
 
-impl<SM: ValidStateMachine, RxSize: TransferSize> EndlessReadTarget for Rx<SM, RxSize> {}
+impl<SM: ValidStateMachine, RxSize: TransferSize> EndlessReadTarget for Rx<SM, RxFifo, RxSize> {}
 
 /// PIO TX FIFO handle.
 pub struct Tx<SM: ValidStateMachine, TxSize = Word> {
@@ -1923,10 +1973,122 @@ impl ShiftDirection {
     }
 }
 
+/// Type-level enumeration which controls RX PUT/RX GET configuration for
+/// PIO FIFOs.
+///
+/// See RP235x reference manual section 11.4.8 and 11.4.9.
+pub trait RxFifoConfig: Sealed {
+    /// Configure the statemachine's SHIFTCTRL register regarding the RX FIFO.
+    /// This should configure:
+    ///
+    /// - autopush
+    /// - rx/tx joining
+    /// - rxput
+    /// - rxget
+    ///
+    /// according to the variant.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the safety requirements for writing bits
+    /// to the fjoin_rx, fjoin_tx, fjoin_rx_get, fjoin_rx_put, push_thresh, and
+    /// autopush fields of the register handed in through `w` are fulfilled.
+    #[doc(hidden)]
+    unsafe fn configure_shiftctrl(self, w: &mut W<SM_SHIFTCTRL_SPEC>) -> &mut W<SM_SHIFTCTRL_SPEC>;
+}
+
+/// RX operates normally as FIFO. Random access is not permitted.
+pub struct RxFifo {
+    /// Enable autopush.
+    autopush: bool,
+    /// Number of bits shifted into `ISR` before autopush or conditional push will take place.
+    push_threshold: u8,
+    /// Config for FIFO joining.
+    fifo_join: Buffers,
+}
+
+impl Sealed for RxFifo {}
+impl RxFifoConfig for RxFifo {
+    unsafe fn configure_shiftctrl(self, w: &mut W<SM_SHIFTCTRL_SPEC>) -> &mut W<SM_SHIFTCTRL_SPEC> {
+        // SAFETY: see caller contract on trait declaration.
+        unsafe {
+            let (fjoin_rx, fjoin_tx) = match self.fifo_join {
+                Buffers::RxTx => (false, false),
+                Buffers::OnlyTx => (false, true),
+                Buffers::OnlyRx => (true, false),
+            };
+            w.fjoin_rx().bit(fjoin_rx);
+            w.fjoin_tx().bit(fjoin_tx);
+            w.fjoin_rx_put().bit(false);
+            w.fjoin_rx_get().bit(false);
+
+            // TODO: Encode 32 as zero, and error on 0
+            w.push_thresh().bits(self.push_threshold);
+
+            w.autopush().bit(self.autopush);
+            w
+        }
+    }
+}
+
+/// RX operates as random-access memory and can be written from the host
+/// and read from the PIO program.
+pub struct RxGet {}
+
+impl Sealed for RxGet {}
+impl RxFifoConfig for RxGet {
+    unsafe fn configure_shiftctrl(self, w: &mut W<SM_SHIFTCTRL_SPEC>) -> &mut W<SM_SHIFTCTRL_SPEC> {
+        // We do not need to set fjoin_rx / fjoin_tx, as according to the
+        // reference, writing a one to either of fjoin_rx_get or fjoin_rx_put
+        // will clear fjoin_rx and fjoin_tx.
+        w.fjoin_rx_put().bit(false);
+        w.fjoin_rx_get().bit(true);
+
+        w.autopush().bit(false);
+        w
+    }
+}
+
+/// RX operates as random-access memory and can be written from the PIO
+/// program and read from the host.
+pub struct RxPut {}
+
+impl Sealed for RxPut {}
+impl RxFifoConfig for RxPut {
+    unsafe fn configure_shiftctrl(self, w: &mut W<SM_SHIFTCTRL_SPEC>) -> &mut W<SM_SHIFTCTRL_SPEC> {
+        // We do not need to set fjoin_rx / fjoin_tx, as according to the
+        // reference, writing a one to either of fjoin_rx_get or fjoin_rx_put
+        // will clear fjoin_rx and fjoin_tx.
+        w.fjoin_rx_put().bit(true);
+        w.fjoin_rx_get().bit(false);
+
+        w.autopush().bit(false);
+        w
+    }
+}
+
+/// RX operates as random-access memory and can be written and read from
+/// the PIO program, while the host has no access.
+pub struct RxPutGet {}
+
+impl Sealed for RxPutGet {}
+impl RxFifoConfig for RxPutGet {
+    unsafe fn configure_shiftctrl(self, w: &mut W<SM_SHIFTCTRL_SPEC>) -> &mut W<SM_SHIFTCTRL_SPEC> {
+        // We do not need to set fjoin_rx / fjoin_tx, as according to the
+        // reference, writing a one to either of fjoin_rx_get or fjoin_rx_put
+        // will clear fjoin_rx and fjoin_tx.
+        w.fjoin_rx_put().bit(true);
+        w.fjoin_rx_get().bit(true);
+
+        w.autopush().bit(false);
+        w
+    }
+}
+
 /// Builder to deploy a fully configured PIO program on one of the state
 /// machines.
 #[derive(Debug)]
-pub struct PIOBuilder<P> {
+pub struct PIOBuilder<P, RxFifoCfg> {
     /// Clock divisor.
     clock_divisor: (u16, u8),
 
@@ -1944,21 +2106,14 @@ pub struct PIOBuilder<P> {
     /// Config for `mov x, status` instruction.
     mov_status: MovStatusConfig,
 
-    /// Config for FIFO joining.
-    fifo_join: Buffers,
-
     /// Number of bits shifted out of `OSR` before autopull or conditional pull will take place.
     pull_threshold: u8,
-    /// Number of bits shifted into `ISR` before autopush or conditional push will take place.
-    push_threshold: u8,
     /// Shift direction for `OUT` instruction.
     out_shiftdir: ShiftDirection,
     /// Shift direction for `IN` instruction.
     in_shiftdir: ShiftDirection,
     /// Enable autopull.
     autopull: bool,
-    /// Enable autopush.
-    autopush: bool,
     /// Number of pins which are not masked to 0 when read by an `IN PINS`, `WAIT PIN` or `MOV x, PINS` instruction.
     in_count: u8,
 
@@ -1974,6 +2129,9 @@ pub struct PIOBuilder<P> {
     set_base: u8,
     /// The first pin that is affected by `OUT PINS`, `OUT PINDIRS` or `MOV PINS` instructions.
     out_base: u8,
+
+    /// RX FIFO configuration.
+    rx_fifo_config: RxFifoCfg,
 }
 
 /// Buffer sharing configuration.
@@ -1985,12 +2143,6 @@ pub enum Buffers {
     OnlyTx,
     /// The memory of the TX FIFO is given to the RX FIFO to double its depth.
     OnlyRx,
-    /// The memory of the RX FIFO is available for random write access by the state machine, but the system can only read from it.
-    RxPut,
-    /// The memory of RX FIFO is available for random read access by the state machine, but the system can only write to it.
-    RxGet,
-    /// The memory of RXFIFO is available for random read and write access by the state machine, but the system can no longer read or write to it.
-    RxPutGet,
 }
 
 /// Errors that occurred during `PIO::install`.
@@ -2000,7 +2152,7 @@ pub enum InstallError {
     NoSpace,
 }
 
-impl<P: PIOExt> PIOBuilder<P> {
+impl<P: PIOExt> PIOBuilder<P, RxFifo> {
     /// Set config settings based on information from the given [`InstalledProgram`].
     /// Additional configuration may be needed in addition to this.
     ///
@@ -2015,13 +2167,10 @@ impl<P: PIOExt> PIOBuilder<P> {
             out_sticky: false,
             inline_out: None,
             mov_status: MovStatusConfig::Tx(0),
-            fifo_join: Buffers::RxTx,
             pull_threshold: 0,
-            push_threshold: 0,
             out_shiftdir: ShiftDirection::Right,
             in_shiftdir: ShiftDirection::Right,
             autopull: false,
-            autopush: false,
             in_count: 0,
             set_count: 5,
             out_count: 0,
@@ -2029,6 +2178,11 @@ impl<P: PIOExt> PIOBuilder<P> {
             side_set_base: 0,
             set_base: 0,
             out_base: 0,
+            rx_fifo_config: RxFifo {
+                autopush: false,
+                push_threshold: 0,
+                fifo_join: Buffers::RxTx,
+            },
         }
     }
 
@@ -2050,13 +2204,10 @@ impl<P: PIOExt> PIOBuilder<P> {
             out_sticky: false,
             inline_out: None,
             mov_status: MovStatusConfig::Tx(0),
-            fifo_join: Buffers::RxTx,
             pull_threshold: 0,
-            push_threshold: 0,
             out_shiftdir: ShiftDirection::Left,
             in_shiftdir: ShiftDirection::Left,
             autopull: false,
-            autopush: false,
             in_count: 0,
             set_count: 5,
             out_count: 0,
@@ -2064,9 +2215,39 @@ impl<P: PIOExt> PIOBuilder<P> {
             side_set_base: 0,
             set_base: 0,
             out_base: 0,
+            rx_fifo_config: RxFifo {
+                autopush: false,
+                push_threshold: 0,
+                fifo_join: Buffers::RxTx,
+            },
         }
     }
 
+    /// Set buffer sharing.
+    ///
+    /// See [`Buffers`] for more information.
+    pub fn buffers(mut self, buffers: Buffers) -> Self {
+        self.rx_fifo_config.fifo_join = buffers;
+        self
+    }
+
+    /// Set the autopush state.
+    ///
+    /// When autopush is enabled, the `IN` instruction automatically pushes the data once the number of bits reaches
+    /// threshold set by [`Self::push_threshold`].
+    pub fn autopush(mut self, autopush: bool) -> Self {
+        self.rx_fifo_config.autopush = autopush;
+        self
+    }
+
+    /// Set the number of bits pushed into ISR before autopush or conditional push will take place.
+    pub fn push_threshold(mut self, threshold: u8) -> Self {
+        self.rx_fifo_config.push_threshold = threshold;
+        self
+    }
+}
+
+impl<P: PIOExt, RxFifoCfg: RxFifoConfig> PIOBuilder<P, RxFifoCfg> {
     /// Set the config for when the status register is set to true.
     ///
     /// See `MovStatusConfig` for more info.
@@ -2126,14 +2307,6 @@ impl<P: PIOExt> PIOBuilder<P> {
     }
     // TODO: Update documentation above.
 
-    /// Set buffer sharing.
-    ///
-    /// See [`Buffers`] for more information.
-    pub fn buffers(mut self, buffers: Buffers) -> Self {
-        self.fifo_join = buffers;
-        self
-    }
-
     /// Set the clock divisor.
     ///
     /// The is based on the sys_clk. Set 1 for full speed. A clock divisor of `n` will cause the state machine to run 1
@@ -2177,15 +2350,6 @@ impl<P: PIOExt> PIOBuilder<P> {
         self
     }
 
-    /// Set the autopush state.
-    ///
-    /// When autopush is enabled, the `IN` instruction automatically pushes the data once the number of bits reaches
-    /// threshold set by [`Self::push_threshold`].
-    pub fn autopush(mut self, autopush: bool) -> Self {
-        self.autopush = autopush;
-        self
-    }
-
     /// Set the number of pins which are not masked to 0 when read by an `IN PINS`, `WAIT PIN` or `MOV x, PINS` instruction.
     ///
     /// For example, an IN_COUNT of 5 means that the 5 LSBs of the IN pin group are
@@ -2194,12 +2358,6 @@ impl<P: PIOExt> PIOBuilder<P> {
     /// masking.
     pub fn in_count(mut self, count: u8) -> Self {
         self.in_count = count;
-        self
-    }
-
-    /// Set the number of bits pushed into ISR before autopush or conditional push will take place.
-    pub fn push_threshold(mut self, threshold: u8) -> Self {
-        self.push_threshold = threshold;
         self
     }
 
@@ -2239,7 +2397,11 @@ impl<P: PIOExt> PIOBuilder<P> {
     pub fn build<SM: StateMachineIndex>(
         self,
         mut sm: UninitStateMachine<(P, SM)>,
-    ) -> (StateMachine<(P, SM), Stopped>, Rx<(P, SM)>, Tx<(P, SM)>) {
+    ) -> (
+        StateMachine<(P, SM), Stopped>,
+        Rx<(P, SM), RxFifoCfg>,
+        Tx<(P, SM)>,
+    ) {
         let offset = self.program.offset;
 
         // Stop the SM
@@ -2286,28 +2448,14 @@ impl<P: PIOExt> PIOBuilder<P> {
             });
 
             sm.sm().sm_shiftctrl().write(|w| {
-                let (fjoin_rx, fjoin_tx, fjoin_rx_put, fjoin_rx_get) = match self.fifo_join {
-                    Buffers::RxTx => (false, false, false, false),
-                    Buffers::OnlyTx => (false, true, false, false),
-                    Buffers::OnlyRx => (true, false, false, false),
-                    Buffers::RxPut => (false, false, true, false),
-                    Buffers::RxGet => (false, false, false, true),
-                    Buffers::RxPutGet => (false, false, true, true),
-                };
-                w.fjoin_rx().bit(fjoin_rx);
-                w.fjoin_tx().bit(fjoin_tx);
-                w.fjoin_rx_put().bit(fjoin_rx_put);
-                w.fjoin_rx_get().bit(fjoin_rx_get);
-
+                self.rx_fifo_config.configure_shiftctrl(w);
                 // TODO: Encode 32 as zero, and error on 0
                 w.pull_thresh().bits(self.pull_threshold);
-                w.push_thresh().bits(self.push_threshold);
 
                 w.out_shiftdir().bit(self.out_shiftdir.bit());
                 w.in_shiftdir().bit(self.in_shiftdir.bit());
 
                 w.autopull().bit(self.autopull);
-                w.autopush().bit(self.autopush);
 
                 w.in_count().bits(self.in_count)
             });
@@ -2357,5 +2505,106 @@ impl<P: PIOExt> PIOBuilder<P> {
             rx,
             tx,
         )
+    }
+
+    // Hidden from the public interface because we don't want to expose this
+    // on RxFifo variants, but we also don't want to duplicate the defaults
+    // all around.
+    fn with_rx_fifo_inner(self) -> PIOBuilder<P, RxFifo> {
+        self.with_rx_config(RxFifo {
+            autopush: false,
+            push_threshold: 0,
+            fifo_join: Buffers::RxTx,
+        })
+    }
+
+    fn with_rx_config<OtherRxCfg: RxFifoConfig>(
+        self,
+        rx_fifo_config: OtherRxCfg,
+    ) -> PIOBuilder<P, OtherRxCfg> {
+        PIOBuilder::<P, OtherRxCfg> {
+            clock_divisor: self.clock_divisor,
+            program: self.program,
+            jmp_pin: self.jmp_pin,
+            out_sticky: self.out_sticky,
+            inline_out: self.inline_out,
+            mov_status: self.mov_status,
+            pull_threshold: self.pull_threshold,
+            out_shiftdir: self.out_shiftdir,
+            in_shiftdir: self.in_shiftdir,
+            autopull: self.autopull,
+            in_count: self.in_count,
+            set_count: self.set_count,
+            out_count: self.out_count,
+            in_base: self.in_base,
+            side_set_base: self.side_set_base,
+            set_base: self.set_base,
+            out_base: self.out_base,
+            rx_fifo_config,
+        }
+    }
+}
+
+impl<P: PIOExt> PIOBuilder<P, RxFifo> {
+    /// Configure the RX buffer for random access, where the PIO program can
+    /// read and the system can write.
+    ///
+    /// See the reference manual, sections 4.11.8 and 4.11.9 for details.
+    pub fn with_rx_get(self) -> PIOBuilder<P, RxGet> {
+        self.with_rx_config(RxGet {})
+    }
+
+    /// Configure the RX buffer for random access, where the PIO program can
+    /// write and the system can read.
+    ///
+    /// See the reference manual, sections 4.11.8 and 4.11.9 for details.
+    pub fn with_rx_put(self) -> PIOBuilder<P, RxPut> {
+        self.with_rx_config(RxPut {})
+    }
+
+    /// Configure the RX buffer for random access where only the PIO program
+    /// can read or write.
+    ///
+    /// See the reference manual, sections 4.11.8 and 4.11.9 for details.
+    pub fn with_rx_putget(self) -> PIOBuilder<P, RxPutGet> {
+        self.with_rx_config(RxPutGet {})
+    }
+}
+
+impl<P: PIOExt> PIOBuilder<P, RxGet> {
+    /// Configure the RX buffer as FIFO.
+    ///
+    /// This disables autopush and configures the RX and TX buffers as
+    /// separate FIFOs. To join RX and TX buffers, see
+    /// [`buffers()`][`Self::buffers`].
+    pub fn with_rx_fifo(self) -> PIOBuilder<P, RxFifo> {
+        self.with_rx_fifo_inner()
+    }
+
+    /// Configure the RX buffer for random access where only the PIO program
+    /// can read or write.
+    ///
+    /// See the reference manual, sections 4.11.8 and 4.11.9 for details.
+    pub fn with_rx_putget(self) -> PIOBuilder<P, RxPutGet> {
+        self.with_rx_config(RxPutGet {})
+    }
+}
+
+impl<P: PIOExt> PIOBuilder<P, RxPut> {
+    /// Configure the RX buffer as FIFO.
+    ///
+    /// This disables autopush and configures the RX and TX buffers as
+    /// separate FIFOs. To join RX and TX buffers, see
+    /// [`buffers()`][`Self::buffers`].
+    pub fn with_rx_fifo(self) -> PIOBuilder<P, RxFifo> {
+        self.with_rx_fifo_inner()
+    }
+
+    /// Configure the RX FIFO for random access where only the PIO program
+    /// can read or write.
+    ///
+    /// See the reference manual, sections 4.11.8 and 4.11.9 for details.
+    pub fn with_rx_putget(self) -> PIOBuilder<P, RxPutGet> {
+        self.with_rx_config(RxPutGet {})
     }
 }
