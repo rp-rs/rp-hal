@@ -36,17 +36,18 @@ pub struct FractionalFrequency(u32);
 
 impl FractionalFrequency {
     /// Create a new Fractional Frequency from any `fugit::Rate`.
-    pub const fn new<const NOM: u32, const DENOM: u32>(
+    pub const fn new<const NOM: u64, const DENOM: u64>(
         rate: fugit::Rate<u32, NOM, DENOM>,
     ) -> FractionalFrequency {
         // fugit has a `convert` method, but it has rounding problems.
+        // (rene) this is fixed in issue #50 of fugit?
         // So we do it by hand.
-        let rd_times_ln: u64 = 65536u64 * NOM as u64;
-        let ld_times_rn: u64 = DENOM as u64 * 1000u64;
+        let rd_times_ln: u64 = 65536u64 * NOM;
+        let ld_times_rn: u64 = DENOM * 1000u64;
         let divisor: u64 = gcd::binary_u64(ld_times_rn, rd_times_ln);
         let rd_times_ln: u64 = rd_times_ln / divisor;
         let ld_times_rn: u64 = ld_times_rn / divisor;
-        let raw = rate.raw() as u64 * rd_times_ln;
+        let raw = rate.to_raw() as u64 * rd_times_ln;
         let raw = (raw + (ld_times_rn / 2)) / ld_times_rn;
         FractionalFrequency(raw as u32)
     }
