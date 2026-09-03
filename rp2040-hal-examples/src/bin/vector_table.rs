@@ -42,8 +42,8 @@ type LedAndAlarm = (
 static LED_AND_ALARM: Mutex<RefCell<Option<LedAndAlarm>>> = Mutex::new(RefCell::new(None));
 
 // Period that each of the alarms will be set for - 1 second and 300ms respectively
-const SLOW_BLINK_INTERVAL_US: MicrosDurationU32 = MicrosDurationU32::secs(1);
-const FAST_BLINK_INTERVAL_US: MicrosDurationU32 = MicrosDurationU32::millis(300);
+const SLOW_BLINK_INTERVAL_US: MicrosDurationU32 = MicrosDurationU32::from_secs(1);
+const FAST_BLINK_INTERVAL_US: MicrosDurationU32 = MicrosDurationU32::from_millis(300);
 
 /// The linker will place this boot block at the start of our program image. We
 /// need this to help the ROM bootloader get our code up and running.
