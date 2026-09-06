@@ -287,11 +287,7 @@ probe-rs can autodetect your debug probe, which can make it easier to use.
 
 *Step 1* - Install `probe-rs`:
 
-```sh
-cargo install --locked probe-rs-tools
-```
-
-Alternatively, follow the installation instructions on https://probe.rs/.
+Follow the installation instructions at the [probe-rs website](https://probe.rs/).
 
 *Step 2* - Make sure your .cargo/config contains the following:
 
