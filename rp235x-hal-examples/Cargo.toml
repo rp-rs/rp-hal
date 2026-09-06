@@ -25,7 +25,7 @@ embedded-hal-async = "1.0.0"
 embedded-hal-bus = {version = "0.3.0", features = ["defmt-03"]}
 embedded-io = "0.7.1"
 embedded_hal_0_2 = {package = "embedded-hal", version = "0.2.5", features = ["unproven"]}
-fugit = "0.3.6"
+fugit = "0.5.0"
 futures = {version = "0.3.30", default-features = false, features = ["async-await"]}
 hd44780-driver = { version = "0.4.0", git = "https://github.com/JohnDoneth/hd44780-driver", rev = "9009f2c24771ba0a20f8f7534471c9869188f76c" }
 heapless = "0.8.0"

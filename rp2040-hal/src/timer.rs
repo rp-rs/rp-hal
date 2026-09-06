@@ -9,7 +9,7 @@
 //! See [Chapter 4 Section 6](https://datasheets.raspberrypi.org/rp2040/rp2040-datasheet.pdf) of the datasheet for more details.
 
 use core::sync::atomic::{AtomicU8, Ordering};
-use fugit::{MicrosDurationU32, MicrosDurationU64, TimerInstantU64};
+use fugit::{MicrosDurationU32, MicrosDurationU64, WrappingTimerInstantU64};
 
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
@@ -20,7 +20,7 @@ use crate::{
 };
 
 /// Instant type used by the Timer & Alarm methods.
-pub type Instant = TimerInstantU64<1_000_000>;
+pub type Instant = WrappingTimerInstantU64<1_000_000>;
 
 static ALARMS: AtomicU8 = AtomicU8::new(0x0F);
 fn take_alarm(mask: u8) -> bool {
@@ -78,7 +78,7 @@ impl Timer {
             }
             hi0 = hi1;
         };
-        TimerInstantU64::from_ticks(timestamp)
+        WrappingTimerInstantU64::from_ticks(timestamp)
     }
 
     /// Get the value of the least significant word of the counter.
@@ -91,7 +91,7 @@ impl Timer {
     pub fn count_down(&self) -> CountDown {
         CountDown {
             timer: *self,
-            period: MicrosDurationU64::nanos(0),
+            period: MicrosDurationU64::from_nanos(0),
             next_end: None,
         }
     }
@@ -230,16 +230,16 @@ impl embedded_hal_0_2::timer::CountDown for CountDown {
         self.next_end = Some(
             self.timer
                 .get_counter()
-                .ticks()
-                .wrapping_add(self.period.to_micros()),
+                .as_ticks()
+                .wrapping_add(self.period.as_micros()),
         );
     }
 
     fn wait(&mut self) -> nb::Result<(), void::Void> {
         if let Some(end) = self.next_end {
-            let ts = self.timer.get_counter().ticks();
+            let ts = self.timer.get_counter().as_ticks();
             if ts >= end {
-                self.next_end = Some(end.wrapping_add(self.period.to_micros()));
+                self.next_end = Some(end.wrapping_add(self.period.as_micros()));
                 Ok(())
             } else {
                 Err(nb::Error::WouldBlock)
@@ -311,7 +311,7 @@ macro_rules! impl_alarm {
         pub struct $name(Timer);
         impl $name {
             fn schedule_internal(&mut self, timestamp: Instant) -> Result<(), ScheduleAlarmError> {
-                let timestamp_low = (timestamp.ticks() & 0xFFFF_FFFF) as u32;
+                let timestamp_low = (timestamp.as_ticks() & 0xFFFF_FFFF) as u32;
                 // Safety: Only used to access bits belonging exclusively to this alarm
                 let timer = unsafe { &*pac::TIMER::PTR };
 
@@ -417,7 +417,7 @@ macro_rules! impl_alarm {
             /// [enable_interrupt]: #method.enable_interrupt
             fn schedule_at(&mut self, timestamp: Instant) -> Result<(), ScheduleAlarmError> {
                 let now = self.0.get_counter();
-                let duration = timestamp.ticks().saturating_sub(now.ticks());
+                let duration = timestamp.as_ticks().saturating_sub(now.as_ticks());
                 if duration > u32::MAX.into() {
                     return Err(ScheduleAlarmError::AlarmTooLate);
                 }

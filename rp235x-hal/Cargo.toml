@@ -28,7 +28,7 @@ embedded-hal-nb = "1.0.0"
 embedded-io = "0.7.1"
 embedded_hal_0_2 = {package = "embedded-hal", version = "0.2.5", features = ["unproven"]}
 frunk = {version = "0.4.1", default-features = false}
-fugit = "0.3.6"
+fugit = "0.5.0"
 gcd = ">=2.1,<3.0"
 itertools = {version = "0.13.0", default-features = false}
 nb = "1.0"

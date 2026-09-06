@@ -11,4 +11,4 @@ version = "0.1.0"
 
 # DO NOT LIST ANY PAC CRATES OR ARCHITECTURE CRATES HERE
 [dependencies]
-fugit = "0.3.7"
+fugit = "0.5.0"

@@ -9,7 +9,7 @@
 //! See [Section 12.8](https://rptl.io/rp2350-datasheet) of the datasheet for more details.
 
 use core::sync::atomic::{AtomicU8, Ordering};
-use fugit::{MicrosDurationU32, MicrosDurationU64, TimerInstantU64};
+use fugit::{MicrosDurationU32, MicrosDurationU64, WrappingTimerInstantU64};
 
 use crate::{
     atomic_register_access::{write_bitmask_clear, write_bitmask_set},
@@ -20,7 +20,7 @@ use crate::{
 };
 
 /// Instant type used by the Timer & Alarm methods.
-pub type Instant = TimerInstantU64<1_000_000>;
+pub type Instant = WrappingTimerInstantU64<1_000_000>;
 
 static ALARMS_TIMER0: AtomicU8 = AtomicU8::new(0x00);
 static ALARMS_TIMER1: AtomicU8 = AtomicU8::new(0x00);
@@ -154,7 +154,7 @@ where
             }
             hi0 = hi1;
         };
-        TimerInstantU64::from_ticks(timestamp)
+        WrappingTimerInstantU64::from_ticks(timestamp)
     }
 
     /// Get the value of the least significant word of the counter.
@@ -168,7 +168,7 @@ where
     pub fn count_down(&self) -> CountDown<'_, D> {
         CountDown {
             timer: self,
-            period: MicrosDurationU64::nanos(0),
+            period: MicrosDurationU64::from_nanos(0),
             next_end: None,
         }
     }
@@ -316,16 +316,16 @@ where
         self.next_end = Some(
             self.timer
                 .get_counter()
-                .ticks()
-                .wrapping_add(self.period.to_micros()),
+                .as_ticks()
+                .wrapping_add(self.period.as_micros()),
         );
     }
 
     fn wait(&mut self) -> nb::Result<(), void::Void> {
         if let Some(end) = self.next_end {
-            let ts = self.timer.get_counter().ticks();
+            let ts = self.timer.get_counter().as_ticks();
             if ts >= end {
-                self.next_end = Some(end.wrapping_add(self.period.to_micros()));
+                self.next_end = Some(end.wrapping_add(self.period.as_micros()));
                 Ok(())
             } else {
                 Err(nb::Error::WouldBlock)
@@ -405,7 +405,7 @@ macro_rules! impl_alarm {
             D: TimerDevice,
         {
             fn schedule_internal(&mut self, timestamp: Instant) -> Result<(), ScheduleAlarmError> {
-                let timestamp_low = (timestamp.ticks() & 0xFFFF_FFFF) as u32;
+                let timestamp_low = (timestamp.as_ticks() & 0xFFFF_FFFF) as u32;
                 let timer = D::get_perif();
 
                 // This lock is for time-criticality
@@ -513,7 +513,7 @@ macro_rules! impl_alarm {
             /// [enable_interrupt]: #method.enable_interrupt
             fn schedule_at(&mut self, timestamp: Instant) -> Result<(), ScheduleAlarmError> {
                 let now = self.0.get_counter();
-                let duration = timestamp.ticks().saturating_sub(now.ticks());
+                let duration = timestamp.as_ticks().saturating_sub(now.as_ticks());
                 if duration > u32::MAX.into() {
                     return Err(ScheduleAlarmError::AlarmTooLate);
                 }
