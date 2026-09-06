@@ -37,6 +37,21 @@ fn release_alarm(mask: u8) {
     });
 }
 
+fn get_timestamp() -> u64 {
+    // Safety: Only used for reading current timer value
+    let timer = unsafe { &*pac::TIMER::PTR };
+    let mut hi0 = timer.timerawh().read().bits();
+    let timestamp = loop {
+        let low = timer.timerawl().read().bits();
+        let hi1 = timer.timerawh().read().bits();
+        if hi0 == hi1 {
+            break (u64::from(hi0) << 32) | u64::from(low);
+        }
+        hi0 = hi1;
+    };
+    timestamp
+}
+
 /// Timer peripheral
 //
 // This struct logically wraps a `pac::TIMER`, but doesn't actually store it:
@@ -67,18 +82,7 @@ impl Timer {
 
     /// Get the current counter value.
     pub fn get_counter(&self) -> Instant {
-        // Safety: Only used for reading current timer value
-        let timer = unsafe { &*pac::TIMER::PTR };
-        let mut hi0 = timer.timerawh().read().bits();
-        let timestamp = loop {
-            let low = timer.timerawl().read().bits();
-            let hi1 = timer.timerawh().read().bits();
-            if hi0 == hi1 {
-                break (u64::from(hi0) << 32) | u64::from(low);
-            }
-            hi0 = hi1;
-        };
-        WrappingTimerInstantU64::from_ticks(timestamp)
+        WrappingTimerInstantU64::from_ticks(get_timestamp())
     }
 
     /// Get the value of the least significant word of the counter.
@@ -499,9 +503,10 @@ impl_alarm!(Alarm3 {
 /// Support for RTIC monotonic trait.
 #[cfg(feature = "rtic-monotonic")]
 pub mod monotonic {
-    use super::{Alarm, Instant, Timer};
-    use fugit::ExtU32;
+    use super::{get_timestamp, Alarm, Timer};
+    use fugit::{ExtU32, MonotonicTimerInstantU64};
 
+    pub type MTInstant = MonotonicTimerInstantU64<1_000_000>;
     /// RTIC Monotonic Implementation
     pub struct Monotonic<A>(pub Timer, A);
     impl<A: Alarm> Monotonic<A> {
@@ -511,19 +516,19 @@ pub mod monotonic {
         }
     }
     impl<A: Alarm> rtic_monotonic::Monotonic for Monotonic<A> {
-        type Instant = Instant;
+        type Instant = MTInstant;
         type Duration = fugit::MicrosDurationU64;
 
         const DISABLE_INTERRUPT_ON_EMPTY_QUEUE: bool = false;
 
-        fn now(&mut self) -> Instant {
-            self.0.get_counter()
+        fn now(&mut self) -> MTInstant {
+            MTInstant::from_ticks(get_timestamp())
         }
 
-        fn set_compare(&mut self, instant: Instant) {
+        fn set_compare(&mut self, instant: MTInstant) {
             // The alarm can only trigger up to 2^32 - 1 ticks in the future.
             // So, if `instant` is more than 2^32 - 2 in the future, we use `max_instant` instead.
-            let max_instant = self.0.get_counter() + 0xFFFF_FFFE.micros();
+            let max_instant = self.now() + 0xFFFF_FFFE.micros();
             let wake_at = core::cmp::min(instant, max_instant);
 
             // Cannot fail
@@ -536,7 +541,7 @@ pub mod monotonic {
         }
 
         fn zero() -> Self::Instant {
-            Instant::from_ticks(0)
+            MTInstant::from_ticks(0)
         }
 
         unsafe fn reset(&mut self) {}
