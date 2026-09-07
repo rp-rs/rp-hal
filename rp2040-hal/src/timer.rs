@@ -9,6 +9,7 @@
 //! See [Chapter 4 Section 6](https://datasheets.raspberrypi.org/rp2040/rp2040-datasheet.pdf) of the datasheet for more details.
 
 use core::sync::atomic::{AtomicU8, Ordering};
+use embedded_hal_timer::OverflowError;
 use fugit::{MicrosDurationU32, MicrosDurationU64, TimerInstantU64};
 
 use crate::{
@@ -540,5 +541,83 @@ pub mod monotonic {
         }
 
         unsafe fn reset(&mut self) {}
+    }
+}
+
+/// Implementation of embedded_hal_timer::Timer
+pub struct TickCounter {
+    timer: Timer,
+    start_time: u64,
+}
+
+impl TickCounter {
+    /// Creates a new TickCounter.
+    pub const fn new(timer: Timer) -> Self {
+        Self {
+            timer,
+            start_time: 0,
+        }
+    }
+}
+
+impl embedded_hal_timer::Timer for TickCounter {
+    fn start(&mut self) {
+        self.start_time = self.timer.get_counter().ticks();
+    }
+
+    fn tickrate(&self) -> u64 {
+        1_000_000
+    }
+
+    fn elapsed_ticks(&self) -> Result<u64, embedded_hal_timer::OverflowError> {
+        let elapsed = self
+            .timer
+            .get_counter()
+            .ticks()
+            .wrapping_sub(self.start_time);
+        Ok(elapsed)
+    }
+
+    fn elapsed_nanos(&self) -> Result<u64, embedded_hal_timer::OverflowError> {
+        let ticks = self.elapsed_ticks().unwrap().saturating_sub(1);
+        ticks.checked_mul(1000).ok_or(OverflowError)
+    }
+
+    fn elapsed_micros(&self) -> Result<u64, embedded_hal_timer::OverflowError> {
+        let ticks = self.elapsed_ticks().unwrap().saturating_sub(1);
+        Ok(ticks)
+    }
+
+    fn elapsed_millis(&self) -> Result<u64, embedded_hal_timer::OverflowError> {
+        let ticks = self.elapsed_ticks().unwrap().saturating_sub(1);
+        Ok(ticks / 1000)
+    }
+
+    fn elapsed_secs(&self) -> Result<u64, embedded_hal_timer::OverflowError> {
+        let ticks = self.elapsed_ticks().unwrap().saturating_sub(1);
+        Ok(ticks / 1_000_000)
+    }
+
+    fn max_ticks(&self) -> u64 {
+        u64::MAX
+    }
+
+    fn max_nanos(&self) -> u64 {
+        u64::MAX
+    }
+
+    fn max_micros(&self) -> u64 {
+        // Subtracting 1 because the first tick may happen less than one microsecond
+        // after calling start(), so overflow may happen in slightly less than u64
+        // microseconds.
+        u64::MAX - 1
+    }
+
+    fn max_millis(&self) -> u64 {
+        u64::MAX / 1000
+    }
+
+    fn max_secs(&self) -> u64 {
+        u64::MAX / 1_000_000
     }
 }
