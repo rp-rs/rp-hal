@@ -1,4 +1,8 @@
 //! Types for the Binary Info system
+use crate::consts::{TAG_RASPBERRY_PI};
+
+// pico-sck/src/common/pico_binary_info/include/pico/binary_info/structure.h
+const BI_PINS_ENCODING_MULTI: u32 = 2;
 
 /// This is the 'Binary Info' header block that `picotool` looks for in your UF2
 /// file/ELF file/Pico in Bootloader Mode to give you useful metadata about your
@@ -116,7 +120,7 @@ pub enum DataType {
     BlockDevice = 7,
     /// GPIO pins, with their function
     PinsWithFunction = 8,
-    /// GPIO pins, with their name
+    /// GPIO pins, with their name pico-sdk: BINARY_INFO_TYPE_PINS_WITH_NAME
     PinsWithName = 9,
     /// GPIO pins, with multiple names?
     PinsWithNames = 10,
@@ -161,6 +165,7 @@ impl StringEntry {
 // core::ffi::c_char` pointers between threads. We only allow these to be
 // created with static string slices, so it's OK.
 unsafe impl Sync for StringEntry {}
+unsafe impl Sync for PinWithNameEntry {}
 
 /// An entry which contains both an ID (e.g. `ID_RP_BINARY_END`) and an integer.
 #[repr(C)]
@@ -180,6 +185,62 @@ impl IntegerEntry {
             },
             id,
             value,
+        }
+    }
+
+    /// Get this entry's address
+    pub const fn addr(&self) -> EntryAddr {
+        EntryAddr(self as *const Self as *const u32)
+    }
+}
+
+/// An entry which contains a pin_encoding.
+#[repr(C)]
+pub struct PinsWithFunctionEntry {
+    header: EntryCommon,
+    pin_encoding: u32,
+}
+
+impl PinsWithFunctionEntry {
+    /// Create a new `PinsWithFunctionEntry`
+    pub const fn new(pin_0: u32, pin_1: u32, func: u32) -> PinsWithFunctionEntry {
+        PinsWithFunctionEntry {
+            header: EntryCommon {
+                data_type: DataType::PinsWithFunction,
+                tag: TAG_RASPBERRY_PI,
+            },
+            pin_encoding: BI_PINS_ENCODING_MULTI
+                | (func << 3)
+                | (pin_0 << 7)
+                | (pin_1 << 12)
+                | (pin_1 << 17)
+        }
+    }
+
+    /// Get this entry's address
+    pub const fn addr(&self) -> EntryAddr {
+        EntryAddr(self as *const Self as *const u32)
+    }
+}
+
+/// An entry which contains a pin and a name.
+#[repr(C)]
+pub struct PinWithNameEntry {
+    header: EntryCommon,
+    pin_mask: u32,
+    label: *const core::ffi::c_char,
+}
+
+impl PinWithNameEntry {
+    /// Create a new `PinWithNameEntry`
+    pub const fn new(pin: u32, name: &'static core::ffi::CStr) -> PinWithNameEntry {
+        PinWithNameEntry {
+            header: EntryCommon {
+                data_type: DataType::PinsWithName,
+                tag: TAG_RASPBERRY_PI,
+            },
+            pin_mask: 1u32 << pin,
+            label: name.as_ptr()
         }
     }
 
