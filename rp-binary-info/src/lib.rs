@@ -127,6 +127,42 @@ pub static PICOTOOL_HEADER: Header = unsafe {
     )
 };
 
+/// Available GPIO Functions for BI_PIN_WITH_FUNC
+///
+/// These values are extracted from the pico-sdk.
+pub enum PinFunction {
+    /// eXecute-In-Place Function
+    Xip = 0,
+    /// GPIO pin is used for Serial Perpheral Interface
+    Spi = 1,
+    /// GPIO pin is used for Univerasl Asynchronous Receiver/Transmitter
+    Uart = 2,
+    /// GPIO pin is used for I2C
+    I2c = 3,
+    /// GPIO pin is used for Pulse Width Modulation
+    Pwm = 4,
+    /// GPIO pin is used for Single-cycle I/O
+    Sio = 5,
+    /// GPIO pin is used for Programmable I/O block 0
+    Pio0 = 6,
+    /// GPIO pin is used for Programmable I/O block 1
+    Pio1 = 7,
+    /// GPIO pin is used for clock signal
+    Gpck = 8,
+    /// GPIO pin is used for USB inferface
+    Usb = 9,
+    /// GPIO pin is used for High Speed Tx
+    Hstx = 10,
+    /// GPIO pin is used for Programmable I/O block 2
+    Pio2 = 11,
+    /// GPIO pin is used for Tracing
+    CoresightTrace = 12,
+    /// GPIO pin is used for Auxilary UART
+    UartAux = 13,
+    /// GPIO pin is not used
+    Null = 0x1f,
+}
+
 /// This tells picotool how to convert RAM addresses back into Flash addresses
 pub static MAPPING_TABLE: [MappingTableEntry; 2] = [
     // This is the entry for .data
