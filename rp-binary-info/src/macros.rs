@@ -6,7 +6,7 @@
 macro_rules! env {
     ($tag:expr, $id:expr, $env_var_name:expr) => {
         $crate::str!($tag, $id, {
-            let value = concat!(env!($env_var_name), "\0");
+            let value = concat!(::core::env!($env_var_name), "\0");
             // # Safety
             //
             // We used `concat!` to null-terminate on the line above.
