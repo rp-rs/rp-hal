@@ -263,15 +263,16 @@ macro_rules! rp_cargo_bin_name {
 ///
 /// # Example
 ///
-/// ```ignore
-/// let entry: EntryAddr = rp_program_version!();
+/// ```
+/// # use rp_binary_info::*;
+/// let entry: EntryAddr = rp_program_version!(c"v1.2.3");
 /// ```
 #[macro_export]
 macro_rules! rp_program_version {
     ($version:expr) => {{
         $crate::str!(
             $crate::consts::TAG_RASPBERRY_PI,
-            $crate::consts::ID_RP_PROGRAM_VERSION,
+            $crate::consts::ID_RP_PROGRAM_VERSION_STRING,
             $version
         )
     }};
