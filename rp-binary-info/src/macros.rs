@@ -6,7 +6,7 @@
 macro_rules! env {
     ($tag:expr, $id:expr, $env_var_name:expr) => {
         $crate::str!($tag, $id, {
-            let value = concat!(env!($env_var_name), "\0");
+            let value = concat!(::core::env!($env_var_name), "\0");
             // # Safety
             //
             // We used `concat!` to null-terminate on the line above.
@@ -224,8 +224,9 @@ macro_rules! pins_range_with_func {
 ///
 /// # Example
 ///
-/// ```ignore
-/// let entry: EntryAddr = rp_program_name!();
+/// ```
+/// # use rp_binary_info::*;
+/// let entry: EntryAddr = rp_program_name!(c"The Program");
 /// ```
 #[macro_export]
 macro_rules! rp_program_name {
@@ -245,6 +246,7 @@ macro_rules! rp_program_name {
 /// # Example
 ///
 /// ```ignore
+/// # // doctest ignored since CARGO_BIN_NAME isn't set for tests.
 /// let entry: EntryAddr = rp_cargo_bin_name!();
 /// ```
 #[macro_export]
@@ -263,15 +265,16 @@ macro_rules! rp_cargo_bin_name {
 ///
 /// # Example
 ///
-/// ```ignore
-/// let entry: EntryAddr = rp_program_version!();
+/// ```
+/// # use rp_binary_info::*;
+/// let entry: EntryAddr = rp_program_version!(c"v1.2.3");
 /// ```
 #[macro_export]
 macro_rules! rp_program_version {
     ($version:expr) => {{
         $crate::str!(
             $crate::consts::TAG_RASPBERRY_PI,
-            $crate::consts::ID_RP_PROGRAM_VERSION,
+            $crate::consts::ID_RP_PROGRAM_VERSION_STRING,
             $version
         )
     }};
@@ -283,7 +286,8 @@ macro_rules! rp_program_version {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```
+/// # use rp_binary_info::*;
 /// let entry: EntryAddr = rp_cargo_version!();
 /// ```
 #[macro_export]
@@ -302,8 +306,9 @@ macro_rules! rp_cargo_version {
 ///
 /// # Example
 ///
-/// ```ignore
-/// let entry: EntryAddr = rp_program_url!();
+/// ```
+/// # use rp_binary_info::*;
+/// let entry: EntryAddr = rp_program_url!(c"https://github.com/rp-rs/rp-hal");
 /// ```
 #[macro_export]
 macro_rules! rp_program_url {
@@ -322,7 +327,8 @@ macro_rules! rp_program_url {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```
+/// # use rp_binary_info::*;
 /// let entry: EntryAddr = rp_cargo_homepage_url!();
 /// ```
 #[macro_export]
@@ -341,8 +347,9 @@ macro_rules! rp_cargo_homepage_url {
 ///
 /// # Example
 ///
-/// ```ignore
-/// let entry: EntryAddr = rp_program_description!();
+/// ```
+/// # use rp_binary_info::*;
+/// let entry: EntryAddr = rp_program_description!(c"RP firmware that does ...!");
 /// ```
 #[macro_export]
 macro_rules! rp_program_description {
@@ -361,7 +368,8 @@ macro_rules! rp_program_description {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```
+/// # use rp_binary_info::*;
 /// let entry: EntryAddr = rp_cargo_description!();
 /// ```
 #[macro_export]
@@ -381,7 +389,8 @@ macro_rules! rp_cargo_description {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```
+/// # use rp_binary_info::*;
 /// let entry: EntryAddr = rp_program_build_attribute!();
 /// ```
 #[macro_export]
@@ -407,8 +416,9 @@ macro_rules! rp_program_build_attribute {
 ///
 /// # Example
 ///
-/// ```ignore
-/// let entry: EntryAddr = rp_pico_board!("pico2");
+/// ```
+/// # use rp_binary_info::*;
+/// let entry: EntryAddr = rp_pico_board!(c"pico2");
 /// ```
 #[macro_export]
 macro_rules! rp_pico_board {
@@ -439,7 +449,9 @@ macro_rules! rp_pico_board {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```
+/// # use rp_binary_info::*;
+/// # static __flash_binary_end: u32 = 0x2000000;
 /// let entry: EntryAddr = rp_binary_end!(__flash_binary_end);
 /// ```
 #[macro_export]
