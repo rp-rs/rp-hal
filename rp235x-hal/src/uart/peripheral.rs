@@ -312,15 +312,18 @@ fn calculate_baudrate_dividers(
         .and_then(|r| r.checked_div(wanted_baudrate.to_Hz()))
         .ok_or(Error::BadArgument)?;
 
-    Ok(
-        match (baudrate_div >> 7, (baudrate_div & 0x7F).div_ceil(2)) {
-            (0, _) => (1, 0),
+    // Round to the nearest 1/64 before splitting the divisor, so that rounding up the
+    // fractional part carries into the integer part instead of overflowing the 6-bit
+    // fractional register.
+    let baudrate_div = baudrate_div.div_ceil(2);
 
-            (int_part, _) if int_part >= 65535 => (65535, 0),
+    Ok(match (baudrate_div >> 6, baudrate_div & 0x3F) {
+        (0, _) => (1, 0),
 
-            (int_part, frac_part) => (int_part as u16, frac_part as u16),
-        },
-    )
+        (int_part, _) if int_part >= 65535 => (65535, 0),
+
+        (int_part, frac_part) => (int_part as u16, frac_part as u16),
+    })
 }
 
 /// Baudrate configuration. Code loosely inspired from the C SDK.
@@ -530,5 +533,39 @@ impl<D: UartDevice, P: ValidUartPinout<D>> embedded_io::WriteReady
 {
     fn write_ready(&mut self) -> Result<bool, Self::Error> {
         Ok(self.uart_is_writable())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use fugit::RateExtU32;
+
+    use super::*;
+
+    #[test]
+    fn test_calculate_baudrate_dividers() {
+        // 125 MHz / (16 * 115200) = 67.817 -> 67 + 52/64
+        assert_eq!(
+            calculate_baudrate_dividers(115_200.Hz(), 125_000_000.Hz()).unwrap(),
+            (67, 52)
+        );
+
+        // 125 MHz / (16 * 57871) = 134.998 must round up to 135 + 0/64, not 134 + 64/64
+        assert_eq!(
+            calculate_baudrate_dividers(57_871.Hz(), 125_000_000.Hz()).unwrap(),
+            (135, 0)
+        );
+    }
+
+    #[test]
+    fn test_calculate_baudrate_dividers_frac_fits_register() {
+        // UARTFBRD.BAUD_DIVFRAC is only 6 bits wide
+        for baudrate in 1200..=1_000_000u32 {
+            let (_, frac) = calculate_baudrate_dividers(baudrate.Hz(), 150_000_000.Hz()).unwrap();
+            assert!(
+                frac < 64,
+                "baudrate {baudrate}: fractional divisor {frac} >= 64"
+            );
+        }
     }
 }
