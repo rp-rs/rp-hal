@@ -40,7 +40,6 @@ impl FractionalFrequency {
         rate: fugit::Rate<u32, NOM, DENOM>,
     ) -> FractionalFrequency {
         // fugit has a `convert` method, but it has rounding problems.
-        // (rene) this is fixed in issue #50 of fugit?
         // So we do it by hand.
         let rd_times_ln: u64 = 65536u64 * NOM;
         let ld_times_rn: u64 = DENOM * 1000u64;
