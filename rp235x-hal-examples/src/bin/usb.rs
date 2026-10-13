@@ -94,11 +94,11 @@ fn main() -> ! {
     let mut said_hello = false;
     loop {
         // A welcome message at the beginning
-        if !said_hello && timer.get_counter().ticks() >= 2_000_000 {
+        if !said_hello && timer.get_counter().as_ticks() >= 2_000_000 {
             said_hello = true;
             let _ = serial.write(b"Hello, World!\r\n");
 
-            let time = timer.get_counter().ticks();
+            let time = timer.get_counter().as_ticks();
             let mut text: String<64> = String::new();
             writeln!(&mut text, "Current timer ticks: {time}").unwrap();
 

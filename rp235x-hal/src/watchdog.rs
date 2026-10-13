@@ -185,7 +185,7 @@ impl Watchdog {
     pub fn start<T: Into<MicrosDurationU32>>(&mut self, period: T) {
         const MAX_PERIOD: u32 = 0xFFFFFF;
 
-        let delay_us = period.into().to_micros();
+        let delay_us = period.into().as_micros();
         if delay_us > MAX_PERIOD / 2 {
             panic!(
                 "Period cannot exceed maximum load value of {} ({} microseconds))",
