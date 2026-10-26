@@ -86,4 +86,4 @@ SECTIONS {
     .flash_end : {
         __flash_binary_end = .;
     } > FLASH
-} INSERT AFTER .uninit;
+} INSERT AFTER .gnu.sgstubs;
