@@ -395,9 +395,17 @@ impl UsbBus {
     }
 
     /// Generates a resume request on the bus.
+    ///
+    /// The controller doesn't raise a resume interrupt for a resume the device
+    /// starts, so the start of frame interrupt is enabled until the host's
+    /// next frame, which `poll` reports as [`PollResult::Resume`].
     pub fn remote_wakeup(&self) {
         critical_section::with(|cs| {
             let inner = self.inner.borrow(cs).borrow_mut();
+            // Reading SOF_RD clears the interrupt left from frames before the
+            // suspend.
+            inner.ctrl_reg.sof_rd().read();
+            inner.ctrl_reg.inte().modify(|_, w| w.dev_sof().set_bit());
             inner
                 .ctrl_reg
                 .sie_ctrl()
@@ -559,6 +567,12 @@ impl UsbBusTrait for UsbBus {
 
             if ints.bus_reset().bit_is_set() {
                 return PollResult::Reset;
+            } else if ints.dev_sof().bit_is_set() {
+                // The host resumed after a remote wakeup. Reading SOF_RD
+                // clears the interrupt.
+                inner.ctrl_reg.sof_rd().read();
+                inner.ctrl_reg.inte().modify(|_, w| w.dev_sof().clear_bit());
+                return PollResult::Resume;
             } else if buff_status == 0 && ints.setup_req().bit_is_clear() {
                 if ints.dev_suspend().bit_is_set() {
                     inner
