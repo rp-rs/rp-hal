@@ -46,7 +46,7 @@
 //!     .flash_end : {
 //!         __flash_binary_end = .;
 //!     } > FLASH
-//! } INSERT AFTER .uninit;
+//! } INSERT AFTER .gnu.sgstubs;
 //! ```
 //!
 //! Then, add this to your Rust code:

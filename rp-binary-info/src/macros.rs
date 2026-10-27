@@ -444,7 +444,7 @@ macro_rules! rp_pico_board {
 ///     {
 ///         __flash_binary_end = .;
 ///     } > FLASH
-/// } INSERT AFTER .uninit;
+/// } INSERT AFTER .gnu.sgstubs;
 /// ```
 ///
 /// # Example
