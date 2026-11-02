@@ -115,6 +115,7 @@ impl ValidAddress for u16 {
 
 /// I2C error
 #[non_exhaustive]
+#[derive(PartialEq, Eq)]
 pub enum Error {
     /// I2C abort with error
     Abort(u32),
