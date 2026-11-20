@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix `Spi::set_baudrate` picking a prescaler one step too small, which made slow SPI clocks run up to twice as fast as requested. - #1019 @emincan2000
+
 ## [0.4.0] - 2026-02-01
 
 ### MSRV
