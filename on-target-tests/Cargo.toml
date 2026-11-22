@@ -1,5 +1,6 @@
 [package]
 authors = ["The rp-rs Developers"]
+categories = ["development-tools::testing", "embedded", "hardware-support", "no-std", "no-std::no-alloc"]
 description = "Test cases that run on an RP2040 or an RP235x"
 edition = "2021"
 keywords = ["embedded", "hal", "raspberry-pi", "embedded-hal"]
