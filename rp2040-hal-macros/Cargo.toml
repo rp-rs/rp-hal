@@ -1,5 +1,4 @@
 [package]
-authors = ["The rp-rs Developers"]
 categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc", "development-tools::procedural-macro-helpers"]
 description = "Macros used by rp2040-hal"
 edition = "2021"

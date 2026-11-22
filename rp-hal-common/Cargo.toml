@@ -1,5 +1,4 @@
 [package]
-authors = ["The rp-rs Developers"]
 categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
 description = "Shared HAL code for the Raspberry Pi microcontrollers"
 edition = "2021"

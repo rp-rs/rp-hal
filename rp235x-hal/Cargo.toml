@@ -1,5 +1,4 @@
 [package]
-authors = ["The rp-rs Developers"]
 categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
 description = "A Rust Embedded-HAL impl for the RP235x microcontroller family"
 edition = "2021"

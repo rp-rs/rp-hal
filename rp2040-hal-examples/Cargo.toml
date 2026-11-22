@@ -1,5 +1,4 @@
 [package]
-authors = ["The rp-rs Developers"]
 categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
 description = "Examples for the rp2040-hal crate"
 edition = "2021"

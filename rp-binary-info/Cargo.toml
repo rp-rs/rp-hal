@@ -1,5 +1,4 @@
 [package]
-authors = ["The rp-rs Developers"]
 categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
 description = "Code and types for creating Picotool compatible Binary Info metadata"
 edition = "2021"
