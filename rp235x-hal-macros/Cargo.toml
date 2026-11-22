@@ -1,20 +1,25 @@
 [package]
+categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc", "development-tools::procedural-macro-helpers"]
 description = "Macros used by rp235x-hal"
+edition = "2021"
+keywords = ["embedded", "hal", "raspberry-pi", "rp235x", "embedded-hal"]
 license = "MIT OR Apache-2.0"
 name = "rp235x-hal-macros"
 readme = "README.md"
-version = "0.1.0"
-edition = "2021"
 repository = "https://github.com/rp-rs/rp-hal"
+version = "0.1.0"
 
 [lib]
 proc-macro = true
 
 [dependencies]
-quote = "1.0"
+# Non-optional dependencies. Keep these sorted by name.
 proc-macro2 = "1.0"
+quote = "1.0"
+
+# Optional dependencies. Keep these sorted by name.
+# None
 
 [dependencies.syn]
 features = ["full"]
 version = "2.0"
-

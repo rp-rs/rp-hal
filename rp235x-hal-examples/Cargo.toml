@@ -1,9 +1,8 @@
 [package]
-authors = ["The rp-rs Developers"]
 categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
 description = "Examples for the rp235x-hal crate"
 edition = "2021"
-keywords = ["embedded", "hal", "raspberry-pi", "rp235x", "rp2350", "embedded-hal"]
+keywords = ["embedded", "hal", "raspberry-pi", "rp235x", "embedded-hal"]
 license = "MIT OR Apache-2.0"
 name = "rp235x-hal-examples"
 repository = "https://github.com/rp-rs/rp-hal"
@@ -11,6 +10,7 @@ rust-version = "1.85"
 version = "0.1.0"
 
 [dependencies]
+# Non-optional dependencies. Keep these sorted by name.
 cortex-m = "0.7.2"
 cortex-m-rt = "0.7"
 cortex-m-rtic = "1.1.4"
@@ -35,6 +35,9 @@ rp235x-hal = {path = "../rp235x-hal", version = "0.4.0", features = ["binary-inf
 usb-device = "0.3.2"
 usbd-serial = "0.2.2"
 static_cell = "2.1.0"
+
+# Optional dependencies. Keep these sorted by name.
+# None
 
 [target.'cfg( target_arch = "arm" )'.dependencies]
 embassy-executor = {version = "0.5", features = ["arch-cortex-m", "executor-thread"]}

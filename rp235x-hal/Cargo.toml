@@ -1,9 +1,8 @@
 [package]
-authors = ["The rp-rs Developers"]
 categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
 description = "A Rust Embedded-HAL impl for the RP235x microcontroller family"
 edition = "2021"
-keywords = ["embedded", "hal", "raspberry-pi", "rp2350", "embedded-hal"]
+keywords = ["embedded", "hal", "raspberry-pi", "rp235x", "embedded-hal"]
 license = "MIT OR Apache-2.0"
 name = "rp235x-hal"
 repository = "https://github.com/rp-rs/rp-hal"

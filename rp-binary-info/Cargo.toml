@@ -1,14 +1,13 @@
 [package]
-name = "rp-binary-info"
-version = "0.1.2"
-edition = "2021"
-authors = ["The rp-rs Developers"]
-description = "Code and types for creating Picotool compatible Binary Info metadata"
-license = "MIT OR Apache-2.0"
-rust-version = "1.82"
-repository = "https://github.com/rp-rs/rp-hal"
 categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
-keywords = ["embedded", "raspberry-pi", "rp2040", "rp2350", "picotool"]
+description = "Code and types for creating Picotool compatible Binary Info metadata"
+edition = "2021"
+keywords = ["embedded", "raspberry-pi", "rp2040", "rp235x", "picotool"]
+license = "MIT OR Apache-2.0"
+name = "rp-binary-info"
+repository = "https://github.com/rp-rs/rp-hal"
+rust-version = "1.82"
+version = "0.1.2"
 
 [features]
 binary-info = []

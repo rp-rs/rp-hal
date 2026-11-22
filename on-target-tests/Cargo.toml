@@ -1,7 +1,8 @@
 [package]
-authors = ["The rp-rs Developers"]
-description = "Test cases that run on an RP2040"
+categories = ["development-tools::testing", "embedded", "hardware-support", "no-std", "no-std::no-alloc"]
+description = "Test cases that run on an RP2040 or an RP235x"
 edition = "2021"
+keywords = ["embedded", "raspberry-pi", "embedded-hal", "rp2040", "rp235x"]
 license = "MIT OR Apache-2.0"
 name = "on-target-tests"
 publish = false
@@ -56,6 +57,7 @@ name = "powman"
 required-features = ["rp235x"]
 
 [dependencies]
+# Non-optional dependencies. Keep these sorted by name.
 cortex-m = "0.7"
 cortex-m-rt = "0.7"
 critical-section = "1.2.0"
@@ -72,13 +74,14 @@ i2c-write-iter = {version = "1.0.0", features = ["async"]}
 itertools = {version = "0.12.0", default-features = false}
 once_cell = { version = "1.19.0", default-features = false, features = ["critical-section"] }
 panic-probe = {version = "0.3", features = ["print-defmt"]}
+portable-atomic = {version = "1.7.0", features = ["critical-section"]}
+
+# Optional dependencies. Keep these sorted by name.
 rp2040-boot2 = { version = "0.3.0", optional = true }
 rp2040-hal = {path = "../rp2040-hal", features = ["critical-section-impl", "defmt", "rt", "i2c-write-iter"], optional = true}
 rp235x-hal = {path = "../rp235x-hal", features = ["critical-section-impl", "defmt", "rt", "i2c-write-iter"], optional = true}
-portable-atomic = {version = "1.7.0", features = ["critical-section"]}
 
 [features]
-
 rp2040 = ["dep:rp2040-boot2", "dep:rp2040-hal"]
 rp235x = ["dep:rp235x-hal"]
 

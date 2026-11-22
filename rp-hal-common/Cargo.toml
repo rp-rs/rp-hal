@@ -1,7 +1,8 @@
 [package]
-authors = ["The rp-rs Developers"]
+categories = ["embedded", "hardware-support", "no-std", "no-std::no-alloc"]
 description = "Shared HAL code for the Raspberry Pi microcontrollers"
 edition = "2021"
+keywords = ["embedded", "hal", "raspberry-pi", "embedded-hal"]
 license = "MIT OR Apache-2.0"
 name = "rp-hal-common"
 repository = "https://github.com/rp-rs/rp-hal"
@@ -10,4 +11,5 @@ version = "0.1.0"
 
 # DO NOT LIST ANY PAC CRATES OR ARCHITECTURE CRATES HERE
 [dependencies]
+# Non-optional dependencies. Keep these sorted by name.
 fugit = "0.6.0"
