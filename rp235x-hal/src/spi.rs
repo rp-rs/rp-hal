@@ -245,7 +245,7 @@ impl<S: State, D: SpiDevice, P: ValidSpiPinout<D>, const DS: u8> Spi<S, D, P, DS
             // We need to use an saturating_mul here because with a high baudrate certain invalid prescale
             // values might not fit in u32. However we can be sure those values exceed the max sys_clk frequency
             // So clamping a u32::MAX is fine here...
-            if freq_in < ((prescale_option + 2) * 256).saturating_mul(baudrate) {
+            if freq_in < (prescale_option * 256).saturating_mul(baudrate) {
                 prescale = prescale_option as u8;
                 break;
             }

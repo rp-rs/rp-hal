@@ -637,7 +637,9 @@ pub mod sys_info_api {
 
     declare_get_sys_info_function!(
         /// Get the unique identifier for the chip
-        chip_info, ChipInfo, GetSysInfoFlag::ChipInfo
+        chip_info,
+        ChipInfo,
+        GetSysInfoFlag::ChipInfo
     );
 
     declare_get_sys_info_function!(
@@ -649,28 +651,38 @@ pub mod sys_info_api {
 
     declare_get_sys_info_function!(
         /// Get the current running CPU's info
-        cpu_info, CpuInfo, GetSysInfoFlag::CpuInfo
+        cpu_info,
+        CpuInfo,
+        GetSysInfoFlag::CpuInfo
     );
 
     declare_get_sys_info_function!(
         /// Get flash device info in the format of OTP FLASH_DEVINFO
-        flash_dev_info, FlashDevInfo, GetSysInfoFlag::FlashDevInfo
+        flash_dev_info,
+        FlashDevInfo,
+        GetSysInfoFlag::FlashDevInfo
     );
 
     declare_get_sys_info_function!(
         /// Get a 128-bit random number generated on each boot
-        boot_random, BootRandom, GetSysInfoFlag::BootRandom
+        boot_random,
+        BootRandom,
+        GetSysInfoFlag::BootRandom
     );
 
     declare_get_sys_info_function!(
         /// Get diagnostic boot info
-        boot_info, BootInfo, GetSysInfoFlag::BootInfo
+        boot_info,
+        BootInfo,
+        GetSysInfoFlag::BootInfo
     );
 
     #[cfg(all(target_arch = "arm", target_os = "none"))]
     declare_get_sys_info_ns_function!(
         /// Get the unique identifier for the chip
-        chip_info_ns, ChipInfo, GetSysInfoFlag::ChipInfo
+        chip_info_ns,
+        ChipInfo,
+        GetSysInfoFlag::ChipInfo
     );
 
     #[cfg(all(target_arch = "arm", target_os = "none"))]
@@ -684,25 +696,33 @@ pub mod sys_info_api {
     #[cfg(all(target_arch = "arm", target_os = "none"))]
     declare_get_sys_info_ns_function!(
         /// Get the current running CPU's info
-        cpu_info_ns, CpuInfo, GetSysInfoFlag::CpuInfo
+        cpu_info_ns,
+        CpuInfo,
+        GetSysInfoFlag::CpuInfo
     );
 
     #[cfg(all(target_arch = "arm", target_os = "none"))]
     declare_get_sys_info_ns_function!(
         /// Get flash device info in the format of OTP FLASH_DEVINFO
-        flash_dev_info_ns, FlashDevInfo, GetSysInfoFlag::FlashDevInfo
+        flash_dev_info_ns,
+        FlashDevInfo,
+        GetSysInfoFlag::FlashDevInfo
     );
 
     #[cfg(all(target_arch = "arm", target_os = "none"))]
     declare_get_sys_info_ns_function!(
         /// Get a 128-bit random number generated on each boot
-        boot_random_ns, BootRandom, GetSysInfoFlag::BootRandom
+        boot_random_ns,
+        BootRandom,
+        GetSysInfoFlag::BootRandom
     );
 
     #[cfg(all(target_arch = "arm", target_os = "none"))]
     declare_get_sys_info_ns_function!(
         /// Get diagnostic boot info
-        boot_info_ns, BootInfo, GetSysInfoFlag::BootInfo
+        boot_info_ns,
+        BootInfo,
+        GetSysInfoFlag::BootInfo
     );
 }
 
