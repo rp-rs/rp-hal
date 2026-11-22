@@ -64,13 +64,12 @@ pub trait AsyncPeripheral: sealed::Wakeable {
 pub(crate) struct CancellablePollFn<'periph, Periph, PFn, EnIrqFn, CancelFn, OutputTy>
 where
     Periph: sealed::Wakeable,
-    CancelFn: FnMut(&mut Periph),
+    CancelFn: FnOnce(&mut Periph),
 {
     periph: &'periph mut Periph,
     poll: PFn,
     enable_irq: EnIrqFn,
-    cancel: CancelFn,
-    done: bool,
+    cancel: Option<CancelFn>,
     // captures F's return type.
     phantom: PhantomData<OutputTy>,
 }
@@ -80,7 +79,7 @@ where
     Periph: sealed::Wakeable,
     PFn: FnMut(&mut Periph) -> Poll<OutputTy>,
     EnIrqFn: FnMut(&mut Periph),
-    CancelFn: FnMut(&mut Periph),
+    CancelFn: FnOnce(&mut Periph),
 {
     pub(crate) fn new(
         periph: &'p mut Periph,
@@ -92,8 +91,7 @@ where
             periph,
             poll,
             enable_irq,
-            cancel,
-            done: false,
+            cancel: Some(cancel),
             phantom: PhantomData,
         }
     }
@@ -105,7 +103,7 @@ where
     Periph: sealed::Wakeable,
     PFn: FnMut(&mut Periph) -> Poll<OutputTy>,
     EnIrqFn: FnMut(&mut Periph),
-    CancelFn: FnMut(&mut Periph),
+    CancelFn: FnOnce(&mut Periph),
 {
     type Output = OutputTy;
 
@@ -115,7 +113,7 @@ where
             ref mut periph,
             poll: ref mut is_ready,
             enable_irq: ref mut setup_flags,
-            ref mut done,
+            ref mut cancel,
             ..
         } = unsafe { self.get_unchecked_mut() };
         let r = (is_ready)(periph);
@@ -123,7 +121,7 @@ where
             Periph::waker().register(cx.waker());
             (setup_flags)(periph);
         } else {
-            *done = true;
+            *cancel = None;
         }
         r
     }
@@ -132,12 +130,12 @@ impl<Periph, PFn, EnIrqFn, CancelFn, OutputTy> Drop
     for CancellablePollFn<'_, Periph, PFn, EnIrqFn, CancelFn, OutputTy>
 where
     Periph: sealed::Wakeable,
-    CancelFn: FnMut(&mut Periph),
+    CancelFn: FnOnce(&mut Periph),
 {
     fn drop(&mut self) {
-        if !self.done {
+        if let Some(cancel) = self.cancel.take() {
             Periph::waker().clear();
-            (self.cancel)(self.periph);
+            cancel(self.periph);
         }
     }
 }
