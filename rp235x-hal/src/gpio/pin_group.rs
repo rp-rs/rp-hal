@@ -24,7 +24,8 @@ impl ReadPinHList for HNil {
 }
 impl<H: AnyPin, T: ReadPinHList> ReadPinHList for HCons<H, T> {
     fn read_mask(&self) -> u32 {
-        (1 << self.head.borrow().id().num) | self.tail.read_mask()
+        use super::pin::pin_sealed::PinIdOps;
+        self.head.borrow().id().mask() | self.tail.read_mask()
     }
 }
 
@@ -50,7 +51,8 @@ impl<P: PinId, M: PullType, T: WritePinHList> WritePinHList
     for HCons<Pin<P, FunctionSioOutput, M>, T>
 {
     fn write_mask(&self) -> u32 {
-        (1 << self.head.id().num) | self.tail.write_mask()
+        use super::pin::pin_sealed::PinIdOps;
+        self.head.id().mask() | self.tail.write_mask()
     }
 }
 
@@ -149,8 +151,10 @@ where
     ///                          This is Gpio1    |
     /// ```
     pub fn read(&self) -> u32 {
+        use super::pin::pin_sealed::PinIdOps;
         let mask = self.0.read_mask();
-        crate::sio::Sio::read_bank0() & mask
+        let head_id = self.0.head.borrow().id();
+        head_id.sio_in().read().bits() & mask
     }
 
     /// Write this set of pins all at the same time.

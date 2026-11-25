@@ -140,8 +140,10 @@ where
     ///                          This is Gpio1    |
     /// ```
     pub fn read(&self) -> u32 {
+        use super::pin::pin_sealed::PinIdOps;
         let mask = self.0.read_mask();
-        crate::sio::Sio::read_bank0() & mask
+        let head_id = self.0.head.borrow().id();
+        head_id.sio_in().read().bits() & mask
     }
 
     /// Write this set of pins all at the same time.
